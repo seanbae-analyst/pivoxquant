@@ -45,8 +45,6 @@ const PILL_LINKED: React.CSSProperties = {
   display: "inline-block",
   padding: "2px 8px",
   fontSize: "var(--pq-text-eyebrow)",
-  letterSpacing: "0.18em",
-  textTransform: "uppercase",
   border: "1px solid rgba(184,149,106,0.15)",
   color: "var(--pq-bronze)",
   borderRadius: 2,
@@ -91,9 +89,9 @@ function ProviderRow({
           <span
             className="font-mono"
             style={linked ? PILL_LINKED : PILL_DIM}
-            aria-label={linked ? "Linked" : "Not linked"}
+            aria-label={linked ? "연결됨" : "연결 안 됨"}
           >
-            {linked ? "Linked" : "Not linked"}
+            {linked ? "연결됨" : "연결 안 됨"}
           </span>
         </div>
         <div className="font-serif" style={ROW_HELP_STYLE}>
@@ -107,23 +105,21 @@ function ProviderRow({
 
       {linked ? (
         <span
-          className="font-mono uppercase"
+          className="font-mono"
           style={{
             fontSize: "var(--pq-text-eyebrow)",
-            letterSpacing: "0.22em",
             color: "var(--pq-ivory-dim)",
           }}
         >
-          Primary
+          기본
         </span>
       ) : (
         <button
           type="button"
           onClick={onConnect}
-          className="font-mono uppercase"
+          className="font-mono"
           style={{
             fontSize: "var(--pq-text-eyebrow)",
-            letterSpacing: "0.18em",
             color: "var(--pq-bronze)",
             borderBottom: "1px solid rgba(184,149,106,0.15)",
             paddingBottom: 2,
@@ -133,7 +129,7 @@ function ProviderRow({
             cursor: "pointer",
           }}
         >
-          Connect {name}
+          {name} 연결
         </button>
       )}
     </div>
@@ -160,29 +156,27 @@ export function SignInProvidersCard({
       }}
     >
       <span
-        className="font-mono uppercase"
+        className="font-mono"
         style={{
           position: "absolute",
           top: 14,
           right: 14,
           fontSize: "var(--pq-text-eyebrow)",
-          letterSpacing: "0.2em",
           color: "var(--pq-ivory-dim)",
         }}
       >
-        A2 · Sign-in
+        로그인
       </span>
 
       <div
-        className="font-mono uppercase"
+        className="font-mono"
         style={{
           fontSize: "var(--pq-text-eyebrow)",
-          letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
           marginBottom: 16,
         }}
       >
-        How you authenticate
+        로그인 수단
       </div>
 
       <ProviderRow
@@ -214,20 +208,19 @@ export function SignInProvidersCard({
         }}
       >
         <div style={{ minWidth: 0 }}>
-          <div className="font-serif" style={ROW_LABEL_STYLE}>Password</div>
+          <div className="font-serif" style={ROW_LABEL_STYLE}>비밀번호</div>
           <div className="font-serif" style={ROW_HELP_STYLE}>
             {t("settingsV2.signin.passwordHelp")}
           </div>
         </div>
         <span
-          className="font-mono uppercase"
+          className="font-mono"
           style={{
             fontSize: "var(--pq-text-eyebrow)",
-            letterSpacing: "0.22em",
             color: "var(--pq-ivory-dim)",
           }}
         >
-          N/A
+          없음
         </span>
       </div>
     </div>

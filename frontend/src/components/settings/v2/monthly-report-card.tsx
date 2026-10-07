@@ -133,10 +133,9 @@ export function MonthlyReportCard({
       }}
     >
       <div
-        className="font-mono uppercase"
+        className="font-mono"
         style={{
           fontSize: "var(--pq-text-eyebrow)",
-          letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
           marginBottom: 12,
         }}
@@ -222,7 +221,7 @@ export function MonthlyReportCard({
           onClick={download}
           disabled={downloading}
           aria-busy={downloading || undefined}
-          className="inline-flex items-center gap-2 px-5 py-2 text-pq-mono-sm uppercase tracking-[0.22em] text-[var(--pq-ivory-mid)] border border-[rgba(245,240,232,0.15)] hover:border-[var(--pq-bronze)] hover:text-[var(--pq-bronze)] disabled:opacity-40 disabled:cursor-wait"
+          className="inline-flex items-center gap-2 px-5 py-2 text-pq-mono-sm text-[var(--pq-ivory-mid)] border border-[rgba(245,240,232,0.15)] hover:border-[var(--pq-bronze)] hover:text-[var(--pq-bronze)] disabled:opacity-40 disabled:cursor-wait"
         >
           {downloading ? m("downloading") : m("download")}
         </button>

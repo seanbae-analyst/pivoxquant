@@ -325,9 +325,9 @@ export default async function RootLayout({
          */}
         <a
           href="#main-content"
-          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[60] focus:bg-[var(--pq-bronze)] focus:text-[var(--pq-ink)] focus:px-3 focus:py-2 focus:rounded-sm focus:font-mono focus:text-pq-mono-sm focus:uppercase focus:tracking-[0.18em] focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[var(--pq-bronze)]"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[60] focus:bg-[var(--pq-bronze)] focus:text-[var(--pq-ink)] focus:px-3 focus:py-2 focus:rounded-sm focus:font-mono focus:text-pq-mono-sm focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[var(--pq-bronze)]"
         >
-          Skip to main content
+          본문으로 건너뛰기
         </a>
         {/* CookieConsent / InstallPrompt sit INSIDE <Providers> so that
             useT() / useLocale() resolve against LocaleProvider. If mounted

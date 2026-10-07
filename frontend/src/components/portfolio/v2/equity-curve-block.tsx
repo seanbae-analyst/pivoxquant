@@ -174,7 +174,7 @@ export function EquityCurveBlock({
     ("1mo" as EquityRange);
   const { data, isLoading, error } = useEquityCurve(activeRange);
   const benchmarkLabel: string =
-    (data?.benchmark?.name?.trim() || "") || "Benchmark";
+    (data?.benchmark?.name?.trim() || "") || "비교 지수";
 
   const series: EquityPoint[] = React.useMemo(() => {
     // hooks-v2 normalizes backend `{ data: [{ date, value }] }` to
@@ -219,7 +219,7 @@ export function EquityCurveBlock({
 
   return (
     <section
-      aria-label="Equity curve"
+      aria-label="자산 곡선"
       style={{ marginBottom: 40 }}
     >
       {/* Section header + timeframe toggle
@@ -236,15 +236,15 @@ export function EquityCurveBlock({
       >
         <div>
           <div
-            className="font-mono uppercase"
+            className="font-mono"
             style={{
               fontSize: "var(--pq-text-eyebrow)",
-              letterSpacing: "0.22em",
+              letterSpacing: "0.02em",
               color: "var(--pq-bronze)",
               marginBottom: 8,
             }}
           >
-            Equity · Curve
+            자산 · 곡선
           </div>
           <EditorialHead size={30} as="h2" style={{ lineHeight: 1.1 }}>
             {t("dashboard.portfolio.equityCurve.heading")}
@@ -252,7 +252,7 @@ export function EquityCurveBlock({
         </div>
 
         {/* Timeframe pills */}
-        <div role="tablist" aria-label="Timeframe" style={{ display: "flex", gap: 4 }}>
+        <div role="tablist" aria-label="기간" style={{ display: "flex", gap: 4 }}>
           {RANGES.map((r) => {
             const active = r.id === activeId;
             return (
@@ -262,10 +262,10 @@ export function EquityCurveBlock({
                 role="tab"
                 aria-selected={active}
                 onClick={() => setActiveId(r.id)}
-                className="font-mono uppercase"
+                className="font-mono"
                 style={{
                   fontSize: "var(--pq-text-eyebrow)",
-                  letterSpacing: "0.2em",
+                  letterSpacing: "0.02em",
                   padding: "6px 12px",
                   background: active
                     ? "rgba(184,149,106,0.12)"
@@ -276,7 +276,6 @@ export function EquityCurveBlock({
                   border: `1px solid ${active ? "var(--pq-bronze)" : "rgba(245,240,232,0.12)"}`,
                   borderRadius: "var(--pq-radius-cta, 2px)",
                   cursor: "pointer",
-                  textTransform: "uppercase",
                   transition: "all 160ms",
                 }}
               >
@@ -311,7 +310,7 @@ export function EquityCurveBlock({
           }}
         >
           <KpiCell
-            label="NAV"
+            label="순자산"
             value={(() => {
               // Not-yet-known NAV must read as unknown, not as zero.
               // `currentNav` is 0 until the summary resolves, so the final
@@ -346,14 +345,14 @@ export function EquityCurveBlock({
             valueColor="var(--pq-ivory)"
           />
           <KpiCell
-            label={`Range · ${(
+            label={`기간 수익률 · ${
               RANGES.find((r) => r.id === activeId)?.label ?? activeRange
-            ).toUpperCase()}`}
+            }`}
             value={fmtPct(rangeReturn)}
             valueColor={pctColor(rangeReturn)}
           />
           <KpiCell
-            label="Benchmark"
+            label="비교 지수"
             value={fmtPct(benchmarkReturn)}
             valueColor={pctColor(benchmarkReturn)}
           />
@@ -389,14 +388,14 @@ export function EquityCurveBlock({
               }}
             >
               <span
-                className="font-mono uppercase"
+                className="font-mono"
                 style={{
                   fontSize: "var(--pq-text-eyebrow)",
-                  letterSpacing: "0.22em",
+                  letterSpacing: "0.02em",
                   color: "var(--pq-ivory-dim)",
                 }}
               >
-                Spread
+                격차
               </span>
               <span
                 className="font-mono tabular-nums"
@@ -457,7 +456,7 @@ export function EquityCurveBlock({
                 기록을 불러오지 못했습니다
               </span>
               <span style={{ opacity: 0.7 }}>
-                Unable to load equity history. Try refreshing in a moment.
+                잠시 후 새로고침해 주세요.
               </span>
             </div>
           ) : !geom ? (
@@ -480,14 +479,14 @@ export function EquityCurveBlock({
               }}
             >
               <span
-                className="font-mono uppercase"
+                className="font-mono"
                 style={{
                   fontSize: "var(--pq-text-eyebrow)",
-                  letterSpacing: "0.22em",
+                  letterSpacing: "0.02em",
                   color: "var(--pq-bronze-light)",
                 }}
               >
-                Building the curve
+                곡선 준비 중
               </span>
               <span
                 className="font-display"
@@ -520,15 +519,10 @@ export function EquityCurveBlock({
                   <>
                     곡선은 매일 종가 스냅샷으로 그려집니다. 첫 스냅샷이 기록되면
                     여기에 나타납니다.
-                    <br />
-                    The curve is drawn from daily closing snapshots — it appears
-                    once the first one is recorded.
                   </>
                 ) : (
                   <>
-                    포지션을 추가하면 매일 종가 기준으로 곡선이 그려집니다.
-                    <br />
-                    Add a position — the curve fills in from daily closes.
+                    종목을 추가하면 매일 종가 기준으로 곡선이 그려집니다.
                   </>
                 )}
               </span>
@@ -536,7 +530,7 @@ export function EquityCurveBlock({
           ) : (
             <svg
               role="img"
-              aria-label="Portfolio NAV over time"
+              aria-label="기간별 포트폴리오 순자산"
               viewBox={`0 0 ${SVG_W} ${SVG_H}`}
               preserveAspectRatio="none"
               width="100%"
@@ -618,12 +612,12 @@ export function EquityCurveBlock({
         >
           <LegendSwatch
             color="var(--pq-bronze)"
-            label="Portfolio"
+            label="포트폴리오"
             dashed={false}
           />
           <LegendSwatch
             color="rgba(245,240,232,0.55)"
-            label={`Benchmark · ${benchmarkLabel}`}
+            label={`비교 지수 · ${benchmarkLabel}`}
             dashed
           />
         </div>
@@ -644,10 +638,10 @@ function KpiCell({
   return (
     <div>
       <div
-        className="font-mono uppercase"
+        className="font-mono"
         style={{
           fontSize: "var(--pq-text-eyebrow)",
-          letterSpacing: "0.22em",
+          letterSpacing: "0.02em",
           color: "var(--pq-ivory-dim)",
           marginBottom: 6,
         }}
@@ -691,10 +685,10 @@ function LegendSwatch({
         }}
       />
       <span
-        className="font-mono uppercase"
+        className="font-mono"
         style={{
           fontSize: "var(--pq-text-eyebrow)",
-          letterSpacing: "0.22em",
+          letterSpacing: "0.02em",
           color: "var(--pq-ivory-dim)",
         }}
       >

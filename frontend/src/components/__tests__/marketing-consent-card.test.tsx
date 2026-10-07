@@ -44,7 +44,7 @@ describe("MarketingConsentCardV2", () => {
     render(<MarketingConsentCardV2 />);
 
     // Toggle (switch role) should be in the DOM immediately
-    const toggle = screen.getByRole("switch", { name: /Marketing email consent/i });
+    const toggle = screen.getByRole("switch", { name: /마케팅 메일 수신 동의/ });
     expect(toggle).toBeInTheDocument();
 
     await waitFor(() => {
@@ -71,7 +71,7 @@ describe("MarketingConsentCardV2", () => {
     render(<MarketingConsentCardV2 />);
 
     // Wait until hydration completes (toggle becomes enabled)
-    const toggle = await screen.findByRole("switch", { name: /Marketing email consent/i });
+    const toggle = await screen.findByRole("switch", { name: /마케팅 메일 수신 동의/ });
     await waitFor(() => {
       expect(toggle).not.toBeDisabled();
     });
@@ -99,7 +99,7 @@ describe("MarketingConsentCardV2", () => {
     const user = userEvent.setup();
     render(<MarketingConsentCardV2 />);
 
-    const toggle = await screen.findByRole("switch", { name: /Marketing email consent/i });
+    const toggle = await screen.findByRole("switch", { name: /마케팅 메일 수신 동의/ });
     await waitFor(() => {
       expect(toggle).toHaveAttribute("aria-checked", "true");
     });

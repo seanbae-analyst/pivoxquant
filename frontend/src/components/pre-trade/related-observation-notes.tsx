@@ -80,10 +80,9 @@ export function RelatedObservationNotes({
       }}
     >
       <p
-        className="font-mono uppercase"
+        className="font-mono"
         style={{
           fontSize: "var(--pq-text-eyebrow)",
-          letterSpacing: "0.16em",
           color: "var(--pq-bronze)",
         }}
       >

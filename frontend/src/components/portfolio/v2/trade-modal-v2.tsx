@@ -70,28 +70,28 @@ interface CopyEntry {
 
 const COPY: Record<TradeAction, CopyEntry> = {
   buy: {
-    eyebrow: "Observation · Add",
-    headline: "Add to",
-    accentWord: "this position.",
-    cta: "Save observation →",
-    toast: "Trade recorded · informational only, not advice.",
-    helper: "Record an additional purchase. Saved to your book.",
+    eyebrow: "기록 · 추가",
+    headline: "이 종목을",
+    accentWord: "추가합니다.",
+    cta: "기록 저장 →",
+    toast: "거래를 기록했습니다 · 정보 기록용입니다.",
+    helper: "추가로 산 내역을 내 장부에 기록합니다.",
   },
   sell: {
-    eyebrow: "Observation · Trim",
-    headline: "Trim",
-    accentWord: "this position.",
-    cta: "Save observation →",
-    toast: "Trade recorded · informational only, not advice.",
-    helper: "Record a partial or full close. Saved to your book.",
+    eyebrow: "기록 · 정리",
+    headline: "이 종목을",
+    accentWord: "정리합니다.",
+    cta: "기록 저장 →",
+    toast: "거래를 기록했습니다 · 정보 기록용입니다.",
+    helper: "일부 또는 전량 정리를 내 장부에 기록합니다.",
   },
   edit: {
-    eyebrow: "Observation · Adjust",
-    headline: "Adjust",
-    accentWord: "the entry.",
-    cta: "Update observation →",
-    toast: "Position updated.",
-    helper: "Edit the average cost or memo for this holding.",
+    eyebrow: "기록 · 수정",
+    headline: "기록을",
+    accentWord: "수정합니다.",
+    cta: "기록 수정 →",
+    toast: "보유 종목을 수정했습니다.",
+    helper: "이 종목의 평균가나 메모를 수정합니다.",
   },
 };
 
@@ -104,10 +104,10 @@ function modeCopy(action: TradeAction, mode: TradeMode): CopyEntry {
   if (mode === "record") {
     return {
       ...base,
-      eyebrow: isBuy ? "Record · Add" : "Record · Trim",
-      headline: isBuy ? "Log an" : "Log a",
-      accentWord: isBuy ? "executed buy." : "executed sell.",
-      cta: "Record · 기록",
+      eyebrow: isBuy ? "기록 · 추가" : "기록 · 정리",
+      headline: "이미 체결한",
+      accentWord: isBuy ? "추가를 기록합니다." : "정리를 기록합니다.",
+      cta: "기록하기",
       helper: isBuy
         ? "이미 체결한 추가 매수를 책에 기록합니다. 질문 없이 바로 저장."
         : "이미 체결한 매도를 책에 기록합니다. 질문 없이 바로 저장.",
@@ -116,10 +116,10 @@ function modeCopy(action: TradeAction, mode: TradeMode): CopyEntry {
   // review
   return {
     ...base,
-    eyebrow: isBuy ? "Observation · Add" : "Observation · Trim",
-    headline: isBuy ? "Add to" : "Trim",
-    accentWord: "this position.",
-    cta: "Continue · 7 questions →",
+    eyebrow: isBuy ? "검토 · 추가" : "검토 · 정리",
+    headline: "이 종목",
+    accentWord: isBuy ? "추가를 검토합니다." : "정리를 검토합니다.",
+    cta: "다음 · 7문항 →",
     helper: isBuy
       ? "지금 추가 매수할지 검토합니다. 7개 질문을 거친 뒤 기록됩니다."
       : "지금 매도할지 검토합니다. 7개 질문을 거친 뒤 기록됩니다.",
@@ -207,7 +207,7 @@ export function TradeModalV2({
     if (action === "edit") {
       const parsedCost = Number(avgCost);
       if (!Number.isFinite(parsedCost) || parsedCost <= 0) {
-        toast.error("Average cost must be positive.");
+        toast.error("평균가는 0보다 커야 합니다.");
         return;
       }
       setSubmitting(true);
@@ -225,7 +225,7 @@ export function TradeModalV2({
           return;
         }
         const message =
-          err instanceof Error ? err.message : "Failed to record entry.";
+          err instanceof Error ? err.message : "기록하지 못했습니다.";
         toast.error(message);
       } finally {
         setSubmitting(false);
@@ -238,15 +238,15 @@ export function TradeModalV2({
     const parsedQty = Number(shares);
     const parsedPrice = Number(price);
     if (!Number.isFinite(parsedQty) || parsedQty <= 0) {
-      toast.error("Shares must be a positive number.");
+      toast.error("수량은 0보다 커야 합니다.");
       return;
     }
     if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
-      toast.error("Price must be positive.");
+      toast.error("가격은 0보다 커야 합니다.");
       return;
     }
     if (action === "sell" && parsedQty > position.shares) {
-      toast.error(`Cannot trim more than ${position.shares} shares held.`);
+      toast.error(`보유 수량(${position.shares}주)보다 많이 정리할 수 없습니다.`);
       return;
     }
 
@@ -254,7 +254,7 @@ export function TradeModalV2({
       // REVIEW: thesis required ≥MIN_RATIONALE_CHARS; hand off to the 7-question
       // reflection. Nothing is written until the modal calls onProceed.
       if (!noteOk) {
-        toast.error(`Thesis는 ${MIN_RATIONALE_CHARS}자 이상 적어주세요 (현재 ${note.trim().length}자).`);
+        toast.error(`근거는 ${MIN_RATIONALE_CHARS}자 이상 적어주세요 (현재 ${note.trim().length}자).`);
         return;
       }
       setFrictionOpen(true);
@@ -302,7 +302,7 @@ export function TradeModalV2({
         return;
       }
       const message =
-        err instanceof Error ? err.message : "Failed to record entry.";
+        err instanceof Error ? err.message : "기록하지 못했습니다.";
       if (mode === "record") {
         // No friction modal to surface the error — toast here.
         toast.error(message);
@@ -354,10 +354,10 @@ export function TradeModalV2({
         {/* Hero */}
         <div style={{ marginBottom: 28 }}>
           <div
-            className="font-mono uppercase"
+            className="font-mono"
             style={{
               fontSize: "var(--pq-text-eyebrow)",
-              letterSpacing: "0.22em",
+              letterSpacing: "0.02em",
               color: "var(--pq-bronze)",
               marginBottom: 14,
             }}
@@ -433,7 +433,7 @@ export function TradeModalV2({
         >
           {action === "edit" ? (
             <>
-              <FormField label="Average cost (per share)">
+              <FormField label="평균가 (주당)">
                 <input
                   required
                   type="number"
@@ -444,7 +444,7 @@ export function TradeModalV2({
                   style={fieldInputStyle}
                 />
               </FormField>
-              <FormField label="Memo">
+              <FormField label="메모">
                 <textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
@@ -463,7 +463,7 @@ export function TradeModalV2({
                 }}
               >
                 <FormField
-                  label={action === "sell" ? `Shares (max ${position.shares})` : "Shares"}
+                  label={action === "sell" ? `수량 (최대 ${position.shares})` : "수량"}
                 >
                   {/*
                     `max` HTML constraint removed (2026-04-28). Browser-level
@@ -484,7 +484,7 @@ export function TradeModalV2({
                   />
                 </FormField>
                 <FormField
-                  label={`Price (per share) ${
+                  label={`주당 가격 ${
                     (position.currency ?? (isKrTicker(position.symbol) ? "KRW" : "USD")) === "KRW"
                       ? "(KRW)"
                       : "(USD)"
@@ -502,7 +502,7 @@ export function TradeModalV2({
                   />
                 </FormField>
               </div>
-              <FormField label="Date">
+              <FormField label="날짜">
                 <input
                   required
                   type="date"
@@ -512,7 +512,7 @@ export function TradeModalV2({
                 />
               </FormField>
               {mode === "review" ? (
-                <FormField label={`Thesis · 한 문단 (${MIN_RATIONALE_CHARS}자 이상)`}>
+                <FormField label={`근거 · 한 문단 (${MIN_RATIONALE_CHARS}자 이상)`}>
                   <textarea
                     required
                     value={note}
@@ -531,8 +531,8 @@ export function TradeModalV2({
                     }}
                   >
                     {noteOk
-                      ? `✓ ${note.trim().length} chars`
-                      : `${noteRemaining} chars more (${note.trim().length}/${MIN_RATIONALE_CHARS})`}
+                      ? `✓ ${note.trim().length}자`
+                      : `${noteRemaining}자 더 (${note.trim().length}/${MIN_RATIONALE_CHARS})`}
                   </span>
                 </FormField>
               ) : (
@@ -565,36 +565,36 @@ export function TradeModalV2({
             }}
           >
             <span
-              className="font-mono uppercase"
+              className="font-mono"
               style={{
                 fontSize: "var(--pq-text-eyebrow)",
-                letterSpacing: "0.22em",
+                letterSpacing: "0.02em",
                 color: "var(--pq-ivory-dim)",
               }}
             >
-              Saved to your book · not sent to broker
+              내 장부에만 저장 · 증권사로 전송되지 않음
             </span>
             <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
               <button
                 type="button"
                 onClick={onClose}
-                className="font-mono uppercase"
+                className="font-mono"
                 style={{
                   background: "transparent",
                   border: "none",
                   color: "var(--pq-ivory-dim)",
                   fontSize: "var(--pq-text-eyebrow)",
-                  letterSpacing: "0.2em",
+                  letterSpacing: "0.02em",
                   cursor: "pointer",
                   padding: 4,
                 }}
               >
-                Cancel
+                취소
               </button>
               <button
                 type="submit"
                 disabled={submitting}
-                className="font-mono uppercase"
+                className="font-mono"
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
@@ -607,11 +607,11 @@ export function TradeModalV2({
                   border: "none",
                   borderRadius: "var(--pq-radius-cta, 2px)",
                   fontSize: "var(--pq-text-eyebrow)",
-                  letterSpacing: "0.2em",
+                  letterSpacing: "0.02em",
                   cursor: submitting ? "not-allowed" : "pointer",
                 }}
               >
-                {submitting ? "Saving…" : copy.cta}
+                {submitting ? "저장 중…" : copy.cta}
               </button>
             </div>
           </div>
@@ -671,7 +671,7 @@ function ModeToggleButton({
       role="radio"
       aria-checked={active}
       onClick={onClick}
-      className="font-mono uppercase"
+      className="font-mono"
       style={{
         flex: 1,
         padding: "9px 12px",
@@ -680,7 +680,7 @@ function ModeToggleButton({
         border: `1px solid ${active ? "var(--pq-bronze)" : "rgba(245,240,232,0.12)"}`,
         borderRadius: "var(--pq-radius-cta, 2px)",
         fontSize: "var(--pq-text-eyebrow)",
-        letterSpacing: "0.14em",
+        letterSpacing: "0.02em",
         cursor: "pointer",
         transition: "all 160ms",
       }}
@@ -706,10 +706,10 @@ function FormField({
       }}
     >
       <span
-        className="font-mono uppercase"
+        className="font-mono"
         style={{
           fontSize: "var(--pq-text-eyebrow)",
-          letterSpacing: "0.22em",
+          letterSpacing: "0.02em",
           color: "var(--pq-bronze)",
         }}
       >

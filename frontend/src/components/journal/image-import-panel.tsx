@@ -260,7 +260,7 @@ export function ImageImportPanel({
         />
         <label
           htmlFor="import-images"
-          className="pq-ink-btn-ghost cursor-pointer px-4 text-pq-mono-sm uppercase tracking-[0.22em]"
+          className="pq-ink-btn-ghost cursor-pointer px-4 text-pq-mono-sm"
         >
           {t("journal.import.image.choose")}
         </label>
@@ -274,7 +274,7 @@ export function ImageImportPanel({
           onClick={read}
           disabled={!canRead}
           aria-disabled={!canRead}
-          className="pq-ink-btn-ghost px-4 text-pq-mono-sm uppercase tracking-[0.22em] disabled:opacity-30 disabled:cursor-not-allowed"
+          className="pq-ink-btn-ghost px-4 text-pq-mono-sm disabled:opacity-30 disabled:cursor-not-allowed"
           data-testid="image-read"
         >
           {progress ?? t("journal.import.image.read")}
@@ -316,7 +316,7 @@ export function ImageImportPanel({
           <button
             type="button"
             onClick={() => { setRows(ruleRows); setRuleRows(null); }}
-            className="pq-ink-btn-ghost px-3 text-pq-mono-sm uppercase tracking-[0.18em]"
+            className="pq-ink-btn-ghost px-3 text-pq-mono-sm"
             data-testid="ai-read-revert"
           >
             {t("aiRead.revert")}
@@ -334,7 +334,7 @@ export function ImageImportPanel({
               onClick={send}
               disabled={!canSend}
               aria-disabled={!canSend}
-              className="pq-ink-btn-bronze inline-flex items-center px-5 py-2 text-pq-mono-sm uppercase tracking-[0.22em] disabled:opacity-30 disabled:cursor-not-allowed"
+              className="pq-ink-btn-bronze inline-flex items-center px-5 py-2 text-pq-mono-sm disabled:opacity-30 disabled:cursor-not-allowed"
               data-testid="image-send"
             >
               {sending ? t("journal.import.page.submitting") : t("journal.import.image.send")}

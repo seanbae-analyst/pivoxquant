@@ -139,14 +139,14 @@ export default function PortfolioPageV2() {
   // Toast on error — surfaces transient API failures (v1 parity).
   React.useEffect(() => {
     if (posErr) {
-      const msg = posErr instanceof Error ? posErr.message : "Something went wrong";
-      toast.error(`Positions: ${msg}`);
+      const msg = posErr instanceof Error ? posErr.message : "문제가 생겼습니다";
+      toast.error(`보유 종목: ${msg}`);
     }
   }, [posErr]);
   React.useEffect(() => {
     if (sumErr) {
-      const msg = sumErr instanceof Error ? sumErr.message : "Something went wrong";
-      toast.error(`Summary: ${msg}`);
+      const msg = sumErr instanceof Error ? sumErr.message : "문제가 생겼습니다";
+      toast.error(`요약: ${msg}`);
     }
   }, [sumErr]);
 
@@ -413,7 +413,7 @@ export default function PortfolioPageV2() {
             {/* "live" left with the flag: nothing on this page is live when
                 the vendor-display gate is off, and the sentence is about the
                 fetch failing either way. */}
-            Unable to load your portfolio. No fallback values are shown.
+            포트폴리오를 불러오지 못했습니다. 대체 값은 표시하지 않습니다.
           </span>
           <button
             type="button"
@@ -429,7 +429,7 @@ export default function PortfolioPageV2() {
               fontSize: "var(--pq-text-body)",
             }}
           >
-            Refresh
+            다시 불러오기
           </button>
         </div>
       )}
@@ -506,13 +506,13 @@ export default function PortfolioPageV2() {
           cash buffer above and every add / trim draw down against, so it
           belongs next to the holdings it constrains, not among account
           settings. */}
-      <section aria-label="Seed capital">
+      <section aria-label="시드 자본">
         <CapitalCardV2 />
       </section>
 
       {/* ═══════════ 2-COL GRID — Sector / Recent ═══════════ */}
       <section
-        aria-label="Allocation and recent activity"
+        aria-label="섹터 구성과 최근 활동"
         style={{ marginBottom: 40 }}
       >
         <div
@@ -560,7 +560,7 @@ export default function PortfolioPageV2() {
           with a `useFxRate()` consumer today. */}
       <div className="mt-6">
         <FxAttribution style={{ marginBottom: 14 }} />
-        <FootSignature note="PivoxQuant · User-entered record · Not investment advice" />
+        <FootSignature note="PivoxQuant · 직접 입력한 기록 · 투자자문이 아닙니다" />
       </div>
 
       {/* ═══════════ MODALS ═══════════ */}

@@ -17,9 +17,9 @@ interface Item {
 }
 
 const ITEMS: Item[] = [
-  { id: "section-a", letter: "A", label: "Identity" },
-  { id: "section-c", letter: "B", label: "Notifications" },
-  { id: "section-e", letter: "C", label: "Privacy" },
+  { id: "section-a", letter: "A", label: "계정" },
+  { id: "section-c", letter: "B", label: "알림" },
+  { id: "section-e", letter: "C", label: "개인정보" },
 ];
 
 export function AnchorRail() {
@@ -59,18 +59,17 @@ export function AnchorRail() {
         top: 24,
         alignSelf: "flex-start",
       }}
-      aria-label="Settings sections"
+      aria-label="설정 목차"
     >
       <div
-        className="font-mono uppercase"
+        className="font-mono"
         style={{
           fontSize: "var(--pq-text-eyebrow)",
-          letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
           marginBottom: 12,
         }}
       >
-        Sections
+        목차
       </div>
       {ITEMS.map((item) => {
         const isActive = activeId === item.id;
@@ -99,13 +98,12 @@ export function AnchorRail() {
             key={item.id}
             href={`#${item.id}`}
             onClick={handleClick}
-            className="font-mono uppercase"
+            className="font-mono"
             style={{
               display: "block",
               padding: "10px 0 10px 14px",
               borderLeft: `1px solid ${isActive ? "var(--pq-bronze)" : "var(--pq-hairline-ink, var(--pq-ivory-line))"}`,
               fontSize: "var(--pq-text-eyebrow)",
-              letterSpacing: "0.16em",
               color: isActive
                 ? "var(--pq-bronze)"
                 : "rgba(245,240,232,0.55)",

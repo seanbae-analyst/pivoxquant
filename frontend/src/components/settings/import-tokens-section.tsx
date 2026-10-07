@@ -143,7 +143,7 @@ export function CopyField({ label, value, testId }: { label: string; value: stri
           type="button"
           onClick={copy}
           aria-label={`${t("settingsV2.importTokens.copy")} · ${label}`}
-          className="pq-ink-btn-ghost inline-flex items-center px-3 py-2 text-pq-mono-sm uppercase tracking-[0.22em]"
+          className="pq-ink-btn-ghost inline-flex items-center px-3 py-2 text-pq-mono-sm"
         >
           {state === "copied"
             ? t("settingsV2.importTokens.copied")
@@ -296,7 +296,7 @@ export function ImportTokensSection() {
     <section
       id="import-tokens"
       style={{ scrollMarginTop: 96 }}
-      aria-label="Import tokens"
+      aria-label="가져오기 토큰"
       data-testid="import-tokens-section"
     >
       {/* Phone: the settings back row names this section (2026-10-07). */}
@@ -312,10 +312,9 @@ export function ImportTokensSection() {
       >
         <div>
           <div
-            className="font-mono uppercase"
+            className="font-mono"
             style={{
               fontSize: "var(--pq-text-eyebrow)",
-              letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
               marginBottom: 8,
             }}
@@ -374,7 +373,7 @@ export function ImportTokensSection() {
               <button
                 type="button"
                 onClick={copyToken}
-                className="pq-ink-btn-bronze inline-flex items-center px-4 py-2 text-pq-mono-sm uppercase tracking-[0.22em]"
+                className="pq-ink-btn-bronze inline-flex items-center px-4 py-2 text-pq-mono-sm"
               >
                 {copied
                   ? t("settingsV2.importTokens.copied")
@@ -440,10 +439,9 @@ export function ImportTokensSection() {
 
             <details className="mt-5">
               <summary
-                className="font-mono uppercase cursor-pointer"
+                className="font-mono cursor-pointer"
                 style={{
                   fontSize: "var(--pq-text-eyebrow)",
-                  letterSpacing: "0.16em",
                   color: "var(--pq-ivory-mid)",
                 }}
               >
@@ -458,7 +456,7 @@ export function ImportTokensSection() {
               <button
                 type="button"
                 onClick={() => setIssued(null)}
-                className="pq-ink-btn-ghost px-4 text-pq-mono-sm uppercase tracking-[0.22em]"
+                className="pq-ink-btn-ghost px-4 text-pq-mono-sm"
               >
                 {t("settingsV2.importTokens.dismiss")}
               </button>
@@ -516,7 +514,7 @@ export function ImportTokensSection() {
               type="submit"
               disabled={!canIssue}
               aria-disabled={!canIssue}
-              className="pq-ink-btn-bronze inline-flex items-center px-5 py-2 text-pq-mono-sm uppercase tracking-[0.22em] disabled:opacity-30 disabled:cursor-not-allowed"
+              className="pq-ink-btn-bronze inline-flex items-center px-5 py-2 text-pq-mono-sm disabled:opacity-30 disabled:cursor-not-allowed"
             >
               {issuing
                 ? t("settingsV2.importTokens.issuing")
@@ -584,10 +582,9 @@ export function ImportTokensSection() {
                       {tk.name}
                       {revoked && (
                         <span
-                          className="font-mono uppercase ml-2"
+                          className="font-mono ml-2"
                           style={{
                             fontSize: "var(--pq-text-eyebrow)",
-                            letterSpacing: "0.16em",
                             color: "var(--pq-ivory-dim)",
                           }}
                         >
@@ -634,7 +631,7 @@ export function ImportTokensSection() {
                             type="button"
                             disabled={busy}
                             onClick={() => revoke(tk)}
-                            className="pq-ink-btn-bronze inline-flex items-center px-4 py-1.5 text-pq-mono-sm uppercase tracking-[0.22em] disabled:opacity-30"
+                            className="pq-ink-btn-bronze inline-flex items-center px-4 py-1.5 text-pq-mono-sm disabled:opacity-30"
                           >
                             {busy
                               ? t("settingsV2.importTokens.revoking")
@@ -644,7 +641,7 @@ export function ImportTokensSection() {
                             type="button"
                             disabled={busy}
                             onClick={() => setConfirmId(null)}
-                            className="pq-ink-btn-ghost px-3 text-pq-mono-sm uppercase tracking-[0.22em]"
+                            className="pq-ink-btn-ghost px-3 text-pq-mono-sm"
                           >
                             {t("settingsV2.importTokens.revokeCancel")}
                           </button>
@@ -653,7 +650,7 @@ export function ImportTokensSection() {
                         <button
                           type="button"
                           onClick={() => setConfirmId(tk.id)}
-                          className="pq-ink-btn-ghost px-3 text-pq-mono-sm uppercase tracking-[0.22em]"
+                          className="pq-ink-btn-ghost px-3 text-pq-mono-sm"
                         >
                           {t("settingsV2.importTokens.revoke")}
                         </button>

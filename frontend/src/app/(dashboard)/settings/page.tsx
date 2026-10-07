@@ -332,14 +332,13 @@ export default function SettingsPageV2() {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <span
-          className="font-mono uppercase"
+          className="font-mono"
           style={{
             fontSize: "var(--pq-text-eyebrow)",
-            letterSpacing: "0.22em",
             color: "var(--pq-bronze)",
           }}
         >
-          Loading…
+          불러오는 중…
         </span>
       </div>
     );
@@ -417,7 +416,7 @@ export default function SettingsPageV2() {
             id="section-a"
             className={onPhone("account")}
             style={{ scrollMarginTop: 96 }}
-            aria-label="Identity and security"
+            aria-label="계정"
           >
             {/* Phone: the back row already names this section. */}
             <div
@@ -432,10 +431,9 @@ export default function SettingsPageV2() {
             >
               <div>
                 <div
-                  className="font-mono uppercase"
+                  className="font-mono"
                   style={{
                     fontSize: "var(--pq-text-eyebrow)",
-                    letterSpacing: "0.22em",
                     color: "var(--pq-bronze)",
                     marginBottom: 8,
                   }}
@@ -479,7 +477,7 @@ export default function SettingsPageV2() {
             id="section-c"
             className={onPhone("notifications")}
             style={{ scrollMarginTop: 96 }}
-            aria-label="Notifications"
+            aria-label="알림"
           >
             {/* Phone: the back row already names this section. */}
             <div
@@ -494,10 +492,9 @@ export default function SettingsPageV2() {
             >
               <div>
                 <div
-                  className="font-mono uppercase"
+                  className="font-mono"
                   style={{
                     fontSize: "var(--pq-text-eyebrow)",
-                    letterSpacing: "0.22em",
                     color: "var(--pq-bronze)",
                     marginBottom: 8,
                   }}
@@ -542,23 +539,21 @@ export default function SettingsPageV2() {
                 }}
               >
                 <span
-                  className="font-mono uppercase"
+                  className="font-mono"
                   style={{
                     position: "absolute",
                     top: 14,
                     right: 14,
                     fontSize: "var(--pq-text-eyebrow)",
-                    letterSpacing: "0.2em",
                     color: "var(--pq-ivory-dim)",
                   }}
                 >
                   {t("settingsV2.push.sectionLabel")}
                 </span>
                 <div
-                  className="font-mono uppercase"
+                  className="font-mono"
                   style={{
                     fontSize: "var(--pq-text-eyebrow)",
-                    letterSpacing: "0.22em",
                     color: "var(--pq-bronze)",
                     marginBottom: 12,
                   }}
@@ -656,23 +651,21 @@ export default function SettingsPageV2() {
                 }}
               >
                 <span
-                  className="font-mono uppercase"
+                  className="font-mono"
                   style={{
                     position: "absolute",
                     top: 14,
                     right: 14,
                     fontSize: "var(--pq-text-eyebrow)",
-                    letterSpacing: "0.2em",
                     color: "var(--pq-ivory-dim)",
                   }}
                 >
                   {t("settingsV2.emailDelivery.sectionLabel")}
                 </span>
                 <div
-                  className="font-mono uppercase"
+                  className="font-mono"
                   style={{
                     fontSize: "var(--pq-text-eyebrow)",
-                    letterSpacing: "0.22em",
                     color: "var(--pq-bronze)",
                     marginBottom: 12,
                   }}
@@ -784,7 +777,7 @@ export default function SettingsPageV2() {
             id="section-e"
             className={onPhone("privacy")}
             style={{ scrollMarginTop: 96 }}
-            aria-label="Privacy"
+            aria-label="개인정보"
           >
             <PrivacyCardV2
               onRequestExport={handleRequestExport}
@@ -818,7 +811,7 @@ export default function SettingsPageV2() {
 
           {/* FOOT */}
           <div className="mt-2">
-            <FootSignature note="PivoxQuant · Settings · Vol. 14 — Seoul" />
+            <FootSignature note="PivoxQuant · 설정" />
           </div>
         </div>
       </main>

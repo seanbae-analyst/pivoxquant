@@ -68,8 +68,8 @@ export function StorageProofToggle({ reflectionId }: { reflectionId: number }) {
           className="h-3 w-3 shrink-0 text-[var(--pq-bronze-light)]"
           aria-hidden="true"
         />
-        <span className="font-mono text-pq-caption uppercase tracking-[0.18em] text-[var(--pq-bronze-light)]">
-          저장 형태 보기 · HOW THIS IS STORED
+        <span className="font-mono text-pq-caption text-[var(--pq-bronze-light)]">
+          저장 형태 보기
         </span>
         <ChevronDown
           className="h-3.5 w-3.5 shrink-0 text-[var(--pq-ivory-faint)] transition-transform duration-200"
@@ -92,7 +92,7 @@ export function StorageProofToggle({ reflectionId }: { reflectionId: number }) {
           {proof && (
             <>
               <ProofRow
-                label="당신이 입력한 내용 · PLAINTEXT"
+                label="당신이 입력한 내용 · 원문"
                 value={proof.rationale_plaintext}
                 serif
               />
@@ -132,7 +132,7 @@ function ProofRow({
 }) {
   return (
     <div className="space-y-1">
-      <span className="font-mono text-pq-caption uppercase tracking-[0.14em] text-[rgba(245,240,232,0.4)]">
+      <span className="font-mono text-pq-caption text-[rgba(245,240,232,0.4)]">
         {label}
       </span>
       <p

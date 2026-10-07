@@ -92,15 +92,15 @@ export function ObservationNoteModalV2({
       >
         <div style={{ marginBottom: 20 }}>
           <div
-            className="font-mono uppercase"
+            className="font-mono"
             style={{
               fontSize: "var(--pq-text-eyebrow)",
-              letterSpacing: "0.22em",
+              letterSpacing: "0.02em",
               color: "var(--pq-bronze)",
               marginBottom: 8,
             }}
           >
-            Observation · 관찰 노트
+            관찰 노트
           </div>
           <h2
             id={headlineId}
@@ -132,14 +132,14 @@ export function ObservationNoteModalV2({
           <button
             type="button"
             onClick={onClose}
-            className="font-mono uppercase"
+            className="font-mono"
             style={{
               background: "transparent",
               border: "1px solid var(--pq-ivory-line)",
               borderRadius: "var(--pq-radius-cta, 2px)",
               color: "var(--pq-ivory-dim)",
               fontSize: "var(--pq-text-eyebrow)",
-              letterSpacing: "0.2em",
+              letterSpacing: "0.02em",
               padding: "8px 18px",
               cursor: "pointer",
             }}

@@ -3,7 +3,7 @@
  *
  * 보유 종목을 등록하면 백엔드가 source="holding_seed" 인 BUY 행을 1줄 쓴다
  * (services/position_writes.add_holding_seed). 그 날짜는 등록일이지 매수일이
- * 아니므로, 활동 목록이 이 행을 "Add"(매수)로 적으면 언제 샀는지를 잘못 말한다.
+ * 아니므로, 활동 목록이 이 행을 "추가"(매수)로 적으면 언제 샀는지를 잘못 말한다.
  */
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
@@ -60,9 +60,9 @@ describe("RecentTransactionsBlock — holding seed rows", () => {
       </LocaleProvider>,
     );
     const seedMeta = screen.getByText(/보유 등록 ·/);
-    expect(seedMeta.textContent).not.toMatch(/^Add\b/);
-    // 체결 행은 그대로 Add.
-    expect(screen.getByText(/^Add ·/)).toBeInTheDocument();
+    expect(seedMeta.textContent).not.toMatch(/^추가 /);
+    // 체결 행은 그대로 추가.
+    expect(screen.getByText(/^추가 ·/)).toBeInTheDocument();
     // 시드는 오늘의 현금 유출이 아니다 — 부호 없이.
     expect(screen.queryByText("−USD 1,000.00")).toBeNull();
     expect(screen.getByText("USD 1,000.00")).toBeInTheDocument();
@@ -76,8 +76,8 @@ describe("RecentTransactionsBlock — holding seed rows", () => {
       </LocaleProvider>,
     );
     const adjMeta = screen.getByText(/보유 조정 ·/);
-    expect(adjMeta.textContent).not.toMatch(/^Trim\b/);
-    expect(screen.queryByText(/^Trim ·/)).toBeNull();
+    expect(adjMeta.textContent).not.toMatch(/^정리 /);
+    expect(screen.queryByText(/^정리 ·/)).toBeNull();
     // 조정은 현금 유입이 아니다 — 부호 없이.
     expect(screen.queryByText("+USD 210.00")).toBeNull();
     expect(screen.getByText("USD 210.00")).toBeInTheDocument();

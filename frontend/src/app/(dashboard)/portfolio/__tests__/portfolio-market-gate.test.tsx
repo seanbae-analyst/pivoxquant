@@ -159,18 +159,18 @@ describe("/portfolio — market-data display OFF (shipped default)", () => {
     renderPage();
     await act(async () => {});
 
-    expect(screen.queryByRole("columnheader", { name: /Last/i })).toBeNull();
-    expect(screen.queryByRole("columnheader", { name: /P\/L %/i })).toBeNull();
+    expect(screen.queryByRole("columnheader", { name: /현재가/ })).toBeNull();
+    expect(screen.queryByRole("columnheader", { name: /손익률/ })).toBeNull();
     expect(
-      screen.queryByRole("columnheader", { name: /Mkt value/i }),
+      screen.queryByRole("columnheader", { name: /평가액/ }),
     ).toBeNull();
 
     // The two cost-basis columns stay.
     expect(
-      screen.getByRole("columnheader", { name: /Avg cost/i }),
+      screen.getByRole("columnheader", { name: /평균가/ }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("columnheader", { name: /Weight · at cost/i }),
+      screen.getByRole("columnheader", { name: /비중 · 취득가 기준/ }),
     ).toBeInTheDocument();
   });
 
@@ -181,9 +181,9 @@ describe("/portfolio — market-data display OFF (shipped default)", () => {
     renderPage();
     await act(async () => {});
 
-    expect(screen.queryByText("Today")).toBeNull();
-    expect(screen.queryByText("Unrealized")).toBeNull();
-    expect(screen.getByText("Realized YTD")).toBeInTheDocument();
+    expect(screen.queryByText("오늘")).toBeNull();
+    expect(screen.queryByText("평가 손익")).toBeNull();
+    expect(screen.getByText("올해 실현 손익")).toBeInTheDocument();
   });
 
   it("hides the equity curve block entirely", async () => {
@@ -233,7 +233,7 @@ describe("/portfolio — market-data display OFF (shipped default)", () => {
     const { container } = renderPage();
     await act(async () => {});
 
-    expect(screen.queryByRole("columnheader", { name: /Mkt value/i })).toBeNull();
+    expect(screen.queryByRole("columnheader", { name: /평가액/ })).toBeNull();
     expect(screen.queryByTestId("equity-curve-stub")).toBeNull();
     expectNoFalseZeroMoney(container);
   });
@@ -257,22 +257,22 @@ describe("/portfolio — market-data display ON (unchanged from before the flag)
     await act(async () => {});
 
     for (const name of [
-      /Name/i,
-      /Shares/i,
-      /Avg cost/i,
-      /Last/i,
-      /P\/L %/i,
-      /Mkt value/i,
-      /Sector/i,
+      /종목/,
+      /수량/,
+      /평균가/,
+      /현재가/,
+      /손익률/,
+      /평가액/,
+      /섹터/,
     ]) {
       expect(screen.getByRole("columnheader", { name })).toBeInTheDocument();
     }
-    // Plain "Weight", not the at-cost variant.
+    // Plain "비중", not the at-cost variant.
     expect(
-      screen.getByRole("columnheader", { name: /^Weight/i }),
-    ).toHaveTextContent(/Weight/);
+      screen.getByRole("columnheader", { name: /^비중/ }),
+    ).toHaveTextContent(/비중/);
     expect(
-      screen.queryByRole("columnheader", { name: /Weight · at cost/i }),
+      screen.queryByRole("columnheader", { name: /비중 · 취득가 기준/ }),
     ).toBeNull();
   });
 
@@ -280,9 +280,9 @@ describe("/portfolio — market-data display ON (unchanged from before the flag)
     renderPage();
     await act(async () => {});
 
-    expect(screen.getByText("Today")).toBeInTheDocument();
-    expect(screen.getByText("Unrealized")).toBeInTheDocument();
-    expect(screen.getByText("Realized YTD")).toBeInTheDocument();
+    expect(screen.getByText("오늘")).toBeInTheDocument();
+    expect(screen.getByText("평가 손익")).toBeInTheDocument();
+    expect(screen.getByText("올해 실현 손익")).toBeInTheDocument();
     expect(screen.getByTestId("equity-curve-stub")).toBeInTheDocument();
   });
 

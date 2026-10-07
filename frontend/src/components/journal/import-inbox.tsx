@@ -44,7 +44,7 @@ import { apiFetch, ApiError } from "@/lib/api";
 import { API, PORTFOLIO_POSITIONS, PORTFOLIO_SUMMARY, PORTFOLIO_TRADES } from "@/lib/endpoints";
 import { displayName, parseIsoUtc } from "@/lib/format";
 import { fadeUp } from "@/lib/motion";
-import { sideLabel } from "@/lib/pre-trade";
+import { sideLabelKo } from "@/components/pre-trade/pre-trade-friction-core";
 import {
   RuledKicker,
   EditorialHead,
@@ -211,11 +211,10 @@ function TickerResolver({
         />
         {loading && (
           <span
-            className="font-mono uppercase"
-            aria-label="Searching"
+            className="font-mono"
+            aria-label="검색 중"
             style={{
               fontSize: "var(--pq-text-eyebrow)",
-              letterSpacing: "0.14em",
               color: "var(--pq-ivory-faint)",
             }}
           >
@@ -227,7 +226,7 @@ function TickerResolver({
           disabled={!picked || busy}
           aria-disabled={!picked || busy}
           onClick={() => picked && onConfirm(picked.ticker.trim().toUpperCase())}
-          className="pq-ink-btn-ghost whitespace-nowrap px-3 text-pq-eyebrow uppercase tracking-[0.16em] disabled:opacity-30 disabled:cursor-not-allowed"
+          className="pq-ink-btn-ghost whitespace-nowrap px-3 text-pq-eyebrow disabled:opacity-30 disabled:cursor-not-allowed"
         >
           {t("journal.import.tickerConfirm")}
         </button>
@@ -337,8 +336,9 @@ export function PendingTradeRow({
 
   const canApprove =
     thesisOk(thesis) && !row.needs_ticker && busy === null && (!needsConfirm || confirmed);
-  // Same wording as the /journal entries: "Long Entry · 진입" / "Position Exit · 정리".
-  const sideText = sideLabel(row.action);
+  // Same wording as the /journal entries: "진입" / "정리" (Korean only,
+  // CEO 2026-10-07 "영문 라벨도 한글로").
+  const sideText = sideLabelKo(row.action);
   const nameLabel = row.ticker ? displayName(row.ticker, row.name) : row.name;
   // Buy ↔ pause link (2026-09-29): buy rows with a resolved ticker only.
   const reflectionLink = useReflectionLink(
@@ -531,7 +531,7 @@ export function PendingTradeRow({
           onClick={approve}
           disabled={!canApprove}
           aria-disabled={!canApprove}
-          className="pq-ink-btn-bronze inline-flex items-center px-5 py-2 text-pq-mono-sm uppercase tracking-[0.22em] disabled:opacity-30 disabled:cursor-not-allowed"
+          className="pq-ink-btn-bronze inline-flex items-center px-5 py-2 text-pq-mono-sm disabled:opacity-30 disabled:cursor-not-allowed"
         >
           {busy === "approve" ? t("journal.import.working") : t("journal.import.approve")}
         </button>
@@ -540,7 +540,7 @@ export function PendingTradeRow({
           onClick={reject}
           disabled={busy !== null}
           aria-disabled={busy !== null}
-          className="pq-ink-btn-ghost px-4 text-pq-mono-sm uppercase tracking-[0.22em] disabled:opacity-30 disabled:cursor-not-allowed"
+          className="pq-ink-btn-ghost px-4 text-pq-mono-sm disabled:opacity-30 disabled:cursor-not-allowed"
         >
           {busy === "reject" ? t("journal.import.working") : t("journal.import.reject")}
         </button>
@@ -609,7 +609,7 @@ export function ImportInbox() {
         <Caption>{t("journal.import.emptyLine")}</Caption>
         <Link
           href="/journal/import"
-          className="font-mono text-pq-eyebrow uppercase tracking-[0.16em] text-[var(--pq-bronze-light)] underline-offset-4 hover:underline"
+          className="font-mono text-pq-eyebrow text-[var(--pq-bronze-light)] underline-offset-4 hover:underline"
         >
           {t("journal.import.importLink")}
         </Link>
@@ -633,7 +633,7 @@ export function ImportInbox() {
         <RuledKicker>{t("journal.import.kicker")}</RuledKicker>
         <Link
           href="/journal/import"
-          className="font-mono text-pq-eyebrow uppercase tracking-[0.16em] text-[var(--pq-bronze-light)] underline-offset-4 hover:underline"
+          className="font-mono text-pq-eyebrow text-[var(--pq-bronze-light)] underline-offset-4 hover:underline"
         >
           {t("journal.import.importLink")}
         </Link>

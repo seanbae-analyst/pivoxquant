@@ -78,17 +78,17 @@ describe("Pre-Trade Friction — cooldown 0 auto-proceed (FIX 3)", () => {
     expect(checkboxes.length).toBe(7);
     for (const cb of checkboxes) await user.click(cb);
 
-    await user.click(screen.getByRole("button", { name: /Start cooldown/ }));
+    await user.click(screen.getByRole("button", { name: /진입 시계 시작/ }));
 
     // onProceed (host journal commit) fires automatically — no extra click.
     await waitFor(() => expect(onProceed).toHaveBeenCalledTimes(1));
 
     // The 00:00 countdown UI must never appear.
     expect(screen.queryByText("00:00")).toBeNull();
-    expect(screen.queryByText(/Time remaining/)).toBeNull();
+    expect(screen.queryByText(/남은 시간/)).toBeNull();
 
     // Terminal recap is shown instead.
-    await waitFor(() => expect(screen.getByText("Close · 닫기")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("닫기")).toBeTruthy());
 
     // /start and /proceed both called; no /status polling needed.
     const urls = mockedFetch.mock.calls.map((c) => c[0]);

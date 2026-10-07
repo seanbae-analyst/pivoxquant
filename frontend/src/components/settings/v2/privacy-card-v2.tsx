@@ -43,7 +43,6 @@ const CSV_BUTTON_STYLE: React.CSSProperties = {
   background: "transparent",
   color: "var(--pq-ivory, #f5f0e8)",
   fontSize: "var(--pq-text-eyebrow)",
-  letterSpacing: "0.18em",
   borderRadius: 2,
   border: "1px solid var(--pq-bronze)",
   cursor: "pointer",
@@ -67,24 +66,24 @@ const COOKIE_ROWS: Array<{
 }> = [
   {
     id: "necessary",
-    label: "Strictly necessary",
-    help: "Auth session, CSRF, locale. Required for sign-in.",
+    label: "필수",
+    help: "로그인 세션, CSRF, 언어 설정. 로그인에 꼭 필요합니다.",
     alwaysOn: true,
   },
   {
     id: "analytics",
-    label: "Analytics",
-    help: "Anonymized page-view counts. Self-hosted.",
+    label: "분석",
+    help: "익명 처리한 페이지 조회 수. 자체 서버에서만 집계합니다.",
   },
   {
     id: "performance",
-    label: "Performance",
-    help: "Web Vitals · LCP / CLS / INP — for engineering.",
+    label: "성능",
+    help: "Web Vitals · LCP / CLS / INP — 속도 개선용입니다.",
   },
   {
     id: "marketing",
-    label: "Marketing",
-    help: "Off by default. We do not use ad-tech cookies.",
+    label: "마케팅",
+    help: "기본으로 꺼져 있습니다. 광고 추적 쿠키는 쓰지 않습니다.",
   },
 ];
 
@@ -217,7 +216,7 @@ export function PrivacyCardV2({
     // scroll. Outer keeps the id; inner drops it.
     <section
       style={{ scrollMarginTop: 96 }}
-      aria-label="Privacy"
+      aria-label="개인정보"
     >
       <div
         style={{
@@ -231,15 +230,14 @@ export function PrivacyCardV2({
       >
         <div>
           <div
-            className="font-mono uppercase"
+            className="font-mono"
             style={{
               fontSize: "var(--pq-text-eyebrow)",
-              letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
               marginBottom: 8,
             }}
           >
-            C · Privacy · PIPA · GDPR
+            개인정보 · 개인정보보호법 · GDPR
           </div>
           <div
             className="font-display"
@@ -251,25 +249,24 @@ export function PrivacyCardV2({
               color: "var(--pq-ivory)",
             }}
           >
-            Your data is{" "}
+            당신의 데이터는{" "}
             <span style={{ color: "var(--pq-bronze)" }}>
-              yours.
+              당신의 것.
             </span>
           </div>
         </div>
         <a
           href="/privacy"
-          className="font-mono uppercase"
+          className="font-mono"
           style={{
             fontSize: "var(--pq-text-eyebrow)",
-            letterSpacing: "0.18em",
             color: "var(--pq-bronze)",
             borderBottom: "1px solid rgba(184,149,106,0.15)",
             paddingBottom: 2,
             textDecoration: "none",
           }}
         >
-          Privacy policy ›
+          개인정보처리방침 ›
         </a>
       </div>
 
@@ -294,28 +291,26 @@ export function PrivacyCardV2({
           }}
         >
           <span
-            className="font-mono uppercase"
+            className="font-mono"
             style={{
               position: "absolute",
               top: 14,
               right: 14,
               fontSize: "var(--pq-text-eyebrow)",
-              letterSpacing: "0.2em",
               color: "var(--pq-ivory-dim)",
             }}
           >
-            C1 · Consent
+            동의
           </span>
           <div
-            className="font-mono uppercase"
+            className="font-mono"
             style={{
               fontSize: "var(--pq-text-eyebrow)",
-              letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
               marginBottom: 16,
             }}
           >
-            Cookie consent · Granular
+            쿠키 동의 · 항목별
           </div>
 
           {COOKIE_ROWS.map((row, idx) => (
@@ -358,18 +353,17 @@ export function PrivacyCardV2({
               </div>
               {row.alwaysOn ? (
                 <span
-                  className="font-mono uppercase"
+                  className="font-mono"
                   style={{
                     display: "inline-block",
                     padding: "2px 8px",
                     fontSize: "var(--pq-text-eyebrow)",
-                    letterSpacing: "0.18em",
                     border: "1px solid rgba(184,149,106,0.15)",
                     color: "var(--pq-bronze)",
                     borderRadius: 2,
                   }}
                 >
-                  Always on
+                  항상 켜짐
                 </span>
               ) : (
                 <PrivacyToggle
@@ -393,28 +387,26 @@ export function PrivacyCardV2({
           }}
         >
           <span
-            className="font-mono uppercase"
+            className="font-mono"
             style={{
               position: "absolute",
               top: 14,
               right: 14,
               fontSize: "var(--pq-text-eyebrow)",
-              letterSpacing: "0.2em",
               color: "var(--pq-ivory-dim)",
             }}
           >
-            C2 · Export
+            내보내기
           </span>
           <div
-            className="font-mono uppercase"
+            className="font-mono"
             style={{
               fontSize: "var(--pq-text-eyebrow)",
-              letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
               marginBottom: 16,
             }}
           >
-            Data export · PIPA Art. 35
+            데이터 내보내기 · 개인정보보호법 제35조
           </div>
 
           <p
@@ -426,9 +418,8 @@ export function PrivacyCardV2({
               marginBottom: 20,
             }}
           >
-            Download a portable JSON copy of everything stored for your
-            account: holdings, trades, pre-trade records, notes, pulse
-            history, and persona snapshots.
+            계정에 저장된 모든 것을 JSON 파일 하나로 받습니다. 보유 종목,
+            거래, 멈춤 기록, 메모, 주간 기록, 페르소나 스냅숏이 담깁니다.
           </p>
 
           {lastExport ? (
@@ -449,7 +440,7 @@ export function PrivacyCardV2({
                     color: "var(--pq-ivory)",
                   }}
                 >
-                  Last export
+                  마지막 내보내기
                 </div>
                 <div
                   className="font-mono"
@@ -470,7 +461,7 @@ export function PrivacyCardV2({
           <button
             type="button"
             onClick={onRequestExport}
-            className="font-mono uppercase"
+            className="font-mono"
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -479,14 +470,13 @@ export function PrivacyCardV2({
               background: "var(--pq-bronze)",
               color: "var(--pq-ink, #050505)",
               fontSize: "var(--pq-text-eyebrow)",
-              letterSpacing: "0.2em",
               borderRadius: 2,
               border: "none",
               cursor: "pointer",
               marginTop: 12,
             }}
           >
-            Download full export (JSON) →
+            전체 내보내기 (JSON) →
           </button>
           <p
             className="font-serif"
@@ -496,8 +486,8 @@ export function PrivacyCardV2({
               marginTop: 12,
             }}
           >
-            Instant download. No email, no wait — the file is generated and
-            saved to your device immediately.
+            바로 내려받습니다. 메일을 기다릴 필요 없이 파일이 곧장 이
+            기기에 저장됩니다.
           </p>
 
           {/* E2b — CSV (spreadsheet) downloads: raw stored fields only. */}
@@ -509,15 +499,14 @@ export function PrivacyCardV2({
             }}
           >
             <div
-              className="font-mono uppercase"
+              className="font-mono"
               style={{
                 fontSize: "var(--pq-text-eyebrow)",
-                letterSpacing: "0.22em",
                 color: "var(--pq-ivory-dim)",
                 marginBottom: 12,
               }}
             >
-              CSV · Spreadsheet
+              CSV · 스프레드시트
             </div>
             <p
               className="font-serif"
@@ -527,8 +516,8 @@ export function PrivacyCardV2({
                 marginBottom: 14,
               }}
             >
-              Download a single table as CSV — opens cleanly in Excel or Google
-              Sheets. Your raw records only, exactly as stored.
+              표 하나를 CSV로 받습니다. Excel이나 Google Sheets에서 바로
+              열립니다. 저장된 기록 그대로이며, 가공하지 않습니다.
             </p>
             <div
               style={{
@@ -538,20 +527,20 @@ export function PrivacyCardV2({
               }}
             >
               {([
-                ["trades", "거래내역 · Trades"],
-                ["positions", "보유종목 · Positions"],
+                ["trades", "거래내역"],
+                ["positions", "보유종목"],
                 // No "watchlist" button (2026-09-29): /watchlist is gone, so
                 // offering its CSV advertised a feature nobody can use. The
                 // backend still exports legacy rows in the JSON / .xlsx copy
                 // (PIPA §35 full record) — only the button is gone.
-                ["journal", "기록 · Journal"],
-                ["pulse", "주간 기록 · Pulse"],
+                ["journal", "기록"],
+                ["pulse", "주간 기록"],
               ] as const).map(([dataset, label]) => (
                 <button
                   key={dataset}
                   type="button"
                   onClick={() => onExportCsv?.(dataset)}
-                  className="font-mono uppercase"
+                  className="font-mono"
                   style={CSV_BUTTON_STYLE}
                 >
                   {label} ↓
@@ -567,7 +556,7 @@ export function PrivacyCardV2({
               <button
                 type="button"
                 onClick={() => onExportXlsx?.()}
-                className="font-mono uppercase"
+                className="font-mono"
                 style={CSV_BUTTON_STYLE}
               >
                 전체 데이터 · Excel (.xlsx) ↓
@@ -580,15 +569,14 @@ export function PrivacyCardV2({
                 unavailable (never fabricated). */}
             <div style={{ marginTop: 22 }}>
               <div
-                className="font-mono uppercase"
+                className="font-mono"
                 style={{
                   fontSize: "var(--pq-text-eyebrow)",
-                  letterSpacing: "0.22em",
                   color: "var(--pq-ivory-dim)",
                   marginBottom: 10,
                 }}
               >
-                해외주식 양도소득세 · Capital gains
+                해외주식 양도소득세
               </div>
               <div
                 style={{
@@ -598,14 +586,14 @@ export function PrivacyCardV2({
                 }}
               >
                 {([
-                  ["capital_gains", "양도세 내역 · Lots"],
-                  ["capital_gains_summary", "양도세 요약 · Yearly"],
+                  ["capital_gains", "양도세 내역"],
+                  ["capital_gains_summary", "양도세 연도별 요약"],
                 ] as const).map(([dataset, label]) => (
                   <button
                     key={dataset}
                     type="button"
                     onClick={() => onExportCsv?.(dataset)}
-                    className="font-mono uppercase"
+                    className="font-mono"
                     style={CSV_BUTTON_STYLE}
                   >
                     {label} ↓
@@ -643,28 +631,26 @@ export function PrivacyCardV2({
         }}
       >
         <span
-          className="font-mono uppercase"
+          className="font-mono"
           style={{
             position: "absolute",
             top: 14,
             right: 14,
             fontSize: "var(--pq-text-eyebrow)",
-            letterSpacing: "0.2em",
             color: ERROR_COLOR,
           }}
         >
-          C3 · Danger zone
+          계정 삭제
         </span>
         <div
-          className="font-mono uppercase"
+          className="font-mono"
           style={{
             fontSize: "var(--pq-text-eyebrow)",
-            letterSpacing: "0.22em",
             color: ERROR_COLOR,
             marginBottom: 16,
           }}
         >
-          Account deletion · PIPA Art. 36
+          회원 탈퇴 · 개인정보보호법 제36조
         </div>
 
         <div
@@ -687,7 +673,7 @@ export function PrivacyCardV2({
                 letterSpacing: "-0.02em",
               }}
             >
-              Sign out
+              로그아웃
             </div>
             <p
               className="font-serif"
@@ -698,13 +684,13 @@ export function PrivacyCardV2({
                 marginBottom: 16,
               }}
             >
-              Ends this browser session. Your data is preserved.
+              이 브라우저에서 로그아웃합니다. 데이터는 그대로 남습니다.
             </p>
             <button
               type="button"
               onClick={onSignOut}
               disabled={signingOut}
-              className="font-mono uppercase"
+              className="font-mono"
               style={{
                 display: "inline-flex",
                 alignItems: "center",
@@ -714,13 +700,12 @@ export function PrivacyCardV2({
                 color: "var(--pq-bronze)",
                 border: "1px solid var(--pq-bronze)",
                 fontSize: "var(--pq-text-eyebrow)",
-                letterSpacing: "0.2em",
                 borderRadius: 2,
                 cursor: signingOut ? "not-allowed" : "pointer",
                 opacity: signingOut ? 0.5 : 1,
               }}
             >
-              {signingOut ? "Signing out…" : "Sign out →"}
+              {signingOut ? "로그아웃 중…" : "로그아웃 →"}
             </button>
           </div>
 
@@ -736,7 +721,7 @@ export function PrivacyCardV2({
                 letterSpacing: "-0.02em",
               }}
             >
-              Delete account
+              계정 삭제
             </div>
             <p
               className="font-serif"
@@ -747,16 +732,15 @@ export function PrivacyCardV2({
                 marginBottom: 16,
               }}
             >
-              Permanent. Removes your holdings, trades, pre-trade records,
-              pulse answers and persona history. PIPA · 30-day purge after request.
+              되돌릴 수 없습니다. 보유 종목, 거래, 멈춤 기록, 주간 기록 답변,
+              페르소나 이력을 지웁니다. 요청하고 30일이 지나면 완전히 파기합니다(개인정보보호법).
             </p>
             <button
               type="button"
               onClick={() => setShowDelete(true)}
-              className="font-mono uppercase"
+              className="font-mono"
               style={{
                 fontSize: "var(--pq-text-eyebrow)",
-                letterSpacing: "0.18em",
                 color: ERROR_COLOR,
                 borderBottom: `1px solid ${ERROR_LINK_BORDER}`,
                 paddingBottom: 2,
@@ -766,7 +750,7 @@ export function PrivacyCardV2({
                 cursor: "pointer",
               }}
             >
-              Delete account →
+              계정 삭제 →
             </button>
           </div>
         </div>

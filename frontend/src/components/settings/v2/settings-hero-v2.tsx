@@ -8,7 +8,7 @@
  *
  * 2026-09-19: the H1 and deck were hardcoded English while every section
  * heading below them was already Korean. Both now read from settingsV2.hero
- * via useT; the eyebrow stays English (EN mono eyebrow is the house rule).
+ * via useT. 2026-10-07: the eyebrow went Korean too (CEO "영문 라벨도 한글로").
  *
  * Surface only — observation-language, no advice/recommend strings.
  */
@@ -21,7 +21,7 @@ interface Props {
 }
 
 export function SettingsHeroV2({
-  eyebrow = "Operations · Notifications · Privacy",
+  eyebrow = "운영 · 알림 · 개인정보",
 }: Props) {
   const t = useT();
   const h = (k: string) => t(`settingsV2.hero.${k}`);
@@ -33,10 +33,9 @@ export function SettingsHeroV2({
       }}
     >
       <div
-        className="font-mono uppercase"
+        className="font-mono"
         style={{
           fontSize: "var(--pq-text-eyebrow)",
-          letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
           marginBottom: 28,
         }}

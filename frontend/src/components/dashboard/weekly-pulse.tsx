@@ -20,15 +20,20 @@ import * as React from "react";
 import { toast } from "sonner";
 import { usePulse, type PulseEntry } from "@/lib/cfo/hooks";
 
-const TOPICS = [
-  "Macro",
-  "Earnings",
-  "Sector rotation",
-  "Single name",
-  "Risk",
-  "Options",
-  "Korean market",
-  "US market",
+/**
+ * Topic chips. The English key is what gets stored in the pulse's `topics`
+ * array (unchanged, so past answers keep matching); only the label the user
+ * sees is Korean (CEO 2026-10-07 "영문 라벨도 한글로").
+ */
+const TOPICS: ReadonlyArray<readonly [string, string]> = [
+  ["Macro", "거시경제"],
+  ["Earnings", "실적"],
+  ["Sector rotation", "업종 순환"],
+  ["Single name", "개별 종목"],
+  ["Risk", "리스크"],
+  ["Options", "옵션"],
+  ["Korean market", "국내 시장"],
+  ["US market", "미국 시장"],
 ];
 
 export function WeeklyPulseCard({ className }: { className?: string }) {
@@ -41,9 +46,9 @@ export function WeeklyPulseCard({ className }: { className?: string }) {
         onSubmit={async (entry) => {
           try {
             await submit(entry);
-            toast.success("Pulse recorded.");
+            toast.success("주간 회고를 기록했습니다.");
           } catch {
-            toast.error("Could not save pulse.");
+            toast.error("주간 회고를 저장하지 못했습니다.");
           }
         }}
       />
@@ -84,44 +89,45 @@ function PulseForm({
   return (
     <form onSubmit={handle} className="space-y-5">
       <LikertRow
-        label="Investing mood this week"
+        label="이번 주 투자 기분"
         value={mood}
         onChange={setMood}
       />
       <LikertRow
-        label="Confidence level"
+        label="자신감"
         value={confidence}
         onChange={setConfidence}
       />
 
       <div>
         <label
-          className="block text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-1.5"
+          className="block text-pq-eyebrow text-[var(--pq-bronze)] mb-1.5"
           htmlFor="pulse-worry"
         >
-          One concern on your mind
+          마음에 걸리는 것 하나
         </label>
         <input
           id="pulse-worry"
           type="text"
           value={worry}
           onChange={(e) => setWorry(e.target.value)}
-          placeholder="e.g. Fed pause odds"
+          placeholder="예) 미국 금리 동결 가능성"
           className="pq-ink-input w-full"
           maxLength={200}
         />
       </div>
 
       <div>
-        <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-2">
-          Topics you&apos;re watching
+        <div className="text-pq-eyebrow text-[var(--pq-bronze)] mb-2">
+          지켜보는 주제
         </div>
         <div className="flex flex-wrap gap-1.5">
-          {TOPICS.map((t) => {
+          {TOPICS.map(([t, label]) => {
             const active = topics.includes(t);
             return (
               <button
                 key={t}
+                aria-pressed={active}
                 type="button"
                 onClick={() => toggleTopic(t)}
                 className="text-pq-mono-sm px-2.5 py-1 rounded-[2px] border transition-colors"
@@ -135,7 +141,7 @@ function PulseForm({
                   color: active ? "var(--pq-ivory)" : "rgba(245,240,232,0.7)",
                 }}
               >
-                {t}
+                {label}
               </button>
             );
           })}
@@ -144,17 +150,17 @@ function PulseForm({
 
       <div>
         <label
-          className="block text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-1.5"
+          className="block text-pq-eyebrow text-[var(--pq-bronze)] mb-1.5"
           htmlFor="pulse-learn"
         >
-          Something you want to learn
+          배우고 싶은 것
         </label>
         <input
           id="pulse-learn"
           type="text"
           value={learn}
           onChange={(e) => setLearn(e.target.value)}
-          placeholder="e.g. Disposition effect basics"
+          placeholder="예) 처분 효과 기초"
           className="pq-ink-input w-full"
           maxLength={200}
         />
@@ -165,7 +171,7 @@ function PulseForm({
         disabled={busy}
         className="pq-ink-btn-bronze w-full disabled:opacity-50"
       >
-        {busy ? "Saving…" : "Record pulse"}
+        {busy ? "저장하는 중…" : "기록하기"}
       </button>
     </form>
   );
@@ -182,7 +188,7 @@ function LikertRow({
 }) {
   return (
     <div>
-      <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-1.5">
+      <div className="text-pq-eyebrow text-[var(--pq-bronze)] mb-1.5">
         {label}
       </div>
       <div className="flex gap-1.5">
@@ -193,7 +199,7 @@ function LikertRow({
               key={n}
               type="button"
               onClick={() => onChange(n)}
-              aria-label={`${label} — ${n} of 5`}
+              aria-label={`${label} — 5점 중 ${n}점`}
               aria-pressed={active}
               className="flex-1 h-9 rounded-[2px] border font-mono text-pq-body-sm transition-colors"
               style={{
@@ -247,8 +253,8 @@ function PulseHistory({ history }: { history: PulseEntry[] }) {
 
   return (
     <section className="mt-6 pt-5 border-t border-[var(--pq-ivory-line)]">
-      <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
-        Pulse history · last {recent.length} weeks
+      <div className="text-pq-eyebrow text-[var(--pq-bronze)]">
+        회고 기록 · 최근 {recent.length}주
       </div>
       <svg
         viewBox={`0 0 ${w} ${h}`}
@@ -257,7 +263,7 @@ function PulseHistory({ history }: { history: PulseEntry[] }) {
         preserveAspectRatio="none"
         className="mt-2"
         role="img"
-        aria-label="Emotion and confidence curves"
+        aria-label="기분과 자신감 추이"
       >
         {path(moodValues, "#B8956A")}
         {path(confValues, "var(--pq-live)")}
@@ -273,7 +279,7 @@ function PulseHistory({ history }: { history: PulseEntry[] }) {
               display: "inline-block",
             }}
           />
-          Mood
+          기분
         </span>
         <span className="flex items-center gap-1.5" style={{ color: "rgba(245,240,232,0.7)" }}>
           <span
@@ -285,7 +291,7 @@ function PulseHistory({ history }: { history: PulseEntry[] }) {
               display: "inline-block",
             }}
           />
-          Confidence
+          자신감
         </span>
       </div>
     </section>
