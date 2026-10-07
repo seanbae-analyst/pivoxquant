@@ -57,6 +57,6 @@
 cd frontend
 node scripts/ai-read-fixtures-render.mjs 20261007 ../tests/fixtures/screenshot_import/ai_read
 node scripts/ocr-eval-dump.mjs ../tests/fixtures/screenshot_import/ai_read ../tests/fixtures/screenshot_import/ai_read/ocr
-node scripts/ai-read-mask.mjs ../tests/fixtures/screenshot_import/ai_read <out>          # 누출 0 이어야
+node scripts/ai-read-mask.mjs ../tests/fixtures/screenshot_import/ai_read <out>          # 누출 0 이어야 (계좌번호꼴 줄은 통째로 삭제)
 node scripts/ai-read-score.mjs ../tests/fixtures/screenshot_import/ai_read ../tests/fixtures/screenshot_import/ai_read/reader_2026-10-07.json
 ```
