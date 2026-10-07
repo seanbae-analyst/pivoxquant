@@ -79,7 +79,6 @@ permissions:
 ### Rule 1: diff 추출
 
 ```bash
-cd /Users/seanbae/Desktop/취준/pivoxquant
 git fetch origin main
 git diff --name-only origin/main..HEAD > /tmp/changed-files.txt   # 커밋 전이면 git diff --cached --name-only
 wc -l /tmp/changed-files.txt

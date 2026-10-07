@@ -39,7 +39,7 @@ tools:
 
 ## 역할
 PivoxQuant 보안 설정이 유지되는지 확인. 새 코드/배포 변경에서 보안 퇴행 감지.
-백엔드 = Render `https://pivoxquant-api.onrender.com` (free plan, 15분 무트래픽 후 sleep). 첫 curl 이 느리거나 502 면 30초 뒤 재시도 — 단발로 판정 금지. 모든 경로는 `/Users/seanbae/Desktop/취준/pivoxquant` 기준.
+백엔드 = Render `https://pivoxquant-api.onrender.com` (free plan, 15분 무트래픽 후 sleep). 첫 curl 이 느리거나 502 면 30초 뒤 재시도 — 단발로 판정 금지. 모든 경로는 레포 루트 기준.
 
 ## 체크 영역
 

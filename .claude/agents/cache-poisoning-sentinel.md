@@ -63,7 +63,6 @@ user-specific 데이터를 cache 할 때 key 에 user_id 가 빠지면 User A �
 ## 살아있는 cache 사이트 (2026-09-21 측정 — 매 실행 시 다시 grep)
 
 ```bash
-cd /Users/seanbae/Desktop/취준/pivoxquant
 grep -rnE "lru_cache|cache\.get\(|_cache\b|_CACHE\b|cache_service\." services routes app.py --include="*.py" | grep -v __pycache__
 ```
 

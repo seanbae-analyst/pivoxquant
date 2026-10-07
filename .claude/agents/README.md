@@ -81,6 +81,23 @@ mv .claude/agents-archive/<name>.md .claude/agents/
 본문의 경로·숫자는 **측정 날짜와 함께** 적고, 삭제된 표면(services/ai · services/quant ·
 services/artifacts · Railway · 페르소나 라벨 · 요금제)을 다시 적지 마라.
 
+## 관리 루프 (2026-10-07)
+
+agent 본문은 코드가 바뀌어도 저절로 바뀌지 않는다 — 2026-10-07 에 security·legal-kr-fintech 가
+"AI 없음" 을, fx-consistency-guard 가 9/29 에 지운 `rolling_metrics.py` 를 들고 있었다. 그래서 셋을 둔다:
+
+| 언제 | 무엇이 | 하는 일 |
+|---|---|---|
+| PR 마다 | `regression-guards.yml` › `Agent definitions` | `check_agents.py --strict --no-history` — 하위 폴더 agent · name/description · 워크플로 `agent:` 계약이 틀리면 빨강 |
+| 매월 1일 09:00 KST | `agent-upgrades-monthly.yml` | `check_agents.py --days 31` 리포트 → Issue `agent-upgrades` |
+| 매월 1일 오전 | Claude Routine "Agent 체계 월간 정비" | `agent-ops` 로 리포트 처리 → agent 본문을 고치는 draft PR. 머지는 CEO |
+
+평소 규칙 두 가지:
+1. **기능 PR 이 agent 가 아는 것을 바꾸면 같은 PR 에서 그 agent 본문도 고친다.** 모르겠으면
+   `python3 scripts/agent_ops/check_agents.py` 의 W3(없는 경로)·I2(agent 보다 새로 바뀐 참조)를 본다.
+2. **새 영역은 새 agent 가 아니라 기존 본문의 한 섹션으로.** description 은 매 턴 로드되고(합계 예산 6,000B),
+   본문은 호출될 때만 로드된다. 새 agent 는 "기존 25개로 안 되는 이유" 를 이 README 에 적은 뒤에만.
+
 ## 아카이브 전 확인 (2026-08-30 교훈)
 
 agent 를 옮기기 전에 **그 파일명을 참조하는 테스트·워크플로가 있는지 먼저 grep 한다.**

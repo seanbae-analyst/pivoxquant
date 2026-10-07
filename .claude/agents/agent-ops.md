@@ -56,7 +56,7 @@ grep -rl '^name:' --include='*.md' .claude/agents/*/ | wc -l
 ### 2. Failure pattern 탐지
 **구조적 패턴**: background launch + verify 필요 → BLOCKED 빈도 / 특정 도메인 (DB migration · legal · FX) 실패율 / 토큰 폭주 (> 200K 단일 호출)
 **거짓 보고 탐지** (사후): "complete" 보고 후 실제 fail / "static review" claim 인데 verify 가능했음 / pytest 결과 fabrication
-**stale drift 탐지**: 본문이 삭제된 표면을 가리킴 —
+**stale drift 탐지**: 먼저 `python3 scripts/agent_ops/check_agents.py` (W3 없는 경로 · I2 agent 보다 새로 바뀐 참조 파일). 그다음 삭제된 표면을 단어로 —
 ```bash
 grep -nEi "railway|services/ai|services/quant|services/artifacts|alpaca|autotrad|CAUS|weekly memo|주간 리포트|17개|/profile|20문항|/watchlist|/signals|/reports|AI Coach" .claude/agents/*.md
 ```
@@ -85,14 +85,16 @@ grep -rn "<agent-name>" tests/ .claude/workflows/ scripts/
 
 ## 워크플로우
 
-### 자동 (live)
-- `.github/workflows/agent-upgrades-monthly.yml` — 매월 1일 09:00 KST, `scripts/agent_ops/propose_upgrades.py` 실행 → GitHub Issue (label `agent-upgrades`) 개설/갱신.
-- `agent-health-weekly.yml` 은 **`.disabled`** — 주간 health report 는 수동 호출로만.
+### 자동 (live, 2026-10-07) — 관리 루프는 `README.md` "관리 루프"
+- **PR 마다** `regression-guards.yml` 의 `Agent definitions` job — `check_agents.py --strict --no-history`, ERROR(하위 폴더 agent · frontmatter · 워크플로 계약) 면 빨강.
+- **매월 1일 09:00 KST** `agent-upgrades-monthly.yml` — `check_agents.py --days 31` 리포트 → GitHub Issue (label `agent-upgrades`).
+- **같은 날 오전** Claude Routine "Agent 체계 월간 정비" — 이 agent 로 리포트를 처리해 agent 본문을 고치는 **draft PR** 을 연다. 머지는 CEO.
+- `agent-health-weekly.yml` 은 **`.disabled`** — telemetry 가 CI 에 없다 (파일 상단 주석).
 
 ### 수동 호출
-1. `scripts/agent_ops/analyze_health.py` — telemetry 지난 7일 (success / verify / hallucination / token)
-2. 활성·아카이브 실측 + stale grep (위)
-3. 패턴 매칭 → upgrade 제안
+1. `python3 scripts/agent_ops/check_agents.py --days 30` — ERROR · WARN · INFO
+2. (로컬에 telemetry 가 있으면) `scripts/agent_ops/analyze_health.py` — 지난 7일 success / verify / hallucination / token
+3. INFO 처리: I1 gap 은 그 모듈을 **읽고** 가장 가까운 agent 본문에 한 섹션(경로·불변식·확인 명령, 측정 날짜)을 더한다. I2 drift 는 바뀐 파일의 커밋을 보고 본문의 경로·행번호·상수를 다시 잰다. 둘 다 "볼 필요 없음" 이면 그 이유를 PR 에 한 줄
 4. CEO review → PR
 
 사고 발생 시: "왜 agent 가 N test fail 했나" / "background launch 결정 기준" / "어떤 agent 추가·아카이브할지" → 즉시 패턴 분석 + 제안.
@@ -125,7 +127,7 @@ grep -rn "<agent-name>" tests/ .claude/workflows/ scripts/
 ## Telemetry 인프라 (`scripts/agent_ops/`, 존재)
 - `log_run.py` — 메인 오케스트레이터가 sub-agent 종료 직후 1행 append (CLI 또는 `--stdin`)
 - `analyze_health.py` — jsonl 파싱 · 패턴 매칭 · 보고서
-- `propose_upgrades.py` — 패턴 → fix 매핑 · agent .md diff · PR draft (`reports/agent_ops/`, `.bkit/state/proposed_diffs/`)
+- `check_agents.py` — git 추적 입력만으로 ERROR/WARN/INFO (2026-10-07, 옛 `propose_upgrades.py` 대체 — HANDOVER v9 문자열과 아카이브 agent 참조를 요구해 64건의 소음을 냈다)
 
 ## 절대 원칙
 - **거짓 보고 금지** — 모든 metric 은 실제 telemetry jsonl 또는 `ls`/`grep` 실측에서 도출

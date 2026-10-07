@@ -92,3 +92,17 @@ jobs:
               repo: context.repo.repo,
               body,
             });
+
+  # .claude/agents/ 계약 — 하위 폴더 agent(매 턴 로드), name/description,
+  # .claude/workflows 의 `agent:` 참조. 틀릴 수 없는 것만 막는다 (ERROR).
+  # WARN/INFO 는 월간 리포트(agent-upgrades-monthly.yml)가 낸다.
+  agent-definitions:
+    name: Agent definitions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Check .claude/agents
+        run: python3 scripts/agent_ops/check_agents.py --strict --no-history

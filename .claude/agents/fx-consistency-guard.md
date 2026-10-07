@@ -62,11 +62,12 @@ PR마다 강제 검증 — 사람 review 에만 의존하지 않음.
 | 2026-05-19 v45.3 | `risk_summary` aggregation (코드 삭제됨) | 700배 inflation | commit `eea051e5` |
 | 2026-05-19 v45.3 | `build_portfolio_context` (코드 삭제됨) | 동일 패턴 | commit `eea051e5` |
 
-### 살아있는 합산 사이트 (실측 2026-09-21)
+### 살아있는 합산 사이트 (실측 2026-10-07)
 
 - `routes/portfolio.py` — `total_value_*` (표시 플래그 ON 일 때만, `fx_service.get_rate()` 로 USD→KRW) · `cost_basis_all_krw = sum(cost_basis_krw)` (항상)
-- `services/behavior/concentration_mirror.py:107` · `services/behavior/scorer.py:281` — `fx_service.cost_basis_krw(p)`
-- `services/profile/rolling_metrics.py:206-215` — `fx_service.amount_to_krw(money, currency, ticker, fx)`
+- `services/behavior/concentration_mirror.py:107` · `services/behavior/scorer.py:283`(DEPRECATED 모듈) — `fx_service.cost_basis_krw(p)`
+- `services/alert.py:364` — 집중도 알림(`concentration`) 비중, `fx_service.cost_basis_krw(p)`
+- (`services/profile/rolling_metrics.py` 는 2026-09-29 `22526d3` 에서 테스트와 함께 삭제 — `amount_to_krw` 는 지금 호출처가 없다)
 - `services/reports/mirror_pdf.py` — 월간 거울 PDF (WeasyPrint) 의 금액 표시
 
 ### 정의
@@ -86,7 +87,6 @@ PR마다 강제 검증 — 사람 review 에만 의존하지 않음.
 ### Rule 1: Aggregation 패턴 grep
 
 ```bash
-cd /Users/seanbae/Desktop/취준/pivoxquant
 grep -rnE "sum\(|np\.sum\(|\.cumsum\(\)|total \+=|total_value|aggregate\(" \
   routes/portfolio.py services/behavior/ services/profile/ services/reports/ | tee /tmp/agg-sites.txt
 wc -l /tmp/agg-sites.txt
@@ -98,14 +98,13 @@ wc -l /tmp/agg-sites.txt
 2. `get_rate(` / `cost_basis_krw(` / `amount_to_krw(` / `is_krw_currency(` 중 하나 발견 → ✅ PASS · 모두 없으면 → ❌ P0 FLAG
 3. 인자가 mixed ticker 리스트면 변환 필수, 단일 통화 가정이면 화이트리스트 확인
 
-### Rule 3: 화이트리스트 (2026-09-21 검증)
+### Rule 3: 화이트리스트 (2026-10-07 검증)
 
 | 파일:라인 | 근거 |
 |---|---|
 | `services/fx_service.py` | FX 자체 (self-aggregation 없음) |
 | `routes/portfolio.py` total 블록 | `rate = fx_service.get_rate()`, `total_all_krw = total_usd * rate + total_krw` |
-| `services/behavior/scorer.py:281` · `concentration_mirror.py:107` | `cost_basis_krw` 사용 |
-| `services/profile/rolling_metrics.py:206-215` | `amount_to_krw` 사용 |
+| `services/behavior/scorer.py:283` · `concentration_mirror.py:107` · `services/alert.py:364` | `cost_basis_krw` 사용 |
 
 ### Rule 4: Recent diff scan
 
@@ -117,21 +116,20 @@ git diff origin/main..HEAD -- services/ routes/ | grep -E "^\+.*sum\(|^\+.*total
 
 ### Rule 5: 회귀 테스트 (기존)
 
-`tests/test_rolling_metrics_currency.py` · `tests/test_fx_staleness.py` · `tests/test_fx_historical.py` · `tests/test_fx_prefetch.py`. 새 합산 사이트엔 KR+US mix fixture 로 `total_pct_change ∈ [-100%, +1000%]` assert 추가 권고.
+`tests/test_fx_staleness.py` · `tests/test_fx_historical.py` · `tests/test_fx_prefetch.py`. 새 합산 사이트엔 KR+US mix fixture 로 `total_pct_change ∈ [-100%, +1000%]` assert 추가 권고.
 
 ---
 
 ## Verification Commands (run order)
 
 ```bash
-cd /Users/seanbae/Desktop/취준/pivoxquant
 # 1. sweep
-grep -rnE "sum\(|total_value|\.cumsum\(\)" routes/portfolio.py services/behavior/ services/profile/ services/reports/ | tee /tmp/agg.txt
+grep -rnE "sum\(|total_value|\.cumsum\(\)" routes/portfolio.py services/behavior/ services/profile/ services/reports/ services/alert.py | tee /tmp/agg.txt
 # 2. 화이트리스트 차감
 grep -v "services/fx_service.py" /tmp/agg.txt
 # 3. 각 hit Read 검증
 # 4. precedent regression
-grep -n "fx_service\.\(get_rate\|cost_basis_krw\|amount_to_krw\)" routes/portfolio.py services/behavior/*.py services/profile/rolling_metrics.py
+grep -n "fx_service\.\(get_rate\|cost_basis_krw\|amount_to_krw\)" routes/portfolio.py services/behavior/*.py services/alert.py
 ```
 
 ---
@@ -140,7 +138,7 @@ grep -n "fx_service\.\(get_rate\|cost_basis_krw\|amount_to_krw\)" routes/portfol
 
 다음 PR은 본 agent 통과 **필수**:
 - `services/behavior/*.py` · `services/pre_trade/*.py` · `services/imports/ledger.py` 변경 (동결 파일 — escape 토큰 `fx-consistency-guard approved`, `.claude/frozen_files.yaml`)
-- `routes/portfolio.py` total / aggregate 변경 · `services/fx_service.py` · `services/profile/rolling_metrics.py` · `services/reports/mirror_pdf.py`
+- `routes/portfolio.py` total / aggregate 변경 · `services/fx_service.py` · `services/alert.py` (집중도) · `services/reports/mirror_pdf.py`
 
 ---
 

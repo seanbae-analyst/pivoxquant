@@ -238,7 +238,7 @@ fetch('/api/auth/dev-login', {
 
 ## PivoxQuant Context (2026-09-21 기준)
 
-**프로덕션**: Render(백엔드) + Vercel(프론트) / pytest 2457 pass (`docs/qa/nightly-verify-2026-09-21.md`) / 무료 클로즈드 베타
+**프로덕션**: Render(백엔드) + Vercel(프론트) / pytest 2457 pass (2026-09-21 야간 검증 기록 — 레포에 없음, launchd 로컬 산출물) / 무료 클로즈드 베타
 **9 bug 패턴 원본**: `~/.claude/projects/-Users-seanbae-Desktop---/memory/feedback_bug_fix_patterns.md`
 
 ### 도메인 reference
