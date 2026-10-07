@@ -203,10 +203,11 @@ services:
       # BETA_PASSWORD — retired 2026-09-04 (free launch, no gate). The
       #   frontend interstitial and its env vars were deleted; nothing
       #   reads this anywhere any more.
-      # ANTHROPIC_API_KEY — the support chatbot was the only live consumer and
-      #   it was removed 2026-09-01; services/ai/ itself was deleted the same
-      #   day (zero callers). Only the disabled self-healing / morning-triage
-      #   scripts still import anthropic, and they do not run on Render.
+      # ANTHROPIC_API_KEY / AI_READ_ENABLED — the capture / pasted-text AI read
+      #   (services/ai_read.py, 2026-10-07) is the only consumer and is OFF until
+      #   BOTH are set AND the overseas-transfer consent + privacy-policy change
+      #   are approved (docs/product/AI_READ_EXPERIMENT_2026-10-07.md §9).
+      #   The frontend needs NEXT_PUBLIC_AI_READ=1 on Vercel as well.
       # SIM_ONBOARD_SECRET — gone. CAUS was retired 2026-09-01 and the
       #   sim-onboard blueprint deleted with it; setting this now does nothing.
       # STRIPE_* — payment stays gated off until BUSINESS_REGISTRATION and the

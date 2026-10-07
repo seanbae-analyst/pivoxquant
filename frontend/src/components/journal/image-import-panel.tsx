@@ -33,12 +33,23 @@ import {
   type ReviewRow,
 } from "@/components/journal/ocr-review-table";
 import type { ImportCreateResponse } from "@/lib/types";
+import { maskScreen } from "@/lib/fill-ocr/mask";
+import { fillFromAi, type AiFillRow, type AiReadScreen } from "@/lib/ai-read";
+import { AiReadOffer } from "@/components/ui/ai-read-offer";
+import { AiContentBadge } from "@/components/ui/ai-content-badge";
 
 export const IMAGE_ACCEPT = "image/png,image/jpeg,image/webp";
 export const MAX_IMAGES_PER_PICK = 10;
 
 const BROKERS = ["unknown", "kis", "kiwoom", "toss", "mirae", "samsung", "nh", "overseas"] as const;
 type Broker = (typeof BROKERS)[number];
+
+/** A read capture's masked text — what an AI read would send (lib/fill-ocr/mask.ts). */
+interface AiText {
+  index: number;
+  fileName: string;
+  text: string;
+}
 
 interface FileNote {
   index: number;
@@ -68,6 +79,9 @@ export function ImageImportPanel({
   const [rows, setRows] = useState<ReviewRow[]>([]);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [aiTexts, setAiTexts] = useState<AiText[]>([]);
+  // Rule-read rows kept while AI rows are shown, so the user can go back.
+  const [ruleRows, setRuleRows] = useState<ReviewRow[] | null>(null);
   // A newer pick or read makes an in-flight run stale: its results are dropped.
   const runId = useRef(0);
 
@@ -82,6 +96,8 @@ export function ImageImportPanel({
     setError(null);
     setNotes([]);
     setRows([]);
+    setAiTexts([]);
+    setRuleRows(null);
     setProgress(t("journal.import.image.loadingOcr"));
     let session;
     try {
@@ -93,6 +109,7 @@ export function ImageImportPanel({
     }
     const nextNotes: FileNote[] = [];
     const nextRows: ReviewRow[] = [];
+    const nextAi: AiText[] = [];
     try {
       for (let i = 0; i < files.length; i++) {
         const f = files[i];
@@ -101,6 +118,7 @@ export function ImageImportPanel({
         );
         try {
           const words = await session.read(f);
+          nextAi.push({ index: i, fileName: f.name, text: maskScreen(words).text });
           const parsed = parseFillScreen(words);
           if (parsed.screenType !== "fills") {
             nextNotes.push({ index: i, fileName: f.name, kind: "rejected", screenType: parsed.screenType });
@@ -124,7 +142,22 @@ export function ImageImportPanel({
     if (myRun !== runId.current) return;
     setNotes(nextNotes);
     setRows(nextRows);
+    setAiTexts(nextAi);
     setProgress(null);
+  }
+
+  /** AI rows replace the table; the rule-read rows are kept for "go back". */
+  function onAiScreens(screens: AiReadScreen<AiFillRow>[]) {
+    const aiRows = screens.flatMap((s, k) =>
+      s.rows.map((r, j) => rowFromParsed(fillFromAi(r), aiTexts[k]?.fileName ?? "", j, aiTexts[k]?.index ?? k)),
+    );
+    if (aiRows.length === 0) {
+      setError(t("aiRead.noRows"));
+      return;
+    }
+    setError(null);
+    setRuleRows(rows);
+    setRows(aiRows);
   }
 
   async function send() {
@@ -145,6 +178,8 @@ export function ImageImportPanel({
       setRows([]);
       setNotes([]);
       setFiles([]);
+      setAiTexts([]);
+      setRuleRows(null);
       onResult(result);
     } catch (err) {
       const msg = err instanceof ApiError || err instanceof Error ? err.message : "";
@@ -268,6 +303,25 @@ export function ImageImportPanel({
             </li>
           ))}
         </ul>
+      )}
+
+      {progress === null && ruleRows === null && (
+        <AiReadOffer<AiFillRow> kind="fills" texts={aiTexts.map((a) => a.text)} onScreens={onAiScreens} />
+      )}
+
+      {ruleRows !== null && (
+        <div className="mt-4 flex flex-wrap items-center gap-3" data-testid="ai-read-applied">
+          <AiContentBadge />
+          <Caption>{t("aiRead.applied")}</Caption>
+          <button
+            type="button"
+            onClick={() => { setRows(ruleRows); setRuleRows(null); }}
+            className="pq-ink-btn-ghost px-3 text-pq-mono-sm uppercase tracking-[0.18em]"
+            data-testid="ai-read-revert"
+          >
+            {t("aiRead.revert")}
+          </button>
+        </div>
       )}
 
       {rows.length > 0 && (

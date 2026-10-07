@@ -26,6 +26,10 @@ import type { ScreenType } from "@/lib/fill-ocr/parse";
 import { OcrInputError, MAX_IMAGE_BYTES, openOcrSession } from "@/lib/fill-ocr/ocr";
 import { IMAGE_ACCEPT, MAX_IMAGES_PER_PICK } from "@/components/journal/image-import-panel";
 import { TickerSearch, type TickerSearchResult } from "@/components/shared/ticker-search";
+import { maskScreen } from "@/lib/fill-ocr/mask";
+import { holdingFromAi, type AiHoldingRow, type AiReadScreen } from "@/lib/ai-read";
+import { AiReadOffer } from "@/components/ui/ai-read-offer";
+import { AiContentBadge } from "@/components/ui/ai-content-badge";
 import type {
   HoldingsCommitResponse,
   HoldingsExisting,
@@ -266,6 +270,10 @@ export function HoldingsImportPanel({
   const [consent, setConsent] = React.useState(false);
   const [sending, setSending] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  // Masked text per read capture (lib/fill-ocr/mask.ts) — what an AI read sends.
+  const [aiTexts, setAiTexts] = React.useState<{ index: number; fileName: string; text: string }[]>([]);
+  // Rule-read rows kept while AI rows are shown, so the user can go back.
+  const [ruleRows, setRuleRows] = React.useState<HoldingRow[] | null>(null);
   const runId = React.useRef(0);
 
   const oversized = files.some((f) => f.size > MAX_IMAGE_BYTES);
@@ -289,6 +297,8 @@ export function HoldingsImportPanel({
     setError(null);
     setNotes([]);
     setRows([]);
+    setAiTexts([]);
+    setRuleRows(null);
     setProgress(t("journal.import.image.loadingOcr"));
     let session;
     try {
@@ -300,12 +310,15 @@ export function HoldingsImportPanel({
     }
     const nextNotes: FileNote[] = [];
     let nextRows: HoldingRow[] = [];
+    const nextAi: { index: number; fileName: string; text: string }[] = [];
     try {
       for (let i = 0; i < files.length; i++) {
         const f = files[i];
         setProgress(t("journal.import.image.progress").replace("{i}", String(i + 1)).replace("{n}", String(files.length)));
         try {
-          const parsed = parseHoldingsScreen(await session.read(f));
+          const words = await session.read(f);
+          nextAi.push({ index: i, fileName: f.name, text: maskScreen(words).text });
+          const parsed = parseHoldingsScreen(words);
           if (parsed.screenType !== "holdings") {
             nextNotes.push({ index: i, fileName: f.name, kind: "rejected", screenType: parsed.screenType });
             continue;
@@ -326,22 +339,48 @@ export function HoldingsImportPanel({
       await session.close();
     }
     if (myRun !== runId.current) return;
-    nextRows = mergeIdenticalReads(nextRows);
-    if (nextRows.length > 0) {
-      setProgress(t("dashboard.portfolio.holdingsImport.resolving"));
-      try {
-        const p = await preview(nextRows.map((r) => ({
-          name: r.readName || null, code: r.readCode || null, currency: r.currency || null,
-        })));
-        nextRows = dropIdenticalTickerDuplicates(nextRows.map((r, i) => applyPreview(r, p.find((x) => x.index === i))));
-      } catch (err) {
-        setError(err instanceof Error && err.message ? err.message : t("dashboard.portfolio.holdingsImport.previewFailed"));
-      }
-    }
+    nextRows = await resolve(nextRows);
     if (myRun !== runId.current) return;
     setNotes(nextNotes);
     setRows(nextRows);
+    setAiTexts(nextAi);
     setProgress(null);
+  }
+
+  /** Merge overlapping reads, then resolve names/codes on the server. */
+  async function resolve(input: HoldingRow[]): Promise<HoldingRow[]> {
+    let next = mergeIdenticalReads(input);
+    if (next.length === 0) return next;
+    setProgress(t("dashboard.portfolio.holdingsImport.resolving"));
+    try {
+      const p = await preview(next.map((r) => ({
+        name: r.readName || null, code: r.readCode || null, currency: r.currency || null,
+      })));
+      next = dropIdenticalTickerDuplicates(next.map((r, i) => applyPreview(r, p.find((x) => x.index === i))));
+    } catch (err) {
+      setError(err instanceof Error && err.message ? err.message : t("dashboard.portfolio.holdingsImport.previewFailed"));
+    }
+    return next;
+  }
+
+  /** AI rows replace the table; the rule-read rows are kept for "go back". */
+  async function onAiScreens(screens: AiReadScreen<AiHoldingRow>[]) {
+    const myRun = ++runId.current;
+    const aiRows = screens.flatMap((s, k) =>
+      s.rows
+        .filter((r) => !r.truncated)
+        .map((r, j) => rowFromHolding(holdingFromAi(r), aiTexts[k]?.fileName ?? "", j, aiTexts[k]?.index ?? k)),
+    );
+    if (aiRows.length === 0) {
+      setError(t("aiRead.noRows"));
+      return;
+    }
+    setError(null);
+    const resolved = await resolve(aiRows);
+    if (myRun !== runId.current) return;
+    setProgress(null);
+    setRuleRows(rows);
+    setRows(resolved);
   }
 
   const patch = (key: string, p: Partial<HoldingRow>) =>
@@ -427,6 +466,8 @@ export function HoldingsImportPanel({
             setFiles(Array.from(e.target.files ?? []).slice(0, MAX_IMAGES_PER_PICK));
             setRows([]);
             setNotes([]);
+            setAiTexts([]);
+            setRuleRows(null);
           }}
           className="sr-only"
           data-testid="holdings-image-input"
@@ -477,6 +518,25 @@ export function HoldingsImportPanel({
             </li>
           )}
         </ul>
+      )}
+
+      {progress === null && ruleRows === null && (
+        <AiReadOffer<AiHoldingRow> kind="holdings" texts={aiTexts.map((a) => a.text)} onScreens={onAiScreens} />
+      )}
+
+      {ruleRows !== null && (
+        <div className="mt-4 flex flex-wrap items-center gap-3" data-testid="ai-read-applied">
+          <AiContentBadge />
+          <span className="font-serif" style={{ ...body, margin: 0 }}>{t("aiRead.applied")}</span>
+          <button
+            type="button"
+            onClick={() => { setRows(ruleRows); setRuleRows(null); }}
+            className="pq-ink-btn-ghost px-3 text-pq-mono-sm uppercase tracking-[0.18em]"
+            data-testid="ai-read-revert"
+          >
+            {t("aiRead.revert")}
+          </button>
+        </div>
       )}
 
       {rows.length > 0 && (

@@ -346,6 +346,10 @@ export const API = {
     // POST JSON {consent, broker?, rows:[…reviewed OCR rows]} → same shape as `create`.
     // The screenshot itself is read in the browser and never uploaded.
     image: "/api/portfolio/imports/image",
+    // POST JSON {kind:"holdings"|"fills", screens:[masked text…], consent:true}
+    //   → {kind, model, screens:[{screen_type, reason, rows}]}. Flag-gated (503
+    //   AI_READ_DISABLED when off) — services/ai_read.py, lib/ai-read.ts.
+    aiRead: "/api/portfolio/imports/ai-read",
   },
   // Holdings-screen capture → positions (docs/product/HOLDINGS_IMPORT_DESIGN.md).
   // The capture is read in the browser; only reviewed JSON rows are sent.

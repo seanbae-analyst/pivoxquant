@@ -11,6 +11,7 @@
 
 import { useT } from "@/lib/locale";
 import type { ParsedFill } from "@/lib/fill-ocr/parse";
+import { maskSourceText } from "@/lib/fill-ocr/mask";
 
 export type ReviewField = "date" | "time" | "name" | "code" | "side" | "shares" | "price" | "currency";
 
@@ -106,7 +107,8 @@ export function rowPayload(r: ReviewRow) {
     shares: num(v.shares),
     price: num(v.price),
     currency: v.currency,
-    source_text: r.sourceText,
+    // Account / customer lines never leave the device (lib/fill-ocr/mask.ts).
+    source_text: maskSourceText(r.sourceText),
     user_filled: userFilled,
   };
 }

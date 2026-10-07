@@ -123,6 +123,14 @@ PASSWORD_REGISTRATION_ENABLED = (
 )
 
 
+# AI_READ_ENABLED — POST /api/portfolio/imports/ai-read (잔고·체결 캡처의 마스킹된
+# OCR 텍스트를 Claude 가 행으로 옮겨 적는다, 추출만). 기본 꺼짐 (2026-10-07).
+# 켜려면 ANTHROPIC_API_KEY 와 함께, 국외이전 동의 문구·개인정보처리방침 변경을
+# 대표가 확인해야 한다 — docs/product/AI_READ_EXPERIMENT_2026-10-07.md §5·§9.
+# 읽는 곳은 services/ai_read.py::ai_read_enabled() 하나.
+AI_READ_ENABLED = os.environ.get("AI_READ_ENABLED", "0").strip() in _TRUTHY_ENV
+
+
 class Config:
     SECRET_KEY = _secret
     SQLALCHEMY_DATABASE_URI = _db_url
@@ -138,6 +146,9 @@ class Config:
 
     # routes/auth.py::register 가 ``current_app.config`` 로 읽는다.
     PASSWORD_REGISTRATION_ENABLED = PASSWORD_REGISTRATION_ENABLED
+
+    # services/ai_read.py::ai_read_enabled() 가 읽는다. 테스트가 덮어쓴다.
+    AI_READ_ENABLED = AI_READ_ENABLED
 
     # Connection pool settings (only effective for PostgreSQL; SQLite ignores them)
     if IS_POSTGRES:

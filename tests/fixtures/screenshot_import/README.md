@@ -49,3 +49,14 @@
 | NH | | | | |
 
 실기기 캡처는 **커밋하지 않는다**(개인 거래 정보) — `real/` 아래 두면 `.gitignore` 가 막는다.
+
+## `ai_read/` — 잔고 캡처 AI 판독 실험 (2026-10-07)
+설계·결과: `docs/product/AI_READ_EXPERIMENT_2026-10-07.md`. 가상 캡처 15장(보유 10 · 보유 없음 5), 숫자는 시드 난수.
+`ground_truth.json` 의 `pii` 는 가상 계좌번호·이름(마스킹 누출 측정용, 실제 정보 아님).
+```
+cd frontend
+node scripts/ai-read-fixtures-render.mjs 20261007 ../tests/fixtures/screenshot_import/ai_read
+node scripts/ocr-eval-dump.mjs ../tests/fixtures/screenshot_import/ai_read ../tests/fixtures/screenshot_import/ai_read/ocr
+node scripts/ai-read-mask.mjs ../tests/fixtures/screenshot_import/ai_read <out>          # 누출 0 이어야 (계좌번호꼴 줄은 통째로 삭제)
+node scripts/ai-read-score.mjs ../tests/fixtures/screenshot_import/ai_read ../tests/fixtures/screenshot_import/ai_read/reader_2026-10-07.json
+```
