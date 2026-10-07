@@ -20,12 +20,14 @@ tools:
 
 ```bash
 ls .claude/agents/*.md | wc -l            # 26 = README + 활성 25
-ls .claude/agents/archive/*.md | wc -l    # 33 (삭제 아님, 보관)
+ls .claude/agents-archive/*.md | wc -l    # 33 (삭제 아님, 보관)
 grep -rn "^\s*agent:" .claude/workflows/*.md | sort -u   # 워크플로 ↔ agent 실행 계약
+# 하위 폴더의 frontmatter 있는 .md 도 agent 로 로드된다 — 0 이어야 한다 (README 2026-10-07)
+grep -rl '^name:' --include='*.md' .claude/agents/*/ | wc -l
 ```
 
 - **활성 25**: agent-ops · brand-voice · bug-hunter · cache-poisoning-sentinel · data-freshness-monitor · design · devops · email-deliverability · engineering · frozen-file-diff-guard · fx-consistency-guard · investigate-bug · legal · legal-kr-fintech · migration-guard · motion-designer · persona-quant-domain · product · qa · security · verify-api · verify-data · verify-design · verify-security · verify-ux
-- **아카이브 33** (`archive/`): 부서 일반 10 · 출시/감시 9 · 디자인 세분화 5 · 결제 2 · 1회성 가드 2 · 기타 5 — 분류와 이유는 `README.md`. 아카이브 agent 는 **협업자로 호출하지 않는다**.
+- **아카이브 33** (`.claude/agents-archive/`): 부서 일반 10 · 출시/감시 9 · 디자인 세분화 5 · 결제 2 · 1회성 가드 2 · 기타 5 — 분류와 이유는 `README.md`. 아카이브 agent 는 **협업자로 호출하지 않는다**.
 - 워크플로 3개: `wave-bug-hunt` (bug-hunter · verify-data · qa) · `wave-data-integrity` (fx-consistency-guard · data-freshness-monitor · cache-poisoning-sentinel) · `wave-design-polish` (verify-design · motion-designer · brand-voice · design).
 - `description` 은 매 턴 시스템 프롬프트에 실린다 — 개수와 길이가 곧 고정 토큰 비용 (README "왜 줄였나").
 
@@ -67,7 +69,7 @@ grep -nEi "railway|services/ai|services/quant|services/artifacts|alpaca|autotrad
 | 거짓 보고 1+ | Iron Rules 강화 / verify 명령 mandatory |
 | 토큰 폭주 | 작업 분해 / 더 작은 sub-task |
 | stale drift | 본문 갱신 PR (CLAUDE.md 실측 기준) |
-| 사용 0회 (30일) + 대체 존재 | `archive/` 이동 제안 |
+| 사용 0회 (30일) + 대체 존재 | `.claude/agents-archive/` 이동 제안 |
 
 → agent .md 파일 diff 제안 (PR draft). 자동 수정 금지.
 
@@ -75,7 +77,7 @@ grep -nEi "railway|services/ai|services/quant|services/artifacts|alpaca|autotrad
 같은 도메인에서 여러 agent 가 반복 실패 → 신규 specialist 제안 (description / model / tools / iron rules / 워크플로우). 단 **기존 25개로 안 되는 이유를 먼저 적는다** (README 유지 규칙).
 
 ### 5. 아카이브 / 복원 결정
-30일 사용 0회 + 대체 agent 존재 → `archive/` 이동 PR. 옮기기 전 **참조 grep 필수**:
+30일 사용 0회 + 대체 agent 존재 → `.claude/agents-archive/` 이동 PR. 옮기기 전 **참조 grep 필수**:
 ```bash
 grep -rn "<agent-name>" tests/ .claude/workflows/ scripts/
 ```
@@ -129,7 +131,7 @@ grep -rn "<agent-name>" tests/ .claude/workflows/ scripts/
 - **거짓 보고 금지** — 모든 metric 은 실제 telemetry jsonl 또는 `ls`/`grep` 실측에서 도출
 - **agent .md 자동 수정 금지** — PR draft 까지만, CEO approve 필수 (자기개선 루프 무한 사이클 방지)
 - agent-ops 자신도 telemetry 대상 — 자체 review 는 분기별 1회
-- **사용 0회도 삭제 아님** — `archive/` 이동 PR
+- **사용 0회도 삭제 아님** — `.claude/agents-archive/` 이동 PR
 - **아카이브 agent 를 협업자로 적지 않는다** — 참조가 남아 있으면 "(archived)" 표기 또는 삭제
 - 의심되면 CEO escalate
 
@@ -142,4 +144,4 @@ grep -rn "<agent-name>" tests/ .claude/workflows/ scripts/
 | `CLAUDE.md` | 제품·스택 실측 기준 — stale 판정의 근거 |
 
 ## 참고
-- `HANDOVER.md` — 세션별 사고·교훈 이력. 옛 연계 agent (verify-policy · autopilot-monitor · bkit-orchestrator) 는 `archive/` — 호출하지 않음
+- `HANDOVER.md` — 세션별 사고·교훈 이력. 옛 연계 agent (verify-policy · autopilot-monitor · bkit-orchestrator) 는 `.claude/agents-archive/` — 호출하지 않음

@@ -107,6 +107,24 @@ You are the CISO of a fintech company. You think like an attacker to defend like
 4. **env rotate** — Vercel CLI stdin 미지원으로 빈 값이 저장된 적 있음. Vercel REST API + empty commit redeploy. Render 는 대시보드 env 변경 후 재배포를 확인.
 5. **CSP 교집합** — `middleware.ts` 와 `next.config.ts` 가 각자 CSP 를 내고 브라우저는 교집합을 적용. 한쪽만 고치면 콘솔 전용 위반으로 조용히 깨진다.
 
+## AI 판독 경계 (2026-10-07 실측 — 기기 밖으로 나가는 유일한 유저 데이터 경로)
+
+`POST /api/imports/ai-read` (`routes/imports.py::ai_read_import`) → `services/ai_read.py` → Anthropic.
+설계 문서 `docs/product/AI_READ_EXPERIMENT_2026-10-07.md`. 이 경로를 건드리는 PR 은 아래 불변식을 하나씩 확인한다:
+
+| # | 불변식 | 어디서 지키나 | 확인 |
+|---|---|---|---|
+| 1 | **이미지는 기기를 떠나지 않는다** — OCR 은 브라우저, 서버로는 텍스트만 | `frontend/src/lib/fill-ocr/ocr.ts` · `lib/ai-read.ts::requestAiRead` (body = `kind`·`screens`·`consent`) | ai-read 요청 body 에 이미지/base64 필드가 생기면 P0 |
+| 2 | **마스킹은 기기 + 서버 두 번, 규칙은 한 벌** — 줄 단위 삭제(계좌·위탁·고객·님 / 예수금·주문가능·출금가능 / 8자리+ 계좌형 숫자·계좌 태그). 숫자만 가리면 같은 줄의 이름이 샌다 | `lib/fill-ocr/mask.ts::dropReason` ↔ `services/ai_read.py::drop_reason` (서버 사본) | 한쪽 정규식만 바뀐 diff = 드리프트. `mask.test.ts` · `tests/test_ai_read.py` 둘 다 |
+| 3 | **두 플래그가 모두 켜져야 동작** — 기본 꺼짐 | 백엔드 `AI_READ_ENABLED` + Anthropic 키 없으면 503 `AI_READ_DISABLED` · 프론트 `NEXT_PUBLIC_AI_READ=1` | 기본값이 켜짐으로 바뀌면 `legal-kr-fintech` escalate (국외이전 동의·방침 갱신이 선행 조건) |
+| 4 | **사용할 때마다 동의** — `consent` 없으면 400 `AI_READ_CONSENT_REQUIRED` | `routes/imports.py` | 동의 체크를 빼거나 기본 true 로 보내는 UI 금지 |
+| 5 | **저장·로그 0** — 보낸 텍스트도, 모델 답도 남기지 않는다. 행은 기존 검토표 → `/image`·holdings commit 으로만 저장 | `services/ai_read.py` 모듈 docstring | `log.*(text` · DB write · 캐시 호출이 생기면 P0 |
+| 6 | **모델 답을 믿지 않는다** — "읽었다"는 숫자는 보낸 텍스트에 찍혀 있어야, 수량×가격 관계가 맞아야 칸을 채운다. 나머지는 hint | `check_holding` · `check_fill` | 검산을 우회해 값을 바로 채우는 diff 금지 |
+| 7 | **비용 상한** — 유저 키 5/분 · 30/일, 화면 ≤ `MAX_SCREENS`(10) · 화면당 ≤ `MAX_TEXT_CHARS`(6000) | `security.py::ai_read_rate_limit` | 데코레이터 제거·키를 IP 로 바꾸는 diff 주의 |
+
+- 저장되는 `source_text` 는 `[AI 판독]` 태그 + 서버 `services/imports::mask_sensitive` 를 거친다 — 판독 원문이 아니다.
+- 이 경로의 **법적 전제**(국외이전 동의 문구, 개인정보처리방침, AI 기본법 §31 고지)는 보안 범위가 아니라 `legal-kr-fintech` 소관. 켜기 전에 그쪽 Verdict 가 필요하다.
+
 ## 공식 데이터 보안 (`feedback_official_data_only`)
 
 | 출처 | 등급 | 사유 |
@@ -129,7 +147,7 @@ You are the CISO of a fintech company. You think like an attacker to defend like
 
 **프로덕션**: Render (`https://pivoxquant-api.onrender.com`, free plan, cold start) + Vercel (`https://www.pivoxquant.com`) + Supabase / pytest ~2457 / 인수인계는 `HANDOVER.md` 최신본 (하드코딩 금지)
 **베타 비밀번호**: 없음 — 게이트 2026-09-04 폐기. `BETA_PASSWORD`/`BETA_SIGNING_SECRET` 은 코드·env 에서 삭제됨.
-**AI 없음** — 코드까지 삭제됨 (2026-09-01). 프롬프트·LLM 키 항목은 감사 범위 밖.
+**AI 는 캡처·체결 문자 판독 한 곳뿐, 기본 꺼짐** (2026-10-07) — 아래 "AI 판독 경계" 를 감사 범위에 넣는다. 그 밖의 AI 는 2026-09-01 코드까지 삭제.
 **법적 안전**: 자본시장법 §17 §101 / 표시광고법 §3 / 신용정보법 / PIPA §28-8 / 정통망법 §50 / 전자상거래법 §17 — `services/legal/forbidden_terms.py` + `services/legal_filter.scrub_response()` (구현은 이 하나, 함정 10). 살아있는 legal 스위트는 CLAUDE.md 함정 4.
 
 ### 자동 호출 매핑
@@ -141,6 +159,7 @@ You are the CISO of a fintech company. You think like an attacker to defend like
 | cache 호출 user_id 누락 (cross-user 유출) | `cache-poisoning-sentinel` |
 | 동결 파일 diff | `frozen-file-diff-guard` |
 | Bloomberg Terminal 톤 / AI slop | `brand-voice` |
+| AI 판독 플래그·동의·국외이전 문구 | `legal-kr-fintech` |
 
 ### Verify policy
 pytest / alembic 실행 · DB schema 변경 · legal_filter 통과 검증 · 시크릿 rotate / git history scrub 은 background launch 금지 (foreground 강제).

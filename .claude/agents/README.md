@@ -1,7 +1,10 @@
 # PivoxQuant Agent System
 
-> 2026-08-30 재편. **59개 → 25개.** 나머지 33개는 삭제가 아니라
-> `.claude/agents/archive/` 로 이동 — 필요하면 언제든 되돌린다.
+> 2026-08-30 재편. **59개 → 25개.** 나머지 33개는 삭제가 아니라 보관 — 필요하면 언제든 되돌린다.
+> 2026-10-07 — 보관 폴더를 `.claude/agents/archive/` 에서 **`.claude/agents-archive/`** 로 뺐다.
+> Claude Code 는 `.claude/agents/` 를 **하위 폴더까지** 읽는다 — 그 아래 `archive/` 에 둔 33개도 매 턴
+> agent 목록에 실려 있었다(2026-10-07 세션의 agent 목록에서 `launch-coordinator` · `stripe-billing` 등 확인).
+> 8/30 재편의 토큰 절감은 이 이동 전까지 실제로는 없었다. **보관은 반드시 `.claude/agents/` 밖에.**
 > 2026-09-21 — 25개 본문을 현재 제품(멈춤 → 기록 → 거울, AI·퀀트·아티팩트 삭제, Render 호스팅)에 맞춰 갱신.
 
 ## 왜 줄였나
@@ -50,10 +53,10 @@ agent 의 `description` 은 **매 턴 시스템 프롬프트에 로드된다.** 
 
 ## 아카이브 33개
 
-되살리려면 파일을 `archive/` 밖으로 옮기기만 하면 된다.
+되살리려면 파일을 `.claude/agents/` 로 옮기기만 하면 된다.
 
 ```bash
-mv .claude/agents/archive/<name>.md .claude/agents/
+mv .claude/agents-archive/<name>.md .claude/agents/
 ```
 
 분류별:

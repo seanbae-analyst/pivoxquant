@@ -17,7 +17,7 @@ tools:
 
 ## 제품 전제 (2026-09-21 — `legal.md` §0 과 동일, 어긋나면 그쪽이 SoT)
 - 기록 중심 개인 투자 회고 도구. 루프: 멈춤 `/pre-trade` → 기록 `/journal` (+ Import Inbox) → 거울 `/mirror`. 무료 클로즈드 베타, 결제 503 `BUSINESS_REGISTRATION_PENDING`.
-- **AI 없음(코드 삭제) · 추천 표면 없음 · 유형 라벨/점수 없음 · 유저 브로커 연동 없음** (`BROKER_LINKING_AVAILABLE=false`, KIS 는 read-only). 벤더 시세 표시는 FMP §2.2.2 미체결로 플래그 뒤 기본 OFF.
+- **AI 는 캡처·체결 문자 판독(추출만) 한 곳뿐, 기본 꺼짐** (2026-10-07 — 아래 "AI 판독") · **추천 표면 없음 · 유형 라벨/점수 없음 · 유저 브로커 연동 없음** (`BROKER_LINKING_AVAILABLE=false`, KIS 는 read-only). 벤더 시세 표시는 FMP §2.2.2 미체결로 플래그 뒤 기본 OFF.
 - 연령 = 만 14세 자가선언 체크박스 (`users.age_confirmed_at`), 생년월일 미수집.
 - `services/access_guard.py` 는 없다 (CLAUDE.md 함정 8).
 
@@ -36,6 +36,16 @@ tools:
 ### PIPA / 정통망법 §50
 - 새 수집 항목·수탁자·국외 이전 → `frontend/src/content/privacy-ko.md` 표 + 가입 동의(`frontend/src/components/auth/v2/consent-stack.tsx`) 동시 갱신 여부.
 - 새 메일 → 광고성이면 `(광고)` + `marketing_consent_*_at` 게이트 + unsubscribe, 정보성이면 `BANNED_MARKETING_PHRASES` 0건 (`services/email/`).
+
+### AI 판독 — 국외 이전 (2026-10-07, 기본 꺼짐)
+마스킹한 잔고·체결 텍스트를 Anthropic(미국)으로 보내 **추출만** 한다 (`services/ai_read.py`, 전제는 `docs/product/AI_READ_EXPERIMENT_2026-10-07.md` §5 — agent 판단, 법률 자문 아님).
+- **켜는 PR 이 곧 검수 대상.** `AI_READ_ENABLED` 또는 `NEXT_PUBLIC_AI_READ` 의 기본값·prod env 를 켜는 diff 는, 아래가 같은 PR 에 다 있기 전엔 **BLOCK_LEGAL_REVIEW**:
+  1. `privacy-ko.md` 국외이전 표 — 이전받는 자·국가·항목(마스킹된 보유/체결 텍스트)·목적·보유기간 (2026-09-06 에 Anthropic 문구를 지웠으므로 **다시 넣어야** 한다)
+  2. 사용할 때마다 받는 동의 UI — 서버는 `consent` 없으면 400 `AI_READ_CONSENT_REQUIRED`. 동의 칸이 미리 체크돼 있거나 문구 없이 `consent: true` 를 보내면 FIX_REQUIRED
+  3. AI 기본법 §31 — 생성형 AI 사용 사전 고지 + AI 가 채운 칸 표시(`[AI 판독]` 태그, `flags`)
+  4. 변호사 R1 질문 (`legal_question_queue.md`): "마스킹한 잔고 텍스트의 국외 LLM 처리 — 동의 범위와 신용정보법 해당 여부"
+- **추출만** — 판독 결과에 해석·점수·권유가 섞이면 §17 문제로 바뀐다. 프롬프트·응답 스키마에 의견·평가 칸이 생기면 FIX_REQUIRED.
+- 마스킹·저장 0·플래그 같은 기술 불변식은 `security` 의 "AI 판독 경계" 표가 SoT.
 
 ## 검수 워크플로우
 
