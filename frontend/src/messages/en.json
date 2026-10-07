@@ -864,5 +864,22 @@
       "tooMany": "Please try again in a moment. Reports can be built 5 times a minute.",
       "failed": "The report could not be built. Please try again in a moment."
     }
+  },
+  "aiRead": {
+    "badge": "AI read",
+    "title": "Read again with AI (optional)",
+    "body": "AI re-reads the cells the rules could not fill. The capture image is not sent — only the text, with the lines carrying account or customer details removed on this device.",
+    "check": "Check every AI-filled cell before saving. A cell whose printed numbers do not add up is left empty, with what was read shown beside it.",
+    "preview": "See what will be sent ({n})",
+    "consent": "I agree to send the text above to Anthropic (USA) for reading. PivoxQuant does not store the text or the result.",
+    "button": "Read with AI",
+    "reading": "AI is reading…",
+    "applied": "These are the AI's readings. Check each cell, then submit.",
+    "revert": "Go back to the rule-based reading",
+    "noRows": "The AI found no rows either.",
+    "failed": "AI reading failed. Please enter the rows yourself.",
+    "textTitle": "Read the pasted message with AI (optional)",
+    "textBody": "Fill notifications in a format the rules cannot read are put into a table by AI. Lines with account numbers or customer names are removed on this device first.",
+    "textEmpty": "No pasted text."
   }
 }

@@ -37,6 +37,7 @@ import { apiFetch, ApiError } from "@/lib/api";
 import { API } from "@/lib/endpoints";
 import { PendingTradeList } from "@/components/journal/import-inbox";
 import { ImageImportPanel } from "@/components/journal/image-import-panel";
+import { AiTextReadPanel } from "@/components/journal/ai-text-read-panel";
 import {
   RuledKicker,
   Caption,
@@ -351,6 +352,7 @@ function ImportPageInner() {
               <Caption>{t("journal.import.page.androidHint")}</Caption>
               <Caption>{t("journal.import.page.noImage")}</Caption>
             </div>
+            {text.trim() !== "" && <AiTextReadPanel text={text} consent={consent} onResult={onImageResult} />}
           </div>
         )}
 

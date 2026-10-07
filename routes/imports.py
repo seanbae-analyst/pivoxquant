@@ -49,7 +49,7 @@ from models.import_token import (
     TOKEN_PREFIX,
     TOKEN_PREFIX_DISPLAY_LEN,
 )
-from security import general_rate_limit
+from security import ai_read_rate_limit, general_rate_limit
 from services.error_responses import api_error
 from services.imports import (
     ImportParseError,
@@ -596,8 +596,56 @@ def create_image_import():
     broker = str(data.get("broker") or "unknown").strip().lower()
     if broker not in ocr_rows.BROKERS or broker == "overseas":
         broker = "unknown"
-    return _ingest(current_user.id, SOURCE_SCREENSHOT_IMAGE,
+    # Rows the AI read from PASTED text (not a capture) keep the text source label.
+    source = SOURCE_SCREENSHOT_TEXT if data.get("origin") == "text" else SOURCE_SCREENSHOT_IMAGE
+    return _ingest(current_user.id, source,
                    prebuilt=raw, prebuilt_broker=broker, consent_at=utcnow_naive())
+
+
+# ── POST /ai-read (masked OCR text → rows, flag-gated) ───────────────
+# services/ai_read.py · docs/product/AI_READ_EXPERIMENT_2026-10-07.md. Only
+# the text the browser kept after dropping account / customer lines arrives
+# here; it is masked again, read, checked, and returned — never stored. The
+# rows go back to the review table and are saved (if at all) through
+# /image or the holdings commit, like rule-parsed rows.
+
+@imports_bp.route("/ai-read", methods=["POST"])
+@api_auth
+@ai_read_rate_limit
+@legal_scrub_response(skip_keys=SCRUB_SKIP)
+def ai_read_import():
+    from services import ai_read
+
+    if not ai_read.ai_read_enabled():
+        return api_error(
+            en="AI reading is not available.",
+            kr="AI 판독은 아직 제공하지 않습니다.",
+            code="AI_READ_DISABLED", status=503,
+        )
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        data = {}
+    # Per-use consent: the kept text goes to the model provider abroad.
+    if not _truthy(data.get("consent")):
+        return api_error(
+            en="Consent to send the text for AI reading is required.",
+            kr="AI 판독을 위해 텍스트를 보내는 데 대한 동의가 필요합니다.",
+            code="AI_READ_CONSENT_REQUIRED", status=400,
+        )
+    kind = data.get("kind")
+    screens = data.get("screens")
+    if kind not in ai_read.KINDS or not isinstance(screens, list) or not screens \
+            or len(screens) > ai_read.MAX_SCREENS or not all(isinstance(t, str) for t in screens):
+        return api_error(
+            en=f"kind must be one of {ai_read.KINDS} and screens 1–{ai_read.MAX_SCREENS} strings.",
+            kr="요청 형식이 올바르지 않습니다.",
+            code="AI_READ_INVALID", status=400,
+        )
+    try:
+        result = ai_read.read_screens(kind, screens)
+    except ai_read.AiReadError as exc:
+        return api_error(en=exc.en, kr=exc.kr, code=exc.code, status=exc.status)
+    return jsonify({"kind": kind, "model": ai_read.AI_READ_MODEL, "screens": result})
 
 
 # ── POST /webhook (Bearer token, no session) ─────────────────────────

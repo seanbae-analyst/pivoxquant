@@ -581,6 +581,27 @@ def report_render_rate_limit(f):
     return wrapped
 
 
+def ai_read_rate_limit(f):
+    """5/minute · 30/day, keyed on the USER — every call is a paid model request.
+
+    Same shape as ``report_render_rate_limit`` (user key, two windows): the
+    route is behind ``@api_auth``, and the daily window is the spend cap — a
+    user importing a whole account at once needs a handful of reads, not
+    hundreds (services/ai_read.py, flag AI_READ_ENABLED).
+    """
+    def _key():
+        from flask_login import current_user
+        uid = getattr(current_user, "id", None)
+        return f"user:{uid}" if uid else get_remote_address()
+
+    @wraps(f)
+    @limiter.limit("5 per minute", key_func=_key)
+    @limiter.limit("30 per day", key_func=_key)
+    def wrapped(*args, **kwargs):
+        return f(*args, **kwargs)
+    return wrapped
+
+
 def general_rate_limit(f):
     """60 requests/minute — generic write-endpoint guard.
 

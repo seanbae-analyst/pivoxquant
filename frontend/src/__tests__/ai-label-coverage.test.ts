@@ -29,8 +29,10 @@ const TARGET_DIRS = [join(FRONTEND_SRC, "app"), join(FRONTEND_SRC, "components")
 
 const TARGET_EXTS = new Set([".ts", ".tsx"]);
 
-// AI 호출 패턴 — 호출이 있으면 응답을 렌더하므로 라벨 의무
-const AI_API_PATTERN = /["'`]\/api\/ai\//;
+// AI 호출 패턴 — 호출이 있으면 응답을 렌더하므로 라벨 의무.
+// 2026-10-07: 캡처·문자 AI 판독(lib/ai-read.ts)은 /api/ai/ 가 아니라
+// API.imports.aiRead 로 부른다 — 그 호출·제안 박스를 쓰는 화면도 같은 의무.
+const AI_API_PATTERN = /["'`]\/api\/ai\/|API\.imports\.aiRead|requestAiRead\(|<AiReadOffer\b/;
 
 // AI 응답 텍스트 키 — 백엔드에서 LLM 출력으로 채워지는 필드
 const AI_RESPONSE_KEY_PATTERN =
@@ -47,6 +49,7 @@ const ALLOWLIST = new Set<string>([
   // AiContentBadge 를 import 한다). lib/types.ts 와 동일 카테고리.
   "components/detail/types.ts",
   "components/ui/ai-content-badge.tsx", // badge 자체
+  "lib/ai-read.ts", // 요청·변환 함수만, 렌더 surface 아님 (렌더는 ai-read-offer.tsx)
   // /sample-reports/page.tsx — 18-tile navigator. Renders titles/tiers only,
   // no AI content surface. Detail route ([slug]/page.tsx) is gated below.
   "app/sample-reports/page.tsx",

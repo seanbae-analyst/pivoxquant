@@ -364,3 +364,11 @@ class TestFuzzyJamo:
         assert fuzzy_kr_ticker("삼성전", index) is None  # 전자 / 전기
         assert fuzzy_kr_ticker("해외주식", index) is None
         assert fuzzy_kr_ticker("현재가", index) is None
+
+
+def test_rows_read_from_pasted_text_keep_the_text_source(client, auth_user):
+    # services/ai_read.py: an AI read of a pasted fill notification is saved
+    # through /image, but the batch says where the rows came from.
+    r = _post(client, _row(), origin="text")
+    assert r.status_code == 201
+    assert r.get_json()["batch"]["source"] == "screenshot_text"
