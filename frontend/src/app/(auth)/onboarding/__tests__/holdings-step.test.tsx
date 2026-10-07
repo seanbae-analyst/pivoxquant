@@ -59,13 +59,13 @@ describe("onboarding step 0 — holdings required", () => {
     expect(screen.getByTestId("add-modal")).toBeTruthy();
   });
 
-  it("with a holding saved: lists it and next goes on to the questions", () => {
+  it("with a holding saved: lists it and next goes on to the phone setup step", () => {
     positions = [{ id: 1, ticker: "005930.KS", name: "삼성전자", shares: 15, avg_cost: 272000, currency: "KRW" }];
     render(<OnboardingBrokerPage />);
     expect(screen.getByTestId("onboarding-held").textContent).toContain("삼성전자");
     const next = screen.getByTestId("onboarding-next") as HTMLButtonElement;
     expect(next.disabled).toBe(false);
     fireEvent.click(next);
-    expect(push).toHaveBeenCalledWith("/onboarding");
+    expect(push).toHaveBeenCalledWith("/onboarding/fills");
   });
 });

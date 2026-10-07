@@ -373,7 +373,7 @@ export default function PortfolioPageV2() {
           context above the TopBar wrapper (z=20), clipping
           NotificationDropdown panel. */}
       <div
-        className="sticky z-10 -mx-4 md:-ml-8 md:-mr-10 mb-2"
+        className="sticky z-10 -mx-4 mb-2 hidden md:-ml-8 md:-mr-10 md:block"
         style={{
           // Pin beneath the TopBar (56px) incl. notch safe-area on PWAs.
           // Token: --pq-aux-sticky-top (globals.css).

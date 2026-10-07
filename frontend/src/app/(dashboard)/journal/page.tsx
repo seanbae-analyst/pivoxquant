@@ -582,6 +582,78 @@ function FilterChips({
 }
 
 /* ────────────────────────────────────────────────────────────────────────
+ * Phone tabs
+ * ────────────────────────────────────────────────────────────────────── */
+
+type JournalTab = "record" | "habits" | "pulse";
+
+function subscribeHash(cb: () => void) {
+  window.addEventListener("hashchange", cb);
+  return () => window.removeEventListener("hashchange", cb);
+}
+
+function readHashTab(): JournalTab {
+  return window.location.hash === "#weekly-pulse" ? "pulse" : "record";
+}
+
+const JOURNAL_TABS: ReadonlyArray<readonly [JournalTab, string]> = [
+  ["record", "기록"],
+  ["habits", "습관"],
+  ["pulse", "주간 회고"],
+];
+
+/** Segmented control, phone only — sticks under the app bar. */
+function JournalTabs({
+  value,
+  onChange,
+}: {
+  value: JournalTab;
+  onChange: (v: JournalTab) => void;
+}) {
+  return (
+    <div
+      role="tablist"
+      aria-label="기록 화면"
+      className="sticky z-10 -mx-4 mb-6 flex border-b px-4 md:hidden"
+      style={{
+        top: "var(--pq-topbar-height)",
+        background: "var(--pq-ink)",
+        borderColor: "var(--pq-ivory-line)",
+      }}
+      data-testid="journal-tabs"
+    >
+      {JOURNAL_TABS.map(([key, label]) => {
+        const active = value === key;
+        return (
+          <button
+            key={key}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => {
+              onChange(key);
+              window.scrollTo({ top: 0 });
+            }}
+            className="relative flex-1 py-3 text-center text-[15px]"
+            style={{ color: active ? "var(--pq-ivory)" : "var(--pq-ivory-dim)" }}
+            data-testid={`journal-tab-${key}`}
+          >
+            {label}
+            {active && (
+              <span
+                aria-hidden
+                className="absolute inset-x-6 bottom-0 h-[2px]"
+                style={{ background: "var(--pq-bronze)" }}
+              />
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────────────
  * Page
  * ────────────────────────────────────────────────────────────────────── */
 
@@ -652,17 +724,32 @@ function JournalContent() {
         ? !reflectionsFailed
         : !reflectionsFailed && !notesFailed;
 
+  // Phone tabs (2026-10-07, CEO "아래로 내리는 느낌이 너무 웹사이트"). On a
+  // phone this page was seven screens of scroll: inbox, six mirrors, the
+  // feed, the weekly pulse. Below md it is three tabs; at md and up every
+  // section shows, as before. Sections stay mounted either way — only
+  // `hidden md:block` changes — so no fetch, effect or deep link depends on
+  // the tab.
+  // /portfolio links to #weekly-pulse on Mondays, so that hash opens the
+  // pulse tab until the user picks one.
+  const hashTab = useSyncExternalStore(subscribeHash, readHashTab, () => "record" as const);
+  const [picked, setTab] = useState<JournalTab | null>(null);
+  const tab = picked ?? hashTab;
+  const onPhone = (which: JournalTab) => (tab === which ? "" : "hidden md:block");
+
   return (
-    <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
-      {/* Header */}
+    <div className="mx-auto w-full max-w-2xl px-0 py-2 md:px-6 md:py-8">
+      {/* Header — the phone app bar already names the screen. */}
       <header className="mb-6">
-        <RuledKicker>{t("journal.page.kicker")}</RuledKicker>
-        <EditorialHead as="h1" size={32} className="mt-3">
-          {t("journal.page.heading")}
-        </EditorialHead>
-        <Caption className="mt-2 max-w-lg">
-          {t("journal.page.headingDesc")}
-        </Caption>
+        <div className="hidden md:block">
+          <RuledKicker>{t("journal.page.kicker")}</RuledKicker>
+          <EditorialHead as="h1" size={32} className="mt-3">
+            {t("journal.page.heading")}
+          </EditorialHead>
+          <Caption className="mt-2 max-w-lg">
+            {t("journal.page.headingDesc")}
+          </Caption>
+        </div>
         {/* The capture path is the easiest way in on a phone, so it gets a
             real button; the text link keeps file / text import reachable. */}
         <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3">
@@ -681,12 +768,16 @@ function JournalContent() {
         </div>
       </header>
 
+      <JournalTabs value={tab} onChange={setTab} />
+
+      <div className={onPhone("record")}>
       {/* Import Inbox — received fills waiting for a "why". A row is not a
           record until the user approves it with a thesis; nothing here feeds
           the mirrors below (docs/product/IMPORT_INBOX_DESIGN.md). */}
       <ErrorBoundary fallback={null}>
         <ImportInbox />
       </ErrorBoundary>
+      </div>
 
       {/* Legal disclaimer mounted once at the bottom by (dashboard)/layout.tsx
           — no page-level banner here (CEO 2026-05-24: disclaimer only at the
@@ -700,7 +791,7 @@ function JournalContent() {
           shows one legal banner — not one per mirror. The disclaimer renders
           unconditionally, independent of each mirror's data/empty/error state,
           and covers any future mirror added to this section (e.g. FOMO). */}
-      <section className="mb-8" aria-label={t("journal.page.kicker")}>
+      <section className={`mb-8 ${onPhone("habits")}`} aria-label={t("journal.page.kicker")}>
         <div className="mb-8">
           <HoldingMirror />
         </div>
@@ -736,6 +827,7 @@ function JournalContent() {
       {/* Composer — the one place a record starts without a trade attached.
           It sits ABOVE the chips on purpose: writing comes before reading
           back (docs/design/observation-notes_2026-09-22.md §5 진입점). */}
+      <div className={onPhone("record")}>
       <div className="mb-6">
         <ErrorBoundary fallback={null}>
           <ObservationNoteComposer
@@ -823,11 +915,12 @@ function JournalContent() {
           )}
         </>
       )}
+      </div>
 
       {/* Weekly pulse — the user's own self-report, so it lives with the
           record. Moved from /profile 2026-09-12. The only pulse form in the
           app; /portfolio links here on Mondays (#weekly-pulse). */}
-      <div className="mt-12">
+      <div className={`mt-12 ${onPhone("pulse")}`}>
         <WeeklyPulseSection />
       </div>
 

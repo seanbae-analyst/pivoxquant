@@ -68,15 +68,15 @@ const PRIMARY_TABS: Tab[] = [
 // Drawer — everything the desktop sidebar has that the bar does not.
 const DRAWER_GROUPS: DrawerGroup[] = [
   {
-    label: "More",
+    label: "더보기",
     items: [
-      { href: "/portfolio", label: "Portfolio", icon: Briefcase },
+      { href: "/portfolio", label: "포트폴리오", icon: Briefcase },
     ],
   },
   {
-    label: "Account",
+    label: "계정",
     items: [
-      { href: "/settings", label: "Settings", icon: SettingsIcon },
+      { href: "/settings", label: "설정", icon: SettingsIcon },
     ],
   },
 ];
@@ -151,17 +151,16 @@ export function BottomNav() {
                 }}
               />
               <span
-                className="font-serif uppercase"
+                className="font-serif"
                 style={{
                   fontSize: "var(--pq-text-eyebrow)",
-                  letterSpacing: "0.14em",
                   color:
                     moreActive || drawerOpen
                       ? "var(--pq-ivory)"
                       : "rgba(245, 240, 232, 0.55)",
                 }}
               >
-                More
+                더보기
               </span>
             </button>
           </li>
@@ -197,7 +196,7 @@ export function BottomNav() {
                   color: "var(--pq-ivory)",
                 }}
               >
-                Menu
+                메뉴
               </span>
               <button
                 type="button"
@@ -252,7 +251,7 @@ export function BottomNav() {
                   strokeWidth={1.5}
                   style={{ color: "var(--pq-bronze)" }}
                 />
-                Sign out
+                로그아웃
               </button>
             </div>
           </div>

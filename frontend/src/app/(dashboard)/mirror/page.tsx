@@ -73,8 +73,12 @@ export default function MirrorPage() {
   return (
     <div className="min-h-screen bg-[rgb(5,5,5)] text-[var(--pq-ivory)]">
 
-      <div className="mx-auto max-w-3xl space-y-8 px-5 py-8 md:px-8">
-        <EditorialHead>거울</EditorialHead>
+      {/* Phone: the app bar names the screen and <main> already pads it, so
+          the page drops its own title and second gutter (2026-10-07). */}
+      <div className="mx-auto max-w-3xl space-y-8 px-0 py-2 md:px-8 md:py-8">
+        <div className="hidden md:block">
+          <EditorialHead>거울</EditorialHead>
+        </div>
 
         {showSkeleton && <MirrorSkeleton />}
 

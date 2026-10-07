@@ -28,7 +28,8 @@ import {
  * Step 0 of the onboarding flow — the user's holdings. Ink theme.
  *
  * Flow:
- *   /login success → /onboarding/broker (Step 0, required) → /onboarding (5 Q's)
+ *   /login success → /onboarding/broker (Step 0, required)
+ *     → /onboarding/fills (phone fill automation, optional) → /onboarding (5 Q's)
  *
  * 2026-09-28 CEO — "무조건 포트폴리오 작성하고 가게끔". There is no skip: the
  * product starts from the portfolio the user already holds, so "next" stays
@@ -138,7 +139,8 @@ export default function OnboardingBrokerPage() {
   const canContinue = held.length > 0;
   const goNext = useCallback(() => {
     if (!canContinue) return;
-    router.push("/onboarding");
+    // 2026-10-07: holdings → phone fill automation (optional) → questions.
+    router.push("/onboarding/fills");
   }, [router, canContinue]);
 
   if (authLoading) {

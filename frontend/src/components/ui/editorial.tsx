@@ -323,8 +323,11 @@ export function FootSignature({
   note?: string;
 }) {
   return (
+    // Desktop only (2026-10-07): a brand sign-off under every screen is what
+    // makes a page read as a website on a phone. The legal disclaimer is the
+    // layout's DisclaimerBanner, not this mark, so nothing legal goes with it.
     <footer
-      className="pq-foot-signature"
+      className="pq-foot-signature hidden md:block"
       style={{
         marginTop: "2.5rem",
         paddingTop: "1.25rem",

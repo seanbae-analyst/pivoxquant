@@ -2,8 +2,9 @@
 
 import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import LandingV2 from "@/components/landing/landing-v2";
+import { AppWelcome, isStandaloneDisplay } from "@/components/pwa/app-welcome";
 import { isDemoMode } from "@/lib/demo";
 
 /**
@@ -58,10 +59,15 @@ function LoadingScreen() {
   );
 }
 
+const noopSubscribe = () => () => {};
+
 export default function Page() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const demo = isDemoMode();
+  // The server cannot know how the page was opened; its snapshot (false) keeps
+  // hydration on the landing, and the client snapshot takes over after.
+  const standalone = useSyncExternalStore(noopSubscribe, isStandaloneDisplay, () => false);
 
   useEffect(() => {
     // Real app: send a logged-in user straight to /home. In DEMO the demo user
@@ -100,6 +106,9 @@ export default function Page() {
   // every crawler and chat preview.
   if (loading) return <LandingV2 />;
   if (user) return <LoadingScreen />;
+
+  // Opened from the home-screen icon: an app has no landing page (2026-10-07).
+  if (standalone) return <AppWelcome />;
 
   return <LandingV2 />;
 }

@@ -887,5 +887,20 @@
     "textTitle": "Read the pasted message with AI (optional)",
     "textBody": "Fill notifications in a format the rules cannot read are put into a table by AI. Lines with account numbers or customer names are removed on this device first.",
     "textEmpty": "No pasted text."
+  },
+  "fillsOnboarding": {
+    "stepLabel": "Optional step",
+    "title": "Record a fill the moment it lands",
+    "subtitle": "Your phone forwards your broker's fill notifications to PivoxQuant. Fills land in the pending inbox and are recorded only after you add a reason and approve. Takes about five minutes now, or do it later in Settings.",
+    "phoneLabel": "Your phone",
+    "phone": {
+      "android": "Android",
+      "ios": "iPhone"
+    },
+    "keyKicker": "1 · Create a connection key",
+    "issue": "Create connection key",
+    "hasToken": "You already have a connection key. Just check the phone setup below. If you lost the key, create a new one in Settings → Import tokens.",
+    "later": "You can skip this now. The same guide is in Settings → Import tokens.",
+    "skip": "Later"
   }
 }
