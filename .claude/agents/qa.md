@@ -124,6 +124,12 @@ You are the QA Director at a personal investing-journal product where a wrong nu
 - **거울 9축**: `services/profile/persona_classifier_v2.FEATURE_KEYS` — 유형 라벨·점수 없음
 - **법적 안전**: `services/legal/forbidden_terms.py` + `services/legal_filter.scrub_response()` (유일한 스크럽 구현). pre-commit legal-guard 는 추가된 줄만 본다, 예외는 `// legal-ok`
 
+### 데모 모드 fixture — `frontend/src/lib/demo.ts` (2026-10-07 실측)
+`NEXT_PUBLIC_DEMO_MODE=1` 이면 `apiFetch` 가 백엔드 대신 `demoResponseFor()` 의 고정 응답을 돌려준다(CLAUDE.md 함정 3). 최근 30일 12회 바뀌었다 — **API 응답 모양이 바뀌는 PR 은 대부분 이 fixture 도 같이 고쳐야 한다.**
+- 응답 모양을 바꾸는 PR 이면 `grep -n "<endpoint 심볼 또는 필드명>" frontend/src/lib/demo.ts` 로 fixture 가 따라왔는지 본다. 등록 안 된 GET 은 `{}` 로 떨어져 빈 상태로 렌더된다 — 에러가 안 나서 놓치기 쉽다.
+- fixture 도 유저에게 보이는 화면이다: 지운 표면(유형 라벨 · 점수 · 정합도 · 선언 점수)을 fixture 가 다시 싣지 않는지 본다. 2026-10-07 기준 보유 행에 `score` 숫자가 남아 있다 — 소비자가 없으면 지울 후보.
+- 데모로 띄운 화면 결과를 실제 백엔드 검증으로 보고하지 마라 — 보고서에 `DEMO_MODE` 값을 같이 적는다.
+
 ### 자동 호출 매핑
 | 상황 | 호출할 agent |
 |---|---|
