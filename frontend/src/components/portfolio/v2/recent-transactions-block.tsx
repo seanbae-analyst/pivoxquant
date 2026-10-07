@@ -4,7 +4,7 @@
  * <RecentTransactionsBlock /> — corner card with recent trade entries.
  *
  * Mockup §BLOCK 3c / SPEC §4.3.
- * Action vocabulary mapped legal-safe: buy → Add, sell → Trim/Close.
+ * Action vocabulary mapped legal-safe: buy → 추가, sell → 정리/전량 정리.
  * Uses local hooks-v2.ts → useTransactions() (does NOT touch lib/hooks.ts).
  */
 
@@ -41,12 +41,12 @@ function actionLabel(
   if (row.source === HOLDING_ADJUST_SOURCE) return { label: adjustLabel, signed: 0 };
   const a = (row.action ?? "").toLowerCase();
   const s = (row.side ?? "").toLowerCase();
-  if (a === "add" || s === "buy" || s === "bought") return { label: "Add", signed: -1 };
-  if (a === "trim" || s === "sell" || s === "sold") return { label: "Trim", signed: +1 };
-  if (a === "close") return { label: "Close", signed: +1 };
-  if (a === "deposit") return { label: "Deposit", signed: +1 };
-  if (a === "withdraw") return { label: "Withdraw", signed: -1 };
-  return { label: row.action ?? row.side ?? "Entry", signed: 0 };
+  if (a === "add" || s === "buy" || s === "bought") return { label: "추가", signed: -1 };
+  if (a === "trim" || s === "sell" || s === "sold") return { label: "정리", signed: +1 };
+  if (a === "close") return { label: "전량 정리", signed: +1 };
+  if (a === "deposit") return { label: "입금", signed: +1 };
+  if (a === "withdraw") return { label: "출금", signed: -1 };
+  return { label: row.action ?? row.side ?? "기록", signed: 0 };
 }
 
 // Wave 4-B (2026-05-20): migrated to lib/fmtMoneyPlain.
@@ -115,15 +115,15 @@ export function RecentTransactionsBlock({
       }}
     >
       <div
-        className="font-mono uppercase"
+        className="font-mono"
         style={{
           fontSize: "var(--pq-text-eyebrow)",
-          letterSpacing: "0.22em",
+          letterSpacing: "0.02em",
           color: "var(--pq-bronze)",
           marginBottom: 20,
         }}
       >
-        Activity · Recent
+        최근 활동
       </div>
 
       {isLoading && trades.length === 0 ? (
@@ -173,10 +173,8 @@ export function RecentTransactionsBlock({
             const shares = tx.qty ?? tx.shares ?? 0;
             const price = tx.price ?? 0;
             const amount = (tx.amount ?? shares * price) || 0;
-            // `sh` and the month name are units and a date, i.e. data — not
-            // the English app-shell labels. The action verb stays English on
-            // purpose: Add / Trim / Close is the legal-safe vocabulary pinned
-            // by this file's header, not a style choice to make here. The
+            // The action verb is the legal-safe 추가 / 정리 / 전량 정리
+            // vocabulary pinned by this file's header (never 매수/매도). The
             // holding-registration label is not a trade verb, so it is i18n.
             const meta = `${label} · ${t("dashboard.portfolio.activity.sharesUnit", { n: String(shares) })} @ ${fmtMoney(price, cur)} · ${shortDate(tx.date, locale)}`;
             return (
@@ -245,17 +243,17 @@ export function RecentTransactionsBlock({
       >
         <Link
           href="/portfolio"
-          className="font-mono uppercase"
+          className="font-mono"
           style={{
             fontSize: "var(--pq-text-eyebrow)",
-            letterSpacing: "0.2em",
+            letterSpacing: "0.02em",
             color: "var(--pq-bronze)",
             textDecoration: "none",
             borderBottom: "1px solid rgba(184,149,106,0.35)",
             paddingBottom: 1,
           }}
         >
-          Open ledger ›
+          전체 내역 ›
         </Link>
       </div>
     </div>

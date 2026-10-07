@@ -24,7 +24,7 @@ function mkEmpty(isLoading: boolean) {
 
 /** Text of the NAV KPI cell (label div + value div share a parent). */
 function navCellText(): string {
-  const label = screen.getByText("NAV");
+  const label = screen.getByText("순자산");
   return label.parentElement?.textContent ?? "";
 }
 

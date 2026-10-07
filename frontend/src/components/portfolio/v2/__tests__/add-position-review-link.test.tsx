@@ -73,7 +73,7 @@ describe("AddPositionModalV2 — review entry links the pause", () => {
         },
       },
     );
-    await user.click(screen.getByRole("button", { name: /Continue · 7 questions/ }));
+    await user.click(screen.getByRole("button", { name: /다음 · 7문항/ }));
     await user.click(screen.getByRole("button", { name: "mock-proceed" }));
 
     await waitFor(() => expect(mockedFetch).toHaveBeenCalledTimes(1));
@@ -88,7 +88,7 @@ describe("AddPositionModalV2 — review entry links the pause", () => {
     const user = userEvent.setup();
     render(<AddPositionModalV2 open onClose={vi.fn()} onSuccess={vi.fn()} />);
     fillCore();
-    await user.click(screen.getByRole("button", { name: /Record · 기록/ }));
+    await user.click(screen.getByRole("button", { name: /기록하기/ }));
     await waitFor(() => expect(mockedFetch).toHaveBeenCalledTimes(1));
     const body = JSON.parse((mockedFetch.mock.calls[0][1] as RequestInit).body as string);
     expect(body).not.toHaveProperty("reflection_id");

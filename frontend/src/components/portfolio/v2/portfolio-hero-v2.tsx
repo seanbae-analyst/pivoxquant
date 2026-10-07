@@ -9,9 +9,9 @@
  * - 80px top / 64px bottom padding, hairline-bottom only (no card border).
  * - H1 Playfair 500 / 48px / line-height 1.05 / track-tight.
  * - Bronze accent on the closing word of the H1 (upright — no italic).
- * - One CTA: bronze-filled "Add position". The broker "Reconcile" CTA was
+ * - One CTA: bronze-filled "종목 추가". The broker "Reconcile" CTA was
  *   removed 2026-09-10 — broker linking is not offered and its route is gone.
- * - Eyebrow: "Book · Volume {weekIndex} · {weekday}".
+ * - Eyebrow: "장부 · {weekIndex}주차 · {weekday}" (Korean since 2026-10-07).
  *
  * Legal: action vocabulary `Add` / `Reconcile` / `Save observation` only.
  * Never "Buy / Sell / Recommend / Advice".
@@ -85,7 +85,7 @@ function weekIndexOf(d: Date): number {
 }
 
 function weekdayOf(d: Date): string {
-  return d.toLocaleDateString("en-US", { weekday: "long" });
+  return d.toLocaleDateString("ko-KR", { weekday: "long" });
 }
 
 // Wave 2 sweep (2026-05-19): NOT migrated to @/lib/format helpers.
@@ -172,11 +172,11 @@ export function PortfolioHeroV2({
   realizedKrw,
 }: PortfolioHeroV2Props) {
   const { locale, t } = useLocale();
-  /** `dashboard.portfolio.hero.*` — the eyebrow stays English by house rule. */
+  /** `dashboard.portfolio.hero.*` keys. */
   const h = (k: string, params?: Record<string, string>) =>
     t(`dashboard.portfolio.hero.${k}`, params);
   const now = new Date();
-  const eyebrow = `Book · Volume ${weekIndexOf(now)} · ${weekdayOf(now)}`;
+  const eyebrow = `장부 · ${weekIndexOf(now)}주차 · ${weekdayOf(now)}`;
 
   // Show native-currency subtotals separately rather than one FX-unified USD
   // figure (CEO 2026-05-24): KR holdings in KRW, US holdings in USD. Falls back to
@@ -269,10 +269,10 @@ export function PortfolioHeroV2({
     >
       {/* Phone: the app bar names the screen (2026-10-07). */}
       <div
-        className="hidden font-mono uppercase md:block"
+        className="hidden font-mono md:block"
         style={{
           fontSize: "var(--pq-text-eyebrow, 10.5px)",
-          letterSpacing: "0.22em",
+          letterSpacing: "0.02em",
           color: "var(--pq-bronze)",
           marginBottom: 28,
         }}
@@ -381,7 +381,7 @@ export function PortfolioHeroV2({
             realizedUsd != null ||
             realizedKrw != null) && (
         <div
-          aria-label="Portfolio KPI deck"
+          aria-label="포트폴리오 손익 요약"
           style={{
             display: "grid",
             gridTemplateColumns: marketDataDisplay
@@ -396,7 +396,7 @@ export function PortfolioHeroV2({
           {marketDataDisplay ? (
             <>
           <HeroKpi
-            label="Today"
+            label="오늘"
             value={splitPnl(todayPnlUsd, todayPnlKrw, todayPnl)}
             sub={
               todayPnlPct != null && Number.isFinite(todayPnlPct)
@@ -414,7 +414,7 @@ export function PortfolioHeroV2({
             }
           />
           <HeroKpi
-            label="Unrealized"
+            label="평가 손익"
             value={splitPnl(unrealizedUsd, unrealizedKrw, unrealized)}
             tone={
               hasUs && hasKr
@@ -429,7 +429,7 @@ export function PortfolioHeroV2({
             </>
           ) : null}
           <HeroKpi
-            label="Realized YTD"
+            label="올해 실현 손익"
             value={splitPnl(realizedUsd, realizedKrw, realizedYtd)}
             tone={
               hasUs && hasKr
@@ -465,15 +465,14 @@ export function PortfolioHeroV2({
             background: "var(--pq-bronze)",
             color: "var(--pq-ink, #050505)",
             fontSize: "var(--pq-text-eyebrow)",
-            letterSpacing: "0.2em",
-            textTransform: "uppercase",
+            letterSpacing: "0.02em",
             border: "none",
             borderRadius: "var(--pq-radius-cta, 2px)",
             cursor: "pointer",
             transition: "background-color 200ms",
           }}
         >
-          Add position →
+          종목 추가 →
         </button>
       </div>
     </section>
@@ -513,10 +512,10 @@ function HeroKpi({
       }}
     >
       <div
-        className="font-mono uppercase"
+        className="font-mono"
         style={{
           fontSize: "var(--pq-text-eyebrow)",
-          letterSpacing: "0.22em",
+          letterSpacing: "0.02em",
           color: "var(--pq-bronze)",
           marginBottom: 6,
         }}

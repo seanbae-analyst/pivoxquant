@@ -27,7 +27,8 @@
  * lock-step with the detail-page redesign). POSITIVE / NEGATIVE / NEUTRAL only.
  *
  * Side labels: internal Side enum ("ENTRY"/"EXIT") → legacy wire format via
- * `@/lib/pre-trade`. The DB schema / audit row stay untouched.
+ * `@/lib/pre-trade`. The DB schema / audit row stay untouched. Shown to the
+ * user in Korean only — 진입 / 정리 (CEO 2026-10-07 "영문 라벨도 한글로").
  *
  * 2026-10-05 — Setup ticker picking:
  *   - The ticker field is the shared <TickerSearch /> (`/api/search`, names
@@ -50,13 +51,7 @@ import { ChevronRight } from "lucide-react";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { useT } from "@/lib/locale";
 import { Caption, FootSignature, RuledKicker } from "@/components/ui/editorial";
-import {
-  type Side,
-  SIDE_LABEL_EN,
-  SIDE_LABEL_KO,
-  sideLabel,
-  isHeldTicker,
-} from "@/lib/pre-trade";
+import { type Side, SIDE_LABEL_KO, isHeldTicker } from "@/lib/pre-trade";
 import {
   MIN_RATIONALE_CHARS,
   QUESTIONS,
@@ -121,7 +116,7 @@ export default function PreTradePage() {
         <header className="space-y-3">
           {/* Phone: the app bar already says 멈춤 — keep only the caption. */}
           <div className="hidden md:block">
-            <RuledKicker>Signature &middot; Pre-Trade Checklist</RuledKicker>
+            <RuledKicker>멈춤 &middot; 진입 전 점검</RuledKicker>
           </div>
           <h1
             className="mt-3 hidden font-display text-[var(--pq-ivory)] md:block"
@@ -223,40 +218,41 @@ function SetupStep(props: {
 
   return (
     <section className="space-y-6">
-      <SectionLabel n={1} title="The Trade · 거래 개요" />
+      <SectionLabel n={1} title="거래 개요" />
       <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-4">
-        <Field label="Ticker" htmlFor="pre-trade-ticker">
+        <Field label="종목" htmlFor="pre-trade-ticker">
           <TickerSearch
             id="pre-trade-ticker"
             value={ticker}
             onChange={setTicker}
             onPick={(r) => setTicker(r.ticker)}
-            ariaLabel="Ticker"
+            ariaLabel="종목"
             autoFocus
             inputClassName="w-full bg-transparent border-b border-[rgba(245,240,232,0.15)] py-2 font-mono text-pq-lead uppercase outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)]"
             inputStyle={{ letterSpacing: "0.04em" }}
           />
         </Field>
-        <Field label="Side">
+        <Field label="방향">
           <div className="flex gap-2 mt-1">
             {(["ENTRY", "EXIT"] as const).map((s) => (
               <button
                 key={s}
                 type="button"
                 onClick={() => setSide(s)}
-                aria-label={sideLabel(s)}
-                className={`px-4 py-2 text-pq-eyebrow uppercase tracking-[0.2em] transition-colors ${
+                aria-label={SIDE_LABEL_KO[s]}
+                aria-pressed={side === s}
+                className={`px-4 py-2 text-pq-eyebrow transition-colors ${
                   side === s
                     ? "bg-[rgba(245,240,232,0.10)] border border-[var(--pq-ivory)] text-[var(--pq-ivory)]"
                     : "border border-[rgba(245,240,232,0.15)] text-[var(--pq-ivory-mid)] hover:border-[rgba(245,240,232,0.45)]"
                 }`}
               >
-                {SIDE_LABEL_EN[s]} · {SIDE_LABEL_KO[s]}
+                {SIDE_LABEL_KO[s]}
               </button>
             ))}
           </div>
         </Field>
-        <Field label="Shares (optional)" htmlFor="pre-trade-shares">
+        <Field label="수량 (선택)" htmlFor="pre-trade-shares">
           <input
             id="pre-trade-shares"
             type="number"
@@ -273,7 +269,7 @@ function SetupStep(props: {
 
       {side === "EXIT" && <HeldPicker ticker={ticker} setTicker={setTicker} />}
 
-      <Field label={`Thesis · 한 문단 (${MIN_RATIONALE_CHARS}자 이상)`} htmlFor="pre-trade-thesis">
+      <Field label={`이유 · 한 문단 (${MIN_RATIONALE_CHARS}자 이상)`} htmlFor="pre-trade-thesis">
         <textarea
           id="pre-trade-thesis"
           value={rationale}
@@ -310,10 +306,10 @@ function SetupStep(props: {
             className="text-pq-mono-sm text-[var(--pq-ivory-faint)] tracking-[0.06em]"
           >
             {ticker.trim().length === 0 && !rationaleOk
-              ? "Ticker와 Thesis를 채워야 진행합니다."
+              ? "종목과 이유를 채워야 진행합니다."
               : ticker.trim().length === 0
-                ? "Ticker를 입력해야 진행합니다."
-                : `Thesis ${MIN_RATIONALE_CHARS}자 이상 필요합니다.`}
+                ? "종목을 입력해야 진행합니다."
+                : `이유를 ${MIN_RATIONALE_CHARS}자 이상 적어야 진행합니다.`}
           </p>
         )}
         <button
@@ -321,9 +317,9 @@ function SetupStep(props: {
           onClick={onNext}
           disabled={!canAdvance}
           aria-disabled={!canAdvance}
-          className="pq-ink-btn-bronze inline-flex items-center gap-2 px-5 py-2 text-pq-mono-sm uppercase tracking-[0.22em] disabled:opacity-30 disabled:cursor-not-allowed"
+          className="pq-ink-btn-bronze inline-flex items-center gap-2 px-5 py-2 text-pq-mono-sm disabled:opacity-30 disabled:cursor-not-allowed"
         >
-          Continue · 7 questions
+          다음 · 질문 7개
           <ChevronRight className="h-3.5 w-3.5" />
         </button>
       </div>
@@ -351,7 +347,7 @@ function HeldPicker({ ticker, setTicker }: { ticker: string; setTicker: (s: stri
   const typed = ticker.trim().length > 0;
   return (
     <div className="space-y-2">
-      <div className="text-pq-eyebrow uppercase tracking-[0.2em] text-[var(--pq-ivory-faint)]">
+      <div className="text-pq-eyebrow text-[var(--pq-ivory-faint)]">
         {t("preTrade.setup.heldLabel")}
       </div>
       {rows.length === 0 ? (
@@ -408,7 +404,7 @@ function ImportHint() {
       </p>
       <Link
         href="/journal/import?tab=image"
-        className="inline-flex items-center gap-2 self-start md:self-auto px-5 py-2 text-pq-mono-sm uppercase tracking-[0.22em] text-[var(--pq-ivory-mid)] border border-[rgba(245,240,232,0.15)] hover:border-[var(--pq-bronze)] hover:text-[var(--pq-bronze)]"
+        className="inline-flex items-center gap-2 self-start md:self-auto px-5 py-2 text-pq-mono-sm text-[var(--pq-ivory-mid)] border border-[rgba(245,240,232,0.15)] hover:border-[var(--pq-bronze)] hover:text-[var(--pq-bronze)]"
       >
         {t("preTrade.done.importCta")}
         <ChevronRight className="h-3.5 w-3.5" />

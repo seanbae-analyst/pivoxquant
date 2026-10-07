@@ -88,10 +88,9 @@ export function ObservationNoteCard({
     >
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <span
-          className="font-mono uppercase"
+          className="font-mono"
           style={{
             fontSize: "var(--pq-text-eyebrow)",
-            letterSpacing: "0.16em",
             color: "var(--pq-bronze)",
           }}
         >
@@ -183,7 +182,7 @@ export function ObservationNoteCard({
               setError(null);
               setConfirming(true);
             }}
-            className="pq-ink-btn-ghost px-3 text-pq-eyebrow uppercase tracking-[0.16em]"
+            className="pq-ink-btn-ghost px-3 text-pq-eyebrow"
           >
             삭제
           </button>
@@ -203,7 +202,7 @@ export function ObservationNoteCard({
               onClick={handleDelete}
               disabled={deleting}
               aria-disabled={deleting}
-              className="pq-ink-btn-ghost px-3 text-pq-eyebrow uppercase tracking-[0.16em] disabled:cursor-not-allowed disabled:opacity-30"
+              className="pq-ink-btn-ghost px-3 text-pq-eyebrow disabled:cursor-not-allowed disabled:opacity-30"
             >
               {deleting ? "지우는 중" : "확인"}
             </button>
@@ -211,7 +210,7 @@ export function ObservationNoteCard({
               type="button"
               onClick={() => setConfirming(false)}
               disabled={deleting}
-              className="pq-ink-btn-ghost px-3 text-pq-eyebrow uppercase tracking-[0.16em] disabled:cursor-not-allowed disabled:opacity-30"
+              className="pq-ink-btn-ghost px-3 text-pq-eyebrow disabled:cursor-not-allowed disabled:opacity-30"
             >
               취소
             </button>

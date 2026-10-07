@@ -54,7 +54,7 @@ describe("QuestionsStep · pagedOnPhone", () => {
     // Last question: tick it and start is enabled.
     const box7 = screen.getByTestId("question-7").querySelector('input[type="checkbox"]') as HTMLInputElement;
     fireEvent.click(box7);
-    const start = screen.getByText(/Start cooldown/).closest("button") as HTMLButtonElement;
+    const start = screen.getByText(/진입 시계 시작/).closest("button") as HTMLButtonElement;
     expect(start.disabled).toBe(false);
   });
 

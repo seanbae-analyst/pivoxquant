@@ -58,7 +58,8 @@ export function DisclaimerBanner({
   // CEO 2026-05-28: "면책 시각적 별로" — hierarchy uplift.
   //   • Collapsed by default (was expanded) → stately, calmer baseline
   //   • Top hairline accent in bronze-light (dark) / slate (light)
-  //   • Playfair "Disclaimer" kicker (was 9px mono kicker, hard to read)
+  //   • Playfair "면책 고지" kicker (was 9px mono kicker, hard to read;
+  //     English "Disclaimer" until 2026-10-07)
   //   • Primary summary at --pq-text-body-sm (14px) instead of 11px mono
   //   • 18px / 20px row padding (was 8px tight) — breathing room
   //   • Expand body in serif lead with KR/EN explicit subheads
@@ -110,7 +111,7 @@ export function DisclaimerBanner({
                 marginBottom: 6,
               }}
             >
-              Disclaimer
+              면책 고지
             </div>
           )}
           <p
@@ -153,10 +154,9 @@ export function DisclaimerBanner({
         >
           {/* KR detail */}
           <div
-            className="font-mono uppercase"
+            className="font-mono"
             style={{
               fontSize: "var(--pq-text-eyebrow)",
-              letterSpacing: "0.22em",
               color: isDark
                 ? "var(--pq-bronze-light)"
                 : "rgb(100,116,139)",
@@ -179,10 +179,9 @@ export function DisclaimerBanner({
 
           {/* EN detail */}
           <div
-            className="font-mono uppercase"
+            className="font-mono"
             style={{
               fontSize: "var(--pq-text-eyebrow)",
-              letterSpacing: "0.22em",
               color: isDark
                 ? "var(--pq-ivory-faint)"
                 : "rgb(100,116,139)",
@@ -190,7 +189,7 @@ export function DisclaimerBanner({
               marginBottom: 8,
             }}
           >
-            English notice
+            영문 안내
           </div>
           <p
             className="font-serif"

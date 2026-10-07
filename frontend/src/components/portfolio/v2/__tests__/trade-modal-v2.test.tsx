@@ -74,7 +74,7 @@ describe("TradeModalV2 — buy/sell mode split", () => {
     fireEvent.change(screen.getByPlaceholderText("0.00"), { target: { value: "155" } });
     // No thesis typed — RECORD allows an empty memo.
 
-    await user.click(screen.getByRole("button", { name: /Record · 기록/ }));
+    await user.click(screen.getByRole("button", { name: /기록하기/ }));
 
     await waitFor(() => expect(mockedFetch).toHaveBeenCalledTimes(1));
 
@@ -90,7 +90,7 @@ describe("TradeModalV2 — buy/sell mode split", () => {
     });
 
     // No 7-question reflection appeared.
-    expect(screen.queryByText("Seven questions first.")).toBeNull();
+    expect(screen.queryByText("먼저, 질문 일곱 개.")).toBeNull();
     await waitFor(() => expect(onSuccess).toHaveBeenCalled());
     await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
@@ -119,12 +119,12 @@ describe("TradeModalV2 — buy/sell mode split", () => {
     );
 
     await user.click(
-      screen.getByRole("button", { name: /Continue · 7 questions/ }),
+      screen.getByRole("button", { name: /다음 · 7문항/ }),
     );
 
     // Friction modal opens — no trade POST yet.
     await waitFor(() =>
-      expect(screen.getByText("Seven questions first.")).toBeTruthy(),
+      expect(screen.getByText("먼저, 질문 일곱 개.")).toBeTruthy(),
     );
     expect(mockedFetch).not.toHaveBeenCalled();
   });
@@ -146,7 +146,7 @@ describe("TradeModalV2 — buy/sell mode split", () => {
     fireEvent.change(screen.getByPlaceholderText("0"), { target: { value: "5" } });
     fireEvent.change(screen.getByPlaceholderText("0.00"), { target: { value: "160" } });
 
-    await user.click(screen.getByRole("button", { name: /Record · 기록/ }));
+    await user.click(screen.getByRole("button", { name: /기록하기/ }));
 
     await waitFor(() => expect(mockedFetch).toHaveBeenCalledTimes(1));
     const [url, opts] = mockedFetch.mock.calls[0];
@@ -156,7 +156,7 @@ describe("TradeModalV2 — buy/sell mode split", () => {
       quantity: 5,
       price: 160,
     });
-    expect(screen.queryByText("Seven questions first.")).toBeNull();
+    expect(screen.queryByText("먼저, 질문 일곱 개.")).toBeNull();
   });
 
   it("sell guard: cannot trim more than shares held (applies in RECORD mode)", async () => {
@@ -176,10 +176,10 @@ describe("TradeModalV2 — buy/sell mode split", () => {
     fireEvent.change(screen.getByPlaceholderText("0"), { target: { value: "99" } }); // > 10 held
     fireEvent.change(screen.getByPlaceholderText("0.00"), { target: { value: "155" } });
 
-    await user.click(screen.getByRole("button", { name: /Record · 기록/ }));
+    await user.click(screen.getByRole("button", { name: /기록하기/ }));
 
     expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
-      "Cannot trim more than 10 shares held.",
+      "보유 수량(10주)보다 많이 정리할 수 없습니다.",
     );
     expect(mockedFetch).not.toHaveBeenCalled();
   });
@@ -204,7 +204,7 @@ describe("TradeModalV2 — buy/sell mode split", () => {
     expect(screen.queryByText("신규 검토 · 7문항")).toBeNull();
 
     await user.click(
-      screen.getByRole("button", { name: /Update observation/ }),
+      screen.getByRole("button", { name: /기록 수정/ }),
     );
 
     await waitFor(() => expect(mockedFetch).toHaveBeenCalledTimes(1));
@@ -213,6 +213,6 @@ describe("TradeModalV2 — buy/sell mode split", () => {
     expect((opts as RequestInit).method).toBe("PATCH");
     const body = JSON.parse((opts as RequestInit).body as string);
     expect(body).toHaveProperty("avg_cost", 120);
-    expect(screen.queryByText("Seven questions first.")).toBeNull();
+    expect(screen.queryByText("먼저, 질문 일곱 개.")).toBeNull();
   });
 });

@@ -66,7 +66,7 @@ describe("EquityCurveBlock — benchmark KPI from partial benchmark series", () 
     ];
     mockedHook.mockReturnValue(mkData(series, { name: "KOSPI 200" }));
     render(<EquityCurveBlock currency="KRW" currentNav={1100} />);
-    expect(screen.getByText(/Benchmark · KOSPI 200/)).toBeTruthy();
+    expect(screen.getByText(/비교 지수 · KOSPI 200/)).toBeTruthy();
   });
 
   it("renders dynamic benchmark legend label from data.benchmark.name (US portfolio)", () => {
@@ -76,7 +76,7 @@ describe("EquityCurveBlock — benchmark KPI from partial benchmark series", () 
     ];
     mockedHook.mockReturnValue(mkData(series, { name: "S&P 500" }));
     render(<EquityCurveBlock currency="USD" currentNav={1100} />);
-    expect(screen.getByText(/Benchmark · S&P 500/)).toBeTruthy();
+    expect(screen.getByText(/비교 지수 · S&P 500/)).toBeTruthy();
     // Regression guard: KOSPI200 must not appear when label = S&P 500.
     expect(screen.queryByText(/KOSPI200/)).toBeNull();
     expect(screen.queryByText(/KOSPI 200/)).toBeNull();

@@ -20,8 +20,8 @@
  * exists, and every page that exists is in this file.
  *
  * Visual language: ink column, bronze left-edge accent on the active
- * item, editorial uppercase labels with generous spacing. Group labels
- * use the bronze tint at 55% with a hairline divider directly under.
+ * item, Korean labels (no uppercase / wide tracking — spaced-out Hangul reads
+ * as broken).
  */
 
 import Link from "next/link";
@@ -53,12 +53,11 @@ type Item = {
 // One list, loop order: 거울 (home) → 멈춤 → 기록, then the two loanword
 // screens. The behavioural loop IS the product.
 //
-// Naming rule: the product's OWN vocabulary is Korean, the generic app
-// shell stays English. 멈춤 / 기록 / 거울 are the words the landing page and
-// all six emails teach the reader; a nav that said "Pre-Trade" taught a
-// second vocabulary for the same three screens. Portfolio / Settings are
-// loanwords in Korean product UI already and carry no such duty, so they
-// keep the terminal tone.
+// Naming rule: Korean throughout. 멈춤 / 기록 / 거울 are the words the landing
+// page and all six emails teach the reader; a nav that said "Pre-Trade"
+// taught a second vocabulary for the same three screens. 포트폴리오 / 설정
+// were English ("Portfolio" / "Settings") until 2026-10-07 (CEO "영문 라벨도
+// 한글로") — now they match bottom-nav.tsx.
 //
 // Labels stay literal (no t()) — same reason bottom-nav.tsx gives: a missing
 // locale key must never be able to blank the navigation.
@@ -66,13 +65,13 @@ const ALL_ITEMS: Item[] = [
   { key: "mirror", label: "거울", href: "/mirror", icon: Contrast },
   { key: "pre-trade", label: "멈춤", href: "/pre-trade", icon: Gavel },
   { key: "journal", label: "기록", href: "/journal", icon: NotebookPen },
-  { key: "portfolio", label: "Portfolio", href: "/portfolio", icon: Briefcase },
-  { key: "settings", label: "Settings", href: "/settings", icon: SettingsIcon },
+  { key: "portfolio", label: "포트폴리오", href: "/portfolio", icon: Briefcase },
+  { key: "settings", label: "설정", href: "/settings", icon: SettingsIcon },
 ];
 
 function keyFromPath(pathname: string | null): TerminalSidebarKey | null {
   if (!pathname) return null;
-  // Longest-prefix match so "/portfolio/123" lights Portfolio.
+  // Longest-prefix match so "/portfolio/123" lights 포트폴리오.
   const match = ALL_ITEMS.slice()
     .sort((a, b) => b.href.length - a.href.length)
     .find((it) => pathname === it.href || pathname.startsWith(it.href + "/"));
@@ -110,8 +109,8 @@ export function TerminalSidebar({
       </div>
 
       {/* Scrollable nav body */}
-      <nav className="flex-1 overflow-y-auto" aria-label="Primary">
-        <ul className="space-y-0.5 px-3" aria-label="Pages">
+      <nav className="flex-1 overflow-y-auto" aria-label="주 메뉴">
+        <ul className="space-y-0.5 px-3" aria-label="페이지">
           {ALL_ITEMS.map((item) => (
             <SidebarLink
               key={item.key}
@@ -132,15 +131,14 @@ export function TerminalSidebar({
           only posture is unmistakable. */}
       <div className="px-6 pb-6 pt-4">
         <span
-          className="block font-mono uppercase"
+          className="block font-mono"
           style={{
             fontSize: "var(--pq-text-kicker)",
-            letterSpacing: "0.22em",
             color: "var(--pq-ivory-dim)",
           }}
-          title="Paper mode — broker orders disabled, observation only"
+          title="관찰 전용 — 증권사 주문 기능이 꺼져 있습니다"
         >
-          v1.0 · Paper mode (observation only)
+          v1.0 · 관찰 전용
         </span>
       </div>
     </div>
@@ -154,11 +152,10 @@ function SidebarLink({ item, isActive }: { item: Item; isActive: boolean }) {
       <Link
         href={item.href}
         aria-current={isActive ? "page" : undefined}
-        className="flex items-center gap-2.5 rounded-sm font-serif uppercase transition-colors"
+        className="flex items-center gap-2.5 rounded-sm font-serif transition-colors"
         style={{
           padding: "10px 14px",
           fontSize: "var(--pq-text-body)",
-          letterSpacing: "0.2em",
           color: isActive ? "var(--pq-ivory)" : "rgba(245,240,232,0.5)",
           backgroundColor: isActive ? "rgba(247,245,239,0.06)" : "transparent",
           borderLeft: isActive

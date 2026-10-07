@@ -53,12 +53,12 @@ describe("AddPositionModalV2 — mode split (FIX 1/2)", () => {
     await fillCoreFields(user);
     // Backdate the purchase date.
     const dateInput = screen.getByLabelText(
-      "매수일 · Purchase date",
+      "매수일",
     ) as HTMLInputElement;
     // type=date in jsdom: set the value via change rather than keystrokes.
     fireEvent.change(dateInput, { target: { value: "2025-03-15" } });
 
-    await user.click(screen.getByRole("button", { name: /Record · 기록/ }));
+    await user.click(screen.getByRole("button", { name: /기록하기/ }));
 
     await waitFor(() => expect(mockedFetch).toHaveBeenCalledTimes(1));
 
@@ -73,7 +73,7 @@ describe("AddPositionModalV2 — mode split (FIX 1/2)", () => {
     });
 
     // No 7-question reflection appeared.
-    expect(screen.queryByText("Seven questions first.")).toBeNull();
+    expect(screen.queryByText("먼저, 질문 일곱 개.")).toBeNull();
     await waitFor(() => expect(onSuccess).toHaveBeenCalled());
     await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
@@ -98,10 +98,10 @@ describe("AddPositionModalV2 — mode split (FIX 1/2)", () => {
       },
     );
 
-    await user.click(screen.getByRole("button", { name: /Continue · 7 questions/ }));
+    await user.click(screen.getByRole("button", { name: /다음 · 7문항/ }));
 
     // Friction modal opens — no position POST yet.
-    await waitFor(() => expect(screen.getByText("Seven questions first.")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("먼저, 질문 일곱 개.")).toBeTruthy());
     expect(mockedFetch).not.toHaveBeenCalled();
   });
 
@@ -109,7 +109,7 @@ describe("AddPositionModalV2 — mode split (FIX 1/2)", () => {
     render(<AddPositionModalV2 open onClose={vi.fn()} onSuccess={vi.fn()} />);
 
     const dateInput = screen.getByLabelText(
-      "매수일 · Purchase date",
+      "매수일",
     ) as HTMLInputElement;
     const d = new Date();
     const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
@@ -181,7 +181,7 @@ describe("AddPositionModalV2 — Symbol autocomplete dropdown", () => {
   it("debounced-searches on input and renders suggestion names + tickers", async () => {
     render(<AddPositionModalV2 open onClose={vi.fn()} onSuccess={vi.fn()} />);
 
-    await user.type(screen.getByLabelText("Symbol"), "005");
+    await user.type(screen.getByLabelText("종목 코드"), "005");
     await flushSearch();
 
     expect(fetchMock).toHaveBeenCalled();
@@ -198,7 +198,7 @@ describe("AddPositionModalV2 — Symbol autocomplete dropdown", () => {
   it("clicking a suggestion fills the canonical ticker and closes the popover", async () => {
     render(<AddPositionModalV2 open onClose={vi.fn()} onSuccess={vi.fn()} />);
 
-    const input = screen.getByLabelText("Symbol") as HTMLInputElement;
+    const input = screen.getByLabelText("종목 코드") as HTMLInputElement;
     await user.type(input, "005");
     await flushSearch();
 
@@ -215,7 +215,7 @@ describe("AddPositionModalV2 — Symbol autocomplete dropdown", () => {
   it("does not re-search after a pick (picked suppresses the popover)", async () => {
     render(<AddPositionModalV2 open onClose={vi.fn()} onSuccess={vi.fn()} />);
 
-    await user.type(screen.getByLabelText("Symbol"), "005");
+    await user.type(screen.getByLabelText("종목 코드"), "005");
     await flushSearch();
 
     const option = screen.getByRole("option", { name: /삼성전자/ });

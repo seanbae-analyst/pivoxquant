@@ -95,7 +95,7 @@ describe("NotificationsMatrix — server wiring", () => {
 
     // price_52w push toggle should hydrate to OFF from the server map.
     const signalPush = await screen.findByRole("switch", {
-      name: /52주 범위 · push/i,
+      name: /52주 범위 · 푸시/i,
     });
     await waitFor(() => {
       expect(signalPush).toHaveAttribute("aria-checked", "false");
@@ -103,7 +103,7 @@ describe("NotificationsMatrix — server wiring", () => {
 
     // concentration in-app is ON from the server map.
     const concentrationInapp = screen.getByRole("switch", {
-      name: /섹터 집중도 · inapp/i,
+      name: /섹터 집중도 · 앱 안/i,
     });
     expect(concentrationInapp).toHaveAttribute("aria-checked", "true");
   });
@@ -116,7 +116,7 @@ describe("NotificationsMatrix — server wiring", () => {
     renderMatrix();
 
     const signalPush = await screen.findByRole("switch", {
-      name: /52주 범위 · push/i,
+      name: /52주 범위 · 푸시/i,
     });
     await waitFor(() =>
       expect(signalPush).toHaveAttribute("aria-checked", "false"),
@@ -151,7 +151,7 @@ describe("NotificationsMatrix — server wiring", () => {
     renderMatrix();
 
     const signalPush = await screen.findByRole("switch", {
-      name: /52주 범위 · push/i,
+      name: /52주 범위 · 푸시/i,
     });
     await waitFor(() =>
       expect(signalPush).toHaveAttribute("aria-checked", "false"),
@@ -185,7 +185,7 @@ describe("NotificationsMatrix — server wiring", () => {
     renderMatrix();
 
     const signalPush = screen.getByRole("switch", {
-      name: /52주 범위 · push/i,
+      name: /52주 범위 · 푸시/i,
     });
     // Toggle is disabled while loading.
     expect(signalPush).toBeDisabled();
@@ -211,7 +211,7 @@ describe("NotificationsMatrix — server wiring", () => {
     renderMatrix();
 
     const signalPush = await screen.findByRole("switch", {
-      name: /52주 범위 · push/i,
+      name: /52주 범위 · 푸시/i,
     });
     await waitFor(() => expect(signalPush).not.toBeDisabled());
 
@@ -231,13 +231,13 @@ describe("NotificationsMatrix — server wiring", () => {
     renderMatrix();
 
     const signalPush = await screen.findByRole("switch", {
-      name: /52주 범위 · push/i,
+      name: /52주 범위 · 푸시/i,
     });
     await waitFor(() =>
       expect(signalPush).toHaveAttribute("aria-checked", "false"),
     );
     const concentrationPush = screen.getByRole("switch", {
-      name: /섹터 집중도 · push/i,
+      name: /섹터 집중도 · 푸시/i,
     });
 
     await user.click(signalPush);
@@ -275,11 +275,11 @@ describe("NotificationsMatrix — the server owns the row list", () => {
     await act(async () => {});
 
     expect(
-      screen.queryByRole("switch", { name: /52주 범위 · push/i }),
+      screen.queryByRole("switch", { name: /52주 범위 · 푸시/i }),
     ).toBeNull();
     // The event that does not need a quote is untouched.
     expect(
-      screen.getByRole("switch", { name: /섹터 집중도 · inapp/i }),
+      screen.getByRole("switch", { name: /섹터 집중도 · 앱 안/i }),
     ).toBeInTheDocument();
   });
 
@@ -293,10 +293,10 @@ describe("NotificationsMatrix — the server owns the row list", () => {
     await act(async () => {});
 
     expect(
-      screen.queryByRole("switch", { name: /52주 범위 · push/i }),
+      screen.queryByRole("switch", { name: /52주 범위 · 푸시/i }),
     ).toBeNull();
     expect(
-      screen.getByRole("switch", { name: /섹터 집중도 · inapp/i }),
+      screen.getByRole("switch", { name: /섹터 집중도 · 앱 안/i }),
     ).toBeInTheDocument();
   });
 
@@ -312,7 +312,7 @@ describe("NotificationsMatrix — the server owns the row list", () => {
     renderMatrix();
 
     const concentrationInapp = await screen.findByRole("switch", {
-      name: /섹터 집중도 · inapp/i,
+      name: /섹터 집중도 · 앱 안/i,
     });
     await waitFor(() => expect(concentrationInapp).not.toBeDisabled());
     await user.click(concentrationInapp);
@@ -354,14 +354,14 @@ describe("NotificationsMatrix — only channels with a sender are toggles", () =
     await act(async () => {});
 
     // concentration is never emailed; monthly mirror is only emailed.
-    expect(screen.queryByRole("switch", { name: /섹터 집중도 · email/i })).toBeNull();
-    expect(screen.queryByRole("switch", { name: /52주 범위 · email/i })).toBeNull();
-    expect(screen.queryByRole("switch", { name: /월간 거울 리포트 · push/i })).toBeNull();
-    expect(screen.queryByRole("switch", { name: /월간 거울 리포트 · inapp/i })).toBeNull();
+    expect(screen.queryByRole("switch", { name: /섹터 집중도 · 이메일/i })).toBeNull();
+    expect(screen.queryByRole("switch", { name: /52주 범위 · 이메일/i })).toBeNull();
+    expect(screen.queryByRole("switch", { name: /월간 거울 리포트 · 푸시/i })).toBeNull();
+    expect(screen.queryByRole("switch", { name: /월간 거울 리포트 · 앱 안/i })).toBeNull();
     // Live cells are still switches.
-    expect(screen.getByRole("switch", { name: /섹터 집중도 · push/i })).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: /섹터 집중도 · 푸시/i })).toBeInTheDocument();
     expect(
-      screen.getByRole("switch", { name: /월간 거울 리포트 · email/i }),
+      screen.getByRole("switch", { name: /월간 거울 리포트 · 이메일/i }),
     ).toHaveAttribute("aria-checked", "true");
   });
 
@@ -370,9 +370,9 @@ describe("NotificationsMatrix — only channels with a sender are toggles", () =
     renderMatrix();
     await act(async () => {});
 
-    expect(screen.queryByRole("switch", { name: /섹터 집중도 · email/i })).toBeNull();
-    expect(screen.queryByRole("switch", { name: /월간 거울 리포트 · push/i })).toBeNull();
-    expect(screen.getByRole("switch", { name: /월간 거울 리포트 · email/i })).toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: /섹터 집중도 · 이메일/i })).toBeNull();
+    expect(screen.queryByRole("switch", { name: /월간 거울 리포트 · 푸시/i })).toBeNull();
+    expect(screen.getByRole("switch", { name: /월간 거울 리포트 · 이메일/i })).toBeInTheDocument();
   });
 });
 

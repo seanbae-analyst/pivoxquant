@@ -14,8 +14,8 @@
  *
  * Host wires `useAuth()` + `useLocale()`; the three help lines read from
  * settingsV2.identity via useT (2026-09-19 — they were hardcoded English
- * under the ko locale). Short field labels stay English: they are app-shell
- * chrome, not product vocabulary (see commit a1327238).
+ * under the ko locale). Short field labels were English app-shell chrome
+ * until 2026-10-07, when the CEO asked for them in Korean too.
  *
  * Legal: persona vocabulary only. No advice strings.
  */
@@ -64,29 +64,27 @@ export function SettingsIdentityCardV2({
       }}
     >
       <span
-        className="font-mono uppercase"
+        className="font-mono"
         style={{
           position: "absolute",
           top: 14,
           right: 14,
           fontSize: "var(--pq-text-eyebrow)",
-          letterSpacing: "0.2em",
           color: "var(--pq-ivory-dim)",
         }}
       >
-        A1 · Identity
+        계정 정보
       </span>
 
       <div
-        className="font-mono uppercase"
+        className="font-mono"
         style={{
           fontSize: "var(--pq-text-eyebrow)",
-          letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
           marginBottom: 16,
         }}
       >
-        Signed-in as
+        로그인 계정
       </div>
 
       {/* Display name */}
@@ -100,7 +98,7 @@ export function SettingsIdentityCardV2({
         }}
       >
         <div style={{ minWidth: 0 }}>
-          <div className="font-serif" style={ROW_LABEL_STYLE}>Display name</div>
+          <div className="font-serif" style={ROW_LABEL_STYLE}>표시 이름</div>
           <div className="font-serif" style={ROW_HELP_STYLE}>
             {t("settingsV2.identity.nameHelp")}
           </div>
@@ -120,7 +118,7 @@ export function SettingsIdentityCardV2({
         }}
       >
         <div style={{ minWidth: 0 }}>
-          <div className="font-serif" style={ROW_LABEL_STYLE}>Email</div>
+          <div className="font-serif" style={ROW_LABEL_STYLE}>이메일</div>
           <div className="font-serif" style={ROW_HELP_STYLE}>
             {t("settingsV2.identity.emailHelp")}
           </div>
@@ -154,14 +152,14 @@ export function SettingsIdentityCardV2({
         }}
       >
         <div style={{ minWidth: 0 }}>
-          <div className="font-serif" style={ROW_LABEL_STYLE}>Locale</div>
+          <div className="font-serif" style={ROW_LABEL_STYLE}>언어</div>
           <div className="font-serif" style={ROW_HELP_STYLE}>
             {t("settingsV2.identity.localeHelp")}
           </div>
         </div>
         <div
           role="group"
-          aria-label="Language"
+          aria-label="언어"
           style={{ display: "flex", gap: 8 }}
         >
           {(["ko", "en"] as const).map((code) => {
@@ -173,11 +171,9 @@ export function SettingsIdentityCardV2({
                 type="button"
                 aria-pressed={active}
                 onClick={() => onLocaleChange(code)}
-                className="font-mono uppercase"
+                className="font-mono"
                 style={{
                   fontSize: "var(--pq-text-eyebrow)",
-                  letterSpacing: "0.18em",
-                  textTransform: "uppercase",
                   border: `1px solid ${
                     active
                       ? "var(--pq-bronze)"

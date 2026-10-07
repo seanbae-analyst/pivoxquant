@@ -388,7 +388,7 @@ export function ObservationNoteComposer({
           type="submit"
           disabled={!canSubmit}
           aria-disabled={!canSubmit}
-          className="pq-ink-btn-bronze inline-flex items-center px-5 py-2 text-pq-mono-sm uppercase tracking-[0.22em] disabled:cursor-not-allowed disabled:opacity-30"
+          className="pq-ink-btn-bronze inline-flex items-center px-5 py-2 text-pq-mono-sm disabled:cursor-not-allowed disabled:opacity-30"
         >
           {submitting ? "기록하는 중" : "기록"}
         </button>

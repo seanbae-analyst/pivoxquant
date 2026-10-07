@@ -30,7 +30,7 @@ import en from "@/messages/en.json";
 describe("LivingCFOStatusBar", () => {
   it("links to /mirror and /onboarding without an 'assessment' label", () => {
     render(<LivingCFOStatusBar />);
-    fireEvent.click(screen.getByRole("button", { name: /CFO status/ }));
+    fireEvent.click(screen.getByRole("button", { name: /CFO 현황/ }));
     const hrefs = screen.getAllByRole("link").map((a) => a.getAttribute("href"));
     expect(hrefs).toContain("/mirror");
     expect(hrefs).toContain("/onboarding");
@@ -47,7 +47,7 @@ describe("LivingCFOStatusBar", () => {
         <LivingCFOStatusBar />
       </LocaleProvider>,
     );
-    fireEvent.click(screen.getByRole("button", { name: /CFO status/ }));
+    fireEvent.click(screen.getByRole("button", { name: /CFO 현황/ }));
     expect(screen.queryByText(/drift tracked/i)).toBeNull();
     expect(screen.queryByText(/drift data/i)).toBeNull();
     expect(screen.getByText("주간 펄스 0회 기록됨.")).toBeTruthy();
@@ -63,12 +63,12 @@ describe("LivingCFOStatusBar", () => {
     state.declared = { persona: "growth", label: "성장형" };
     try {
       const { container } = render(<LivingCFOStatusBar />);
-      fireEvent.click(screen.getByRole("button", { name: /CFO status/ }));
+      fireEvent.click(screen.getByRole("button", { name: /CFO 현황/ }));
       const text = container.ownerDocument.body.textContent ?? "";
       for (const name of ["성장형", "균형형", "수익형", "Declared persona"]) {
         expect(text).not.toContain(name);
       }
-      expect(text).toContain("Five onboarding answers recorded.");
+      expect(text).toContain("온보딩 다섯 문항에 답했습니다.");
     } finally {
       state.profile = null;
       state.declared = undefined;

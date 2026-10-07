@@ -30,7 +30,6 @@ vi.mock("@/lib/api", async (importOriginal) => {
 import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
 import { ImportInbox, thesisOk, fmtPrice } from "@/components/journal/import-inbox";
-import { sideLabel } from "@/lib/pre-trade";
 
 const apiFetchMock = vi.mocked(apiFetch);
 import type { PendingTradeDTO, PreTradeReflection } from "@/lib/types";
@@ -150,12 +149,12 @@ describe("ImportInbox", () => {
 
     // Row 1 — KRW buy with a matching pause record.
     expect(within(rows[0]).getByText("삼성전자")).toBeInTheDocument();
-    expect(within(rows[0]).getByText(sideLabel("BUY"))).toBeInTheDocument();
+    expect(within(rows[0]).getByText("진입")).toBeInTheDocument();
     expect(within(rows[0]).getByText(fmtPrice(71200, "KRW"))).toBeInTheDocument();
     expect(within(rows[0]).getByText("journal.import.reflectionMatched")).toBeInTheDocument();
 
     // Row 2 — USD sell, no pause.
-    expect(within(rows[1]).getByText(sideLabel("SELL"))).toBeInTheDocument();
+    expect(within(rows[1]).getByText("정리")).toBeInTheDocument();
     expect(within(rows[1]).getByText(fmtPrice(189.2, "USD"))).toBeInTheDocument();
     expect(within(rows[1]).getByText("journal.import.reflectionNone")).toBeInTheDocument();
 

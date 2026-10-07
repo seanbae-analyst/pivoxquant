@@ -94,7 +94,7 @@ export function AiTextReadPanel({
               onClick={send}
               disabled={!canSend}
               aria-disabled={!canSend}
-              className="pq-ink-btn-bronze inline-flex items-center px-5 py-2 text-pq-mono-sm uppercase tracking-[0.22em] disabled:opacity-30 disabled:cursor-not-allowed"
+              className="pq-ink-btn-bronze inline-flex items-center px-5 py-2 text-pq-mono-sm disabled:opacity-30 disabled:cursor-not-allowed"
               data-testid="ai-text-send"
             >
               {sending ? t("journal.import.page.submitting") : t("journal.import.image.send")}

@@ -23,13 +23,14 @@
 import * as React from "react";
 import { X } from "lucide-react";
 import { useFocusTrap } from "@/lib/useFocusTrap";
-import { sideLabel, type Side } from "@/lib/pre-trade";
+import { type Side } from "@/lib/pre-trade";
 import {
   usePreTradeCycle,
   QuestionsStep,
   CooldownStep,
   TerminalStep,
   QUESTIONS,
+  sideLabelKo,
 } from "./pre-trade-friction-core";
 import { RelatedObservationNotes } from "./related-observation-notes";
 
@@ -115,7 +116,7 @@ export function PreTradeFrictionModal({
 
   // Header copy keys off side + phase.
   const eyebrow =
-    side === "ENTRY" ? "Reflection · Before you add" : "Reflection · Before you trim";
+    side === "ENTRY" ? "멈춤 · 더하기 전" : "멈춤 · 줄이기 전";
 
   return (
     <div
@@ -165,10 +166,9 @@ export function PreTradeFrictionModal({
         >
           <div>
             <div
-              className="font-mono uppercase"
+              className="font-mono"
               style={{
                 fontSize: "var(--pq-text-eyebrow)",
-                letterSpacing: "0.22em",
                 color: "var(--pq-bronze)",
                 marginBottom: 12,
               }}
@@ -187,7 +187,7 @@ export function PreTradeFrictionModal({
                 margin: 0,
               }}
             >
-              Seven questions first.
+              먼저, 질문 일곱 개.
             </h2>
             <p
               className="font-serif"
@@ -205,11 +205,10 @@ export function PreTradeFrictionModal({
                 className="font-mono"
                 style={{
                   fontSize: "var(--pq-text-eyebrow)",
-                  letterSpacing: "0.16em",
                   color: "var(--pq-ivory-dim)",
                 }}
               >
-                {sideLabel(side)}
+                {sideLabelKo(side)}
               </span>{" "}
               · 조언이 아니라 규율입니다. 기록 전용 — 주문은 넣지 않습니다.
             </p>
@@ -217,7 +216,7 @@ export function PreTradeFrictionModal({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close"
+            aria-label="닫기"
             disabled={cycle.phase === "cooldown"}
             className="font-mono"
             style={{
@@ -277,7 +276,7 @@ export function PreTradeFrictionModal({
             bare
             reflection={cycle.reflection}
             onReset={onClose}
-            resetLabel="Close · 닫기"
+            resetLabel="닫기"
           />
         )}
       </div>

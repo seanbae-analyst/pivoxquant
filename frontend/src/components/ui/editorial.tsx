@@ -43,6 +43,18 @@ export function Fleuron({
   );
 }
 
+/**
+ * Wide tracking is for Latin small caps. On Hangul it spreads a word into
+ * separate letters ("검 토 했 음"), so a label whose text is Korean gets
+ * normal spacing (2026-10-07, labels moved to Korean).
+ */
+function hasHangul(node: React.ReactNode): boolean {
+  if (typeof node === "string") return /[\uAC00-\uD7A3]/.test(node);
+  if (typeof node === "number") return false;
+  if (Array.isArray(node)) return node.some(hasHangul);
+  return false;
+}
+
 /** Thin 24px bronze rule + small-caps kicker. Sits above a section heading. */
 export function RuledKicker({
   children,
@@ -59,7 +71,7 @@ export function RuledKicker({
         alignItems: "center",
         gap: 10,
         fontSize: "var(--pq-text-eyebrow)",
-        letterSpacing: "0.24em",
+        letterSpacing: hasHangul(children) ? "0.02em" : "0.24em",
         textTransform: "uppercase",
         color: "var(--pq-bronze)",
         fontWeight: 500,
@@ -260,7 +272,7 @@ export function FieldLabel({
       style={{
         display: "inline-block",
         fontSize: size,
-        letterSpacing: "0.12em",
+        letterSpacing: hasHangul(children) ? "0.02em" : "0.12em",
         textTransform: "uppercase",
         color,
         fontWeight: 500,

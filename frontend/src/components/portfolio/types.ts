@@ -57,7 +57,7 @@ export interface BackendPositionRow {
   // The mismatch produced `undefined` for every numeric field; the
   // `?? 0` fallback then silently zeroed avgCost + current, which
   // cascaded into KRW 0/USD 0 for every Holdings row, NAV → 0, weights →
-  // 0%, and Sectors → "No allocation yet". All 4 positions on every
+  // 0%, and 섹터 → "아직 섹터 구성이 없습니다". All 4 positions on every
   // user's portfolio rendered as zero in prod 2026-05-15. Holding
   // both shapes here keeps both endpoints working.
   avg_cost?: number;
@@ -104,7 +104,7 @@ export function toPosition(row: BackendPositionRow): Position {
     avgCost: row.avgCost ?? row.avg_cost ?? 0,
     current: row.current ?? row.current_price ?? 0,
     notes: row.notes,
-    sector: row.sector ?? "Unclassified",
+    sector: row.sector ?? "미분류",
     purchaseDate: row.purchaseDate ?? row.purchase_date ?? "",
     observed_at: row.observed_at ?? null,
     currency: row.currency,

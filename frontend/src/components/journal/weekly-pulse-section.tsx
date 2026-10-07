@@ -18,8 +18,8 @@
  * instead of its old auto-opening modal copy of the same form.
  *
  * Legal: self-reported sentiment only, not investment advice. Mood bands
- * render as CALM / STEADY / PROTECTIVE / CAUTIOUS — never the literal "HOLD"
- * token (CEO + legal 2026-04-28).
+ * render as 차분 / 보통 / 방어적 / 신중 (Korean since 2026-10-07, CEO "영문
+ * 라벨도 한글로") — never the literal "HOLD" token (CEO + legal 2026-04-28).
  */
 
 import * as React from "react";
@@ -31,15 +31,15 @@ import { WeeklyPulseCard } from "@/components/dashboard/weekly-pulse";
 
 /**
  * Posture mapping for pulse history rows. The backend may still emit `hold`
- * as a posture key — the UI label renders STEADY.
+ * as a posture key — the UI label renders the same as `steady`.
  */
 const POSTURE_LABEL: Record<string, string> = {
-  calm: "CALM",
-  protective: "PROTECTIVE",
-  steady: "STEADY",
-  hold: "STEADY", // ← rename: "HOLD" → "STEADY" (legal, 2026-04-28)
-  wait: "WAIT",
-  cautious: "CAUTIOUS",
+  calm: "차분",
+  protective: "방어적",
+  steady: "보통",
+  hold: "보통", // ← never the "HOLD" token (legal, 2026-04-28)
+  wait: "기다림",
+  cautious: "신중",
 };
 
 interface PulseHistoryRow {
@@ -58,14 +58,13 @@ function moodToPosture(mood: number | undefined): string {
 }
 
 function PulseRow({ row }: { row: PulseHistoryRow }) {
-  const label =
-    POSTURE_LABEL[row.posture.toLowerCase()] ?? row.posture.toUpperCase();
+  const label = POSTURE_LABEL[row.posture.toLowerCase()] ?? row.posture;
   return (
     <div
       role="listitem"
       style={{
         display: "grid",
-        gridTemplateColumns: "60px 1fr auto",
+        gridTemplateColumns: "64px 1fr auto",
         gap: 14,
         alignItems: "baseline",
         padding: "10px 0",
@@ -73,11 +72,10 @@ function PulseRow({ row }: { row: PulseHistoryRow }) {
       }}
     >
       <span
-        className="font-mono uppercase"
+        className="font-mono"
         style={{
           fontVariantNumeric: "tabular-nums",
           fontSize: "var(--pq-text-eyebrow)",
-          letterSpacing: "0.16em",
           color: "var(--pq-bronze)",
         }}
       >
@@ -93,10 +91,9 @@ function PulseRow({ row }: { row: PulseHistoryRow }) {
         &ldquo;{row.question}&rdquo;
       </span>
       <span
-        className="font-mono uppercase"
+        className="font-mono"
         style={{
           fontSize: "var(--pq-text-eyebrow)",
-          letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
         }}
       >
@@ -131,11 +128,12 @@ export function WeeklyPulseSection() {
           .reverse()
           .map((p) => ({
             date: p.submitted_at
-              ? new Date(parseUtcSafe(p.submitted_at))
-                  .toLocaleDateString("en-US", { day: "2-digit", month: "short" })
-                  .toUpperCase()
+              ? new Date(parseUtcSafe(p.submitted_at)).toLocaleDateString(
+                  "ko-KR",
+                  { month: "long", day: "numeric", timeZone: "Asia/Seoul" },
+                )
               : "—",
-            question: p.worry?.trim() ? p.worry : "Weekly reflection.",
+            question: p.worry?.trim() ? p.worry : "주간 회고.",
             posture: moodToPosture(p.mood),
           }))
       : [];
@@ -144,10 +142,10 @@ export function WeeklyPulseSection() {
     <section
       ref={sectionRef}
       id="weekly-pulse"
-      aria-label="주간 펄스 · Weekly pulse"
+      aria-label="주간 회고"
       style={{ scrollMarginTop: "calc(var(--pq-aux-sticky-top, 56px) + 16px)" }}
     >
-      <RuledKicker>주간 펄스 · Weekly pulse</RuledKicker>
+      <RuledKicker>주간 회고</RuledKicker>
       <EditorialHead as="h2" size={26} tone="ivory" className="mt-3">
         이번 주를 스스로 적어 두기
       </EditorialHead>
@@ -156,10 +154,10 @@ export function WeeklyPulseSection() {
         싶은 것 — 다섯 칸입니다. 남긴 답은 여기에 쌓입니다.
       </Caption>
 
-      <div role="list" aria-label="Recent pulse answers" className="mt-5">
+      <div role="list" aria-label="최근 회고" className="mt-5">
         {rows.length === 0 ? (
           <p className="font-serif text-pq-body-sm text-[var(--pq-ivory-dim)]">
-            아직 남긴 펄스가 없습니다.
+            아직 남긴 회고가 없습니다.
           </p>
         ) : (
           rows.map((r, i) => <PulseRow key={`${r.date}-${i}`} row={r} />)

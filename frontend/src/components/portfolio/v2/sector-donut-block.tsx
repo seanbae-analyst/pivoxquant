@@ -67,7 +67,7 @@ function buildSectors(
     } else {
       normalized = mv;
     }
-    const sector = p.sector || "Unclassified";
+    const sector = p.sector || "미분류";
     totals[sector] = (totals[sector] ?? 0) + normalized;
     total += normalized;
   }
@@ -85,7 +85,7 @@ function buildSectors(
   const otherPct = sorted.slice(6).reduce((acc, s) => acc + s.pct, 0);
   return [
     ...top.map((s, i) => ({ ...s, color: COLOR_RAMP[i] })),
-    { name: "Other", pct: otherPct, color: COLOR_RAMP[6] },
+    { name: "기타", pct: otherPct, color: COLOR_RAMP[6] },
   ];
 }
 
@@ -134,15 +134,15 @@ export function SectorDonutBlock({
       }}
     >
       <div
-        className="font-mono uppercase"
+        className="font-mono"
         style={{
           fontSize: "var(--pq-text-eyebrow)",
-          letterSpacing: "0.22em",
+          letterSpacing: "0.02em",
           color: "var(--pq-bronze)",
           marginBottom: 20,
         }}
       >
-        Sectors · Mix
+        섹터 · 구성
       </div>
 
       {sectors.length === 0 ? (
@@ -156,7 +156,7 @@ export function SectorDonutBlock({
             fontSize: "var(--pq-text-body)",
           }}
         className="font-serif" >
-          No allocation yet.
+          아직 섹터 구성이 없습니다.
         </div>
       ) : (
         <>
@@ -170,7 +170,7 @@ export function SectorDonutBlock({
           >
             <svg
               role="img"
-              aria-label={`Sector allocation across ${sectors.length} sectors`}
+              aria-label={`섹터 ${sectors.length}개 구성`}
               width={SIZE}
               height={SIZE}
               viewBox={`0 0 ${SIZE} ${SIZE}`}
@@ -210,15 +210,15 @@ export function SectorDonutBlock({
               }}
             >
               <div
-                className="font-mono uppercase"
+                className="font-mono"
                 style={{
                   fontSize: "var(--pq-text-eyebrow)",
-                  letterSpacing: "0.22em",
+                  letterSpacing: "0.02em",
                   color: "var(--pq-ivory-dim)",
                   marginBottom: 2,
                 }}
               >
-                Sectors
+                섹터
               </div>
               <div
                 className="font-display"

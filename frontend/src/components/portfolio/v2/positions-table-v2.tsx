@@ -260,27 +260,27 @@ export function PositionsTableV2({
   // three leave the table with the gate off — removed, not em-dashed, so no
   // empty money column invites the reader to assume a zero.
   const marketHeaders: TableHeader[] = [
-    { key: "last", label: "Last", align: "right" },
-    { key: "plPct", label: "P/L %", align: "right" },
-    { key: "value", label: "Mkt value", align: "right" },
+    { key: "last", label: "현재가", align: "right" },
+    { key: "plPct", label: "손익률", align: "right" },
+    { key: "value", label: "평가액", align: "right" },
   ];
   const headers: TableHeader[] = [
-    { key: "name", label: "Name", align: "left" },
-    { key: "shares", label: "Shares", align: "right" },
-    { key: "avgCost", label: "Avg cost", align: "right" },
+    { key: "name", label: "종목", align: "left" },
+    { key: "shares", label: "수량", align: "right" },
+    { key: "avgCost", label: "평균가", align: "right" },
     ...(marketDataDisplay ? marketHeaders : []),
     {
       key: "weight",
       // The header carries the basis so the number is never read as a
       // market weight — same convention as /journal's 평균매입가 기준 비중.
-      label: marketDataDisplay ? "Weight" : "Weight · at cost",
+      label: marketDataDisplay ? "비중" : "비중 · 취득가 기준",
       align: "right",
     },
-    { key: "sector", label: "Sector", align: "left" },
+    { key: "sector", label: "섹터", align: "left" },
   ];
 
   return (
-    <section aria-label="Positions" style={{ marginBottom: 40 }}>
+    <section aria-label="보유 종목" style={{ marginBottom: 40 }}>
       <div
         style={{
           display: "flex",
@@ -293,29 +293,29 @@ export function PositionsTableV2({
             page-chrome, not content (2026-10-07). */}
         <div className="hidden md:block">
           <div
-            className="font-mono uppercase"
+            className="font-mono"
             style={{
               fontSize: "var(--pq-text-eyebrow)",
-              letterSpacing: "0.22em",
+              letterSpacing: "0.02em",
               color: "var(--pq-bronze)",
               marginBottom: 8,
             }}
           >
-            Holdings · Ledger
+            보유 종목 · 장부
           </div>
           <EditorialHead size={30} as="h2" style={{ lineHeight: 1.1 }}>
             {t("dashboard.portfolio.positions.heading")}
           </EditorialHead>
         </div>
         <span
-          className="font-mono uppercase"
+          className="font-mono"
           style={{
             fontSize: "var(--pq-text-eyebrow)",
-            letterSpacing: "0.22em",
+            letterSpacing: "0.02em",
             color: "var(--pq-ivory-dim)",
           }}
         >
-          {rows.length} {rows.length === 1 ? "row" : "rows"}
+          {rows.length}개 종목
         </span>
       </div>
 
@@ -339,7 +339,7 @@ export function PositionsTableV2({
               fontSize: "var(--pq-text-body)",
             }}
           className="font-serif" >
-            Loading positions…
+            보유 종목을 불러오는 중…
           </div>
         ) : rows.length === 0 ? (
           <div
@@ -386,14 +386,14 @@ export function PositionsTableV2({
                 <button
                   type="button"
                   onClick={onAddPosition}
-                  className="font-mono uppercase"
+                  className="font-mono"
                   style={{
                     display: "inline-flex",
                     padding: "11px 22px",
                     background: "var(--pq-bronze)",
                     color: "var(--pq-ink, #050505)",
                     fontSize: "var(--pq-text-eyebrow)",
-                    letterSpacing: "0.2em",
+                    letterSpacing: "0.02em",
                     border: "none",
                     borderRadius: "var(--pq-radius-cta, 2px)",
                     cursor: "pointer",
@@ -446,8 +446,7 @@ export function PositionsTableV2({
                     className="pq-pos-th font-mono"
                     style={{
                       fontSize: "var(--pq-text-eyebrow)",
-                      letterSpacing: "0.22em",
-                      textTransform: "uppercase",
+                      letterSpacing: "0.02em",
                       fontWeight: 500,
                       color:
                         sortKey === h.key
@@ -489,9 +488,8 @@ export function PositionsTableV2({
         )}
       </div>
 
-      {/* Basis footnote. The column header above sits in the uppercase-mono
-          eyebrow tier, which stays English by house rule, so the Korean
-          clarifier lives here — verbatim the wording /journal already uses. */}
+      {/* Basis footnote — the header says "취득가 기준" in short; the full
+          clarifier lives here, verbatim the wording /journal already uses. */}
       {!marketDataDisplay && rows.length > 0 ? (
         <div data-testid="positions-cost-basis-note" style={{ marginTop: 12 }}>
           <Caption>{t("journal.concentrationMirror.costBasisNote")}</Caption>
@@ -620,23 +618,23 @@ function PositionRow({
             {onAction && (
               <>
                 <RowActionBtn
-                  label="Add"
+                  label="추가"
+                  ariaLabel={`${normalizeTicker(p.symbol)} 추가 기록`}
                   onClick={(e) => handleAction(e, "buy")}
                 />
                 <RowActionBtn
-                  label="Trim"
+                  label="정리"
+                  ariaLabel={`${normalizeTicker(p.symbol)} 정리 기록`}
                   onClick={(e) => handleAction(e, "sell")}
                 />
                 <RowActionBtn
-                  label="Edit"
+                  label="수정"
+                  ariaLabel={`${normalizeTicker(p.symbol)} 수정`}
                   onClick={(e) => handleAction(e, "edit")}
                 />
               </>
             )}
-            {/* Korean label in the mono eyebrow tier — the exception the
-                empty-state CTA already sets ("보유종목 직접 추가 →"). This is a
-                product noun the reader has to recognize from /journal, not a
-                column header. */}
+            {/* 관찰 노트 — the product noun the reader recognizes from /journal. */}
             {onObservationNote && (
               <RowActionBtn
                 label="관찰 노트"
@@ -831,17 +829,16 @@ function RowActionBtn({
       type="button"
       onClick={onClick}
       aria-label={ariaLabel}
-      className="font-mono uppercase"
+      className="font-mono"
       style={{
         fontSize: "var(--pq-text-eyebrow)",
-        letterSpacing: "0.2em",
+        letterSpacing: "0.02em",
         padding: "4px 10px",
         background: "transparent",
         color: "var(--pq-bronze)",
         border: "1px solid rgba(184,149,106,0.4)",
         borderRadius: "var(--pq-radius-cta, 2px)",
         cursor: "pointer",
-        textTransform: "uppercase",
       }}
     >
       {label}

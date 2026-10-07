@@ -139,29 +139,29 @@ export function CapitalCardV2() {
       }}
     >
       <span
-        className="font-mono uppercase"
+        className="font-mono"
         style={{
           position: "absolute",
           top: 14,
           right: 14,
           fontSize: "var(--pq-text-eyebrow)",
-          letterSpacing: "0.2em",
+          letterSpacing: "0.02em",
           color: "var(--pq-ivory-dim)",
         }}
       >
-        Seed capital
+        시드 자본
       </span>
 
       <div
-        className="font-mono uppercase"
+        className="font-mono"
         style={{
           fontSize: "var(--pq-text-eyebrow)",
-          letterSpacing: "0.22em",
+          letterSpacing: "0.02em",
           color: "var(--pq-bronze)",
           marginBottom: 8,
         }}
       >
-        Seed capital · Analysis basis
+        시드 자본 · 분석 기준
       </div>
       <p
         className="font-serif"
@@ -186,15 +186,15 @@ export function CapitalCardV2() {
       >
         <div>
           <div
-            className="font-mono uppercase"
+            className="font-mono"
             style={{
               fontSize: "var(--pq-text-eyebrow)",
-              letterSpacing: "0.18em",
+              letterSpacing: "0.02em",
               color: "var(--pq-ivory-dim)",
               marginBottom: 4,
             }}
           >
-            Current USD
+            현재 USD
           </div>
           <div className="font-mono" style={ROW_VALUE_STYLE}>
             {fmtUsd(user?.available_capital ?? 0)}
@@ -202,15 +202,15 @@ export function CapitalCardV2() {
         </div>
         <div>
           <div
-            className="font-mono uppercase"
+            className="font-mono"
             style={{
               fontSize: "var(--pq-text-eyebrow)",
-              letterSpacing: "0.18em",
+              letterSpacing: "0.02em",
               color: "var(--pq-ivory-dim)",
               marginBottom: 4,
             }}
           >
-            Current KRW
+            현재 KRW
           </div>
           <div className="font-mono" style={ROW_VALUE_STYLE}>
             {fmtKrw(user?.available_capital_krw ?? 0)}
@@ -282,7 +282,7 @@ export function CapitalCardV2() {
         <button
           type="submit"
           disabled={saving}
-          className="font-mono uppercase"
+          className="font-mono"
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -292,7 +292,7 @@ export function CapitalCardV2() {
             background: "var(--pq-bronze)",
             color: "var(--pq-ink, #050505)",
             fontSize: "var(--pq-text-eyebrow)",
-            letterSpacing: "0.2em",
+            letterSpacing: "0.02em",
             borderRadius: 2,
             border: "none",
             cursor: saving ? "wait" : "pointer",
@@ -300,7 +300,7 @@ export function CapitalCardV2() {
           }}
         >
           {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-          {saving ? "Saving…" : "Save"}
+          {saving ? "저장 중…" : "저장"}
         </button>
       </form>
     </div>

@@ -150,15 +150,15 @@ export function AddPositionModalV2({
     if (submitting || frictionOpen) return;
 
     if (!sym) {
-      toast.error("Symbol is required.");
+      toast.error("종목 코드를 입력하세요.");
       return;
     }
     if (!Number.isFinite(sharesN) || sharesN <= 0) {
-      toast.error("Shares must be a positive number.");
+      toast.error("수량은 0보다 커야 합니다.");
       return;
     }
     if (!Number.isFinite(costN) || costN <= 0) {
-      toast.error("Average cost must be positive.");
+      toast.error("평균가는 0보다 커야 합니다.");
       return;
     }
     if (purchaseDate && purchaseDate > today) {
@@ -170,7 +170,7 @@ export function AddPositionModalV2({
       // NEW_ENTRY: thesis required ≥MIN_RATIONALE_CHARS; hand off to the 7-question
       // reflection. Nothing is written until the modal calls onProceed.
       if (!memoOk) {
-        toast.error(`Thesis는 ${MIN_RATIONALE_CHARS}자 이상 적어주세요 (현재 ${memo.trim().length}자).`);
+        toast.error(`근거는 ${MIN_RATIONALE_CHARS}자 이상 적어주세요 (현재 ${memo.trim().length}자).`);
         return;
       }
       setFrictionOpen(true);
@@ -206,7 +206,7 @@ export function AddPositionModalV2({
         method: "POST",
         body: JSON.stringify(body),
       });
-      toast.success("Position recorded · informational only, not advice.");
+      toast.success("종목을 기록했습니다 · 정보 기록용입니다.");
       onSuccess?.();
       // HOLDING mode owns its own close (no friction modal to do it).
       if (mode === "holding") {
@@ -218,7 +218,7 @@ export function AddPositionModalV2({
         return;
       }
       const message =
-        err instanceof Error ? err.message : "Failed to record position.";
+        err instanceof Error ? err.message : "기록하지 못했습니다.";
       if (mode === "holding") {
         // No friction modal to surface the error — toast here.
         toast.error(message);
@@ -289,15 +289,15 @@ export function AddPositionModalV2({
         {/* Hero block — copy keys off mode */}
         <div style={{ marginBottom: 24 }}>
           <div
-            className="font-mono uppercase"
+            className="font-mono"
             style={{
               fontSize: "var(--pq-text-eyebrow)",
-              letterSpacing: "0.22em",
+              letterSpacing: "0.02em",
               color: "var(--pq-bronze)",
               marginBottom: 14,
             }}
           >
-            {mode === "holding" ? "Observation · Existing holding" : "Observation · New entry"}
+            {mode === "holding" ? "기록 · 보유 중인 종목" : "기록 · 신규 진입"}
           </div>
           <h2
             id={headlineId}
@@ -313,13 +313,13 @@ export function AddPositionModalV2({
           >
             {mode === "holding" ? (
               <>
-                Log a{" "}
-                <span style={{ color: "var(--pq-bronze)" }}>position you hold.</span>
+                지금 들고 있는{" "}
+                <span style={{ color: "var(--pq-bronze)" }}>종목을 기록합니다.</span>
               </>
             ) : (
               <>
-                Record a{" "}
-                <span style={{ color: "var(--pq-bronze)" }}>new position.</span>
+                새로 들어가는{" "}
+                <span style={{ color: "var(--pq-bronze)" }}>종목을 기록합니다.</span>
               </>
             )}
           </h2>
@@ -334,7 +334,7 @@ export function AddPositionModalV2({
           >
             {mode === "holding"
               ? "이미 보유한 종목을 책에 기록합니다. 질문 없이 바로 저장 — 매수일은 과거로 자유롭게 적어도 됩니다."
-              : "Saved to your book · not sent to broker. Journaling only — 7개 질문을 거친 뒤 기록됩니다."}
+              : "내 장부에만 저장되고 증권사로 전송되지 않습니다. 7개 질문을 거친 뒤 기록됩니다."}
           </p>
         </div>
 
@@ -392,7 +392,7 @@ export function AddPositionModalV2({
           style={{ display: "flex", flexDirection: "column", gap: 20 }}
         >
           {/* Symbol — full row, with debounced autocomplete dropdown */}
-          <FormField label="Symbol">
+          <FormField label="종목 코드">
             <TickerSearch
               required
               value={symbol}
@@ -406,7 +406,7 @@ export function AddPositionModalV2({
 
           {/* Row 1: Shares + Avg cost */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-            <FormField label="Shares">
+            <FormField label="수량">
               <input
                 required
                 type="number"
@@ -418,7 +418,7 @@ export function AddPositionModalV2({
                 style={fieldInputStyle}
               />
             </FormField>
-            <FormField label={`Avg cost${sym ? (isKrTicker(sym) ? " (KRW)" : " (USD)") : ""}`}>
+            <FormField label={`평균가${sym ? (isKrTicker(sym) ? " (KRW)" : " (USD)") : ""}`}>
               <input
                 required
                 type="number"
@@ -435,7 +435,7 @@ export function AddPositionModalV2({
           {/* Purchase date — when you opened the position. HOLDING mode's core
               use is backdating; NEW_ENTRY defaults to today. max=today blocks
               future dates client-side (also re-checked in handleSubmit). */}
-          <FormField label="매수일 · Purchase date">
+          <FormField label="매수일">
             <input
               type="date"
               value={purchaseDate}
@@ -448,7 +448,7 @@ export function AddPositionModalV2({
           {/* Thesis — required ≥MIN_RATIONALE_CHARS in NEW_ENTRY (prefills the
               reflection); optional memo in HOLDING mode. */}
           {mode === "new" ? (
-            <FormField label={`Thesis · 한 문단 (${MIN_RATIONALE_CHARS}자 이상)`}>
+            <FormField label={`근거 · 한 문단 (${MIN_RATIONALE_CHARS}자 이상)`}>
               <textarea
                 required
                 value={memo}
@@ -467,8 +467,8 @@ export function AddPositionModalV2({
                 }}
               >
                 {memoOk
-                  ? `✓ ${memo.trim().length} chars`
-                  : `${memoRemaining} chars more (${memo.trim().length}/${MIN_RATIONALE_CHARS})`}
+                  ? `✓ ${memo.trim().length}자`
+                  : `${memoRemaining}자 더 (${memo.trim().length}/${MIN_RATIONALE_CHARS})`}
               </span>
             </FormField>
           ) : (
@@ -498,36 +498,36 @@ export function AddPositionModalV2({
             }}
           >
             <span
-              className="font-mono uppercase"
+              className="font-mono"
               style={{
                 fontSize: "var(--pq-text-eyebrow)",
-                letterSpacing: "0.22em",
+                letterSpacing: "0.02em",
                 color: "var(--pq-ivory-dim)",
               }}
             >
-              Saved to your book · not sent to broker
+              내 장부에만 저장 · 증권사로 전송되지 않음
             </span>
             <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
               <button
                 type="button"
                 onClick={onClose}
-                className="font-mono uppercase"
+                className="font-mono"
                 style={{
                   background: "transparent",
                   border: "none",
                   color: "var(--pq-ivory-dim)",
                   fontSize: "var(--pq-text-eyebrow)",
-                  letterSpacing: "0.2em",
+                  letterSpacing: "0.02em",
                   cursor: "pointer",
                   padding: 4,
                 }}
               >
-                Cancel
+                취소
               </button>
               <button
                 type="submit"
                 disabled={submitting}
-                className="font-mono uppercase"
+                className="font-mono"
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
@@ -540,15 +540,15 @@ export function AddPositionModalV2({
                   border: "none",
                   borderRadius: "var(--pq-radius-cta, 2px)",
                   fontSize: "var(--pq-text-eyebrow)",
-                  letterSpacing: "0.2em",
+                  letterSpacing: "0.02em",
                   cursor: submitting ? "not-allowed" : "pointer",
                 }}
               >
                 {submitting
-                  ? "Saving…"
+                  ? "저장 중…"
                   : mode === "holding"
-                    ? "Record · 기록"
-                    : "Continue · 7 questions →"}
+                    ? "기록하기"
+                    : "다음 · 7문항 →"}
               </button>
             </div>
           </div>
@@ -608,7 +608,7 @@ function ModeToggleButton({
       role="radio"
       aria-checked={active}
       onClick={onClick}
-      className="font-mono uppercase"
+      className="font-mono"
       style={{
         flex: 1,
         padding: "9px 12px",
@@ -617,7 +617,7 @@ function ModeToggleButton({
         border: `1px solid ${active ? "var(--pq-bronze)" : "rgba(245,240,232,0.12)"}`,
         borderRadius: "var(--pq-radius-cta, 2px)",
         fontSize: "var(--pq-text-eyebrow)",
-        letterSpacing: "0.14em",
+        letterSpacing: "0.02em",
         cursor: "pointer",
         transition: "all 160ms",
       }}
@@ -643,10 +643,10 @@ function FormField({
       }}
     >
       <span
-        className="font-mono uppercase"
+        className="font-mono"
         style={{
           fontSize: "var(--pq-text-eyebrow)",
-          letterSpacing: "0.22em",
+          letterSpacing: "0.02em",
           color: "var(--pq-bronze)",
         }}
       >

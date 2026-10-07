@@ -36,7 +36,12 @@ import { Gavel, RotateCcw, Check, X, AlertCircle } from "lucide-react";
 import { apiFetch, ApiError } from "@/lib/api";
 import { API } from "@/lib/endpoints";
 import { Caption } from "@/components/ui/editorial";
-import { type Side, sideLabel, sideToWire } from "@/lib/pre-trade";
+import {
+  type Side,
+  SIDE_LABEL_KO,
+  sideFromWire,
+  sideToWire,
+} from "@/lib/pre-trade";
 import { useT } from "@/lib/locale";
 import {
   PRE_TRADE_QUESTIONS,
@@ -431,7 +436,7 @@ export function QuestionsStep(props: {
 
   return (
     <section className="space-y-6">
-      {!bare && <SectionLabel n={2} title="The Deposition · 7개 질문" />}
+      {!bare && <SectionLabel n={2} title="질문 7개" />}
       {pagedOnPhone && (
         <div className="md:hidden" data-testid="questions-progress">
           <div className="flex items-center justify-between text-[13px] text-[var(--pq-ivory-dim)]">
@@ -461,10 +466,10 @@ export function QuestionsStep(props: {
                 {String(q.n).padStart(2, "0")}
               </span>
               <div className="flex-1 space-y-1">
+                {/* 2026-10-07 (CEO "영문 라벨도 한글로"): only the Korean line
+                    is shown. q.en stays in the data — it still labels each
+                    answer in the devil_advocate audit blob sent to /start. */}
                 <p className="font-serif text-pq-deck leading-snug text-[var(--pq-ivory)]">
-                  {q.en}
-                </p>
-                <p className="font-serif text-pq-body-sm text-[var(--pq-ivory-dim)]">
                   {q.ko}
                 </p>
                 {hints?.[q.n] && (
@@ -487,11 +492,11 @@ export function QuestionsStep(props: {
                 onChange={(e) =>
                   setAnswers((prev) => ({ ...prev, [q.n]: e.target.value }))
                 }
-                placeholder="(optional) 한 줄로 답해보라"
-                aria-label={`Answer to question ${q.n}: ${q.en}`}
+                placeholder="(선택) 한 줄로 답해보라"
+                aria-label={`질문 ${q.n} 답: ${q.ko}`}
                 className="w-full bg-transparent border-b border-[rgba(245,240,232,0.1)] py-1.5 text-pq-body-sm font-serif outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)]"
               />
-              <label className="inline-flex items-center gap-2 cursor-pointer text-pq-mono-sm tracking-[0.18em] uppercase text-[var(--pq-ivory-dim)] hover:text-[var(--pq-bronze)]">
+              <label className="inline-flex items-center gap-2 cursor-pointer text-pq-mono-sm text-[var(--pq-ivory-dim)] hover:text-[var(--pq-bronze)]">
                 <input
                   type="checkbox"
                   checked={!!acks[q.n]}
@@ -500,7 +505,7 @@ export function QuestionsStep(props: {
                   }
                   className="accent-[var(--pq-bronze)]"
                 />
-                I considered this · 검토했음
+                검토했음
               </label>
             </div>
           </li>
@@ -545,9 +550,9 @@ export function QuestionsStep(props: {
             type="button"
             onClick={onBack}
             disabled={submitting}
-            className="px-4 py-2 text-pq-mono-sm uppercase tracking-[0.18em] text-[var(--pq-ivory-dim)] hover:text-[var(--pq-bronze)]"
+            className="px-4 py-2 text-pq-mono-sm text-[var(--pq-ivory-dim)] hover:text-[var(--pq-bronze)]"
           >
-            ← Back
+            ← 이전
           </button>
         ) : (
           <span />
@@ -557,9 +562,9 @@ export function QuestionsStep(props: {
           onClick={onStart}
           disabled={!allAcked || submitting}
           aria-disabled={!allAcked || submitting}
-          className="pq-ink-btn-bronze inline-flex items-center gap-2 px-5 py-2 text-pq-mono-sm uppercase tracking-[0.22em] disabled:opacity-30 disabled:cursor-not-allowed"
+          className="pq-ink-btn-bronze inline-flex items-center gap-2 px-5 py-2 text-pq-mono-sm disabled:opacity-30 disabled:cursor-not-allowed"
         >
-          {submitting ? "Starting…" : "Start cooldown · 진입 시계"}
+          {submitting ? "시작하는 중…" : "진입 시계 시작"}
           <Gavel className="h-3.5 w-3.5" />
         </button>
       </div>
@@ -611,15 +616,15 @@ export function CooldownStep({
       {!bare && (
         <SectionLabel
           n={3}
-          title={isReady ? "Ready · 결정의 시간" : "Cooldown · 진입 시계"}
+          title={isReady ? "결정의 시간" : "진입 시계"}
         />
       )}
 
       <div className="rounded-[2px] border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-6 md:p-8 space-y-6">
         {/* Trade summary */}
         <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
-          <span className="font-mono text-pq-mono-sm uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
-            {sideLabel(reflection.intended_side)}
+          <span className="font-mono text-pq-mono-sm text-[var(--pq-bronze)]">
+            {sideLabelKo(reflection.intended_side)}
           </span>
           <span
             className="font-serif text-pq-avatar text-[var(--pq-ivory)]"
@@ -629,7 +634,7 @@ export function CooldownStep({
           </span>
           {reflection.intended_shares !== null && (
             <span className="font-mono text-pq-body-sm text-[rgba(245,240,232,0.6)]">
-              {reflection.intended_shares} shares
+              {reflection.intended_shares}주
             </span>
           )}
         </div>
@@ -646,8 +651,8 @@ export function CooldownStep({
           >
             {String(mm).padStart(2, "0")}:{String(ss).padStart(2, "0")}
           </div>
-          <div className="mt-3 text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-ivory-faint)]">
-            {isReady ? "Cooldown complete" : "Time remaining · 남은 시간"}
+          <div className="mt-3 text-pq-eyebrow text-[var(--pq-ivory-faint)]">
+            {isReady ? "기다림 끝" : "남은 시간"}
           </div>
         </div>
 
@@ -664,8 +669,8 @@ export function CooldownStep({
           <div className="flex items-start gap-2 rounded-[2px] border border-[rgba(184,149,106,0.3)] bg-[rgba(184,149,106,0.05)] p-3">
             <AlertCircle className="h-3.5 w-3.5 mt-0.5 text-[var(--pq-bronze)] shrink-0" />
             <p className="text-pq-caption leading-relaxed text-[rgba(245,240,232,0.75)]">
-              <span className="font-mono text-pq-eyebrow tracking-[0.18em] uppercase text-[var(--pq-bronze)] mr-2">
-                Extended
+              <span className="font-mono text-pq-eyebrow text-[var(--pq-bronze)] mr-2">
+                연장됨
               </span>
               {extendReasonLabel(reflection.auto_extended_reason)}
             </p>
@@ -687,19 +692,19 @@ export function CooldownStep({
           type="button"
           onClick={onCancel}
           disabled={submitting}
-          className="inline-flex items-center gap-2 px-4 py-2 text-pq-mono-sm uppercase tracking-[0.18em] text-[var(--pq-ivory-dim)] hover:text-[var(--pq-error)]"
+          className="inline-flex items-center gap-2 px-4 py-2 text-pq-mono-sm text-[var(--pq-ivory-dim)] hover:text-[var(--pq-error)]"
         >
           <X className="h-3.5 w-3.5" />
-          Cancel · 취소
+          취소
         </button>
         <button
           type="button"
           onClick={onProceed}
           disabled={!isReady || submitting}
-          className="pq-ink-btn-bronze inline-flex items-center gap-2 px-5 py-2 text-pq-mono-sm uppercase tracking-[0.22em] disabled:opacity-30 disabled:cursor-not-allowed"
+          className="pq-ink-btn-bronze inline-flex items-center gap-2 px-5 py-2 text-pq-mono-sm disabled:opacity-30 disabled:cursor-not-allowed"
         >
           <Check className="h-3.5 w-3.5" />
-          {isReady ? "I am ready · 진행" : "Wait…"}
+          {isReady ? "진행" : "기다리는 중…"}
         </button>
       </div>
     </section>
@@ -719,7 +724,7 @@ export function TerminalStep({
   /** Outcome of the host's record commit; "none" when the host has no commit. */
   commit?: "none" | "recorded" | "failed";
   onReset: () => void;
-  /** Override the reset CTA label (modal: "Close"; page: "New checklist"). */
+  /** Override the reset CTA label (modal: "닫기"; page: "새로 시작"). */
   resetLabel?: string;
   bare?: boolean;
 }) {
@@ -732,7 +737,7 @@ export function TerminalStep({
       {!bare && (
         <SectionLabel
           n={4}
-          title={proceeded ? "Proceeded · 기록 완료" : "Cancelled · 취소"}
+          title={proceeded ? "기록 완료" : "취소"}
         />
       )}
       <div className="rounded-[2px] border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-6 md:p-8 space-y-4">
@@ -776,7 +781,7 @@ export function TerminalStep({
         </p>
         <div className="border-t border-[var(--pq-ivory-line-soft)] pt-3 flex flex-wrap gap-x-6 gap-y-1 text-pq-caption font-mono text-[var(--pq-ivory-dim)]">
           <span>
-            {sideLabel(reflection.intended_side)} ·{" "}
+            {sideLabelKo(reflection.intended_side)} ·{" "}
             {reflection.intended_ticker_name || reflection.intended_ticker}
           </span>
           {reflection.intended_shares !== null && (
@@ -784,8 +789,8 @@ export function TerminalStep({
           )}
           <span>
             {proceeded
-              ? `Proceeded ${formatTime(reflection.proceeded_at)}`
-              : `Cancelled ${formatTime(reflection.cancelled_at)}`}
+              ? `진행 ${formatTime(reflection.proceeded_at)}`
+              : `취소 ${formatTime(reflection.cancelled_at)}`}
           </span>
         </div>
       </div>
@@ -794,10 +799,10 @@ export function TerminalStep({
         <button
           type="button"
           onClick={onReset}
-          className="inline-flex items-center gap-2 px-5 py-2 text-pq-mono-sm uppercase tracking-[0.22em] text-[var(--pq-ivory-mid)] border border-[rgba(245,240,232,0.15)] hover:border-[var(--pq-bronze)] hover:text-[var(--pq-bronze)]"
+          className="inline-flex items-center gap-2 px-5 py-2 text-pq-mono-sm text-[var(--pq-ivory-mid)] border border-[rgba(245,240,232,0.15)] hover:border-[var(--pq-bronze)] hover:text-[var(--pq-bronze)]"
         >
           <RotateCcw className="h-3.5 w-3.5" />
-          {resetLabel ?? "New checklist · 새로 시작"}
+          {resetLabel ?? "새로 시작"}
         </button>
       </div>
     </section>
@@ -805,6 +810,20 @@ export function TerminalStep({
 }
 
 /* ─── Shared helpers ─────────────────────────────────────────────────────── */
+
+/**
+ * Korean-only side label ("진입" / "정리") for an internal Side or a wire
+ * value. `@/lib/pre-trade` sideLabel still renders the bilingual
+ * "Long Entry · 진입" form other surfaces use; the pre-trade and journal
+ * screens show Korean only (CEO 2026-10-07 "영문 라벨도 한글로").
+ */
+export function sideLabelKo(wireOrSide: string | null | undefined): string {
+  const s: Side | null =
+    wireOrSide === "ENTRY" || wireOrSide === "EXIT"
+      ? wireOrSide
+      : sideFromWire(wireOrSide);
+  return s ? SIDE_LABEL_KO[s] : "—";
+}
 
 export function SectionLabel({ n, title }: { n: number; title: string }) {
   return (
@@ -852,7 +871,7 @@ export function Field({
       <div className="block">
         <label
           htmlFor={htmlFor}
-          className="block text-pq-eyebrow uppercase tracking-[0.22em] text-[var(--pq-ivory-faint)] mb-1"
+          className="block text-pq-eyebrow text-[var(--pq-ivory-faint)] mb-1"
         >
           {label}
         </label>
@@ -862,7 +881,7 @@ export function Field({
   }
   return (
     <label className="block">
-      <span className="block text-pq-eyebrow uppercase tracking-[0.22em] text-[var(--pq-ivory-faint)] mb-1">
+      <span className="block text-pq-eyebrow text-[var(--pq-ivory-faint)] mb-1">
         {label}
       </span>
       {children}
@@ -873,13 +892,13 @@ export function Field({
 export function extendReasonLabel(reason: string): string {
   switch (reason) {
     case "fomc_30min":
-      return "FOMC 발표가 ±30분 안에 있어 cooldown이 5분으로 연장되었습니다.";
+      return "FOMC 발표가 ±30분 안에 있어 진입 시계가 5분으로 연장되었습니다.";
     case "high_vix":
-      return "VIX > 30 고변동성 구간이라 cooldown이 5분으로 연장되었습니다.";
+      return "VIX > 30 고변동성 구간이라 진입 시계가 5분으로 연장되었습니다.";
     case "big_move_1h":
-      return "이 종목이 최근 1시간 동안 ±5% 이상 움직여 cooldown이 5분으로 연장되었습니다.";
+      return "이 종목이 최근 1시간 동안 ±5% 이상 움직여 진입 시계가 5분으로 연장되었습니다.";
     default:
-      return `Cooldown extended (${reason}).`;
+      return `진입 시계가 연장되었습니다 (${reason}).`;
   }
 }
 

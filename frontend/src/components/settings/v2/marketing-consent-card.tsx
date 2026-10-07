@@ -48,9 +48,8 @@ function formatTimestamp(iso: string | null): string | null {
   if (!iso) return null;
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
-  // Keep the format compatible with the rest of the v2 settings deck:
-  // mono digits, lowercase month — see NotificationsMatrix.
-  return d.toLocaleString("en-US", {
+  // Korean date-time (2026-10-07 — was en-US "07 Oct 2026, 03:12 PM").
+  return d.toLocaleString("ko-KR", {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -115,14 +114,16 @@ export function MarketingConsentCardV2({
         : await revokeMarketingConsent();
       setState(updated);
       toast.success(
-        next ? "Marketing emails enabled." : "Marketing emails disabled.",
+        next
+          ? "마케팅 메일 수신에 동의했습니다."
+          : "마케팅 메일 수신 동의를 철회했습니다.",
       );
     } catch (err) {
       setState(prev);
       const message =
         err instanceof Error && err.message
           ? err.message
-          : "Could not update marketing consent.";
+          : "마케팅 수신 동의를 바꾸지 못했습니다.";
       toast.error(message);
     } finally {
       setBusy(false);
@@ -142,28 +143,26 @@ export function MarketingConsentCardV2({
       }}
     >
       <span
-        className="font-mono uppercase"
+        className="font-mono"
         style={{
           position: "absolute",
           top: 14,
           right: 14,
           fontSize: "var(--pq-text-eyebrow)",
-          letterSpacing: "0.2em",
           color: "var(--pq-ivory-dim)",
         }}
       >
-        B3 · Marketing
+        마케팅
       </span>
       <div
-        className="font-mono uppercase"
+        className="font-mono"
         style={{
           fontSize: "var(--pq-text-eyebrow)",
-          letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
           marginBottom: 12,
         }}
       >
-        Marketing emails · 정통망법 §50 ①
+        마케팅 메일 · 정통망법 §50 ①
       </div>
       <div
         style={{
@@ -226,7 +225,7 @@ export function MarketingConsentCardV2({
           type="button"
           role="switch"
           aria-checked={optedIn}
-          aria-label="Marketing email consent"
+          aria-label="마케팅 메일 수신 동의"
           onClick={() => handleToggle(!optedIn)}
           disabled={!loaded || busy}
           style={{

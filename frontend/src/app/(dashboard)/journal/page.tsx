@@ -14,7 +14,8 @@
  *
  * Compliance posture (자본시장법 §6 / §101):
  *   - intended_side BUY/SELL is NEVER surfaced raw. Rendered through
- *     `@/lib/pre-trade` sideLabel as "Long Entry · 진입" / "Position Exit · 정리".
+ *     sideLabelKo (pre-trade-friction-core) as "진입" / "정리" — Korean only
+ *     since 2026-10-07 (CEO "영문 라벨도 한글로").
  *   - No 추천/조언 language. DisclaimerBanner mounted at the page head.
  *
  * Tone: v3 — Vantablack + Bronze + Playfair UPRIGHT (no italic headings).
@@ -33,7 +34,7 @@ import { Briefcase, NotebookPen, ChevronDown } from "lucide-react";
 import { useLocale, useT } from "@/lib/locale";
 import { usePreTradeJournal, useObservationNotes } from "@/lib/hooks";
 import { displayName, normalizeTicker, parseIsoUtc } from "@/lib/format";
-import { sideLabel } from "@/lib/pre-trade";
+import { sideLabelKo } from "@/components/pre-trade/pre-trade-friction-core";
 import { relativeTime } from "@/lib/relative-time";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import {
@@ -164,22 +165,15 @@ function StatusChip({ kind }: { kind: StatusKind }) {
       : kind === "cancelled"
         ? t("journal.page.statusCancelled")
         : t("journal.page.statusPending");
-  const enLabel =
-    kind === "proceeded"
-      ? t("journal.page.statusProceededEn")
-      : kind === "cancelled"
-        ? t("journal.page.statusCancelledEn")
-        : t("journal.page.statusPendingEn");
   return (
     <span
-      className="font-mono text-pq-caption uppercase"
+      className="font-mono text-pq-caption"
       style={{
         display: "inline-flex",
         alignItems: "center",
         gap: 6,
         padding: "2px 8px",
         borderRadius: 2,
-        letterSpacing: "0.16em",
         border: "0.5px solid var(--pq-ivory-line)",
         background: "var(--pq-ivory-line-faint)",
         color: dimmed ? "var(--pq-ivory-faint)" : "rgba(245,240,232,0.82)",
@@ -200,7 +194,6 @@ function StatusChip({ kind }: { kind: StatusKind }) {
         }}
       />
       {koLabel}
-      <span style={{ opacity: 0.5 }}>· {enLabel}</span>
     </span>
   );
 }
@@ -224,7 +217,7 @@ function ObservedContextLine({
   }
   if (typeof ctx.vix === "number") parts.push(`VIX ${ctx.vix}`);
   if (typeof ctx.change_1h_pct === "number") {
-    parts.push(`1H ${ctx.change_1h_pct > 0 ? "+" : ""}${ctx.change_1h_pct}%`);
+    parts.push(`1시간 ${ctx.change_1h_pct > 0 ? "+" : ""}${ctx.change_1h_pct}%`);
   }
   if (parts.length === 0) return null;
   return (
@@ -232,8 +225,8 @@ function ObservedContextLine({
       className="mt-2 font-mono text-pq-caption text-[var(--pq-ivory-faint)]"
       data-testid="observed-context"
     >
-      <span className="uppercase tracking-[0.14em] text-[var(--pq-bronze-light)]">
-        진입 시점 관측 · At entry
+      <span className="text-[var(--pq-bronze-light)]">
+        진입 시점 관측
       </span>
       <span className="mx-2 opacity-40">—</span>
       {parts.join(" · ")}
@@ -257,7 +250,7 @@ function JournalEntry({ r }: { r: PreTradeReflection }) {
   const showTickerSub =
     bareTicker.length > 0 && name.toUpperCase() !== bareTicker.toUpperCase();
 
-  const sideText = r.intended_side ? sideLabel(r.intended_side) : null;
+  const sideText = r.intended_side ? sideLabelKo(r.intended_side) : null;
   const kind = statusKind(r);
   const hasDevilsAdvocate =
     typeof r.devil_advocate_seen === "string" &&
@@ -292,7 +285,7 @@ function JournalEntry({ r }: { r: PreTradeReflection }) {
       {/* Meta row: intent + shares + time */}
       <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5">
         {sideText && (
-          <span className="font-mono text-pq-caption uppercase tracking-[0.14em] text-[var(--pq-bronze-light)]">
+          <span className="font-mono text-pq-caption text-[var(--pq-bronze-light)]">
             {sideText}
           </span>
         )}
@@ -352,7 +345,7 @@ function JournalEntry({ r }: { r: PreTradeReflection }) {
             className="flex w-full items-center gap-2 text-left"
             aria-expanded={open}
           >
-            <span className="font-mono text-pq-caption uppercase tracking-[0.18em] text-[var(--pq-bronze-light)]">
+            <span className="font-mono text-pq-caption text-[var(--pq-bronze-light)]">
               {t("journal.page.devilsAdvocateToggle")}
             </span>
             <ChevronDown
@@ -422,7 +415,7 @@ function LoadFailure({ onRetry }: { onRetry: () => void }) {
       <button
         type="button"
         onClick={onRetry}
-        className="mt-3 rounded-[2px] border px-4 py-2 font-mono text-pq-caption uppercase tracking-[0.16em] text-[var(--pq-bronze-light)] transition-colors hover:bg-[var(--pq-card-veil-strong)]"
+        className="mt-3 rounded-[2px] border px-4 py-2 font-mono text-pq-caption text-[var(--pq-bronze-light)] transition-colors hover:bg-[var(--pq-card-veil-strong)]"
         style={{ borderColor: "var(--pq-ivory-line)" }}
       >
         {t("journal.page.retry")}
@@ -462,7 +455,7 @@ function FeedRetryStrip({
       <button
         type="button"
         onClick={onRetry}
-        className="rounded-[2px] border px-4 py-1.5 font-mono text-pq-caption uppercase tracking-[0.16em] text-[var(--pq-bronze-light)] transition-colors hover:bg-[var(--pq-card-veil-strong)]"
+        className="rounded-[2px] border px-4 py-1.5 font-mono text-pq-caption text-[var(--pq-bronze-light)] transition-colors hover:bg-[var(--pq-card-veil-strong)]"
         style={{ borderColor: "var(--pq-ivory-line)" }}
       >
         {t("journal.page.retry")}
@@ -500,7 +493,7 @@ function EmptyState() {
       </Caption>
       <Link
         href="/portfolio"
-        className="mt-6 inline-flex items-center gap-2 rounded-[2px] border px-5 py-2.5 font-mono text-pq-caption uppercase tracking-[0.16em] text-[var(--pq-bronze-light)] transition-colors hover:bg-[var(--pq-card-veil-strong)]"
+        className="mt-6 inline-flex items-center gap-2 rounded-[2px] border px-5 py-2.5 font-mono text-pq-caption text-[var(--pq-bronze-light)] transition-colors hover:bg-[var(--pq-card-veil-strong)]"
         style={{ borderColor: "var(--pq-ivory-line)" }}
       >
         <Briefcase className="h-3.5 w-3.5" aria-hidden="true" />
@@ -560,7 +553,7 @@ function FilterChips({
             type="button"
             onClick={() => onChange(v)}
             aria-pressed={active}
-            className="rounded-[2px] border px-3 py-1.5 font-mono text-pq-caption uppercase tracking-[0.16em] transition-colors"
+            className="rounded-[2px] border px-3 py-1.5 font-mono text-pq-caption transition-colors"
             style={{
               borderColor: active
                 ? "var(--pq-bronze)"
@@ -755,13 +748,13 @@ function JournalContent() {
         <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3">
           <Link
             href="/journal/import?tab=image"
-            className="inline-flex min-h-[44px] items-center rounded-[2px] border border-[var(--pq-bronze)] px-4 font-mono text-pq-eyebrow uppercase tracking-[0.16em] text-[var(--pq-bronze-light)] transition-colors hover:bg-[var(--pq-bronze)]/10"
+            className="inline-flex min-h-[44px] items-center rounded-[2px] border border-[var(--pq-bronze)] px-4 font-mono text-pq-eyebrow text-[var(--pq-bronze-light)] transition-colors hover:bg-[var(--pq-bronze)]/10"
           >
             {t("journal.import.captureLink")}
           </Link>
           <Link
             href="/journal/import"
-            className="inline-flex min-h-[44px] items-center gap-2 font-mono text-pq-eyebrow uppercase tracking-[0.16em] text-[var(--pq-bronze-light)] underline-offset-4 hover:underline"
+            className="inline-flex min-h-[44px] items-center gap-2 font-mono text-pq-eyebrow text-[var(--pq-bronze-light)] underline-offset-4 hover:underline"
           >
             {t("journal.import.importLink")}
           </Link>

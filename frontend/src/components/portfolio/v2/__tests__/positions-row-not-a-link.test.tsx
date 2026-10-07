@@ -68,7 +68,7 @@ describe("PositionsTableV2 — rows are not links", () => {
   it("still runs the real affordances — the action buttons", async () => {
     const onAction = vi.fn();
     renderTable(onAction);
-    await userEvent.click(screen.getByRole("button", { name: /add/i }));
+    await userEvent.click(screen.getByRole("button", { name: /추가/ }));
     expect(onAction).toHaveBeenCalledTimes(1);
     expect(onAction.mock.calls[0][1]).toMatchObject({ symbol: "AAPL" });
   });

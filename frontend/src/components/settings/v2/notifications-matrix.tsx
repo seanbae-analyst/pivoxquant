@@ -92,6 +92,13 @@ type MatrixState = NotificationPrefsMap;
 
 type Channel = "email" | "push" | "inapp";
 
+/** Korean channel names — column headers and the switches' accessible names. */
+const CHANNEL_LABEL: Record<Channel, string> = {
+  email: "이메일",
+  push: "푸시",
+  inapp: "앱 안",
+};
+
 /** Debounce window before a toggle batch is flushed to the server. */
 const SAVE_DEBOUNCE_MS = 600;
 
@@ -385,35 +392,34 @@ export function NotificationsMatrix({
           <tr>
             <th
               scope="col"
-              className="font-mono uppercase"
+              className="font-mono"
               style={{
                 padding: "14px 12px 14px 24px",
                 textAlign: "left",
                 borderBottom: "1px solid var(--pq-ivory-line)",
                 fontSize: "var(--pq-text-eyebrow)",
-                letterSpacing: "0.22em",
                 color: "var(--pq-bronze)",
                 fontWeight: 500,
               }}
             >
-              Event
+              항목
             </th>
-            {(["Email", "Push", "In-app"] as const).map((c) => (
+            {(["email", "push", "inapp"] as const).map((c) => (
               <th
                 key={c}
                 scope="col"
-                className="font-mono uppercase"
+                className="font-mono"
                 style={{
                   padding: "14px 12px",
                   textAlign: "center",
                   borderBottom: "1px solid var(--pq-ivory-line)",
                   fontSize: "var(--pq-text-eyebrow)",
-                  letterSpacing: "0.22em",
                   color: "var(--pq-bronze)",
                   fontWeight: 500,
+                  whiteSpace: "nowrap",
                 }}
               >
-                {c}
+                {CHANNEL_LABEL[c]}
               </th>
             ))}
           </tr>
@@ -488,7 +494,7 @@ export function NotificationsMatrix({
                       <MatrixToggle
                         on={row[ch]}
                         onChange={(next) => toggle(e.id, ch, next)}
-                        ariaLabel={`${evName(e.id)} · ${ch}`}
+                        ariaLabel={`${evName(e.id)} · ${CHANNEL_LABEL[ch]}`}
                         disabled={togglesDisabled}
                       />
                     ) : (

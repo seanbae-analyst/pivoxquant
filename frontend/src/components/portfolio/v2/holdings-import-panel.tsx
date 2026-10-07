@@ -472,7 +472,7 @@ export function HoldingsImportPanel({
           className="sr-only"
           data-testid="holdings-image-input"
         />
-        <label htmlFor="holdings-images" className="pq-ink-btn-ghost cursor-pointer px-4 text-pq-mono-sm uppercase tracking-[0.22em]">
+        <label htmlFor="holdings-images" className="pq-ink-btn-ghost cursor-pointer px-4 text-pq-mono-sm tracking-[0.02em]">
           {t("journal.import.image.choose")}
         </label>
         <span className="font-mono truncate" style={{ ...small, color: "var(--pq-ivory-mid)" }}>
@@ -483,7 +483,7 @@ export function HoldingsImportPanel({
           onClick={read}
           disabled={!canRead}
           aria-disabled={!canRead}
-          className="pq-ink-btn-ghost px-4 text-pq-mono-sm uppercase tracking-[0.22em] disabled:opacity-30 disabled:cursor-not-allowed"
+          className="pq-ink-btn-ghost px-4 text-pq-mono-sm tracking-[0.02em] disabled:opacity-30 disabled:cursor-not-allowed"
           data-testid="holdings-read"
         >
           {progress ?? t("journal.import.image.read")}
@@ -531,7 +531,7 @@ export function HoldingsImportPanel({
           <button
             type="button"
             onClick={() => { setRows(ruleRows); setRuleRows(null); }}
-            className="pq-ink-btn-ghost px-3 text-pq-mono-sm uppercase tracking-[0.18em]"
+            className="pq-ink-btn-ghost px-3 text-pq-mono-sm tracking-[0.02em]"
             data-testid="ai-read-revert"
           >
             {t("aiRead.revert")}
@@ -586,8 +586,8 @@ export function HoldingsImportPanel({
         <button
           type="button"
           onClick={onCancel}
-          className="font-mono uppercase"
-          style={{ background: "transparent", border: "none", color: "var(--pq-ivory-dim)", fontSize: "var(--pq-text-eyebrow)", letterSpacing: "0.2em", cursor: "pointer", padding: 4 }}
+          className="font-mono"
+          style={{ background: "transparent", border: "none", color: "var(--pq-ivory-dim)", fontSize: "var(--pq-text-eyebrow)", letterSpacing: "0.02em", cursor: "pointer", padding: 4 }}
         >
           {t("dashboard.portfolio.holdingsImport.back")}
         </button>
@@ -598,7 +598,7 @@ export function HoldingsImportPanel({
             onClick={send}
             disabled={!canSend}
             aria-disabled={!canSend}
-            className="pq-ink-btn-bronze inline-flex items-center px-5 py-2 text-pq-mono-sm uppercase tracking-[0.22em] disabled:opacity-30 disabled:cursor-not-allowed"
+            className="pq-ink-btn-bronze inline-flex items-center px-5 py-2 text-pq-mono-sm tracking-[0.02em] disabled:opacity-30 disabled:cursor-not-allowed"
             data-testid="holdings-send"
           >
             {sending
@@ -615,7 +615,7 @@ export function HoldingsImportPanel({
 function StepHead({ n, label }: { n: number; label: string }) {
   return (
     <div
-      className="mt-5 mb-2 font-mono uppercase tracking-[0.18em]"
+      className="mt-5 mb-2 font-mono tracking-[0.02em]"
       style={{ ...small, color: "var(--pq-bronze)" }}
     >
       {n} · {label}
