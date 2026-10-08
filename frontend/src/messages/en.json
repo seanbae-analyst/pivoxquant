@@ -681,6 +681,11 @@
     }
   },
   "settingsV2": {
+    "retake": {
+      "title": "Answer the five questions again",
+      "help": "Re-answer holding period, trading frequency, number of holdings, response to −10%, and record-keeping habit. The mirror's “declared” side switches to your new answers.",
+      "cta": "Answer again →"
+    },
     "sectionA": {
       "eyebrow": "Account · Sign-in",
       "heading": "Who is signed in."
