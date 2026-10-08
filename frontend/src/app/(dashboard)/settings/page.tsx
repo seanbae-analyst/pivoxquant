@@ -55,6 +55,7 @@ import { LivingCFOStatusBar } from "@/components/dashboard/living-cfo-status";
 
 
 import { SettingsHeroV2 } from "@/components/settings/v2/settings-hero-v2";
+import Link from "next/link";
 import { AnchorRail } from "@/components/settings/v2/anchor-rail";
 import {
   SettingsPhoneBack,
@@ -470,6 +471,43 @@ export default function SettingsPageV2() {
               />
             </div>
 
+            {/* The five onboarding questions, again — /onboarding?retake=1
+                writes through PUT /api/profile (update_profile). */}
+            <div
+              style={{
+                marginTop: 12,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 16,
+                flexWrap: "wrap",
+                padding: "16px 20px",
+                border: "1px solid var(--pq-border)",
+                borderRadius: 2,
+              }}
+            >
+              <div style={{ minWidth: 0, flex: "1 1 240px" }}>
+                <div style={{ color: "var(--pq-ivory)", fontSize: "var(--pq-text-h6)" }}>
+                  {t("settingsV2.retake.title")}
+                </div>
+                <div
+                  style={{
+                    marginTop: 4,
+                    color: "var(--pq-ivory-mid)",
+                    fontSize: "var(--pq-text-body-sm)",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {t("settingsV2.retake.help")}
+                </div>
+              </div>
+              <Link
+                href="/onboarding?retake=1"
+                className="inline-flex min-h-[44px] items-center rounded-[2px] border border-[var(--pq-bronze)] px-4 text-pq-mono-sm text-[var(--pq-bronze-light)] transition-colors hover:bg-[var(--pq-bronze)]/10"
+              >
+                {t("settingsV2.retake.cta")}
+              </Link>
+            </div>
           </section>
 
           {/* SECTION C — Notifications */}

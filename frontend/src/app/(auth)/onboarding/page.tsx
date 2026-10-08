@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import { Check, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { useAuth } from "@/lib/auth";
-import { apiFetch } from "@/lib/api";
+import { ApiError, apiFetch } from "@/lib/api";
 import { usePortfolioPositions } from "@/lib/hooks";
 import { API } from "@/lib/endpoints";
 import { PQ_EASE, PQ_DUR_BASE, PQ_DUR_SLOW } from "@/lib/motion";
@@ -568,9 +568,23 @@ function ResultScreen({
 
 // ── Main Page ────────────────────────────────────────────────────────────────
 
+// `?retake=1` (설정 → "다섯 문항 다시 답하기"): an already-onboarded user
+// answers the five questions again. The answers go to PUT /api/profile
+// (update_profile), which rewrites the declared vector the mirror compares
+// against — the holdings gate and the skip path do not apply.
 export default function OnboardingPage() {
+  // useSearchParams needs a Suspense boundary at the page level.
+  return (
+    <Suspense fallback={null}>
+      <OnboardingWizard />
+    </Suspense>
+  );
+}
+
+function OnboardingWizard() {
   const router = useRouter();
   const { user, loading: authLoading, refresh } = useAuth();
+  const retake = useSearchParams().get("retake") === "1";
 
   // Steps: 0..4 = wizard questions, 5 = legal, 6 = result screen
   const [step, setStep] = useState(0);
@@ -590,10 +604,10 @@ export default function OnboardingPage() {
       router.replace(loginHref(currentLocationPath()));
       return;
     }
-    if (!authLoading && user && user.onboarding_completed === true) {
+    if (!authLoading && user && user.onboarding_completed === true && !retake) {
       router.replace("/mirror");
     }
-  }, [authLoading, user, router]);
+  }, [authLoading, user, router, retake]);
 
   // Holdings come first (2026-09-28): opened by URL with an empty book, the
   // questions send the user back to step 0. The server refuses to complete
@@ -608,6 +622,11 @@ export default function OnboardingPage() {
   // a user who answered N questions on mobile picks up at N on desktop.
   // localStorage is the fallback when the network call fails / first paint.
   useEffect(() => {
+    // A retake starts from a blank sheet; the draft belongs to first-run.
+    if (retake) {
+      setAnswers({});
+      return;
+    }
     const local = loadSavedAnswers();
     if (Object.keys(local).length > 0) {
       setAnswers(local);
@@ -625,7 +644,7 @@ export default function OnboardingPage() {
       .catch(() => {
         // Best-effort hydrate. localStorage already populated above.
       });
-  }, []);
+  }, [retake]);
 
   // Save answers to localStorage + server draft whenever they change.
   // 2026-05-17 wave 12 UX P0 (PR #427): localStorage stays as the hot
@@ -634,6 +653,7 @@ export default function OnboardingPage() {
   // 2s debounce balances network chatter vs how much answer drift we
   // tolerate (≤2s, well under the wizard's per-question rhythm).
   useEffect(() => {
+    if (retake) return;
     saveAnswers(answers);
     if (Object.keys(answers).length === 0) return;
     const t = setTimeout(() => {
@@ -646,7 +666,7 @@ export default function OnboardingPage() {
       });
     }, 2_000);
     return () => clearTimeout(t);
-  }, [answers]);
+  }, [answers, retake]);
 
   // 2026-05-17 wave 12 UX P1 (PR #428): beforeunload guard. The wizard
   // has localStorage + server-side draft (PR #427) but those sync 2s
@@ -791,10 +811,10 @@ export default function OnboardingPage() {
     if (submitting) return;
     setSubmitting(true);
     try {
-      const res = await apiFetch<OnboardingV3Response>(API.profile.onboarding, {
-        method: "POST",
-        body: JSON.stringify({ answers }),
-      });
+      const res = await apiFetch<OnboardingV3Response>(
+        retake ? API.profile.update : API.profile.onboarding,
+        { method: retake ? "PUT" : "POST", body: JSON.stringify({ answers }) },
+      );
       setDeclared(Array.isArray(res?.declared) ? res.declared : []);
       // Clean up stored progress (answers now live server-side).
       localStorage.removeItem(STORAGE_KEY);
@@ -802,7 +822,11 @@ export default function OnboardingPage() {
       setDirection(1);
       setStep(TOTAL_STEPS);
       containerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
-    } catch {
+    } catch (err) {
+      if (err instanceof ApiError && err.code === "PROFILE_CHANGE_LIMIT") {
+        toast.error("다시 답할 수 있는 횟수를 모두 썼습니다.");
+        return;
+      }
       // Sonner toast keeps the user in-flow; answers stay in localStorage so
       // the next click retries cleanly.
       toast.error(
@@ -812,7 +836,7 @@ export default function OnboardingPage() {
     } finally {
       setSubmitting(false);
     }
-  }, [answers, submitting]);
+  }, [answers, submitting, retake]);
 
   const goNext = useCallback(() => {
     if (!isStepValid && !isResultScreen) return;
@@ -943,7 +967,7 @@ export default function OnboardingPage() {
   if (!user) return null;
 
   // Already onboarded — don't flash the wizard while redirect runs
-  if (user.onboarding_completed === true) return null;
+  if (user.onboarding_completed === true && !retake) return null;
 
   // ── Result screen ────────────────────────────────────────────────────────
 
@@ -1004,20 +1028,36 @@ export default function OnboardingPage() {
                 want to explore before answering the questions. Bumped to a
                 higher-contrast hairline-bordered affordance so it reads as a
                 real, tappable escape hatch (44px touch target retained). */}
-            <button
-              type="button"
-              onClick={handleSkip}
-              disabled={skipping}
-              className="text-xs font-semibold transition-colors disabled:opacity-50"
-              style={{
-                color: "rgba(var(--pq-ivory-rgb), 0.85)",
-                border: "1px solid var(--pq-border)",
-                borderRadius: "var(--pq-radius-cta, 2px)",
-                padding: "8px 14px",
-              }}
-            >
-              {skipping ? "Skipping…" : "Skip for now →"}
-            </button>
+            {retake ? (
+              <button
+                type="button"
+                onClick={() => router.replace("/settings")}
+                className="text-xs font-semibold transition-colors"
+                style={{
+                  color: "rgba(var(--pq-ivory-rgb), 0.85)",
+                  border: "1px solid var(--pq-border)",
+                  borderRadius: "var(--pq-radius-cta, 2px)",
+                  padding: "8px 14px",
+                }}
+              >
+                그만두기
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleSkip}
+                disabled={skipping}
+                className="text-xs font-semibold transition-colors disabled:opacity-50"
+                style={{
+                  color: "rgba(var(--pq-ivory-rgb), 0.85)",
+                  border: "1px solid var(--pq-border)",
+                  borderRadius: "var(--pq-radius-cta, 2px)",
+                  padding: "8px 14px",
+                }}
+              >
+                {skipping ? "Skipping…" : "Skip for now →"}
+              </button>
+            )}
           </div>
           <ProgressBar current={displayStep} total={TOTAL_STEPS} category={category} />
         </div>
