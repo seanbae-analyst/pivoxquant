@@ -16,6 +16,7 @@
 import * as React from "react";
 import { useT } from "@/lib/locale";
 import { useIsPhone } from "@/lib/use-phone";
+import { Sheet } from "@/components/ui/sheet";
 import { Caption, EditorialHead } from "@/components/ui/editorial";
 import { fmtMoneyPlain, fmtPctSignedMinus, pctColor, displayTicker, normalizeTicker } from "@/lib/format";
 import type { Position, TradeAction } from "@/components/portfolio/types";
@@ -748,7 +749,13 @@ function PositionRow({
   );
 }
 
-/** Phone card for one holding — same values and actions as PositionRow. */
+/**
+ * Phone card for one holding — same values and actions as PositionRow.
+ *
+ * 2026-10-09: the four bordered 36px buttons per card (추가 / 정리 / 수정 /
+ * 관찰 노트) became one tap target — tapping the card opens an action sheet
+ * with the same four actions as full-width 52px rows. Same handlers.
+ */
 function PositionCard({
   row,
   first,
@@ -765,15 +772,24 @@ function PositionCard({
   const p = row.raw;
   const cur = p.currency ?? "USD";
   const name = normalizeTicker(p.symbol);
-  return (
-    <li
-      className={`px-4 py-4 ${first ? "" : "border-t border-[var(--pq-ivory-line)]"}`}
-      data-testid="position-card"
-    >
+  const title = displayTicker(p.symbol, p.name);
+  const hasActions = !!(onAction || onObservationNote);
+  const [sheetOpen, setSheetOpen] = React.useState(false);
+  const titleId = `position-actions-${p.id}`;
+
+  // Close the action sheet, then hand off to the host (which opens its own
+  // trade / note sheet in the same tick).
+  const run = (fn: () => void) => {
+    setSheetOpen(false);
+    fn();
+  };
+
+  const summary = (
+    <>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="truncate font-serif text-[17px] text-[var(--pq-ivory)]">
-            {displayTicker(p.symbol, p.name)}
+            {title}
           </div>
           <div className="mt-0.5 font-mono text-[12px] text-[var(--pq-ivory-dim)]">{name}</div>
         </div>
@@ -803,34 +819,89 @@ function PositionCard({
           </>
         )}
       </div>
-      {(onAction || onObservationNote) && (
-        <div className="mt-3 flex flex-wrap gap-2">
-          {onAction && (
-            <>
-              <CardActionBtn label="추가" ariaLabel={`${name} 추가 기록`} onClick={() => onAction("buy", p)} />
-              <CardActionBtn label="정리" ariaLabel={`${name} 정리 기록`} onClick={() => onAction("sell", p)} />
-              <CardActionBtn label="수정" ariaLabel={`${name} 수정`} onClick={() => onAction("edit", p)} />
-            </>
-          )}
-          {onObservationNote && (
-            <CardActionBtn label="관찰 노트" ariaLabel={`${name} 관찰 노트 작성`} onClick={() => onObservationNote(p)} />
-          )}
-        </div>
+    </>
+  );
+
+  return (
+    <li
+      className={first ? "" : "border-t border-[var(--pq-ivory-line)]"}
+      data-testid="position-card"
+    >
+      {hasActions ? (
+        <button
+          type="button"
+          onClick={() => setSheetOpen(true)}
+          aria-haspopup="dialog"
+          aria-expanded={sheetOpen}
+          aria-label={`${title} — 기록 동작 열기`}
+          data-testid="position-card-open"
+          className="block w-full px-4 py-4 text-left transition-colors active:bg-[var(--pq-ivory-line-faint)]"
+        >
+          {summary}
+        </button>
+      ) : (
+        <div className="px-4 py-4">{summary}</div>
+      )}
+
+      {hasActions && (
+        <Sheet
+          open={sheetOpen}
+          onClose={() => setSheetOpen(false)}
+          ariaLabelledBy={titleId}
+          testId="position-action-sheet"
+        >
+          <div className="pb-2 pt-1">
+            <div
+              id={titleId}
+              className="truncate font-serif text-pq-h4 text-[var(--pq-ivory)]"
+            >
+              {title}
+            </div>
+            <div className="mt-0.5 font-mono text-pq-caption tabular-nums text-[var(--pq-ivory-dim)]">
+              {fmtShares(p.shares)}주 · 평균 {fmtMoney(p.avgCost, cur)}
+            </div>
+          </div>
+          <ul className="-mx-5 mt-2 border-t border-[var(--pq-ivory-line)]" role="list">
+            {onAction && (
+              <>
+                <SheetActionRow label="추가" hint="더 산 내역을 기록" ariaLabel={`${name} 추가 기록`} onClick={() => run(() => onAction("buy", p))} />
+                <SheetActionRow label="정리" hint="판 내역을 기록" ariaLabel={`${name} 정리 기록`} onClick={() => run(() => onAction("sell", p))} />
+                <SheetActionRow label="수정" hint="평균가 · 메모 고치기" ariaLabel={`${name} 수정`} onClick={() => run(() => onAction("edit", p))} />
+              </>
+            )}
+            {onObservationNote && (
+              <SheetActionRow label="관찰 노트" hint="이 종목에 대해 적어 두기" ariaLabel={`${name} 관찰 노트 작성`} onClick={() => run(() => onObservationNote(p))} />
+            )}
+          </ul>
+        </Sheet>
       )}
     </li>
   );
 }
 
-function CardActionBtn({ label, ariaLabel, onClick }: { label: string; ariaLabel: string; onClick: () => void }) {
+function SheetActionRow({
+  label,
+  hint,
+  ariaLabel,
+  onClick,
+}: {
+  label: string;
+  hint: string;
+  ariaLabel: string;
+  onClick: () => void;
+}) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={ariaLabel}
-      className="min-h-[36px] rounded-[2px] border border-[rgba(184,149,106,0.4)] px-3 text-[13px] text-[var(--pq-bronze-light)]"
-    >
-      {label}
-    </button>
+    <li className="border-b border-[var(--pq-ivory-line)]">
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={ariaLabel}
+        className="flex min-h-[52px] w-full items-center justify-between gap-3 px-5 py-3 text-left transition-colors active:bg-[var(--pq-ivory-line-faint)]"
+      >
+        <span className="text-pq-h6 text-[var(--pq-ivory)]">{label}</span>
+        <span className="text-pq-caption text-[var(--pq-ivory-dim)]">{hint}</span>
+      </button>
+    </li>
   );
 }
 

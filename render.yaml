@@ -51,7 +51,26 @@ services:
         # dev-login refusal in routes/__init__.py, and the
         # encryption-key check in services/crypto_service.py
       - key: POPULATE_CACHE_ON_BOOT
-        value: "1"
+        value: "0" # 2026-10-09 (cold-start): the boot warm-up is redundant here.
+        # What it does: app.py::_populate_cache spawns a thread that calls
+        # cache_service.cache_ticker() (FMP quote + profile) for held tickers
+        # that have NO signal_cache row yet. What still reads that cache while
+        # MARKET_DATA_DISPLAY_ENABLED is off: only identity fields — name
+        # (services/name_resolver.py) and sector (portfolio allocation,
+        # services/alert.py concentration attribution, the pre-trade
+        # observed-context snapshot in services/pre_trade/friction.py); every
+        # price field is nulled or refused by the display gate. FX (services/fx_service.py) and ticker
+        # search do not read signal_cache at all.
+        # Why "0" loses nothing: signal_cache rows live in Supabase and are
+        # never purged, so a wake finds them already there; a newly added
+        # ticker is warmed on the add itself (routes/portfolio.py
+        # _cache_ticker_async); and RUN_SCHEDULER=1 runs _scheduled_refresh
+        # every 3 minutes over every held ticker, writing the same fields.
+        # Worst case: a ticker whose earlier warms all failed shows its
+        # registry name / "Unknown" sector for up to 3 minutes after a wake.
+        # What "0" saves: two DB round trips (Singapore -> Seoul) plus FMP calls
+        # competing with the first requests on Render Free's shared CPU, and
+        # FMP free-tier quota (250/day) spent twice on the same tickers.
       - key: RUN_SCHEDULER
         value: "1" # exactly one process may set this; the Dockerfile pins
         # gunicorn to --workers 1, so this is that process

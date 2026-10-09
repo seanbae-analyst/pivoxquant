@@ -13,13 +13,16 @@
  * questions. Writing something down about a holding is not a trade
  * decision, which is exactly why it is allowed to be this cheap.
  *
- * Shell copied from <AddPositionModalV2 /> (same dialog chrome, focus trap,
- * Escape and backdrop dismissal) so /portfolio has one modal language.
+ * Shell: <Sheet /> with the same desktop chrome as <AddPositionModalV2 />
+ * (focus trap, Escape, backdrop) so /portfolio has one modal language. On a
+ * phone it is a bottom sheet with a header close button, drag-to-dismiss and
+ * back-button close; the composer's textarea is not autofocused on touch
+ * (the keyboard would cover the sheet before the user asked for it).
  */
 
 import * as React from "react";
 import { toast } from "sonner";
-import { useFocusTrap } from "@/lib/useFocusTrap";
+import { Sheet, type SheetHandle } from "@/components/ui/sheet";
 import { displayTicker } from "@/lib/format";
 import { ObservationNoteComposer } from "@/components/journal/observation-note-composer";
 
@@ -39,28 +42,25 @@ export function ObservationNoteModalV2({
   onClose,
 }: ObservationNoteModalV2Props) {
   const headlineId = "obs-note-v2-headline";
-  const trapRef = useFocusTrap<HTMLDivElement>(open);
+  const sheetRef = React.useRef<SheetHandle>(null);
+  const close = React.useCallback(() => {
+    if (sheetRef.current) sheetRef.current.dismiss();
+    else onClose();
+  }, [onClose]);
 
-  React.useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
-
-  if (!open || !symbol) return null;
+  if (!symbol) return null;
 
   const heading = displayTicker(symbol, name ?? "");
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={headlineId}
-      className="pq-modal-v2"
-      style={{
+    <Sheet
+      ref={sheetRef}
+      open={open}
+      onClose={onClose}
+      ariaLabelledBy={headlineId}
+      showClose
+      desktopOverlayClassName="pq-modal-v2"
+      desktopOverlayStyle={{
         position: "fixed",
         inset: 0,
         zIndex: 1000,
@@ -74,22 +74,16 @@ export function ObservationNoteModalV2({
         padding: "10vh 16px calc(24px + env(safe-area-inset-bottom, 0px))",
         overflowY: "auto",
       }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
+      desktopPanelStyle={{
+        width: "100%",
+        maxWidth: 560,
+        background: "rgba(184,149,106,0.025)",
+        border: "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
+        borderRadius: "var(--pq-radius-card, 4px)",
+        padding: "32px 24px",
+        color: "var(--pq-ivory)",
       }}
     >
-      <div
-        ref={trapRef}
-        style={{
-          width: "100%",
-          maxWidth: 560,
-          background: "rgba(184,149,106,0.025)",
-          border: "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
-          borderRadius: "var(--pq-radius-card, 4px)",
-          padding: "32px 24px",
-          color: "var(--pq-ivory)",
-        }}
-      >
         <div style={{ marginBottom: 20 }}>
           <div
             className="font-mono"
@@ -124,14 +118,15 @@ export function ObservationNoteModalV2({
           onCreated={() => {
             // Same confirmation channel the Add / Trim modals use.
             toast.success("관찰 노트를 기록했습니다.");
-            onClose();
+            close();
           }}
         />
 
-        <div style={{ marginTop: 16, textAlign: "right" }}>
+        {/* Phone has the header close + drag; this stays for desktop. */}
+        <div className="max-md:hidden" style={{ marginTop: 16, textAlign: "right" }}>
           <button
             type="button"
-            onClick={onClose}
+            onClick={close}
             className="font-mono"
             style={{
               background: "transparent",
@@ -147,8 +142,7 @@ export function ObservationNoteModalV2({
             닫기
           </button>
         </div>
-      </div>
-    </div>
+    </Sheet>
   );
 }
 

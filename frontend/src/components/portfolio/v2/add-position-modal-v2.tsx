@@ -31,14 +31,16 @@
  *   backdating a position you already own. side / sector / currency still
  *   have no Position-model column and are intentionally not sent.
  *
- * A11y: role=dialog, aria-modal, focus trap via useFocusTrap, Escape closes.
+ * A11y: role=dialog, aria-modal, focus trap, Escape closes — all via <Sheet />
+ * (components/ui/sheet.tsx), which is also the phone bottom sheet (drag to
+ * dismiss, back button closes, pinned footer). Desktop markup unchanged.
  */
 
 import * as React from "react";
 import { toast } from "sonner";
 import { PORTFOLIO_POSITIONS } from "@/lib/endpoints";
 import { apiFetch, ApiError } from "@/lib/api";
-import { useFocusTrap } from "@/lib/useFocusTrap";
+import { Sheet, SheetFooter, type SheetHandle } from "@/components/ui/sheet";
 import { isKrTicker } from "@/lib/format";
 import { PreTradeFrictionModal } from "@/components/pre-trade/pre-trade-friction-modal";
 import { MIN_RATIONALE_CHARS } from "@/components/pre-trade/pre-trade-friction-core";
@@ -82,7 +84,12 @@ export function AddPositionModalV2({
   holdingOnly = false,
 }: AddPositionModalV2Props) {
   const headlineId = "add-pos-v2-headline";
-  const trapRef = useFocusTrap<HTMLDivElement>(open);
+  const sheetRef = React.useRef<SheetHandle>(null);
+  // Cancel / success close through the sheet so the phone exit animates.
+  const close = React.useCallback(() => {
+    if (sheetRef.current) sheetRef.current.dismiss();
+    else onClose();
+  }, [onClose]);
   const t = useT();
   // Holdings-screen capture import (HOLDINGS_IMPORT_DESIGN.md) replaces the
   // form inside the same dialog shell.
@@ -128,18 +135,8 @@ export function AddPositionModalV2({
     if (open && startWithImport) setImporting(true);
   }, [open, startWithImport]);
 
-  // Escape closes — only when the friction modal is NOT open (it owns Escape
-  // during its own lifecycle).
-  React.useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !frictionOpen) onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [open, onClose, frictionOpen]);
-
-  if (!open) return null;
+  // Escape / backdrop / back are owned by <Sheet />. While the friction
+  // modal is open it is the topmost sheet, so it takes Escape and back.
 
   const sym = symbol.trim().toUpperCase();
   const sharesN = Number(shares);
@@ -210,7 +207,7 @@ export function AddPositionModalV2({
       onSuccess?.();
       // HOLDING mode owns its own close (no friction modal to do it).
       if (mode === "holding") {
-        onClose();
+        close();
       }
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -233,12 +230,15 @@ export function AddPositionModalV2({
   }
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={headlineId}
-      className="pq-modal-v2"
-      style={{
+    <>
+    <Sheet
+      ref={sheetRef}
+      open={open}
+      onClose={onClose}
+      ariaLabelledBy={headlineId}
+      showClose
+      desktopOverlayClassName="pq-modal-v2"
+      desktopOverlayStyle={{
         position: "fixed",
         inset: 0,
         zIndex: 1000,
@@ -251,22 +251,16 @@ export function AddPositionModalV2({
         padding: "10vh 24px calc(24px + env(safe-area-inset-bottom, 0px))",
         overflowY: "auto",
       }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
+      desktopPanelStyle={{
+        width: "100%",
+        maxWidth: 560,
+        background: "rgba(184,149,106,0.025)",
+        border: "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
+        borderRadius: "var(--pq-radius-card, 4px)",
+        padding: "40px 36px",
+        color: "var(--pq-ivory)",
       }}
     >
-      <div
-        ref={trapRef}
-        style={{
-          width: "100%",
-          maxWidth: 560,
-          background: "rgba(184,149,106,0.025)",
-          border: "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
-          borderRadius: "var(--pq-radius-card, 4px)",
-          padding: "40px 36px",
-          color: "var(--pq-ivory)",
-        }}
-      >
         {importing ? (
           <>
             <h2
@@ -280,7 +274,7 @@ export function AddPositionModalV2({
               onCancel={() => setImporting(false)}
               onDone={() => {
                 onSuccess?.();
-                onClose();
+                close();
               }}
             />
           </>
@@ -484,8 +478,8 @@ export function AddPositionModalV2({
           )}
 
           {/* Footer */}
-          <div
-            style={{
+          <SheetFooter
+            desktopStyle={{
               marginTop: 12,
               paddingTop: 20,
               borderTop:
@@ -510,7 +504,7 @@ export function AddPositionModalV2({
             <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
               <button
                 type="button"
-                onClick={onClose}
+                onClick={close}
                 className="font-mono"
                 style={{
                   background: "transparent",
@@ -551,11 +545,11 @@ export function AddPositionModalV2({
                     : "다음 · 7문항 →"}
               </button>
             </div>
-          </div>
+          </SheetFooter>
         </form>
         </>
         )}
-      </div>
+    </Sheet>
 
       {/* Inline Pre-Trade Friction (ENTRY). The real POST fires on onProceed.
           On cancel, nothing is written and we return to this form. */}
@@ -571,12 +565,12 @@ export function AddPositionModalV2({
           await commitPosition(reflectionId);
           // Position committed — close both modals.
           setFrictionOpen(false);
-          onClose();
+          close();
         }}
         onCancel={() => setFrictionOpen(false)}
         onClose={() => setFrictionOpen(false)}
       />
-    </div>
+    </>
   );
 }
 

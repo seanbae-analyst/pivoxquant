@@ -5,6 +5,11 @@
  *
  * Tier visual: Bronze outline + uppercase tracking. Compliance-safe labels.
  * Sign-out is Bronze-accent and separated by a hairline divider.
+ *
+ * Phone (<768px, 2026-10-09): the same menu opens as a bottom sheet
+ * (components/ui/sheet.tsx) instead of a 260px popover; the plan chip is
+ * hidden there (payment is gated — no plan UI on the phone), and on touch
+ * devices (pointer: coarse) the keyboard-shortcuts entry is hidden.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -12,7 +17,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Settings, Keyboard, HelpCircle, LifeBuoy, LogOut } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { ModalShell } from "@/components/ui/modal-shell";
+import { MODAL_SHELL_OVERLAY_CLASS, Sheet } from "@/components/ui/sheet";
+import { useIsPhone } from "@/lib/use-phone";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/locale";
 import { initials } from "@/lib/initials";
@@ -40,6 +46,7 @@ export function ProfileDropdown() {
   const [open, setOpen] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
+  const isPhone = useIsPhone();
 
   // Bug #12 (wave 3b): use the real subscription_tier from /api/auth/me
   // instead of the placeholder "Free". The DB value can be free/pro/premium
@@ -56,6 +63,9 @@ export function ProfileDropdown() {
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
+      // The phone menu is a sheet portaled to <body> — a tap inside it is not
+      // "outside" (the sheet owns its own backdrop dismissal).
+      if ((e.target as Element | null)?.closest?.("[data-pq-sheet-layer]")) return;
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     }
     function onEsc(e: KeyboardEvent) {
@@ -80,6 +90,91 @@ export function ProfileDropdown() {
       router.push("/");
     }
   }
+
+  const menuBody = (
+    <>
+        {/* Identity block */}
+        <div
+          className="px-4 py-4"
+          style={{ borderBottom: "0.5px solid var(--pq-hairline)" }}
+        >
+          <div
+            className="text-pq-lead font-serif"
+            style={{
+              color: "var(--pq-ivory)",
+            }}
+          >
+            {displayName}
+          </div>
+          <div
+            className="mt-0.5 truncate text-xs"
+            style={{ color: "var(--pq-muted)" }}
+          >
+            {displayEmail}
+          </div>
+          {/* Plan chip: desktop only — payment is gated, so the phone shows
+              no plan UI (CLAUDE.md: 요금제·잠금 UI 금지). */}
+          {!isPhone && (
+          <div className="mt-3">
+            <span
+              className="inline-flex items-center rounded px-2 py-0.5 text-pq-eyebrow font-mono"
+              style={{
+                border: "0.5px solid var(--pq-bronze)",
+                color: "var(--pq-bronze)",
+                letterSpacing: "0.2em",
+                textTransform: "uppercase",
+              }}
+            >
+              {tier}
+            </span>
+          </div>
+          )}
+        </div>
+
+        {/* Menu items */}
+        <nav className="py-1.5">
+          {/* "My Profile" (/profile) removed 2026-09-12 — the page was
+              decomposed and now 308s to /settings, listed right here. */}
+          <MenuLink href="/settings" icon={<Settings className="h-4 w-4" />} onNavigate={() => setOpen(false)}>
+            {t("profileMenu.settings")}
+          </MenuLink>
+          {/* Billing 진입점 제거 (DECISIONS.md ✅확정 2026-05-30: 무료 Stage 0).
+              /pricing 은 next.config.ts 307 redirect → /mirror (라우트 코드는 2026-09-29 삭제). i18n 키
+              (profileMenu.billing) 는 보존 — Stage 1 부활 시 이 링크만 복원. */}
+          {/* Keyboard shortcuts mean nothing on a touch screen. */}
+          <MenuButton
+            className="pointer-coarse:hidden"
+            icon={<Keyboard className="h-4 w-4" />}
+            onClick={() => {
+              setOpen(false);
+              setShowShortcuts(true);
+            }}
+          >
+            {t("profileMenu.keyboardShortcuts")}
+          </MenuButton>
+          <MenuLink href="/support" icon={<LifeBuoy className="h-4 w-4" />} onNavigate={() => setOpen(false)}>
+            고객지원
+          </MenuLink>
+          <MenuLink href="/docs" icon={<HelpCircle className="h-4 w-4" />} onNavigate={() => setOpen(false)}>
+            {t("profileMenu.helpDocs")}
+          </MenuLink>
+        </nav>
+
+        {/* Sign out */}
+        <div style={{ borderTop: "0.5px solid var(--pq-hairline)" }} className="py-1.5">
+          <button
+            type="button"
+            role="menuitem"
+            onClick={handleSignOut}
+            className="flex min-h-[44px] w-full items-center gap-3 px-4 py-2 text-left text-sm transition-colors hover:bg-[rgba(var(--pq-bronze-wash-rgb),0.08)] max-md:min-h-[52px] max-md:px-5"
+            style={{ color: "var(--pq-bronze)" }}
+          >
+            <LogOut className="h-4 w-4" />
+            {t("profileMenu.signOut")}
+          </button>
+        </div>
+    </>
+  );
 
   return (
     <>
@@ -107,89 +202,25 @@ export function ProfileDropdown() {
           </span>
         </button>
 
-        {open && (
+        {open && !isPhone && (
           <div
             className="absolute right-0 top-full z-[100] mt-2 w-[260px] overflow-hidden rounded-xl shadow-[0_16px_48px_-16px_rgba(10,10,10,0.3)]"
             style={{ background: "color-mix(in srgb, var(--pq-ivory) 4%, var(--pq-ink))", border: "0.5px solid rgba(245,240,232,0.12)" }}
             role="menu"
           >
-            {/* Identity block */}
-            <div
-              className="px-4 py-4"
-              style={{ borderBottom: "0.5px solid var(--pq-hairline)" }}
-            >
-              <div
-                className="text-pq-lead font-serif"
-                style={{
-                  color: "var(--pq-ivory)",
-                }}
-              >
-                {displayName}
-              </div>
-              <div
-                className="mt-0.5 truncate text-xs"
-                style={{ color: "var(--pq-muted)" }}
-              >
-                {displayEmail}
-              </div>
-              <div className="mt-3">
-                <span
-                  className="inline-flex items-center rounded px-2 py-0.5 text-pq-eyebrow font-mono"
-                  style={{
-                    border: "0.5px solid var(--pq-bronze)",
-                    color: "var(--pq-bronze)",
-                    letterSpacing: "0.2em",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  {tier}
-                </span>
-              </div>
-            </div>
-
-            {/* Menu items */}
-            <nav className="py-1.5">
-              {/* "My Profile" (/profile) removed 2026-09-12 — the page was
-                  decomposed and now 308s to /settings, listed right here. */}
-              <MenuLink href="/settings" icon={<Settings className="h-4 w-4" />} onNavigate={() => setOpen(false)}>
-                {t("profileMenu.settings")}
-              </MenuLink>
-              {/* Billing 진입점 제거 (DECISIONS.md ✅확정 2026-05-30: 무료 Stage 0).
-                  /pricing 은 next.config.ts 307 redirect → /mirror (라우트 코드는 2026-09-29 삭제). i18n 키
-                  (profileMenu.billing) 는 보존 — Stage 1 부활 시 이 링크만 복원. */}
-              <MenuButton
-                icon={<Keyboard className="h-4 w-4" />}
-                onClick={() => {
-                  setOpen(false);
-                  setShowShortcuts(true);
-                }}
-              >
-                {t("profileMenu.keyboardShortcuts")}
-              </MenuButton>
-              <MenuLink href="/support" icon={<LifeBuoy className="h-4 w-4" />} onNavigate={() => setOpen(false)}>
-                고객지원
-              </MenuLink>
-              <MenuLink href="/docs" icon={<HelpCircle className="h-4 w-4" />} onNavigate={() => setOpen(false)}>
-                {t("profileMenu.helpDocs")}
-              </MenuLink>
-            </nav>
-
-            {/* Sign out */}
-            <div style={{ borderTop: "0.5px solid var(--pq-hairline)" }} className="py-1.5">
-              <button
-                type="button"
-                role="menuitem"
-                onClick={handleSignOut}
-                className="flex min-h-[44px] w-full items-center gap-3 px-4 py-2 text-left text-sm transition-colors hover:bg-[rgba(var(--pq-bronze-wash-rgb),0.08)]"
-                style={{ color: "var(--pq-bronze)" }}
-              >
-                <LogOut className="h-4 w-4" />
-                {t("profileMenu.signOut")}
-              </button>
-            </div>
+            {menuBody}
           </div>
         )}
       </div>
+
+      <Sheet
+        open={open && isPhone}
+        onClose={() => setOpen(false)}
+        ariaLabel={t("profileMenu.ariaLabel")}
+        phoneBodyClassName="px-0"
+      >
+        <div role="menu">{menuBody}</div>
+      </Sheet>
 
       {showShortcuts && <ShortcutsModal onClose={() => setShowShortcuts(false)} />}
     </>
@@ -216,6 +247,8 @@ function MenuLink({
       role="menuitem"
       className={cn(
         "flex min-h-[44px] items-center gap-3 px-4 py-2 text-sm transition-colors hover:bg-[rgba(var(--pq-bronze-wash-rgb),0.08)]",
+        // Phone sheet rows: full-width 52px targets.
+        "max-md:min-h-[52px] max-md:px-5",
       )}
       style={{ color: "var(--pq-ivory)" }}
     >
@@ -229,17 +262,23 @@ function MenuButton({
   icon,
   children,
   onClick,
+  className,
 }: {
   icon: React.ReactNode;
   children: React.ReactNode;
   onClick: () => void;
+  className?: string;
 }) {
   return (
     <button
       type="button"
       role="menuitem"
       onClick={onClick}
-      className="flex min-h-[44px] w-full items-center gap-3 px-4 py-2 text-left text-sm transition-colors hover:bg-[rgba(var(--pq-bronze-wash-rgb),0.08)]"
+      className={cn(
+        "flex min-h-[44px] w-full items-center gap-3 px-4 py-2 text-left text-sm transition-colors hover:bg-[rgba(var(--pq-bronze-wash-rgb),0.08)]",
+        "max-md:min-h-[52px] max-md:px-5",
+        className,
+      )}
       style={{ color: "var(--pq-ivory)" }}
     >
       <span style={{ color: "var(--pq-muted)" }}>{icon}</span>
@@ -262,12 +301,18 @@ function ShortcutsModal({ onClose }: { onClose: () => void }) {
   ];
 
   return (
-    <ModalShell onClose={onClose} ariaLabel={t("profileMenu.shortcutsModalTitle")}>
-      {/* v3 modal-shell exception per project_design_v3.md — rounded-2xl is intentional on modal/dialog shells (CTAs inside remain rounded-sm). */}
-      <div
-        className="w-full max-w-md overflow-hidden rounded-2xl shadow-[0_24px_60px_-20px_rgba(10,10,10,0.35)]"
-        style={{ background: "color-mix(in srgb, var(--pq-ivory) 4%, var(--pq-ink))", border: "0.5px solid rgba(245,240,232,0.12)" }}
-      >
+    // v3 modal-shell exception per project_design_v3.md — rounded-2xl is intentional on modal/dialog shells (CTAs inside remain rounded-sm).
+    <Sheet
+      open
+      onClose={onClose}
+      ariaLabel={t("profileMenu.shortcutsModalTitle")}
+      desktopOverlayClassName={MODAL_SHELL_OVERLAY_CLASS}
+      desktopBackdropEvent="mousedown"
+      desktopScrollLock
+      desktopPanelClassName="w-full max-w-md overflow-hidden rounded-2xl shadow-[0_24px_60px_-20px_rgba(10,10,10,0.35)]"
+      desktopPanelStyle={{ background: "color-mix(in srgb, var(--pq-ivory) 4%, var(--pq-ink))", border: "0.5px solid rgba(245,240,232,0.12)" }}
+      phoneBodyClassName="px-0"
+    >
         <div
           className="px-5 py-4"
           style={{ borderBottom: "0.5px solid var(--pq-hairline)" }}
@@ -312,7 +357,6 @@ function ShortcutsModal({ onClose }: { onClose: () => void }) {
             {t("profileMenu.close")}
           </button>
         </div>
-      </div>
-    </ModalShell>
+    </Sheet>
   );
 }

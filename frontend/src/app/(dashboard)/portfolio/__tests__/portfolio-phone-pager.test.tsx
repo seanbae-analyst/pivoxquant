@@ -154,6 +154,8 @@ describe("/portfolio phone pager — vendor gate OFF (shipped default)", () => {
     await userEvent.click(screen.getByTestId("portfolio-phone-add"));
     expect(screen.getByTestId("add-modal-open")).toBeInTheDocument();
 
+    // 2026-10-09: tapping a holding opens its action sheet (same actions).
+    await userEvent.click(screen.getAllByTestId("position-card-open")[0]);
     await userEvent.click(screen.getByRole("button", { name: "AAPL 정리 기록" }));
     expect(screen.getByTestId("trade-modal-sell")).toBeInTheDocument();
   });

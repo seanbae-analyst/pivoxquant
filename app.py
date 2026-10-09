@@ -12,7 +12,6 @@ import threading
 from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'), override=True)
 
-import sentry_sdk
 from flask import Flask, redirect, request, jsonify
 from werkzeug.exceptions import HTTPException
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -132,7 +131,15 @@ def _sentry_filter(event, hint):
 
 
 _sentry_dsn = os.environ.get("SENTRY_DSN")
+# Cold-start: sentry_sdk costs ~0.15s to import (measured 2026-10-09 with
+# `python -X importtime`), and without a DSN the SDK is never initialised, so
+# every call into it is a no-op. Import it only when it will actually be used;
+# with a DSN the import + init below run exactly as before, before Flask builds
+# the app (the integrations still hook in on time).
+sentry_sdk = None
 if _sentry_dsn:
+    import sentry_sdk  # noqa: PLC0415 — conditional, see comment above
+
     # include_local_variables=False: the SDK default ships every stack
     # frame's locals, and an unhandled error inside routes/imports.py has the
     # raw Bearer import token and the user's thesis text in scope.
@@ -146,9 +153,9 @@ def _set_sentry_user_type_tag() -> str:
 
     Returns the tag value chosen (``"sim"`` / ``"real"`` / ``"anon"``) so
     unit tests can assert the classification without standing up a full
-    Sentry initialisation. The tag itself goes through ``sentry_sdk.set_tag``
-    which is a no-op when Sentry isn't initialised (no DSN) — safe in dev
-    and tests.
+    Sentry initialisation. The tag itself goes through ``sentry_sdk.set_tag``,
+    which is skipped when no DSN is set (the SDK is then not even imported —
+    see the ``_sentry_dsn`` block) — safe in dev and tests.
 
     Continuous User Simulation Phase 1: sim user errors must be distinguishable
     from real-user errors in the dashboard so the simulation harness doesn't
@@ -157,12 +164,14 @@ def _set_sentry_user_type_tag() -> str:
     try:
         from flask_login import current_user
         if not getattr(current_user, "is_authenticated", False):
-            sentry_sdk.set_tag("user_type", "anon")
+            if sentry_sdk is not None:
+                sentry_sdk.set_tag("user_type", "anon")
             return "anon"
         user_type = "sim" if bool(
             getattr(current_user, "is_simulated", False)
         ) else "real"
-        sentry_sdk.set_tag("user_type", user_type)
+        if sentry_sdk is not None:
+            sentry_sdk.set_tag("user_type", user_type)
         return user_type
     except Exception:
         # Sentry tagging must never break a request. Best-effort.
