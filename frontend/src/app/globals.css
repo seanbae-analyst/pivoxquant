@@ -880,6 +880,17 @@
 /* PWA standalone */
 .pwa-standalone .hide-in-pwa { display: none; }
 
+/* Browser vs home-screen app on "/" (app/page.tsx LandingOrAppSplash).
+   Decided by CSS before hydration so the installed app never paints the
+   web landing first. */
+.pq-standalone-only { display: none; }
+.pwa-standalone .pq-browser-only { display: none; }
+.pwa-standalone .pq-standalone-only { display: block; }
+@media all and (display-mode: standalone) {
+  .pq-browser-only { display: none; }
+  .pq-standalone-only { display: block; }
+}
+
 /* ───────────────────────────────────────────────────────────
    PWA standalone mode — safe-area insets.
    Triggered both by display-mode media (modern browsers) and by the
