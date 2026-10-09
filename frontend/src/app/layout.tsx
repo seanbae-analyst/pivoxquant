@@ -323,7 +323,14 @@ export default async function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-full bg-background text-foreground antialiased">
+      {/* No bg-background / text-foreground here: those utilities (white /
+          slate-900, the shadcn light defaults) out-ranked the Vantablack
+          body rule in globals.css (@layer base) — a browser tab showed white
+          under short pages and overscroll; only the installed app (its
+          unlayered display-mode block) was ink. The body floor and text are
+          --pq-ink / --pq-ivory from globals.css. Light surfaces (/feedback/nps)
+          set their own background. */}
+      <body className="min-h-full antialiased">
         {/*
          * Skip link — WCAG 2.4.1 (Bypass Blocks, Level A). Visually hidden
          * until keyboard-focused, then jumps to <main id="main-content">

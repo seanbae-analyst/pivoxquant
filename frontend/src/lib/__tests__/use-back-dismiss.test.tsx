@@ -5,11 +5,14 @@
  */
 import * as React from "react";
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
-import { render, cleanup, act, waitFor } from "@testing-library/react";
+import { render, cleanup, act, waitFor, fireEvent, screen } from "@testing-library/react";
+import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
+import type { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import {
   useBackDismiss,
   countStaleTrailing,
   markOverlayNavigation,
+  navigateFromOverlay,
   __resetBackDismissForTests,
 } from "@/lib/use-back-dismiss";
 
@@ -32,8 +35,39 @@ function Overlay({
 }
 
 beforeEach(() => {
-  window.history.replaceState({ page: "base" }, "");
+  window.history.replaceState({ page: "base" }, "", "/mirror");
 });
+
+/** A stand-in App Router that moves real (jsdom) history like Next does:
+ *  a navigation's entry carries Next's own state, not the overlay marker. */
+function fakeRouter() {
+  const r = {
+    push: vi.fn((href: string) => window.history.pushState({ page: href }, "", href)),
+    replace: vi.fn((href: string) => window.history.replaceState({ page: href }, "", href)),
+  };
+  return r as typeof r & AppRouterInstance;
+}
+
+function SheetWithLink({
+  open,
+  onClose,
+  router,
+}: {
+  open: boolean;
+  onClose: () => void;
+  router: AppRouterInstance | null;
+}) {
+  return (
+    <AppRouterContext.Provider value={router}>
+      <Overlay open={open} onClose={onClose} />
+      {open ? (
+        <a href="/settings" onClick={onClose}>
+          설정
+        </a>
+      ) : null}
+    </AppRouterContext.Provider>
+  );
+}
 afterEach(async () => {
   vi.restoreAllMocks();
   cleanup();
@@ -155,5 +189,106 @@ describe("useBackDismiss", () => {
     await new Promise((r) => setTimeout(r, 30));
     expect(goSpy).not.toHaveBeenCalled();
     goSpy.mockRestore();
+  });
+
+  it("a link inside the overlay replaces the overlay's entry: one Back returns to the opener", async () => {
+    const router = fakeRouter();
+    const go = vi.spyOn(window.history, "go");
+    const before = window.history.length;
+    let open = true;
+    const onClose = vi.fn(() => {
+      open = false;
+    });
+    const { rerender } = render(<SheetWithLink open onClose={onClose} router={router} />);
+    expect(window.history.length).toBe(before + 1); // the overlay's entry
+
+    // Click 설정: handled before next/link (default prevented → no push),
+    // the link's own onClick (closing the sheet) still runs.
+    const notPrevented = fireEvent.click(screen.getByText("설정"));
+    expect(notPrevented).toBe(false);
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(router.replace).toHaveBeenCalledWith("/settings");
+    expect(router.push).not.toHaveBeenCalled();
+    rerender(<SheetWithLink open={open} onClose={onClose} router={router} />);
+
+    // Arrived: the overlay entry became /settings — no extra entry left behind.
+    await new Promise((r) => setTimeout(r, 30));
+    expect(go).not.toHaveBeenCalled(); // and the navigation was not cancelled
+    expect(window.location.pathname).toBe("/settings");
+    expect(window.history.length).toBe(before + 1);
+    expect(stack()).toBeUndefined();
+
+    // One Back → the page that opened the sheet.
+    act(() => window.history.back());
+    await waitFor(() => expect((window.history.state as S)?.page).toBe("base"));
+    expect(window.location.pathname).toBe("/mirror");
+  });
+
+  it("without an App Router mounted, a link is left to the browser (old behaviour)", async () => {
+    const go = vi.spyOn(window.history, "go");
+    const onClose = vi.fn();
+    // Record what reached the browser, then stop jsdom's own navigation.
+    let reachedBrowser = false;
+    const sink = (e: Event) => {
+      reachedBrowser = !e.defaultPrevented;
+      e.preventDefault();
+    };
+    window.addEventListener("click", sink);
+    const { rerender } = render(<SheetWithLink open onClose={onClose} router={null} />);
+    fireEvent.click(screen.getByText("설정"));
+    window.removeEventListener("click", sink);
+    expect(reachedBrowser).toBe(true);
+    rerender(<SheetWithLink open={false} onClose={onClose} router={null} />);
+    await new Promise((r) => setTimeout(r, 30));
+    expect(go).not.toHaveBeenCalled(); // still never cancels the navigation
+  });
+
+  it("only the top overlay takes the link over (one replace for a nested pair)", () => {
+    const router = fakeRouter();
+    render(
+      <AppRouterContext.Provider value={router}>
+        <Overlay open onClose={() => {}} />
+        <Overlay open onClose={() => {}} />
+        <a href="/settings">설정</a>
+      </AppRouterContext.Provider>,
+    );
+    fireEvent.click(screen.getByText("설정"));
+    expect(router.replace).toHaveBeenCalledTimes(1);
+  });
+
+  it("modified clicks, new-tab links and in-page hashes are not taken over", () => {
+    const router = fakeRouter();
+    render(
+      <AppRouterContext.Provider value={router}>
+        <Overlay open onClose={() => {}} />
+        <a href="/settings">a</a>
+        <a href="/settings" target="_blank">b</a>
+        <a href="#top">c</a>
+        <a href="https://example.com/x">d</a>
+      </AppRouterContext.Provider>,
+    );
+    const sink = (e: Event) => e.preventDefault(); // jsdom: never navigate
+    window.addEventListener("click", sink);
+    fireEvent.click(screen.getByText("a"), { metaKey: true });
+    fireEvent.click(screen.getByText("b"));
+    fireEvent.click(screen.getByText("c"));
+    fireEvent.click(screen.getByText("d"));
+    window.removeEventListener("click", sink);
+    expect(router.replace).not.toHaveBeenCalled();
+  });
+});
+
+describe("navigateFromOverlay", () => {
+  it("replaces while the overlay's entry is current, pushes otherwise", () => {
+    const router = fakeRouter();
+    const { rerender } = render(<Overlay open onClose={() => {}} />);
+    navigateFromOverlay(router, "/journal");
+    expect(router.replace).toHaveBeenCalledWith("/journal");
+    expect(router.push).not.toHaveBeenCalled();
+
+    rerender(<Overlay open={false} onClose={() => {}} />);
+    window.history.replaceState({ page: "base" }, "", "/mirror");
+    navigateFromOverlay(router, "/portfolio");
+    expect(router.push).toHaveBeenCalledWith("/portfolio");
   });
 });

@@ -18,14 +18,19 @@
  *     already popped and leaves history alone.
  *   - No fight with routing. A same-origin link clicked inside the overlay is
  *     a navigation, so the cleanup skips its `go(-n)` (going back would cancel
- *     the navigation Next.js is about to commit). The left-behind entry is
- *     the same URL as the page under it, so it is harmless.
+ *     the navigation Next.js is about to commit).
+ *   - No leftover entry after such a link. The overlay's entry is a copy of
+ *     the page under it, so a push on top of it would leave two entries for
+ *     that page and the second Back would look dead. Instead the link
+ *     navigates with `router.replace`, which turns the overlay's entry into
+ *     the new route: page → [sheet] → 설정 becomes page → 설정, and one Back
+ *     from 설정 lands on the page that opened the sheet.
+ *     Programmatic navigations do the same through `navigateFromOverlay`.
  *   - The URL never changes — the entry copies `history.state`, which keeps
  *     Next.js's `__NA` tree marker, so its popstate handler restores the same
  *     route instead of reloading.
  *
- * Stable API (the 더보기 drawer in components/layout/bottom-nav.tsx and
- * components/ui/sheet.tsx both use it):
+ * Stable API (components/ui/sheet.tsx uses it):
  *
  *     useBackDismiss(open, onClose)
  *     useBackDismiss(open, onClose, { enabled, blocked })
@@ -37,7 +42,17 @@
  *             flight. Default false.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
+// The App Router instance without useRouter()'s throw when no router is
+// mounted (unit tests render sheets bare). Same module Next's own client
+// code reads, so it is the live router in the app.
+import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
+
+/** The bit of the App Router this module needs. */
+export interface OverlayRouter {
+  push(href: string): void;
+  replace(href: string): void;
+}
 
 const STATE_KEY = "__pqOverlays";
 
@@ -102,29 +117,38 @@ function scheduleFlush() {
   }, 0);
 }
 
-function isNavigatingClick(e: MouseEvent): boolean {
-  if (e.defaultPrevented || e.button !== 0) return false;
-  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return false;
+/**
+ * The in-app URL (path + query + hash) a click navigates to, or null when
+ * the click is not a same-origin, same-tab navigation.
+ */
+function navigatingClickHref(e: MouseEvent): string | null {
+  if (e.defaultPrevented || e.button !== 0) return null;
+  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return null;
   const target = e.target as Element | null;
   const a = target?.closest?.("a[href]") as HTMLAnchorElement | null;
-  if (!a) return false;
-  if (a.target && a.target !== "_self") return false;
-  if (a.hasAttribute("download")) return false;
+  if (!a) return null;
+  if (a.target && a.target !== "_self") return null;
+  if (a.hasAttribute("download")) return null;
   try {
     const url = new URL(a.href, window.location.href);
-    if (url.origin !== window.location.origin) return false;
+    if (url.origin !== window.location.origin) return null;
     // Pure in-page hash jumps are not navigations.
     if (
       url.pathname === window.location.pathname &&
       url.search === window.location.search &&
       url.hash
     ) {
-      return false;
+      return null;
     }
+    return url.pathname + url.search + url.hash;
   } catch {
-    return false;
+    return null;
   }
-  return true;
+}
+
+/** The current history entry is an overlay's (a copy of the page under it). */
+function onOverlayEntry(): boolean {
+  return readStack().length > 0;
 }
 
 /**
@@ -134,6 +158,18 @@ function isNavigatingClick(e: MouseEvent): boolean {
  */
 export function markOverlayNavigation(): void {
   navigatingAt = Date.now();
+}
+
+/**
+ * Navigate from inside an open (or just-closed) overlay. When the current
+ * history entry is the overlay's, it is replaced by the new route rather
+ * than pushed on top of, so no same-URL entry is left behind for Back to
+ * stall on. Otherwise a plain push.
+ */
+export function navigateFromOverlay(router: OverlayRouter, href: string): void {
+  markOverlayNavigation();
+  if (onOverlayEntry()) router.replace(href);
+  else router.push(href);
 }
 
 export interface BackDismissOptions {
@@ -150,11 +186,14 @@ export function useBackDismiss(
 ): void {
   const { enabled = true, blocked = false } = options;
   const [id] = useState(() => `o${++seq}`);
+  const router = useContext(AppRouterContext);
   const onCloseRef = useRef(onClose);
   const blockedRef = useRef(blocked);
+  const routerRef = useRef<OverlayRouter | null>(router);
   useEffect(() => {
     onCloseRef.current = onClose;
     blockedRef.current = blocked;
+    routerRef.current = router;
   });
 
   const active = open && enabled;
@@ -178,7 +217,19 @@ export function useBackDismiss(
       onCloseRef.current();
     };
     const onClickCapture = (e: MouseEvent) => {
-      if (isNavigatingClick(e)) navigatingAt = Date.now();
+      const href = navigatingClickHref(e);
+      if (href === null) return;
+      navigatingAt = Date.now();
+      // Only the overlay whose entry is on top takes the navigation over
+      // (each open overlay has this listener). Capture phase on document
+      // runs before next/link's onClick: the link's own onClick (e.g. one
+      // that closes the sheet) still runs, and next/link skips its push
+      // because the click is already handled.
+      const r = routerRef.current;
+      const top = readStack();
+      if (!r || top[top.length - 1] !== id) return;
+      e.preventDefault();
+      r.replace(href);
     };
 
     window.addEventListener("popstate", onPopState);

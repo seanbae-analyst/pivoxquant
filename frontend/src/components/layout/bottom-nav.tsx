@@ -42,6 +42,8 @@ type Tab = {
   href: string;
   label: string;
   icon: LucideIcon;
+  /** Real sub-routes that still belong to this tab (exact paths). */
+  subRoutes?: ReadonlyArray<string>;
 };
 
 // 거울 (Mirror) leads as the home; 멈춤 → 기록 → 거울 is the product loop;
@@ -51,13 +53,23 @@ type Tab = {
 export const PRIMARY_TABS: ReadonlyArray<Tab> = [
   { href: "/mirror", label: "거울", icon: Contrast },
   { href: "/pre-trade", label: "멈춤", icon: Gavel },
-  { href: "/journal", label: "기록", icon: NotebookPen },
+  { href: "/journal", label: "기록", icon: NotebookPen, subRoutes: ["/journal/import"] },
   { href: "/portfolio", label: "포트폴리오", icon: Briefcase },
 ];
 
-export function isRouteActive(pathname: string | null, href: string): boolean {
+/**
+ * Whether `pathname` is one of the tab's own screens — the tab root or one of
+ * its listed sub-routes, matched exactly. A prefix match would light 거울 on
+ * the in-app 404 for /mirror/nope; an unknown path lights no tab.
+ */
+export function isRouteActive(
+  pathname: string | null,
+  href: string,
+  subRoutes: ReadonlyArray<string> = [],
+): boolean {
   if (!pathname) return false;
-  return pathname === href || pathname.startsWith(href + "/");
+  const path = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
+  return path === href || subRoutes.includes(path);
 }
 
 function isPlainClick(e: MouseEvent): boolean {
@@ -80,8 +92,8 @@ export function BottomNav() {
   // the user ends up somewhere else.
   const [tapped, setTapped] = useState<{ href: string; from: string | null } | null>(null);
   const pendingHref = tapped && tapped.from === pathname ? tapped.href : null;
-  const isLit = (href: string) =>
-    pendingHref ? pendingHref === href : isRouteActive(pathname, href);
+  const isLit = (tab: Tab) =>
+    pendingHref ? pendingHref === tab.href : isRouteActive(pathname, tab.href, tab.subRoutes);
 
   function onTabClick(e: MouseEvent<HTMLAnchorElement>, href: string) {
     if (!isPlainClick(e)) return;
@@ -112,8 +124,8 @@ export function BottomNav() {
           <BottomTab
             key={tab.href}
             tab={tab}
-            active={isLit(tab.href)}
-            current={isRouteActive(pathname, tab.href)}
+            active={isLit(tab)}
+            current={isRouteActive(pathname, tab.href, tab.subRoutes)}
             onClick={(e) => onTabClick(e, tab.href)}
           />
         ))}

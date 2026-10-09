@@ -82,4 +82,14 @@ describe("RecentTransactionsBlock — holding seed rows", () => {
     expect(screen.queryByText("+USD 210.00")).toBeNull();
     expect(screen.getByText("USD 210.00")).toBeInTheDocument();
   });
+
+  it("has no 전체 내역 link back to /portfolio (no full-history screen exists)", () => {
+    render(
+      <LocaleProvider>
+        <RecentTransactionsBlock limit={6} />
+      </LocaleProvider>,
+    );
+    expect(screen.queryByText(/전체 내역/)).toBeNull();
+    expect(screen.queryByRole("link")).toBeNull();
+  });
 });
