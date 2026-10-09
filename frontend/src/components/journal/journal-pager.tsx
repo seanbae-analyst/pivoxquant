@@ -77,9 +77,10 @@ function useMediaQuery(query: string): boolean {
 }
 
 /**
- * Scroll the window without a glide. `html` has `scroll-behavior: smooth`
- * (globals.css), so a plain scrollTo would animate; and older WebKit rejects
- * `behavior: "instant"`, so the CSS is lifted for the one call instead.
+ * Scroll the window without a glide. Since 2026-10-09 `html` is smooth only
+ * on the landing (globals.css), so this is belt-and-braces: should a smooth
+ * rule ever reach this page again, a plain scrollTo would animate, and older
+ * WebKit rejects `behavior: "instant"` — so the CSS is lifted for the call.
  */
 function jumpWindowTo(top: number): void {
   const root = document.documentElement;
@@ -204,7 +205,17 @@ export function JournalPager({
   }, [commit, count]);
 
   // Window scroll after a page change, before paint — see the file comment.
+  // On MOUNT there is no page change to land: the off-screen pages are out
+  // of view, so lining them up can wait a frame instead of forcing a
+  // synchronous layout in the middle of hydration (alignInactive measures the
+  // strip and the track; measured 2026-10-09 at 4× CPU throttle).
+  const mounted = useRef(false);
   useLayoutEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true;
+      const id = window.requestAnimationFrame(() => alignInactive());
+      return () => window.cancelAnimationFrame(id);
+    }
     const track = trackRef.current;
     if (track) track.scrollTop = 0;
     if (pendingScroll.current !== null) {
@@ -305,8 +316,12 @@ export function JournalPager({
         role="tablist"
         aria-label={ariaLabel}
         className="sticky z-10 -mx-4 flex h-12 border-b md:hidden"
+        data-pq-chrome
         style={{
-          top: "var(--pq-topbar-height)",
+          // Flush under the app bar, which is safe-top + 56px tall in the
+          // installed app (globals.css --pq-aux-sticky-top). Not the token
+          // itself: journal/page.tsx re-points it below this strip.
+          top: "calc(var(--pq-topbar-height) + var(--pq-safe-top))",
           background: "var(--pq-ink)",
           borderColor: "var(--pq-ivory-line)",
         }}
@@ -369,7 +384,10 @@ export function JournalPager({
               role={isPhone ? "tabpanel" : undefined}
               aria-labelledby={isPhone ? `journal-tab-${p.id}` : undefined}
               inert={isPhone && !current}
-              className={`relative w-full shrink-0 snap-start snap-always px-4 pt-4 md:contents ${current ? "" : "h-0"}`}
+              // pb-12 (phone): the floating page dots sit 10px above the
+              // bottom nav; reserve their height so a page's last block
+              // scrolls clear of them instead of ending underneath.
+              className={`relative w-full shrink-0 snap-start snap-always px-4 pt-4 pb-12 md:contents ${current ? "" : "h-0"}`}
               data-testid={`journal-page-${p.id}`}
               data-active={current ? "true" : "false"}
             >
@@ -390,6 +408,7 @@ export function JournalPager({
           background: "var(--pq-ink)",
           borderColor: "var(--pq-ivory-line)",
         }}
+        data-pq-chrome
         data-testid="journal-page-dots"
       >
         {pages.map((p, i) => (

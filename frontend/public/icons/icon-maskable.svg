@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<!-- PivoxQuant app icon — purpose "maskable". Whole mark sits inside the
+     W3C safe zone (circle r = 40% = 204.8 of 512, centred).
+     Mark: Playfair Display 700 "P" (outlines baked in, SIL OFL 1.1) in Ivory
+     #F5F0E8 + a Bronze #B8956A full stop on Vantablack #050505.
+     Rasterised by scripts/render-pwa-assets.mjs — edit this file, then re-run it. -->
+<defs><radialGradient id="veil" cx="50%" cy="46%" r="62%"><stop offset="0" stop-color="#F5F0E8" stop-opacity="0.055"/><stop offset="0.55" stop-color="#F5F0E8" stop-opacity="0.018"/><stop offset="1" stop-color="#F5F0E8" stop-opacity="0"/></radialGradient></defs>
+<rect width="512" height="512" fill="#050505"/>
+<rect width="512" height="512" fill="url(#veil)"/>
+<g transform="translate(128.59 374)">
+<path fill="#F5F0E8" transform="scale(0.33333)" d="M34 -708Q59 -707 101.5 -706Q144 -705 186 -705Q234 -705 279 -706Q324 -707 343 -707Q482 -707 551 -652Q620 -597 620 -510Q620 -474 606 -434.5Q592 -395 558.5 -361.5Q525 -328 467 -307Q409 -286 321 -286H219V-306H311Q370 -306 400.5 -333Q431 -360 442.5 -404Q454 -448 454 -499Q454 -594 426 -641Q398 -688 330 -688Q291 -688 279.5 -671Q268 -654 268 -602V-112Q268 -73 276 -54Q284 -35 307 -29Q330 -23 375 -22V0Q344 -1 295 -2Q246 -3 192 -3Q149 -3 108 -2Q67 -1 34 0V-20Q66 -22 82 -28Q98 -34 103.5 -52Q109 -70 109 -106V-602Q109 -639 103.5 -656.5Q98 -674 81.5 -680.5Q65 -687 34 -688Z"/>
+<circle fill="#B8956A" cx="225.07" cy="-18.41" r="18.41"/>
+</g>
+</svg>

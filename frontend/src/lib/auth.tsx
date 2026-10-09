@@ -9,11 +9,16 @@ import {
   useRef,
   useState,
 } from "react";
-import useSWR, { useSWRConfig } from "swr";
+import useSWR, { useSWRConfig, type SWRConfiguration } from "swr";
 import { apiFetch, ApiError } from "./api";
 import { API } from "./endpoints";
 import { clearHadSession, markHadSession } from "./had-session";
 import { isDemoMode, DEMO_USER } from "./demo";
+import {
+  clearPersistedSwrCache,
+  syncPersistedCacheIdentity,
+} from "./persisted-swr-cache";
+import { useAuthWakePoll } from "./auth-wake";
 
 // PIPA: drop the service-worker API_CACHE so per-user SWR endpoints
 // (/api/profile, /api/earnings, /api/discover — cached by URL only with
@@ -107,7 +112,23 @@ export function ageConfirmationRequired(
 
 interface AuthCtx {
   user: User | null;
+  /**
+   * True only until the FIRST auth probe has settled (an answer or an
+   * error). It never flips back to true on a retry — see `authSettled`.
+   */
   loading: boolean;
+  /**
+   * Auth state UNKNOWN: the probe has never been answered and its last
+   * attempt failed with "could not reach / could not ask the server"
+   * (AuthUnknownError — a cold backend, a timeout, a 5xx, a 429). `user` is
+   * null here but that is not "signed out": guards must hold, not redirect
+   * to /login. Cleared by the first real answer.
+   */
+  waking: boolean;
+  /** `waking` and the wake poll passed its deadline (show error + retry). */
+  wakeFailed: boolean;
+  /** Restart the wake poll and re-run the auth probe now. */
+  retryAuth: () => void;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, name?: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -141,7 +162,58 @@ const AuthContext = createContext<AuthCtx | null>(null);
 // instead of logging the user out. On a cold start there is no previous
 // response to keep, so `data` stays undefined and the shell renders its
 // unauthenticated branch exactly as before.
-export class AuthUnknownError extends Error {}
+export class AuthUnknownError extends Error {
+  /** HTTP status when the server answered at all; undefined = no answer. */
+  readonly status?: number;
+  constructor(message: string, status?: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
+/**
+ * A failure that a sleeping Render backend produces while it boots: no
+ * answer at all (network error, our 8 s abort) or a 5xx/408 from the router.
+ * 429 and other 4xx are NOT this — retrying those fast would only add load.
+ */
+export function isColdStartAuthError(err: unknown): boolean {
+  if (!(err instanceof AuthUnknownError)) return false;
+  const s = err.status;
+  return s === undefined || s === 408 || s >= 500;
+}
+
+/**
+ * Wake retry cadence for the auth probe (2026-10-09). The previous policy —
+ * SWR's default `errorRetryCount: 2` with exponential backoff — made its
+ * last attempt at roughly 31–41 s and then went quiet until the 5-minute
+ * refresh. A cold start is ~44 s (keep-warm.yml), so the probe routinely
+ * gave up just before the server came up. Now: a fixed short gap while the
+ * failure looks like a boot, for longer than the wake deadline the login
+ * button uses (lib/backend-wake WAKE_DEADLINE_MS = 75 s):
+ *   8 retries × (≤ 8 s probe + 3 s gap) ≈ 88 s.
+ */
+export const AUTH_WAKE_RETRY_MS = 3_000;
+export const AUTH_WAKE_MAX_RETRIES = 8;
+/** Non-boot failures (e.g. 429): the old budget — 2 retries, backoff. */
+const AUTH_OTHER_MAX_RETRIES = 2;
+const AUTH_OTHER_RETRY_BASE_MS = 5_000;
+
+export const authErrorRetry: NonNullable<SWRConfiguration["onErrorRetry"]> = (
+  err,
+  _key,
+  _config,
+  revalidate,
+  { retryCount },
+) => {
+  if (isColdStartAuthError(err)) {
+    if (retryCount > AUTH_WAKE_MAX_RETRIES) return;
+    setTimeout(() => void revalidate({ retryCount }), AUTH_WAKE_RETRY_MS);
+    return;
+  }
+  if (retryCount > AUTH_OTHER_MAX_RETRIES) return;
+  const delay = AUTH_OTHER_RETRY_BASE_MS * 2 ** Math.max(0, retryCount - 1);
+  setTimeout(() => void revalidate({ retryCount }), delay);
+};
 
 export const meFetcher = async (url: string): Promise<MeResponse> => {
   const ctrl = new AbortController();
@@ -154,6 +226,7 @@ export const meFetcher = async (url: string): Promise<MeResponse> => {
     }
     throw new AuthUnknownError(
       err instanceof Error ? err.message : "auth probe failed",
+      err instanceof ApiError ? err.status : undefined,
     );
   } finally {
     clearTimeout(timeoutId);
@@ -166,24 +239,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // setInterval and produced the "7x duplicate /api/auth/me" pattern flagged
   // by verify-ux. SWR dedupes concurrent in-flight requests and respects
   // refreshInterval/dedupingInterval globally per cache key.
-  const { data, isLoading, mutate } = useSWR<MeResponse>(
-    API.auth.me,
-    meFetcher,
-    {
-      refreshInterval: 5 * 60 * 1000, // 5 min — matches prior cadence
-      dedupingInterval: 60 * 1000, // collapse duplicate calls within 60s
-      revalidateOnFocus: false,
-      revalidateOnReconnect: true,
-      errorRetryCount: 2,
-      // keepPreviousData is what makes an unreachable backend a no-op rather
-      // than a logout: on an AuthUnknownError SWR surfaces the error but
-      // leaves `data` at the last good response.
-      keepPreviousData: true,
-    },
-  );
   // Global SWR mutate — used on logout to evict every other per-user cache
-  // key (the bound `mutate` above only clears the auth.me key).
-  const { mutate: globalMutate } = useSWRConfig();
+  // key (the bound `mutate` below only clears the auth.me key). `cache` is
+  // SWR's default cache, the one lib/persisted-swr-cache hydrates.
+  const { mutate: globalMutate, cache } = useSWRConfig();
+
+  // The persisted screen cache follows the SERVER's answer about identity:
+  // it is put back only after /me names the same user id it was saved for,
+  // and wiped when /me says "not signed in". Running this inside the fetcher
+  // means it happens before SWR commits the answer, i.e. before any
+  // (dashboard) page mounts and reads the cache. Demo mode never persists.
+  const fetchMe = useCallback(
+    async (url: string): Promise<MeResponse> => {
+      const res = await meFetcher(url);
+      if (!isDemoMode()) syncPersistedCacheIdentity(cache, res);
+      return res;
+    },
+    [cache],
+  );
+
+  const { data, error, mutate } = useSWR<MeResponse>(API.auth.me, fetchMe, {
+    refreshInterval: 5 * 60 * 1000, // 5 min — matches prior cadence
+    dedupingInterval: 60 * 1000, // collapse duplicate calls within 60s
+    revalidateOnFocus: false,
+    revalidateOnReconnect: true,
+    errorRetryCount: AUTH_WAKE_MAX_RETRIES,
+    onErrorRetry: authErrorRetry,
+    // keepPreviousData is what makes an unreachable backend a no-op rather
+    // than a logout: on an AuthUnknownError SWR surfaces the error but
+    // leaves `data` at the last good response.
+    keepPreviousData: true,
+  });
 
   // Local override for logout — clears the user immediately without waiting
   // for the network round-trip, mirroring the previous setUser(null) behavior.
@@ -215,9 +301,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ? (data.user ?? null)
         : null;
 
-  // Match prior semantics: loading is true only on the very first fetch. In demo
-  // mode, stay loading until mounted so the authenticated shell is client-only.
-  const loading = demo ? !demoMounted : isLoading && !data;
+  // `loading` is true only until the first probe SETTLES, and latches there.
+  //
+  // 2026-10-09 wake-state fix: this used to be `isLoading && !data`. SWR sets
+  // `isLoading` back to true at the start of EVERY retry while there is no
+  // data (swr/dist/index: `if (isUndefined(getCache().data))
+  // initialState.isLoading = true`). On a cold backend the probe fails and
+  // retries, so `loading` went true → false → true… and /login swapped its
+  // OAuth card for the skeleton on each retry. That unmounted <OAuthButtonsV2>
+  // mid-wake: its "서버를 깨우는 중" note and "다시 시도" button vanished, and
+  // its wake loop was aborted by the unmount cleanup, so a click made during
+  // a gap never navigated. Once the first answer or error is in, later
+  // retries change `waking`, never `loading`. (State updated during render
+  // is React's documented "adjust state on prop change" pattern.)
+  const settledNow = data !== undefined || error !== undefined;
+  const [authSettled, setAuthSettled] = useState(settledNow);
+  if (settledNow && !authSettled) setAuthSettled(true);
+  // In demo mode, stay loading until mounted so the authenticated shell is
+  // client-only.
+  const loading = demo ? !demoMounted : !(authSettled || settledNow);
+  const waking =
+    !demo && !logoutPending && data === undefined && error instanceof AuthUnknownError;
+
+  // While unknown: poll /api/health every 2 s and re-run this probe the moment
+  // the backend answers, instead of waiting out the probe's own retry timer
+  // (lib/auth-wake.ts has the measured numbers).
+  const revalidateMe = useCallback(() => mutate(), [mutate]);
+  const { gaveUp: wakeFailed, retry: retryAuth } = useAuthWakePoll(waking, revalidateMe);
 
   // Track "this browser has held a session" so apiFetch can disambiguate
   // a real expiry from a fresh-guest 401 when redirecting to /login.
@@ -309,12 +419,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         revalidate: false,
       });
       clearSwApiCache();
+      // The on-device copy of the screens (lib/persisted-swr-cache) goes too.
+      clearPersistedSwrCache(cache);
     }
-  }, [mutate, globalMutate]);
+  }, [mutate, globalMutate, cache]);
 
   const value = useMemo<AuthCtx>(
-    () => ({ user, loading, login, signup, logout, refresh }),
-    [user, loading, login, signup, logout, refresh],
+    () => ({
+      user,
+      loading,
+      waking,
+      wakeFailed: waking && wakeFailed,
+      retryAuth,
+      login,
+      signup,
+      logout,
+      refresh,
+    }),
+    [user, loading, waking, wakeFailed, retryAuth, login, signup, logout, refresh],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -32,6 +32,7 @@
 import * as React from "react";
 import { useReducedMotion } from "motion/react";
 import { PQ_DUR_FAST, PQ_EASE } from "@/lib/motion";
+import { SCROLL_TOP_EVENT } from "@/lib/scroll-top-event";
 
 export interface PhonePage {
   /** Stable id — used for the tab / panel ids and test hooks. */
@@ -150,11 +151,28 @@ export function PhonePager({
   );
 
   // First paint: open on `initialIndex` without a visible glide.
+  // Page 0 (the common case) needs no measurement — a fresh track is already
+  // at scrollLeft 0 — so hydration does not force a synchronous layout just
+  // to read clientWidth (measured 2026-10-09: ~250ms at 4× CPU throttle).
   React.useLayoutEffect(() => {
-    const el = trackRef.current;
-    if (el && el.clientWidth > 0) el.scrollLeft = indexRef.current * el.clientWidth;
+    if (indexRef.current > 0) {
+      const el = trackRef.current;
+      if (el && el.clientWidth > 0) el.scrollLeft = indexRef.current * el.clientWidth;
+    }
     paintUnderline(indexRef.current);
   }, [paintUnderline]);
+
+  // Bottom-nav "tap the current tab again" → the visible page scrolls up.
+  React.useEffect(() => {
+    const onTop = () => {
+      pageRefs.current[indexRef.current]?.scrollTo({
+        top: 0,
+        behavior: reduce ? "auto" : "smooth",
+      });
+    };
+    window.addEventListener(SCROLL_TOP_EVENT, onTop);
+    return () => window.removeEventListener(SCROLL_TOP_EVENT, onTop);
+  }, [reduce]);
 
   // Rotation / resize: keep the current page in place rather than
   // trusting every engine to re-snap a mandatory track.
@@ -214,6 +232,7 @@ export function PhonePager({
           onKeyDown={onTabKeyDown}
           className="pq-phone-pager-tabs"
           style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }}
+          data-pq-chrome
           data-testid="phone-pager-tabs"
         >
           {pages.map((p, i) => (
@@ -281,6 +300,7 @@ export function PhonePager({
           aria-label={label}
           onKeyDown={onTabKeyDown}
           className="pq-phone-pager-dots"
+          data-pq-chrome
           data-testid="phone-pager-dots"
         >
           {pages.map((p, i) => (
@@ -304,7 +324,7 @@ export function PhonePager({
           ))}
         </div>
       ) : (
-        <div className="pq-phone-pager-dots" aria-hidden data-testid="phone-pager-dots">
+        <div className="pq-phone-pager-dots" aria-hidden data-pq-chrome data-testid="phone-pager-dots">
           {pages.map((p, i) => (
             <span key={p.id} style={dotStyle(i)} />
           ))}
@@ -392,6 +412,9 @@ export function PhonePager({
           height: 100%;
           overflow-y: auto;
           overflow-x: hidden;
+          /* Reaching a page's end must not hand the drag to the document
+             (which would slide the whole pager under the app bar). */
+          overscroll-behavior-y: contain;
           scroll-snap-align: start;
           scroll-snap-stop: always;
           padding: 16px 16px 24px;

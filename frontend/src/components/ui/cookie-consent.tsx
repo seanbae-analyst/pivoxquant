@@ -19,24 +19,24 @@ export function CookieConsent() {
     setShow(false);
   };
 
+  // Placement / look only (2026-10-09 phone audit). The choice logic, copy,
+  // storage and defaults above are untouched. Phone: an ink card that floats
+  // ABOVE the bottom nav (globals.css "Cookie banner" lifts it when a nav is
+  // on screen) with 48px buttons in one row; desktop: the full-width strip.
+  const btn =
+    "min-h-[48px] flex-1 px-3 text-sm font-medium transition-colors md:min-h-0 md:flex-none md:px-4 md:py-2";
   return (
     <div
       role="dialog"
       aria-label="Cookie consent"
       data-cookie-banner="true"
       // z-[55]: explicitly above the mobile BottomNav (z-50) instead of tying
-      // with it on DOM order; it's a choice the user answers once. pb clears
-      // the iPhone home indicator (env() is 0 elsewhere → plain 1rem).
-      className="pq-cookie-banner fixed bottom-0 left-0 right-0 z-[55] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:flex md:items-center md:justify-between md:gap-6 md:px-8"
-      style={{
-        backgroundColor: "var(--pq-ink)",
-        color: "var(--pq-ivory)",
-        borderTop: "1px solid var(--pq-border)",
-        boxShadow: "0 -8px 24px rgba(0,0,0,0.4)",
-      }}
+      // with it on DOM order; it's a choice the user answers once.
+      className="pq-cookie-banner fixed bottom-0 left-0 right-0 z-[55] md:flex md:items-center md:justify-between md:gap-6 md:px-8 md:py-4"
+      style={{ color: "var(--pq-ivory)" }}
     >
       <p
-        className="mb-3 text-sm md:mb-0 md:flex-1"
+        className="mb-3 text-sm leading-relaxed md:mb-0 md:flex-1"
         style={{ color: "rgba(var(--pq-ivory-rgb), 0.78)" }}
       >
         {t("cookieConsent.message")}{" "}
@@ -48,11 +48,11 @@ export function CookieConsent() {
           {t("cookieConsent.privacyPolicy")}
         </a>
       </p>
-      <div className="flex flex-wrap gap-2 md:flex-nowrap">
+      <div className="flex gap-2 md:flex-nowrap">
         <button
           type="button"
           onClick={() => choose("rejected")}
-          className="px-4 py-2 text-sm font-medium transition-colors"
+          className={btn}
           style={{
             borderRadius: "var(--pq-radius-cta)",
             border: "1px solid var(--pq-border)",
@@ -65,7 +65,7 @@ export function CookieConsent() {
         <button
           type="button"
           onClick={() => choose("essential")}
-          className="px-4 py-2 text-sm font-medium transition-colors"
+          className={btn}
           style={{
             borderRadius: "var(--pq-radius-cta)",
             border: "1px solid var(--pq-border)",
@@ -78,7 +78,7 @@ export function CookieConsent() {
         <button
           type="button"
           onClick={() => choose("accepted")}
-          className="px-4 py-2 text-sm font-semibold transition-colors"
+          className={`${btn} font-semibold`}
           style={{
             borderRadius: "var(--pq-radius-cta)",
             backgroundColor: "var(--pq-bronze)",

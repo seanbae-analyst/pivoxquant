@@ -197,8 +197,14 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   // positions.length > 0. Using useSWR here with the same key is free — SWR
   // de-duplicates by key. No refreshInterval: this provider is mounted on
   // every page and only needs the count, not the /portfolio page's polling.
+  //
+  // 2026-10-09 perf: gated on the display flag FIRST. With vendor display off
+  // the stream is never opened (see connect()), so the count is never needed
+  // — yet this read went out on every page of every session, including the
+  // ones that never visit /portfolio, and on a just-woken free-plan backend
+  // it competed with the screen's own requests.
   const { data: positionsData } = useSWR<PositionsAliasResponse>(
-    user ? PORTFOLIO_POSITIONS : null,
+    user && isMarketDataDisplayEnabled() ? PORTFOLIO_POSITIONS : null,
     positionsFetcher,
     { revalidateOnFocus: false, dedupingInterval: 30_000 },
   );

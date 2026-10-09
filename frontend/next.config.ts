@@ -29,6 +29,18 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: __dirname,
   },
+  // 2026-10-09 (phone app feel): every dashboard page is dynamic (the root
+  // layout reads headers/cookies), so the client router kept NO copy of a
+  // visited page segment (dynamic default 0s) — each tab switch refetched it
+  // and flashed (dashboard)/loading.tsx even when the screen's SWR data was
+  // already cached. 30s lets a tab you just left come back at once. Safe:
+  // these pages are client components whose data comes from /api via SWR;
+  // the server payload holds no user data. Back/forward was already cached.
+  experimental: {
+    staleTimes: {
+      dynamic: 30,
+    },
+  },
   async rewrites() {
     return [
       {

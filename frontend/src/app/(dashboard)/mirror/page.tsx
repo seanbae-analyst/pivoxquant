@@ -34,6 +34,8 @@ import { MirrorHeadline } from "@/components/mirror/mirror-headline";
 import { MirrorRadarPanel } from "@/components/mirror/mirror-radar-panel";
 import { MirrorPhoneCards } from "@/components/mirror/mirror-phone-cards";
 import { OneThingNudge } from "@/components/mirror/one-thing-nudge";
+import { PullToRefresh } from "@/components/layout/pull-to-refresh";
+import { LastSyncNote } from "@/components/mirror/last-sync-note";
 
 function MirrorSkeleton() {
   const bar = { background: "rgba(var(--pq-ivory-rgb), 0.06)" };
@@ -48,7 +50,9 @@ function MirrorSkeleton() {
 
 export default function MirrorPage() {
   const { loading: authLoading } = useAuth();
-  const { data, isLoading, error } = useMirrorHome();
+  const { data, isLoading, error, mutate } = useMirrorHome();
+  // Phone pull-to-refresh re-reads the mirror (the hook's own key).
+  const refresh = React.useCallback(() => mutate(), [mutate]);
   const isPhone = useIsPhone();
 
   // A 200 is not the same as a usable payload. A backend that answers this
@@ -78,58 +82,72 @@ export default function MirrorPage() {
   // error line above them, as the desktop column does.
   if (isPhone && ready && data && !showSkeleton) {
     return (
-      <ErrorBoundary>
-        <MirrorPhoneCards
-          data={data}
-          header={showError ? <div className="pb-3">{errorLine}</div> : undefined}
-        />
-      </ErrorBoundary>
+      <PullToRefresh onRefresh={refresh}>
+        <ErrorBoundary>
+          <MirrorPhoneCards
+            data={data}
+            header={
+              showError ? (
+                <div className="pb-3">{errorLine}</div>
+              ) : (
+                // On-device copy older than 10 min: say when it was fetched
+                // (renders nothing otherwise — lib/persisted-swr-cache).
+                <LastSyncNote className="pb-3" />
+              )
+            }
+          />
+        </ErrorBoundary>
+      </PullToRefresh>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[rgb(5,5,5)] text-[var(--pq-ivory)]">
+    <PullToRefresh onRefresh={refresh}>
+      <div className="min-h-screen bg-[rgb(5,5,5)] text-[var(--pq-ivory)]">
 
-      {/* Phone: the app bar names the screen and <main> already pads it, so
-          the page drops its own title and second gutter (2026-10-07). */}
-      <div className="mx-auto max-w-3xl space-y-8 px-0 py-2 md:px-8 md:py-8">
-        <div className="hidden md:block">
-          <EditorialHead>거울</EditorialHead>
+        {/* Phone: the app bar names the screen and <main> already pads it, so
+            the page drops its own title and second gutter (2026-10-07). */}
+        <div className="mx-auto max-w-3xl space-y-8 px-0 py-2 md:px-8 md:py-8">
+          <div className="hidden md:block">
+            <EditorialHead>거울</EditorialHead>
+          </div>
+
+          {showSkeleton && <MirrorSkeleton />}
+
+          {showError && errorLine}
+
+          {ready && !showError && <LastSyncNote />}
+
+          {showEmpty && (
+            <div className="space-y-3">
+              <p className="text-[13px]" style={{ color: "var(--pq-ivory)" }}>
+                아직 비출 기록이 없어요.
+              </p>
+              <p
+                className="text-[12.5px]"
+                style={{ color: "rgba(var(--pq-ivory-rgb), 0.55)", lineHeight: 1.6 }}
+              >
+                보유 종목을 등록하고 사기 전에 이유를 남기면, 선언한 나와 기록 속의
+                나를 나란히 보여드립니다.
+              </p>
+            </div>
+          )}
+
+          {ready && data && (
+            <ErrorBoundary>
+              <div className="space-y-8">
+                <MirrorHeadline data={data} />
+
+                <MirrorRadarPanel data={data} />
+
+                <OneThingNudge data={data} />
+              </div>
+            </ErrorBoundary>
+          )}
         </div>
 
-        {showSkeleton && <MirrorSkeleton />}
-
-        {showError && errorLine}
-
-        {showEmpty && (
-          <div className="space-y-3">
-            <p className="text-[13px]" style={{ color: "var(--pq-ivory)" }}>
-              아직 비출 기록이 없어요.
-            </p>
-            <p
-              className="text-[12.5px]"
-              style={{ color: "rgba(var(--pq-ivory-rgb), 0.55)", lineHeight: 1.6 }}
-            >
-              보유 종목을 등록하고 사기 전에 이유를 남기면, 선언한 나와 기록 속의
-              나를 나란히 보여드립니다.
-            </p>
-          </div>
-        )}
-
-        {ready && data && (
-          <ErrorBoundary>
-            <div className="space-y-8">
-              <MirrorHeadline data={data} />
-
-              <MirrorRadarPanel data={data} />
-
-              <OneThingNudge data={data} />
-            </div>
-          </ErrorBoundary>
-        )}
+        <FootSignature />
       </div>
-
-      <FootSignature />
-    </div>
+    </PullToRefresh>
   );
 }

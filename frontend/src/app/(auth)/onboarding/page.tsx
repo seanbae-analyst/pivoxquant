@@ -20,8 +20,10 @@ import type { PagerDir } from "@/lib/use-swipe-pager";
 import {
   OnboardingPhoneProgress,
   OnboardingSwipeHintLine,
+  onboardingStepReachable,
   useOnboardingPager,
 } from "@/components/onboarding/onboarding-phone";
+import { useHistorySteps } from "@/lib/use-history-steps";
 import {
   WIZARD_QUESTIONS,
   LEGAL_QUESTION,
@@ -967,6 +969,25 @@ function OnboardingWizard() {
     busy: submitting,
     goNext,
     goBack,
+  });
+
+  // Phone: Android back / the iOS edge swipe step back through the questions
+  // instead of leaving onboarding. A pop only moves between screens — saving
+  // stays the legal step's button. Once saved (the result screen) the flow is
+  // locked: back leaves, it never reopens the legal step to save twice.
+  useHistorySteps({
+    key: "onboarding",
+    enabled: isPhone,
+    step: isResultScreen ? 0 : step,
+    locked: isResultScreen,
+    onPopTo: (target) => {
+      if (submitting) return false;
+      if (target > step && !onboardingStepReachable(target, answeredSteps)) return false;
+      setDirection(target < step ? -1 : 1);
+      setStep(target);
+      containerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+      return true;
+    },
   });
 
   const [skipping, setSkipping] = useState(false);

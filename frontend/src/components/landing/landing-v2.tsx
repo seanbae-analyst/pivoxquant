@@ -552,6 +552,7 @@ export default function LandingV2() {
     <div
       className="min-h-screen overflow-x-hidden"
       style={{ backgroundColor: "var(--pq-ink)", color: "var(--pq-ivory)" }}
+      data-pq-landing
     >
       <TopNav />
       <SplashPage />

@@ -41,6 +41,7 @@ import { useAuth } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
 import { useLocale } from "@/lib/locale";
+import { useInvestmentProfile } from "@/lib/hooks";
 import { currentLocationPath, loginHref } from "@/lib/login-redirect";
 import { retakeChangesLeft } from "@/lib/profile-retake";
 import {
@@ -59,7 +60,6 @@ import { SettingsHeroV2 } from "@/components/settings/v2/settings-hero-v2";
 import Link from "next/link";
 import { AnchorRail } from "@/components/settings/v2/anchor-rail";
 import {
-  SettingsPhoneBack,
   SettingsPhoneList,
   useSettingsPane,
   type SettingsPane,
@@ -121,20 +121,24 @@ export default function SettingsPageV2() {
     if (cached === "1" || cached === "0") {
       setEmailEnabled(cached === "1");
     }
-    apiFetch<{
-      profile?: { email_opt_out?: boolean };
-      email_opt_out?: boolean;
-    }>(API.profile.get)
-      .then((data) => {
-        const optOut =
-          data?.email_opt_out ?? data?.profile?.email_opt_out ?? false;
-        setEmailEnabled(!optOut);
-        setEmailKnown(true);
-      })
-      .catch(() => {
-        /* Best-effort hydrate; localStorage cache wins on failure. */
-      });
   }, []);
+
+  /* Server truth for the email toggle. 2026-10-09 perf: this was a second,
+     raw GET /api/profile next to <LivingCFOStatusBar />'s useInvestmentProfile
+     on the same screen — two requests for one payload. It now reads the same
+     SWR key, so the two share one request. Until the read settles (or if it
+     fails) the localStorage value above stands, as before. */
+  const profileQ = useInvestmentProfile();
+  const profileResp = profileQ.data;
+  const profileSettled = !profileQ.isLoading && !profileQ.error;
+  React.useEffect(() => {
+    if (!profileSettled || !profileResp) return;
+    const nested = profileResp.profile as { email_opt_out?: boolean } | null;
+    const optOut = profileResp.email_opt_out ?? nested?.email_opt_out ?? false;
+    setEmailEnabled(!optOut);
+    setEmailKnown(true);
+  }, [profileSettled, profileResp]);
+  const refreshProfile = profileQ.mutate;
 
   const handlePushToggle = React.useCallback(
     async (next: boolean) => {
@@ -190,6 +194,9 @@ export default function SettingsPageV2() {
         body: JSON.stringify({ email_opt_out: !next }),
       });
       toast.success(next ? t("settingsV2.toast.emailEnabled") : t("settingsV2.toast.emailDisabled"));
+      // The shared /api/profile read is deduped for 5 min; re-read it so a
+      // revisit within that window does not hydrate the old opt-out value.
+      void refreshProfile();
     } catch (err) {
       setEmailEnabled(prev);
       if (typeof window !== "undefined") {
@@ -203,7 +210,7 @@ export default function SettingsPageV2() {
     } finally {
       setEmailSaving(false);
     }
-  }, [emailEnabled, t]);
+  }, [emailEnabled, t, refreshProfile]);
 
   /* ── Sign in providers (GAP-D) ── */
   const handleProviderConnect = React.useCallback(
@@ -414,7 +421,9 @@ export default function SettingsPageV2() {
             gap: 64,
           }}
         >
-          {pane === null ? <SettingsPhoneList /> : <SettingsPhoneBack pane={pane} />}
+          {/* Phone: an open pane's ‹ back + title live in the app bar
+              (top-bar.tsx subScreen), like a native settings stack. */}
+          {pane === null && <SettingsPhoneList />}
           {/* SECTION A — Identity & security */}
           <section
             id="section-a"
@@ -422,7 +431,7 @@ export default function SettingsPageV2() {
             style={{ scrollMarginTop: 96 }}
             aria-label="계정"
           >
-            {/* Phone: the back row already names this section. */}
+            {/* Phone: the app bar already names this section. */}
             <div
               className="hidden md:flex"
               style={{
@@ -546,7 +555,7 @@ export default function SettingsPageV2() {
             style={{ scrollMarginTop: 96 }}
             aria-label="알림"
           >
-            {/* Phone: the back row already names this section. */}
+            {/* Phone: the app bar already names this section. */}
             <div
               className="hidden md:flex"
               style={{

@@ -3,6 +3,7 @@
 import { TopBar } from "./top-bar";
 import { TerminalSidebar } from "./terminal-sidebar";
 import { BottomNav } from "./bottom-nav";
+import { useIsPhone } from "@/lib/use-phone";
 
 /**
  * Dashboard shell — full-screen Vantablack.
@@ -21,6 +22,7 @@ import { BottomNav } from "./bottom-nav";
  * available width (sidebar-excluded on desktop, full width on mobile).
  */
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const isPhone = useIsPhone();
   /*
    * ONE tree, not two (2026-09-10).
    *
@@ -48,7 +50,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         <aside
           className="hidden md:block sticky top-0 h-screen w-[240px] shrink-0 border-r border-[var(--pq-ivory-line)] bg-[var(--pq-ink)]"
         >
-          <TerminalSidebar variant="rail" />
+          {/* Phone: not mounted at all (it is CSS-hidden there anyway).
+              Server render and hydration keep it, so md+ markup is as before. */}
+          {!isPhone && <TerminalSidebar variant="rail" />}
         </aside>
 
         {/* Content column — TopBar + main, at every width */}

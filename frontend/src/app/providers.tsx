@@ -5,6 +5,14 @@ import { AuthProvider } from "@/lib/auth";
 import { RealtimeProvider } from "@/lib/realtime";
 import { LocaleProvider } from "@/lib/locale";
 import { apiFetch } from "@/lib/api";
+import { wakeBackendEarly } from "@/lib/early-wake";
+import { persistedCacheMiddleware } from "@/lib/persisted-swr-cache";
+
+// Start the sleeping Render backend booting as soon as this bundle evaluates —
+// before hydration, before AuthProvider queues /api/auth/me. One deduped,
+// cookie-less GET per page load; see lib/early-wake.ts for why it adds no
+// instance hours.
+if (typeof window !== "undefined") wakeBackendEarly();
 
 /**
  * Global SWR provider.
@@ -24,7 +32,15 @@ import { apiFetch } from "@/lib/api";
  *
  * Fetcher is centralised here so useSWR calls that don't pass a custom
  * fetcher inherit the same credential/CSRF/timeout behaviour as apiFetch.
+ *
+ * `use: [persistedCacheMiddleware]` (2026-10-09): last-known data for the
+ * main screens survives an app restart (lib/persisted-swr-cache.ts). It is a
+ * middleware on the DEFAULT cache, not a custom `provider`, on purpose: half
+ * the app calls the global `mutate` imported from "swr" (portfolio refresh,
+ * realtime SSE, pull-to-refresh, import inbox), and that function is bound to
+ * the default cache — a provider would silently detach all of them.
  */
+const SWR_MIDDLEWARE = [persistedCacheMiddleware];
 const DEFAULT_FETCHER = <T,>(url: string) => apiFetch<T>(url);
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -35,6 +51,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         dedupingInterval: 6_000,
         revalidateOnFocus: false,
         errorRetryCount: 2,
+        use: SWR_MIDDLEWARE,
       }}
     >
       <LocaleProvider>

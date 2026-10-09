@@ -21,7 +21,6 @@ import React, {
 } from "react";
 import ko from "@/messages/ko.json";
 import { API } from "@/lib/endpoints";
-import en from "@/messages/en.json";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -37,7 +36,20 @@ interface LocaleContextValue {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const MESSAGES: Record<Locale, Messages> = { ko, en };
+// 2026-10-09 perf: only Korean ships in the shared bundle. Both catalogs used
+// to be static imports, so every route carried en.json (~55 KB raw) that a
+// Korean-first user never reads. English is fetched as its own chunk the
+// first time the locale is "en" and kept for the rest of the page's life;
+// until it lands, `t()` answers in Korean (a key never leaks raw).
+let enMessagesCache: Messages | null = null;
+
+export function loadEnMessages(): Promise<Messages> {
+  if (enMessagesCache) return Promise.resolve(enMessagesCache);
+  return import("@/messages/en.json").then((m) => {
+    enMessagesCache = (m.default ?? m) as Messages;
+    return enMessagesCache;
+  });
+}
 const COOKIE_NAME = "sp_locale";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
 
@@ -131,12 +143,32 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const [enMessages, setEnMessages] = useState<Messages | null>(
+    () => enMessagesCache,
+  );
+  useEffect(() => {
+    if (locale !== "en" || enMessages) return;
+    let alive = true;
+    loadEnMessages()
+      .then((m) => {
+        if (alive) setEnMessages(m);
+      })
+      .catch(() => {
+        /* chunk failed to load — stay on Korean rather than raw keys */
+      });
+    return () => {
+      alive = false;
+    };
+  }, [locale, enMessages]);
+
+  const messages: Messages = locale === "en" && enMessages ? enMessages : ko;
+
   const t = useCallback(
     (key: string, params?: Record<string, string>) => {
-      const raw = resolve(MESSAGES[locale], key);
+      const raw = resolve(messages, key);
       return interpolate(raw, params);
     },
-    [locale],
+    [messages],
   );
 
   return (

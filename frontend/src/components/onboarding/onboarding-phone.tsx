@@ -25,6 +25,20 @@ import {
   useSwipePager,
 } from "@/lib/use-swipe-pager";
 
+/**
+ * May the wizard be on `target` (the system forward gesture)? Every step
+ * before it must be answered, and the legal step is never passed by a
+ * history move — the result screen is reached only by saving.
+ * `answered[i]` is the page's own validity check for step i.
+ */
+export function onboardingStepReachable(target: number, answered: boolean[]): boolean {
+  if (target < 0 || target >= answered.length) return false;
+  for (let i = 0; i < target; i++) {
+    if (!answered[i]) return false;
+  }
+  return true;
+}
+
 /** Why the last forward swipe was refused, shown under the screen. */
 export type OnboardingSwipeHint = "answer" | "legal" | "save";
 
