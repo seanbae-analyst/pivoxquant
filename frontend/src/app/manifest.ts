@@ -1,9 +1,13 @@
 import type { MetadataRoute } from "next";
 
 // PivoxQuant PWA manifest — Vantablack Luxe theme, editorial shortcuts.
-// start_url "/" keeps the manifest aligned with the marketing/home root so
-// installed users land on the correct surface based on auth state (root
-// redirects to /home for logged-in users, marketing for guests).
+// start_url "/mirror" (2026-10-09, was "/"): a signed-in launch opens the home
+// tab directly instead of loading "/" (landing JS + a redirect hop; measured
+// warm launch 2.8s → 1.4s). A signed-out launch is sent by the dashboard guard
+// to "/" — AppCover/AppWelcome — never to the web login (see
+// (dashboard)/layout.tsx nextAuthRedirect `standalone`). A cold backend holds
+// on the "waking" state instead of redirecting. `id: "/"` keeps the installed
+// app's identity unchanged across this switch.
 export default function manifest(): MetadataRoute.Manifest {
   return {
     // Stable app identity (W3C manifest `id`): without it the browser keys the
@@ -21,7 +25,7 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "PivoxQuant",
     description:
       "사기 전에 멈춰 이유를 적고, 체결을 기록하고, 그 기록으로 말한 나와 실제의 나를 나란히 봅니다. 종목을 골라 주지 않습니다. 관측 자료이며 투자 권유가 아닙니다.",
-    start_url: "/",
+    start_url: "/mirror",
     scope: "/",
     display: "standalone",
     display_override: ["standalone", "minimal-ui"],
