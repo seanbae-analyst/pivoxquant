@@ -1408,11 +1408,13 @@ def _init_scheduler(app):
         checks fan out across every holder's tickers. US tickers price via FMP;
         KR (.KS/.KQ) tickers route through KIS (``w52_hgpr``/``w52_lwpr`` in
         kis_market_adapter.get_52w_range) since commit 3ba9564d — they are no
-        longer skipped. ``create_alert`` dedups per key: 52w = 24h per
-        (user, kind, ticker) — a touch on a later day is a new observation;
-        concentration = 7d per (user, sector) (``CONCENTRATION_DEDUP_HOURS``)
-        — a standing concentration re-surfaces at most weekly, not every
-        weekday, and two sectors over the limit each alert once. Bell prefs
+        longer skipped. ``create_alert`` dedups per key: 52w = 7d per
+        (user, kind, ticker) (``PRICE_52W_DEDUP_HOURS``) — a ticker parked at
+        its 52-week high/low re-touches it every sweep, so it re-surfaces at
+        most weekly, not every weekday; concentration = 7d per (user, sector)
+        (``CONCENTRATION_DEDUP_HOURS``) — same weekly cadence, and two
+        sectors over the limit each alert once. The 52w half only runs while
+        ``MARKET_DATA_DISPLAY_ENABLED`` is on (see below). Bell prefs
         routing is unchanged from every other bell alert (fail-open) — not
         wired here.
 
@@ -1554,7 +1556,8 @@ def _init_scheduler(app):
     # 사용자가 설정한 52w 알림이 자동 발화되지 않았다(어드민 수동 POST 외 0회).
     # 하루 1회 보수적 cadence — FMP/KIS budget + PG 압박 회피. KR 티커는 KIS
     # (get_52w_range) 로 라우팅(커밋 3ba9564d, 더 이상 skip 아님), create_alert
-    # 24h/7d dedup 로 스팸 방지.
+    # 7d/7d dedup(52w 티커별 · 집중도 섹터별) 로 스팸 방지. 52w 는
+    # MARKET_DATA_DISPLAY_ENABLED 가 켜졌을 때만 돈다.
     sched.add_job(
         _scheduled_price_alerts,
         trigger="cron",

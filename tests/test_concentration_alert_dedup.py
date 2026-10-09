@@ -1,4 +1,4 @@
-"""Sector-concentration bell alert — dedup per sector, 7-day window (2026-10-09).
+"""Bell alert dedup — sector per 7 days, 52w per ticker per 7 days (2026-10-09).
 
 Bugs pinned here (services/alert.py::alert_concentration):
 
@@ -7,6 +7,10 @@ Bugs pinned here (services/alert.py::alert_concentration):
 2. The window was 12h against a once-per-weekday sweep (app.py
    ``_scheduled_price_alerts``), so a standing concentration re-pushed every
    weekday. Now 7 days per (user, sector), matching that function's docstring.
+3. 52w (``PRICE_52W_DEDUP_HOURS``) was 24h per ticker against the same daily
+   sweep, so a ticker sitting at its 52-week high re-alerted every weekday.
+   Now 7 days per (user, kind, ticker). 52w only fires while
+   MARKET_DATA_DISPLAY_ENABLED is on.
 """
 from __future__ import annotations
 
@@ -122,14 +126,58 @@ def test_sector_with_like_wildcards_matches_literally(app, make_user):
         assert alert_mod.alert_concentration(user["id"], "100x", 40.0) is not None
 
 
-def test_price_52w_dedup_unchanged_per_ticker(app, make_user):
-    """52w keeps its 24h per-ticker key; only concentration moved to 7d."""
+def _age_52w_alerts(user_id, delta):
+    """Move every 52w alert ``delta`` into the past (a later sweep)."""
+    from extensions import db
+    from models import Alert
+    for a in Alert.query.filter(Alert.user_id == user_id,
+                                Alert.kind.in_(("price_52w_high",
+                                                "price_52w_low"))).all():
+        a.created_at = a.created_at - delta
+    db.session.commit()
+
+
+def test_price_52w_dedup_is_weekly_per_ticker(app, make_user):
+    """52w moved 24h → 7d per ticker (2026-10-09), same cadence as sector.
+
+    A ticker parked at its 52-week high touches it on every weekday sweep; a
+    24h window (vs a 24h sweep interval, with created_at drift) re-alerted it
+    every weekday.
+    """
     from services import alert as alert_mod
 
-    assert alert_mod.PRICE_52W_DEDUP_HOURS == 24
+    assert alert_mod.PRICE_52W_DEDUP_HOURS == 7 * 24
     assert alert_mod.CONCENTRATION_DEDUP_HOURS == 7 * 24
     user = make_user()
     with app.app_context(), patch("services.push_service.notify_bell_alert"):
         assert alert_mod.alert_52w_high(user["id"], "AAPL", name="Apple") is not None
+        # Key is per ticker — another ticker the same sweep still alerts.
         assert alert_mod.alert_52w_high(user["id"], "MSFT", name="Microsoft") is not None
         assert alert_mod.alert_52w_high(user["id"], "AAPL", name="Apple") is None
+
+
+@pytest.mark.parametrize("days_later", [1, 4, 6])
+def test_price_52w_later_sweeps_inside_week_do_not_repeat(app, make_user, days_later):
+    """Next weekday, after a weekend, and day 6 — all still inside the window."""
+    from services import alert as alert_mod
+
+    user = make_user()
+    with app.app_context(), patch("services.push_service.notify_bell_alert") as push:
+        assert alert_mod.alert_52w_high(user["id"], "AAPL", name="Apple") is not None
+        # A few minutes of created_at drift past the 24h mark used to be
+        # exactly what let the next sweep through.
+        _age_52w_alerts(user["id"], timedelta(days=days_later, minutes=5))
+        assert alert_mod.alert_52w_high(user["id"], "AAPL", name="Apple") is None
+    assert push.call_count == 1
+
+
+def test_price_52w_after_window_alerts_again(app, make_user):
+    """The window is a week, not forever — a ticker still at its high resurfaces."""
+    from services import alert as alert_mod
+
+    user = make_user()
+    with app.app_context(), patch("services.push_service.notify_bell_alert"):
+        assert alert_mod.alert_52w_low(user["id"], "XOM", name="Exxon") is not None
+        _age_52w_alerts(user["id"],
+                        timedelta(hours=alert_mod.PRICE_52W_DEDUP_HOURS + 1))
+        assert alert_mod.alert_52w_low(user["id"], "XOM", name="Exxon") is not None
