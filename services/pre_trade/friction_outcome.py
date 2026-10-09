@@ -119,6 +119,28 @@ def _norm(ticker: Any) -> str:
     return str(ticker or "").strip().upper()
 
 
+# 한국 거래소 접미사만 뗀다. 미국 클래스주(BRK.A / BRK.B, BF.A / BF.B)의
+# ".A" 는 거래소가 아니라 다른 종목이다 — 첫 "." 에서 자르면 둘이 같아진다.
+_KR_SUFFIXES = (".KS", ".KQ", ".KRX")
+
+
+def ticker_key(ticker: Any) -> str:
+    """같은 종목 판정의 키 — 거래소 접미사(.KS/.KQ/.KRX)만 다른 표기는 같다.
+
+    ``services/pre_trade/link.same_ticker`` 가 이 키를 쓴다 (한 벌). 여기 있는
+    이유는 import 방향뿐이다 — link 가 이 모듈을 import 하므로 반대로는 순환.
+    2026-10-09: 이 모듈은 ``_norm`` 으로 정확히 비교했고 link 는 접미사를
+    무시해서, 멈춤 ``035720.KQ`` 를 매수 ``035720.KS``(또는 접미사 없는
+    ``035720``)에 직접 이을 수는 있는데 7일 창 추정·취소 후 매수 추적에서는
+    다른 종목으로 갈렸다.
+    """
+    t = _norm(ticker)
+    for suffix in _KR_SUFFIXES:
+        if t.endswith(suffix):
+            return t[: -len(suffix)]
+    return t
+
+
 def _median_mean(values: list[float]) -> tuple[float | None, float | None]:
     """median 우선 / mean 보조. 빈 리스트는 (None, None)."""
     if not values:
@@ -215,12 +237,12 @@ def compute_friction_outcome(
             continue
         rid = getattr(t, "reflection_id", None)
         if rid:
-            linked_buys.setdefault(int(rid), []).append((_norm(t.ticker), t.traded_at))
+            linked_buys.setdefault(int(rid), []).append((ticker_key(t.ticker), t.traded_at))
         # 사용자가 보여진 멈춤 후보를 끄고 기록한 매수 — "멈춤과 무관"이라고
         # 직접 말했다. 추정 색인(취소 후 매수 · 7일 창)에 넣지 않는다.
         elif getattr(t, "reflection_declined", None) is True:
             continue
-        buys.setdefault(_norm(t.ticker), []).append(t.traded_at)
+        buys.setdefault(ticker_key(t.ticker), []).append(t.traded_at)
     for v in buys.values():
         v.sort()
 
@@ -228,7 +250,7 @@ def compute_friction_outcome(
     revisit_days: list[float] = []
     bought_anyway = 0
     for r in buy_side_cancelled:
-        tk = _norm(r.intended_ticker)
+        tk = ticker_key(r.intended_ticker)
         # 명시 연결이 있으면 그 매수가 답이다 (취소해 놓고 산 매수를 사용자가
         # 그 멈춤에 이었다). 없으면 같은 종목의 이후 매수로 추정한다.
         explicit = sorted(b for _, b in linked_buys.get(getattr(r, "id", None), []))
@@ -262,7 +284,7 @@ def compute_friction_outcome(
     for r in sorted(buy_side_proceeded, key=lambda x: x.proceeded_at):
         if getattr(r, "id", None) in linked_buys:  # 연결이 있으면 추정하지 않는다
             continue
-        tk = _norm(r.intended_ticker)
+        tk = ticker_key(r.intended_ticker)
         for b in buys.get(tk, []):
             if (tk, b) in friction_buys:
                 continue
@@ -285,7 +307,7 @@ def compute_friction_outcome(
         if pair.sell_is_adjust:
             continue
         ret = (pair.sell_price - pair.buy_price) / pair.buy_price * 100.0
-        key = (_norm(pair.ticker), pair.buy_time)
+        key = (ticker_key(pair.ticker), pair.buy_time)
         (with_f if key in friction_buys else without_f).append(ret)
 
     w_med, w_mean = _median_mean(with_f)

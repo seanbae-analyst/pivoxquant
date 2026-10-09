@@ -85,6 +85,16 @@ function fmtPctSigned(n: number): string {
   return fmtPctSignedMinus(n, 2);
 }
 
+/**
+ * Weight label. With the vendor-quote gate off the weight is cost-basis, and
+ * the label says so — the table header and the phone card share this string
+ * so the number is never read as a market weight (same convention as
+ * /journal's 평균매입가 기준 비중).
+ */
+function weightLabel(marketDataDisplay: boolean): string {
+  return marketDataDisplay ? "비중" : "비중 · 취득가 기준";
+}
+
 // P&L gain/loss color now uses the site-canonical KR convention helper
 // (lib/format.pctColor): gain → carmine #D18888, loss → indigo #7AA0C8,
 // flat → muted ivory. The old local helper inverted this (gain → bronze),
@@ -271,9 +281,7 @@ export function PositionsTableV2({
     ...(marketDataDisplay ? marketHeaders : []),
     {
       key: "weight",
-      // The header carries the basis so the number is never read as a
-      // market weight — same convention as /journal's 평균매입가 기준 비중.
-      label: marketDataDisplay ? "비중" : "비중 · 취득가 기준",
+      label: weightLabel(marketDataDisplay),
       align: "right",
     },
     { key: "sector", label: "섹터", align: "left" },
@@ -769,8 +777,20 @@ function PositionCard({
           </div>
           <div className="mt-0.5 font-mono text-[12px] text-[var(--pq-ivory-dim)]">{name}</div>
         </div>
-        <div className="shrink-0 text-right font-mono text-[15px] text-[var(--pq-ivory)]">
-          {Number.isFinite(row.weight) ? row.weight.toFixed(1) : "—"}%
+        <div className="shrink-0 text-right">
+          <div className="font-mono text-[15px] text-[var(--pq-ivory)]">
+            {Number.isFinite(row.weight) ? row.weight.toFixed(1) : "—"}%
+          </div>
+          {/* Same basis label as the table header — a bare % on a phone
+              would read as a market weight. */}
+          {!marketDataDisplay && (
+            <div
+              className="mt-0.5 font-mono text-[11px] text-[var(--pq-ivory-dim)]"
+              data-testid="position-card-weight-basis"
+            >
+              {weightLabel(false)}
+            </div>
+          )}
         </div>
       </div>
       <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[13px] text-[var(--pq-ivory-mid)]">

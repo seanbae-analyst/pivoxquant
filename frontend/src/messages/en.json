@@ -684,7 +684,13 @@
     "retake": {
       "title": "Answer the five questions again",
       "help": "Re-answer holding period, trading frequency, number of holdings, response to −10%, and record-keeping habit. The mirror's “declared” side switches to your new answers.",
-      "cta": "Answer again →"
+      "cta": "Answer again →",
+      "remaining": "{n} left",
+      "limitReached": "You have used all of your chances to answer again.",
+      "limitHelp": "Your saved answers stay as the mirror's “declared” side.",
+      "backToSettings": "Back to settings",
+      "quit": "Stop",
+      "notFound": "We couldn't find saved answers to replace, so nothing was saved. Please let us know through 1:1 support."
     },
     "sectionA": {
       "eyebrow": "Account · Sign-in",

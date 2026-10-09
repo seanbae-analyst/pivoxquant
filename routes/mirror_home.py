@@ -55,9 +55,12 @@ logger = logging.getLogger(__name__)
 
 mirror_home_bp = Blueprint("mirror_home", __name__, url_prefix="/api/mirror-home")
 
-# Below this many in-window closed trades we render the declared-only "new"
-# stage (no observed overlay, no gap) — matches MIN_TRADES_FOR_LIVING_MIRROR
-# in services/artifacts/living_mirror_service.py so the two surfaces agree.
+# Below this many in-window trades we render the declared-only "new" stage
+# (no observed overlay, no gap). "Trades" = every recorded fill, buy AND sell,
+# whose traded_at falls in the 30-day window, minus holding-registration rows
+# (classify_persona_multi's ``trade_count``) — NOT closed round trips. The
+# Living Mirror artifact this threshold was once aligned with has been deleted
+# (services/artifacts/ no longer exists), so 5 stands on its own.
 _MIN_TRADES_FOR_OBSERVED = 5
 _OBSERVED_WINDOW_DAYS = 30
 _GAP_TOP_N = 3
@@ -235,11 +238,11 @@ def get_mirror_home():
         measured.discard(_POSITIONS_AXIS)
     measured_axes = [k for k in FEATURE_KEYS if k in measured]
     trade_count = int(clf.get("trade_count", 0) or 0)
-    # Gate on closed-trade count only — matches the Living Mirror artifact's
-    # 5-trade threshold so the two surfaces agree. (The classifier's own
-    # data_sparse flag uses a stricter 10; ANDing it here kept the home in the
-    # "new" stage until 10 while the PDF already showed the observed overlay at
-    # 5 — a cross-surface contradiction. P2 fix 2026-06-15.)
+    # Gate on the in-window fill count only (buys + sells, registration rows
+    # excluded — see _MIN_TRADES_FOR_OBSERVED; not closed round trips). (The
+    # classifier's own data_sparse flag uses a stricter 10; ANDing it here
+    # kept the home in the "new" stage until 10 while the then-existing PDF
+    # showed the observed overlay at 5 — P2 fix 2026-06-15.)
     has_observed = trade_count >= _MIN_TRADES_FOR_OBSERVED
     stage = "observed" if has_observed else "new"
 

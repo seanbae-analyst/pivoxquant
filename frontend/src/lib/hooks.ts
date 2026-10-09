@@ -778,25 +778,6 @@ export function usePortfolioPositions<T = any>() {
 export { useRealtimeContext } from "./realtime";
 export type { RealtimePriceDetail, PriceDirection, RealtimeState } from "./realtime";
 
-/* ── Risk v2 (additive — does not modify any v1 hook) ──
- *
- * Five new hooks back the /risk v2 "Risk Board" page. Three call existing
- * backend endpoints (RISK_SUMMARY / RISK_LAYERS / RISK_ROLLING_VAR); the
- * remaining two derive their data client-side from PORTFOLIO_POSITIONS
- * (no new endpoint required). All five share a 60s idle / 5s live dedupe
- * window — same cadence as the existing portfolio hooks.
- */
-
-
-/* ── Risk v2 — Correlation Matrix (additive, v1 parity preservation) ──
- *
- * Restores the v1 RISK_CORRELATION call that was dropped from the
- * Risk-v2 page. Pure read-through SWR — backend payload shape is the
- * same as v1: { labels: string[], matrix: number[][] }. Preserves the
- * full N×N heatmap so the v2 page can render it without losing the
- * underlying observation surface.
- */
-
 /* ── Earnings Pre-Brief (home v2 Card 3, 2026-05-19 P2 #11) ────────────
  *
  * GET /api/brief/earnings/upcoming?days=7 — 6h server-side cache + 1h

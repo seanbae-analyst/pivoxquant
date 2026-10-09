@@ -545,12 +545,18 @@ export function QuestionsStep(props: {
           pagedOnPhone && cur < lastIdx ? "hidden md:flex" : "flex"
         }`}
       >
+        {/* Paged on a phone, the pager's "이전" (previous question) is the
+            only back control — this one (→ setup) would sit right under it
+            with the same label on the last question. md+ is unchanged. */}
         {onBack ? (
           <button
             type="button"
             onClick={onBack}
             disabled={submitting}
-            className="px-4 py-2 text-pq-mono-sm text-[var(--pq-ivory-dim)] hover:text-[var(--pq-bronze)]"
+            className={`px-4 py-2 text-pq-mono-sm text-[var(--pq-ivory-dim)] hover:text-[var(--pq-bronze)] ${
+              pagedOnPhone ? "hidden md:inline-block" : ""
+            }`}
+            data-testid="questions-footer-back"
           >
             ← 이전
           </button>
@@ -562,7 +568,9 @@ export function QuestionsStep(props: {
           onClick={onStart}
           disabled={!allAcked || submitting}
           aria-disabled={!allAcked || submitting}
-          className="pq-ink-btn-bronze inline-flex items-center gap-2 px-5 py-2 text-pq-mono-sm disabled:opacity-30 disabled:cursor-not-allowed"
+          className={`pq-ink-btn-bronze inline-flex items-center gap-2 px-5 py-2 text-pq-mono-sm disabled:opacity-30 disabled:cursor-not-allowed ${
+            pagedOnPhone && onBack ? "ml-auto" : ""
+          }`}
         >
           {submitting ? "시작하는 중…" : "진입 시계 시작"}
           <Gavel className="h-3.5 w-3.5" />

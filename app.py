@@ -340,9 +340,12 @@ def create_app(
         # (load_user runs per request) — bypassing the login-time block and
         # granting full 200 access to /api/auth/me and every data API.
         # Returning None here invalidates the session so the soft-delete is
-        # enforced consistently across all entry points. Cancellation is a
-        # manual "contact support" flow (no self-service /delete-cancel), so
-        # logging the user out everywhere is the correct, consistent behaviour.
+        # enforced consistently across all entry points. Cancellation does NOT
+        # need a session: the self-service POST /api/auth/delete-cancel
+        # (routes/auth.py::delete_cancel) is authenticated by the HMAC token
+        # emailed at delete-request time, and it never logs the user in —
+        # they sign in normally once the request is cleared. So logging the
+        # user out everywhere is the correct, consistent behaviour.
         try:
             user = db.session.get(User, int(uid))
         except (TypeError, ValueError):
@@ -1396,9 +1399,13 @@ def _init_scheduler(app):
         checks fan out across every holder's tickers. US tickers price via FMP;
         KR (.KS/.KQ) tickers route through KIS (``w52_hgpr``/``w52_lwpr`` in
         kis_market_adapter.get_52w_range) since commit 3ba9564d — they are no
-        longer skipped. ``create_alert`` already dedups via a 24h/7d window so a
-        daily cadence cannot spam. Bell prefs routing is unchanged from every
-        other bell alert (fail-open) — not wired here.
+        longer skipped. ``create_alert`` dedups per key: 52w = 24h per
+        (user, kind, ticker) — a touch on a later day is a new observation;
+        concentration = 7d per (user, sector) (``CONCENTRATION_DEDUP_HOURS``)
+        — a standing concentration re-surfaces at most weekly, not every
+        weekday, and two sectors over the limit each alert once. Bell prefs
+        routing is unchanged from every other bell alert (fail-open) — not
+        wired here.
 
         Per-check failures are isolated; a bad 52w sweep must not block the
         concentration sweep, and neither must raise out of the scheduler.

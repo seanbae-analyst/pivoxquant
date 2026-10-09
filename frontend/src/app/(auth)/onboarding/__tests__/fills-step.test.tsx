@@ -18,9 +18,10 @@ vi.mock("@/lib/api", async (orig) => ({ ...(await orig<typeof import("@/lib/api"
 
 let tokens: { id: number; revoked_at: string | null }[] = [];
 let positions: unknown[] = [{ id: 1 }];
+let tokensLoading = false;
 const mutate = vi.fn();
 vi.mock("@/lib/hooks", () => ({
-  useImportTokens: () => ({ tokens, mutate }),
+  useImportTokens: () => ({ tokens, isLoading: tokensLoading, mutate }),
   usePortfolioPositions: () => ({ data: { positions } }),
 }));
 
@@ -39,6 +40,7 @@ function setUA(ua: string) {
 beforeEach(() => {
   tokens = [];
   positions = [{ id: 1 }];
+  tokensLoading = false;
 });
 afterEach(() => {
   cleanup();
@@ -93,6 +95,14 @@ describe("onboarding · phone fill automation", () => {
     render(<OnboardingFillsPage />);
     expect(screen.getByTestId("fills-has-token")).toBeTruthy();
     expect(screen.queryByTestId("fills-issue")).toBeNull();
+  });
+
+  it("does not flash the issue form while the key list is loading", () => {
+    tokensLoading = true;
+    render(<OnboardingFillsPage />);
+    expect(screen.getByTestId("fills-token-loading")).toBeTruthy();
+    expect(screen.queryByTestId("fills-issue")).toBeNull();
+    expect(screen.queryByTestId("fills-consent")).toBeNull();
   });
 
   it("is optional — later and next both go on to the questions", () => {

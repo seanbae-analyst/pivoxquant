@@ -7,7 +7,9 @@ ready / complete.
 Dedup: callers are expected to check cadence; this module is a thin
 insert wrapper. Callers that fire frequently (e.g. 52w high sweeps)
 should pass a dedup_window_hours to skip if an equivalent alert was
-raised recently for the same (user_id, kind, ticker) triple.
+raised recently for the same (user_id, kind, ticker) triple. Alerts that
+are not about a ticker (sector concentration) narrow the key with
+``dedup_title_prefix`` instead — see ``alert_concentration``.
 """
 from __future__ import annotations
 
@@ -30,6 +32,18 @@ ALLOWED_KINDS = {
     "price_52w_low",
     "concentration_alert",
 }
+
+
+# Dedup windows for the wrappers below. The sweep in app.py runs once per
+# weekday, so a window must be longer than one sweep interval to hold.
+#   52w      — 24h per (user, kind, ticker): a fresh touch on a later day is
+#              a new observation (unchanged behaviour).
+#   sector   — 7d per (user, sector): concentration is a standing condition,
+#              not an event; re-pushing it every weekday while it persists is
+#              noise. One reminder per sector per week.
+PRICE_52W_DEDUP_HOURS = 24
+CONCENTRATION_DEDUP_HOURS = 7 * 24
+CONCENTRATION_TITLE_PREFIX = "Portfolio concentration — "
 
 
 # Bell-alert kind → notification_prefs event_id map.
@@ -74,6 +88,7 @@ def create_alert(
     ticker: Optional[str] = None,
     link: Optional[str] = None,
     dedup_window_hours: Optional[int] = None,
+    dedup_title_prefix: Optional[str] = None,
 ) -> Optional[Alert]:
     """Insert a new notification-bell alert.
 
@@ -142,6 +157,10 @@ def create_alert(
         )
         if ticker:
             q = q.filter(Alert.ticker == ticker)
+        if dedup_title_prefix:
+            # Non-ticker key (e.g. one sector). autoescape: a "%"/"_" in the
+            # prefix must match literally, not as a LIKE wildcard.
+            q = q.filter(Alert.title.startswith(dedup_title_prefix, autoescape=True))
         if q.first() is not None:
             return None
 
@@ -220,7 +239,7 @@ def alert_52w_high(user_id: int, ticker: str, name: Optional[str] = None):
         body="Observation — price level noted against trailing 52-week range.",
         ticker=ticker,
         link="/portfolio",
-        dedup_window_hours=24,
+        dedup_window_hours=PRICE_52W_DEDUP_HOURS,
     )
 
 
@@ -233,18 +252,30 @@ def alert_52w_low(user_id: int, ticker: str, name: Optional[str] = None):
         body="Observation — price level noted against trailing 52-week range.",
         ticker=ticker,
         link="/portfolio",
-        dedup_window_hours=24,
+        dedup_window_hours=PRICE_52W_DEDUP_HOURS,
     )
 
 
 def alert_concentration(user_id: int, sector: str, pct: float):
+    """One alert per (user, sector) per ``CONCENTRATION_DEDUP_HOURS``.
+
+    Dedup is keyed on the sector via the title prefix — the pct suffix moves
+    every day, the sector does not. Without it the dedup key was
+    (user, kind) only, so a second sector over the limit in the same sweep was
+    swallowed by the first. The ``ticker`` column is not used for the sector:
+    it is String(20) ("Communication Services" is 22) and routes/alerts.py
+    reads it as a real ticker.
+    """
+    # Trailing space: "Tech " must not match "Technology 41.0%".
+    sector_prefix = f"{CONCENTRATION_TITLE_PREFIX}{sector} "
     return create_alert(
         user_id,
         kind="concentration_alert",
-        title=f"Portfolio concentration — {sector} {pct:.1f}%",
+        title=f"{sector_prefix}{pct:.1f}%",
         body="Observation — single-sector weighting exceeds 30% of portfolio.",
         link="/mirror",
-        dedup_window_hours=12,
+        dedup_window_hours=CONCENTRATION_DEDUP_HOURS,
+        dedup_title_prefix=sector_prefix,
     )
 
 

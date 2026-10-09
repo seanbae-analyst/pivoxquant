@@ -42,6 +42,7 @@ import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
 import { useLocale } from "@/lib/locale";
 import { currentLocationPath, loginHref } from "@/lib/login-redirect";
+import { retakeChangesLeft } from "@/lib/profile-retake";
 import {
   isPushSupported,
   subscribeToPush,
@@ -348,6 +349,8 @@ export default function SettingsPageV2() {
   // Phone: list → one section (settings-phone-nav.tsx). Desktop shows all.
   const pane = settingsPane;
   const onPhone = (p: SettingsPane) => (pane === p ? "" : "hidden md:block");
+  // null = no cap applies (non-free tier / count unknown) — nothing to show.
+  const retakeLeft = retakeChangesLeft(user);
 
   return (
     <ErrorBoundary>
@@ -500,13 +503,39 @@ export default function SettingsPageV2() {
                 >
                   {t("settingsV2.retake.help")}
                 </div>
+                {retakeLeft !== null && (
+                  <div
+                    className="font-mono"
+                    style={{
+                      marginTop: 6,
+                      color: retakeLeft === 0 ? "var(--pq-ivory-mid)" : "var(--pq-bronze-light)",
+                      fontSize: "var(--pq-text-body-sm)",
+                      lineHeight: 1.5,
+                    }}
+                    data-testid="retake-remaining"
+                  >
+                    {retakeLeft === 0
+                      ? `${t("settingsV2.retake.limitReached")} ${t("settingsV2.retake.limitHelp")}`
+                      : t("settingsV2.retake.remaining", { n: String(retakeLeft) })}
+                  </div>
+                )}
               </div>
-              <Link
-                href="/onboarding?retake=1"
-                className="inline-flex min-h-[44px] items-center rounded-[2px] border border-[var(--pq-bronze)] px-4 text-pq-mono-sm text-[var(--pq-bronze-light)] transition-colors hover:bg-[var(--pq-bronze)]/10"
-              >
-                {t("settingsV2.retake.cta")}
-              </Link>
+              {retakeLeft === 0 ? (
+                <span
+                  aria-disabled="true"
+                  className="inline-flex min-h-[44px] cursor-not-allowed items-center rounded-[2px] border border-[var(--pq-border)] px-4 text-pq-mono-sm text-[var(--pq-ivory-mid)] opacity-50"
+                  data-testid="retake-cta-disabled"
+                >
+                  {t("settingsV2.retake.cta")}
+                </span>
+              ) : (
+                <Link
+                  href="/onboarding?retake=1"
+                  className="inline-flex min-h-[44px] items-center rounded-[2px] border border-[var(--pq-bronze)] px-4 text-pq-mono-sm text-[var(--pq-bronze-light)] transition-colors hover:bg-[var(--pq-bronze)]/10"
+                >
+                  {t("settingsV2.retake.cta")}
+                </Link>
+              )}
             </div>
           </section>
 

@@ -48,7 +48,7 @@ export default function OnboardingFillsPage() {
   const router = useRouter();
   const t = useT();
   const { user, loading: authLoading } = useAuth();
-  const { tokens, mutate } = useImportTokens();
+  const { tokens, isLoading: tokensLoading, mutate } = useImportTokens();
   const { data: posData } = usePortfolioPositions<{ positions?: unknown[] }>();
 
   const [phone, setPhone] = useState<PhoneKind>("android");
@@ -159,6 +159,15 @@ export default function OnboardingFillsPage() {
                   <CopyField label={t("settingsV2.importTokens.bodyLabel")} value={MACRODROID_BODY} testId="fills-body" />
                 )}
               </div>
+            ) : tokensLoading ? (
+              // Until the key list arrives, `tokens` is [] — rendering the
+              // issue form here flashes it at a user who already has a key.
+              <div
+                className="pq-skeleton-dark mt-3 h-[88px] w-full rounded-[2px]"
+                role="status"
+                aria-busy="true"
+                data-testid="fills-token-loading"
+              />
             ) : hasActiveToken ? (
               <p className="mt-2 text-[14px] leading-relaxed text-[var(--pq-ivory-mid)]" data-testid="fills-has-token">
                 {t("fillsOnboarding.hasToken")}

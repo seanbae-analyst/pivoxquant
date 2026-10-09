@@ -29,6 +29,7 @@ from flask_login import current_user
 from sqlalchemy import func
 
 from extensions import db
+from models import User
 from models.import_batch import (
     ImportBatch,
     PendingTrade,
@@ -67,7 +68,13 @@ from services.imports import (
 )
 from services.imports.csv_parser import parse_table
 from services.imports import ocr_rows
-from services.imports.dedupe import DedupeIndex, is_duplicate, make_key
+from services.imports.dedupe import (
+    UNTIMED_RETRY_WINDOW,
+    DedupeIndex,
+    already_recorded,
+    is_duplicate,
+    make_key,
+)
 from services.imports.ledger import LedgerError, PreTradeIndex, apply_pending, match_pre_trade
 from services.imports.text_parser import parse_text
 from services.kr_stock_registry import KR_STOCKS, KR_STOCKS_FULL, get_name
@@ -126,15 +133,25 @@ def import_token_auth(f):
     Sets ``g.import_user_id`` / ``g.import_token``. Never touches the
     session (``current_user``), so ``security._csrf_protect`` skips the
     request. The raw token is hashed immediately and never logged.
+
+    An owner inside the PIPA §21 deletion grace window
+    (``users.deletion_requested_at`` set) is refused like a revoked token —
+    the same as login (routes/auth.py) and every alert sender. The token row
+    is left alone, so cancelling the deletion makes it work again.
     """
     @wraps(f)
     def wrapped(*args, **kwargs):
         parts = (request.headers.get("Authorization") or "").split()
         if len(parts) != 2 or parts[0].lower() != "bearer" or not _TOKEN_RE.match(parts[1]):
             return _token_invalid()
-        token = ImportToken.query.filter_by(
-            token_hash=_hash_token(parts[1]), revoked_at=None,
-        ).first()
+        token = (
+            ImportToken.query
+            .join(User, User.id == ImportToken.user_id)
+            .filter(ImportToken.token_hash == _hash_token(parts[1]),
+                    ImportToken.revoked_at.is_(None),
+                    User.deletion_requested_at.is_(None))
+            .first()
+        )
         if token is None:
             return _token_invalid()
         g.import_user_id = token.user_id
@@ -237,11 +254,13 @@ def _pending_for_user(pid: int) -> PendingTrade | None:
 
 
 def _recompute(row: PendingTrade, seen: set[str] | None = None,
-               index: DedupeIndex | None = None) -> None:
+               index: DedupeIndex | None = None, untimed: bool = False) -> None:
     """Recalculate dedupe_key / needs_ticker / status(duplicate) for ``row``.
 
     ``index`` (batch prefetch) answers in memory; without it the per-row
-    query path is used (PATCH of a single row)."""
+    query path is used (PATCH of a single row). ``untimed``: the input gave
+    no time and ``traded_at`` is the arrival stamp — a retry of an earlier
+    time-less post is then a duplicate too (``dedupe.UNTIMED_RETRY_WINDOW``)."""
     row.needs_ticker = not bool(row.ticker)
     row.dedupe_key = make_key(
         row.user_id, row.ticker or row.name, row.action,
@@ -250,6 +269,9 @@ def _recompute(row: PendingTrade, seen: set[str] | None = None,
     if index is not None:
         dup = index.is_duplicate(row.dedupe_key, row.ticker, row.action,
                                  row.shares, row.price, row.traded_at)
+        if untimed and not dup:
+            dup = index.is_untimed_retry(row.ticker or row.name, row.action,
+                                         row.shares, row.price)
     else:
         dup = is_duplicate(
             row.user_id, row.dedupe_key, row.ticker, row.action,
@@ -462,6 +484,9 @@ def _ingest(user_id: int, source: str, *, text=None, rows=None, upload=None,
 
     # Pass 1 — build rows (ticker resolution is in-memory).
     pending: list[PendingTrade] = []
+    # Parallel to ``pending``: the input carried no time, so ``traded_at`` is
+    # ``now`` (and equals ``created_at`` — how dedupe finds such rows later).
+    untimed: list[bool] = []
     for r in fills:
         ticker, display = resolve_ticker(
             r.code, r.name,
@@ -488,16 +513,18 @@ def _ingest(user_id: int, source: str, *, text=None, rows=None, upload=None,
         row.dedupe_key = make_key(user_id, ticker or display, r.action,
                                   row.shares, row.price, row.traded_at)
         pending.append(row)
+        untimed.append(r.traded_at is None)
 
     # Pass 2 — two prefetches for the whole batch instead of 3 queries/row.
     tickers = {x.ticker for x in pending if x.ticker}
     times = [x.traded_at for x in pending]
     t_min, t_max = (min(times), max(times)) if times else (None, None)
-    index = DedupeIndex(user_id, {x.dedupe_key for x in pending}, tickers, t_min, t_max)
+    index = DedupeIndex(user_id, {x.dedupe_key for x in pending}, tickers, t_min, t_max,
+                        untimed_since=(now - UNTIMED_RETRY_WINDOW) if any(untimed) else None)
     reflections = PreTradeIndex(user_id, tickers, t_min, t_max)
     seen: set[str] = set()
-    for row in pending:
-        _recompute(row, seen, index)
+    for row, no_time in zip(pending, untimed):
+        _recompute(row, seen, index, untimed=no_time)
         row.pre_trade_reflection_id = reflections.match(row.ticker, row.traded_at)
         db.session.add(row)
 
@@ -993,6 +1020,15 @@ def approve_pending(pid: int):
         return api_error(en=e.en, kr=e.kr, code=e.code, status=400)
     link_declined = import_link_declined(current_user.id, data, row, link_id)
 
+    # The fill may have reached the ledger since intake (a manual entry, or
+    # another row of the same fill approved first). Lock the User row first
+    # (same User → Position order as ledger._enforce_position_cap and
+    # routes/portfolio.py) so two approvals of one fill serialise on Postgres
+    # and the second sees the first's trade_history row. SQLite no-ops it.
+    User.query.filter_by(id=current_user.id).with_for_update().first()
+    if already_recorded(row):
+        return _mark_duplicate(row, pid)
+
     try:
         trade_id, position_id = apply_pending(current_user.id, row, thesis)
         attach_reflection(trade_id, link_id, declined=link_declined)
@@ -1015,6 +1051,24 @@ def approve_pending(pid: int):
         "trade_id": trade_id,
         "position_id": position_id,
     })
+
+
+def _mark_duplicate(row: PendingTrade, pid: int):
+    """Approval found the fill already recorded: flag the row instead of
+    writing a second ``trade_history`` row (→ 409 ``IMPORT_DUPLICATE``)."""
+    row.status = STATUS_DUPLICATE
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception("imports.approve duplicate flag failed pid=%s", pid)
+        return api_error(en="Failed to update the fill.", kr="항목 수정에 실패했습니다.",
+                         code="IMPORT_SAVE_FAILED", status=500)
+    return api_error(
+        en="This fill is already recorded, so it was marked as a duplicate.",
+        kr="이미 기록된 체결이라 중복으로 표시했습니다.",
+        code="IMPORT_DUPLICATE", status=409,
+    )
 
 
 # ── POST /pending/<id>/reject ────────────────────────────────────────

@@ -44,6 +44,18 @@ describe("PositionsTableV2 on a phone", () => {
     expect(onAction).toHaveBeenCalledWith("sell", expect.objectContaining({ symbol: "AAPL" }));
   });
 
+  it("labels the card weight cost-basis when vendor quotes are off", () => {
+    setPhone(true);
+    render(<PositionsTableV2 positions={POS} totalNav={1200} fxRate={1380} marketDataDisplay={false} />);
+    expect(screen.getByTestId("position-card-weight-basis").textContent).toBe("비중 · 취득가 기준");
+  });
+
+  it("shows no basis label when vendor quotes are on", () => {
+    setPhone(true);
+    render(<PositionsTableV2 positions={POS} totalNav={1200} fxRate={1380} marketDataDisplay />);
+    expect(screen.queryByTestId("position-card-weight-basis")).toBeNull();
+  });
+
   it("keeps the table on desktop", () => {
     setPhone(false);
     render(<PositionsTableV2 positions={POS} totalNav={1200} fxRate={1380} />);

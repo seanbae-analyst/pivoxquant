@@ -339,3 +339,77 @@ class TestImportApproveLink:
 def test_same_ticker_strips_only_kr_suffix(a, b, expected):
     from services.pre_trade.link import same_ticker
     assert same_ticker(a, b) is expected
+
+
+# ── 동시 연결 잠금 (2026-10-09) ─────────────────────────────────────────
+# "이미 이어졌나" 검사가 잠금 없이 돌고 유니크 제약도 없어서, 같은 멈춤을 고른
+# 동시 매수 둘이 둘 다 이어졌다. SQLite 는 FOR UPDATE 를 무시하므로 여기서는
+# (1) PG 방언으로 잠금 SQL 을 컴파일하고 (2) 잠금이 검사보다 먼저, User →
+# 멈춤 순서로 잡히는지 확인한다.
+
+def test_reflection_lock_query_is_for_update_on_postgres(app):
+    from sqlalchemy.dialects import postgresql
+    from services.pre_trade.link import _lock_reflection_query
+
+    with app.app_context():
+        sql = str(_lock_reflection_query(1, 7).statement.compile(dialect=postgresql.dialect()))
+    assert "FOR UPDATE" in sql
+    assert "pre_trade_reflections" in sql
+    assert "user_id" in sql   # 남의 멈춤은 잠그지도 않는다
+
+
+def test_resolve_locks_user_then_reflection_before_already_linked_check(app, auth_user, monkeypatch):
+    from services.pre_trade import link
+    from services import position_writes
+
+    with app.app_context():
+        rid = _refl(auth_user["id"])
+        calls: list[str] = []
+        real_user_q = position_writes.lock_user_row_query
+        real_refl_q = link._lock_reflection_query
+        real_linked = link._linked_ids
+
+        def user_q(uid):
+            calls.append("user")
+            return real_user_q(uid)
+
+        def refl_q(uid, r):
+            calls.append("reflection")
+            return real_refl_q(uid, r)
+
+        def linked(uid):
+            calls.append("linked_check")
+            return real_linked(uid)
+
+        monkeypatch.setattr(position_writes, "lock_user_row_query", user_q)
+        monkeypatch.setattr(link, "_lock_reflection_query", refl_q)
+        monkeypatch.setattr(link, "_linked_ids", linked)
+
+        assert link.resolve_reflection_link(auth_user["id"], rid, ticker="AAPL", action="buy") == rid
+        db.session.rollback()
+    assert calls == ["user", "reflection", "linked_check"], calls
+
+
+def test_resolve_without_id_takes_no_lock(app, auth_user, monkeypatch):
+    from services.pre_trade import link
+    from services import position_writes
+
+    def boom(*a, **k):
+        raise AssertionError("no lock when nothing is linked")
+
+    monkeypatch.setattr(position_writes, "lock_user_row_query", boom)
+    monkeypatch.setattr(link, "_lock_reflection_query", boom)
+    with app.app_context():
+        assert link.resolve_reflection_link(auth_user["id"], None, ticker="AAPL", action="buy") is None
+
+
+def test_other_users_reflection_is_not_found_under_lock(app, auth_user, make_user):
+    from services.pre_trade.link import ReflectionLinkError, resolve_reflection_link
+
+    other = make_user(email="other_lock@test.com")
+    with app.app_context():
+        rid = _refl(other["id"])
+        with pytest.raises(ReflectionLinkError) as ei:
+            resolve_reflection_link(auth_user["id"], rid, ticker="AAPL", action="buy")
+        db.session.rollback()
+    assert ei.value.code == "REFLECTION_LINK_NOT_FOUND"
