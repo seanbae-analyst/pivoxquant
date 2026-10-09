@@ -11,6 +11,9 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ replace, push: vi.fn() }
 
 import { AppWelcome, WELCOME_SEEN_KEY, isStandaloneDisplay } from "../app-welcome";
 
+const scrollTo = vi.fn();
+Object.defineProperty(HTMLElement.prototype, "scrollTo", { value: scrollTo, configurable: true });
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -28,12 +31,24 @@ describe("AppWelcome", () => {
     // jsdom has no layout, so drive the "last card" state through the skip button's target.
     const track = screen.getByTestId("app-welcome-track");
     Object.defineProperty(track, "clientWidth", { value: 390, configurable: true });
-    Object.defineProperty(track, "scrollLeft", { value: 780, configurable: true });
+    Object.defineProperty(track, "scrollLeft", { value: 1170, configurable: true });
     fireEvent.scroll(track);
     const start = screen.getByTestId("app-welcome-start");
     expect(start.getAttribute("href")).toBe("/signup");
     fireEvent.click(start);
     expect(localStorage.getItem(WELCOME_SEEN_KEY)).toBe("1");
+  });
+
+  it("opens on the landing cover (PIVOXQUANT alone); tapping it moves to the first card", () => {
+    render(<AppWelcome />);
+    const cover = screen.getByTestId("app-cover");
+    expect(cover.textContent).toContain("PIVOXQUANT");
+    // Chrome is faded out and inert on the cover.
+    expect(screen.getByTestId("app-welcome-next").getAttribute("tabindex")).toBe("-1");
+    const track = screen.getByTestId("app-welcome-track");
+    Object.defineProperty(track, "clientWidth", { value: 390, configurable: true });
+    fireEvent.click(cover);
+    expect(scrollTo).toHaveBeenCalledWith({ left: 390, behavior: "smooth" });
   });
 
   it("after the cards were seen, goes straight to login", () => {
