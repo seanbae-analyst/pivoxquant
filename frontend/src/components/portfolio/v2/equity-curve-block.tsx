@@ -297,11 +297,15 @@ export function EquityCurveBlock({
           padding: "clamp(14px, 3vw, 24px)",
         }}
       >
-        {/* KPI strip — 3 up */}
+        {/* KPI strip — 3 up on xl+. Narrower, 순자산 takes the full first
+            row and the two returns share the second: a third of a 358px phone
+            card (~94px), of the 768px tablet card beside the sidebar
+            (~117px) or of a 1024px one (~200px, no room for a larger book)
+            cannot hold "KRW 30,285,000" at quote size, and the figure broke
+            at its comma ("30,285 / ,000"). Values never wrap. */}
         <div
+          className="grid grid-cols-2 xl:grid-cols-3"
           style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
             gap: 24,
             paddingBottom: 20,
             marginBottom: 20,
@@ -311,6 +315,7 @@ export function EquityCurveBlock({
         >
           <KpiCell
             label="순자산"
+            wide
             value={(() => {
               // Not-yet-known NAV must read as unknown, not as zero.
               // `currentNav` is 0 until the summary resolves, so the final
@@ -630,13 +635,16 @@ function KpiCell({
   label,
   value,
   valueColor,
+  wide = false,
 }: {
   label: string;
   value: React.ReactNode;
   valueColor: string;
+  /** Full row below xl (the NAV figure needs the width). */
+  wide?: boolean;
 }) {
   return (
-    <div>
+    <div className={wide ? "col-span-2 min-w-0 xl:col-span-1" : "min-w-0"}>
       <div
         className="font-mono"
         style={{
@@ -654,6 +662,8 @@ function KpiCell({
           fontSize: "var(--pq-text-quote)",
           letterSpacing: "-0.01em",
           color: valueColor,
+          // A money figure is one unit: never break it at a comma.
+          whiteSpace: "nowrap",
         }}
       >
         {value}

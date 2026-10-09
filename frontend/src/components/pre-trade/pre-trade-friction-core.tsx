@@ -755,9 +755,16 @@ function QuestionItem(props: {
  * less the step chrome above the screen (section label + progress, ~9rem)
  * and the sticky action bar (~5rem), so each step reads as one screen and
  * the bar sits at the bottom edge. Below md only; md+ is untouched.
+ *
+ * Both bars carry a safe-area band in the installed app — the pinned app bar
+ * is --pq-safe-top + 56px (globals.css [data-pq-dash-topbar]) and the bottom
+ * nav, like <PhoneActionBar>'s offset, is 64px + --pq-safe-bottom — so both
+ * insets come off here too; without them a step overran the screen by the
+ * notch and its last lines sat behind the action bar / home indicator.
+ * (16px = the gap --pq-bottomnav-clearance keeps above the nav.)
  */
 export const PAGER_SCREEN_CLASS =
-  "max-md:min-h-[calc(100dvh_-_var(--pq-topbar-height)_-_var(--pq-bottomnav-clearance)_-_14rem)]";
+  "max-md:min-h-[calc(100dvh_-_var(--pq-topbar-height)_-_var(--pq-safe-top)_-_var(--pq-bottomnav-height)_-_var(--pq-safe-bottom)_-_16px_-_14rem)]";
 
 function PhoneProgress({
   cur,
@@ -875,7 +882,7 @@ export function PhoneActionBar({
     <div
       className="sticky z-30 -mx-4 flex gap-3 border-t border-[var(--pq-ivory-line)] bg-[var(--pq-ink)] px-4 py-3 md:hidden"
       style={{
-        bottom: "calc(var(--pq-bottomnav-height) + env(safe-area-inset-bottom, 0px))",
+        bottom: "calc(var(--pq-bottomnav-height) + var(--pq-safe-bottom))",
       }}
       data-testid={testId}
     >

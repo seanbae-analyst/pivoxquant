@@ -52,6 +52,24 @@ describe("BottomNav", () => {
     expect(screen.getByRole("link", { name: "거울" })).not.toHaveAttribute("aria-current");
   });
 
+  it("an unknown sub-path (the in-app 404) lights no tab", () => {
+    for (const p of ["/mirror/nope", "/journal/nope", "/portfolio/x/y", "/pre-trade/1", "/mirrorx"]) {
+      nav.pathname = p;
+      const { unmount } = render(<BottomNav />);
+      for (const a of within(bar()).getAllByRole("link")) {
+        expect(a, p).not.toHaveAttribute("aria-current");
+        expect(a, p).not.toHaveAttribute("data-lit");
+      }
+      unmount();
+    }
+  });
+
+  it("a trailing slash still matches the tab root", () => {
+    nav.pathname = "/portfolio/";
+    render(<BottomNav />);
+    expect(screen.getByRole("link", { name: "포트폴리오" })).toHaveAttribute("aria-current", "page");
+  });
+
   it("/settings and /support light no tab", () => {
     for (const p of ["/settings", "/support/inbox/3"]) {
       nav.pathname = p;

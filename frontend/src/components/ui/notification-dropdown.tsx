@@ -23,7 +23,7 @@ import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/lib/locale";
 import { relativeTime } from "@/lib/relative-time";
 import { useIsPhone } from "@/lib/use-phone";
-import { markOverlayNavigation } from "@/lib/use-back-dismiss";
+import { navigateFromOverlay } from "@/lib/use-back-dismiss";
 import { Sheet } from "@/components/ui/sheet";
 
 type AlertRow = {
@@ -138,9 +138,9 @@ export function NotificationDropdown() {
     }
     if (item.link) {
       // Leaving from inside the phone sheet: keep its back-entry cleanup from
-      // racing this navigation.
-      markOverlayNavigation();
-      router.push(item.link);
+      // racing this navigation, and take over the sheet's history entry
+      // (replace) so Back from the destination lands on this page at once.
+      navigateFromOverlay(router, item.link);
     }
   }
 

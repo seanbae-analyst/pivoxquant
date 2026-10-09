@@ -6,10 +6,14 @@
  * Mockup §BLOCK 3c / SPEC §4.3.
  * Action vocabulary mapped legal-safe: buy → 추가, sell → 정리/전량 정리.
  * Uses local hooks-v2.ts → useTransactions() (does NOT touch lib/hooks.ts).
+ *
+ * 2026-10-09: no "전체 내역 ›" footer. It linked to /portfolio — the page
+ * this card sits on (on a phone, its own pager page) — because there is no
+ * full trade-history screen to send it to. A link that promises a screen we
+ * do not have is gone until that screen exists.
  */
 
 import * as React from "react";
-import Link from "next/link";
 import { fmtMoneyPlain, pctColor, displayTicker, parseIsoUtc } from "@/lib/format";
 import { useLocale } from "@/lib/locale";
 import { useTransactions, type TransactionRow } from "./hooks-v2";
@@ -230,32 +234,6 @@ export function RecentTransactionsBlock({
           })}
         </ul>
       )}
-
-      <div
-        style={{
-          marginTop: 16,
-          paddingTop: 12,
-          borderTop: "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "flex-end",
-        }}
-      >
-        <Link
-          href="/portfolio"
-          className="font-mono"
-          style={{
-            fontSize: "var(--pq-text-eyebrow)",
-            letterSpacing: "0.02em",
-            color: "var(--pq-bronze)",
-            textDecoration: "none",
-            borderBottom: "1px solid rgba(184,149,106,0.35)",
-            paddingBottom: 1,
-          }}
-        >
-          전체 내역 ›
-        </Link>
-      </div>
     </div>
   );
 }

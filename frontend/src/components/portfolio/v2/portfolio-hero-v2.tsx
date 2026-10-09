@@ -245,6 +245,33 @@ export function PortfolioHeroV2({
     }
     return fmtMoneySigned(unified, navCurrency, loading);
   };
+  // Realized P&L is a record of closed trades per currency, not a market
+  // reading: a currency with nothing realized this year has no line (a mixed
+  // book that sold only US stock printed "+USD 3,180" over "KRW 0"). The two
+  // currencies are never summed. Nothing realized in either → one plain 0.
+  // Books without the per-currency split keep the single-figure fallback.
+  const realizedPnl = (): React.ReactNode => {
+    if (loading) return "—";
+    const split = realizedUsd != null || realizedKrw != null;
+    if (!split) return splitPnl(realizedUsd, realizedKrw, realizedYtd);
+    const lines: Array<{ cur: "USD" | "KRW"; v: number }> = [];
+    if (realizedUsd != null && Number.isFinite(realizedUsd) && realizedUsd !== 0) {
+      lines.push({ cur: "USD", v: realizedUsd });
+    }
+    if (realizedKrw != null && Number.isFinite(realizedKrw) && realizedKrw !== 0) {
+      lines.push({ cur: "KRW", v: realizedKrw });
+    }
+    if (lines.length === 0) return <div style={{ color: signColor(0) }}>0</div>;
+    return (
+      <>
+        {lines.map(({ cur, v }) => (
+          <div key={cur} style={{ color: signColor(v) }}>
+            {fmtMoneySigned(v, cur)}
+          </div>
+        ))}
+      </>
+    );
+  };
   const positionsText = loading
     ? "—"
     : positionCount != null
@@ -439,7 +466,7 @@ export function PortfolioHeroV2({
           ) : null}
           <HeroKpi
             label="올해 실현 손익"
-            value={splitPnl(realizedUsd, realizedKrw, realizedYtd)}
+            value={realizedPnl()}
             tone={
               hasUs && hasKr
                 ? "neutral"
