@@ -54,6 +54,7 @@ import { WeeklyPulseSection } from "@/components/journal/weekly-pulse-section";
 import { ImportInbox } from "@/components/journal/import-inbox";
 import { ObservationNoteComposer } from "@/components/journal/observation-note-composer";
 import { ObservationNoteCard } from "@/components/journal/observation-note-card";
+import { JournalPager } from "@/components/journal/journal-pager";
 import {
   entryTimestamp,
   filterTimeline,
@@ -575,75 +576,56 @@ function FilterChips({
 }
 
 /* ────────────────────────────────────────────────────────────────────────
- * Phone tabs
+ * Capture links — 캡처로 기록 (button) + 파일·텍스트 가져오기 (text link)
  * ────────────────────────────────────────────────────────────────────── */
 
-type JournalTab = "record" | "habits" | "pulse";
+/** The capture path is the easiest way in on a phone, so it gets a real
+ *  button; the text link keeps file / text import reachable. */
+function CaptureLinks({ className }: { className: string }) {
+  const t = useT();
+  return (
+    <div className={`flex flex-wrap items-center gap-x-5 gap-y-3 ${className}`}>
+      <Link
+        href="/journal/import?tab=image"
+        className="inline-flex min-h-[44px] items-center rounded-[2px] border border-[var(--pq-bronze)] px-4 font-mono text-pq-eyebrow text-[var(--pq-bronze-light)] transition-colors hover:bg-[var(--pq-bronze)]/10"
+      >
+        {t("journal.import.captureLink")}
+      </Link>
+      <Link
+        href="/journal/import"
+        className="inline-flex min-h-[44px] items-center gap-2 font-mono text-pq-eyebrow text-[var(--pq-bronze-light)] underline-offset-4 hover:underline"
+      >
+        {t("journal.import.importLink")}
+      </Link>
+    </div>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+ * Phone pages — deep links
+ * ────────────────────────────────────────────────────────────────────── */
+
+/** Order of the swipeable phone pages (components/journal/journal-pager). */
+const JOURNAL_PAGE_IDS = ["record", "habits", "pulse"] as const;
+type JournalPageId = (typeof JOURNAL_PAGE_IDS)[number];
 
 function subscribeHash(cb: () => void) {
   window.addEventListener("hashchange", cb);
   return () => window.removeEventListener("hashchange", cb);
 }
 
-function readHashTab(): JournalTab {
-  return window.location.hash === "#weekly-pulse" ? "pulse" : "record";
+/**
+ * The page a deep link asks for. `?pending=<id>` (the fill_memo push) wins —
+ * that row lives in the 기록 대기함 on the record page — then
+ * `#weekly-pulse` (/portfolio's Monday link) opens the pulse page.
+ */
+export function deepLinkPage(search: string, hash: string): JournalPageId {
+  if (new URLSearchParams(search).get("pending")) return "record";
+  return hash === "#weekly-pulse" ? "pulse" : "record";
 }
 
-const JOURNAL_TABS: ReadonlyArray<readonly [JournalTab, string]> = [
-  ["record", "기록"],
-  ["habits", "습관"],
-  ["pulse", "주간 회고"],
-];
-
-/** Segmented control, phone only — sticks under the app bar. */
-function JournalTabs({
-  value,
-  onChange,
-}: {
-  value: JournalTab;
-  onChange: (v: JournalTab) => void;
-}) {
-  return (
-    <div
-      role="tablist"
-      aria-label="기록 화면"
-      className="sticky z-10 -mx-4 mb-6 flex border-b px-4 md:hidden"
-      style={{
-        top: "var(--pq-topbar-height)",
-        background: "var(--pq-ink)",
-        borderColor: "var(--pq-ivory-line)",
-      }}
-      data-testid="journal-tabs"
-    >
-      {JOURNAL_TABS.map(([key, label]) => {
-        const active = value === key;
-        return (
-          <button
-            key={key}
-            type="button"
-            role="tab"
-            aria-selected={active}
-            onClick={() => {
-              onChange(key);
-              window.scrollTo({ top: 0 });
-            }}
-            className="relative flex-1 py-3 text-center text-[15px]"
-            style={{ color: active ? "var(--pq-ivory)" : "var(--pq-ivory-dim)" }}
-            data-testid={`journal-tab-${key}`}
-          >
-            {label}
-            {active && (
-              <span
-                aria-hidden
-                className="absolute inset-x-6 bottom-0 h-[2px]"
-                style={{ background: "var(--pq-bronze)" }}
-              />
-            )}
-          </button>
-        );
-      })}
-    </div>
-  );
+function readDeepLinkPage(): JournalPageId {
+  return deepLinkPage(window.location.search, window.location.hash);
 }
 
 /* ────────────────────────────────────────────────────────────────────────
@@ -717,65 +699,130 @@ function JournalContent() {
         ? !reflectionsFailed
         : !reflectionsFailed && !notesFailed;
 
-  // Phone tabs (2026-10-07, CEO "아래로 내리는 느낌이 너무 웹사이트"). On a
-  // phone this page was seven screens of scroll: inbox, six mirrors, the
-  // feed, the weekly pulse. Below md it is three tabs; at md and up every
-  // section shows, as before. Sections stay mounted either way — only
-  // `hidden md:block` changes — so no fetch, effect or deep link depends on
-  // the tab.
-  // /portfolio links to #weekly-pulse on Mondays, so that hash opens the
-  // pulse tab until the user picks one.
-  const hashTab = useSyncExternalStore(subscribeHash, readHashTab, () => "record" as const);
-  const [picked, setTab] = useState<JournalTab | null>(null);
-  const tab = picked ?? hashTab;
-  const onPhone = (which: JournalTab) => (tab === which ? "" : "hidden md:block");
+  // Phone pages (2026-10-09, CEO "기록부분이랑 포트폴리오 부분도 화면
+  // 넘어가는식으로 … 앱은"). Below md the three sections are swipeable pages
+  // (components/journal/journal-pager) with a tab strip on top. At md and up
+  // the pager dissolves and every section stacks as before, in the order the
+  // md:order-* classes give it. Sections stay mounted either way, so no fetch,
+  // effect or deep link depends on the page in view.
+  const linkPage = useSyncExternalStore(
+    subscribeHash,
+    readDeepLinkPage,
+    () => "record" as const,
+  );
 
-  return (
-    <div className="mx-auto w-full max-w-2xl px-0 py-2 md:px-6 md:py-8">
-      {/* Header — the phone app bar already names the screen. */}
-      <header className="mb-6">
-        <div className="hidden md:block">
-          <RuledKicker>{t("journal.page.kicker")}</RuledKicker>
-          <EditorialHead as="h1" size={32} className="mt-3">
-            {t("journal.page.heading")}
-          </EditorialHead>
-          <Caption className="mt-2 max-w-lg">
-            {t("journal.page.headingDesc")}
-          </Caption>
-        </div>
-        {/* The capture path is the easiest way in on a phone, so it gets a
-            real button; the text link keeps file / text import reachable. */}
-        <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3">
-          <Link
-            href="/journal/import?tab=image"
-            className="inline-flex min-h-[44px] items-center rounded-[2px] border border-[var(--pq-bronze)] px-4 font-mono text-pq-eyebrow text-[var(--pq-bronze-light)] transition-colors hover:bg-[var(--pq-bronze)]/10"
-          >
-            {t("journal.import.captureLink")}
-          </Link>
-          <Link
-            href="/journal/import"
-            className="inline-flex min-h-[44px] items-center gap-2 font-mono text-pq-eyebrow text-[var(--pq-bronze-light)] underline-offset-4 hover:underline"
-          >
-            {t("journal.import.importLink")}
-          </Link>
-        </div>
-      </header>
+  const recordPage = (
+    <>
+      {/* The capture path is the easiest way in on a phone, so it opens the
+          record page; on desktop the same links sit in the header. */}
+      <CaptureLinks className="mb-6 md:hidden" />
 
-      <JournalTabs value={tab} onChange={setTab} />
-
-      <div className={onPhone("record")}>
       {/* Import Inbox — received fills waiting for a "why". A row is not a
           record until the user approves it with a thesis; nothing here feeds
           the mirrors below (docs/product/IMPORT_INBOX_DESIGN.md). */}
-      <ErrorBoundary fallback={null}>
-        <ImportInbox />
-      </ErrorBoundary>
+      <div className="md:order-1">
+        <ErrorBoundary fallback={null}>
+          <ImportInbox />
+        </ErrorBoundary>
       </div>
 
-      {/* Legal disclaimer mounted once at the bottom by (dashboard)/layout.tsx
-          — no page-level banner here (CEO 2026-05-24: disclaimer only at the
-          bottom, every page). */}
+      {/* Composer — the one place a record starts without a trade attached.
+          It sits ABOVE the chips on purpose: writing comes before reading
+          back (docs/design/observation-notes_2026-09-22.md §5 진입점). */}
+      <div className="md:order-3">
+        <div className="mb-6">
+          <ErrorBoundary fallback={null}>
+            <ObservationNoteComposer
+              source="journal"
+              onCreated={() => {
+                void mutateNotes();
+              }}
+            />
+          </ErrorBoundary>
+        </div>
 
+        {/* Chips + this-week count. Counts only — no score, no label (§4-2).
+            The count is dropped entirely when the notes feed failed: "0개" read
+            off a failed fetch is a false statement about the user's own record. */}
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <FilterChips value={filter} onChange={setTimelineFilter} />
+          {!notesFailed && (
+            <p
+              className="font-mono text-pq-caption text-[var(--pq-ivory-faint)]"
+              data-testid="journal-weekly-note-count"
+            >
+              이번 주 관찰 노트 {weekly.notes}개
+              <span className="mx-1.5 opacity-40">·</span>
+              종목 {weekly.tickers}개
+              {nextBefore !== null && (
+                <span className="ml-1.5 opacity-70">
+                  (최근 {OBS_NOTE_FEED_LIMIT}개 기준)
+                </span>
+              )}
+            </p>
+          )}
+        </div>
+
+        {/* Feed — 멈춤 기록 + 관찰 노트 in one reverse-chronological record. */}
+        {feedLoading ? (
+          <LoadingState />
+        ) : bothFailed ? (
+          <LoadFailure onRetry={retry} />
+        ) : (
+          <>
+            {reflectionsFailed && (
+              <FeedRetryStrip
+                label="멈춤 기록을 불러오지 못했습니다."
+                onRetry={() => void mutate()}
+              />
+            )}
+            {notesFailed && (
+              <FeedRetryStrip
+                label="관찰 노트를 불러오지 못했습니다."
+                onRetry={() => void mutateNotes()}
+              />
+            )}
+            {entries.length === 0 ? (
+              reflectionsFailed || notesFailed ? null : (
+                <EmptyState />
+              )
+            ) : visible.length === 0 ? (
+              filterEmptyIsHonest ? (
+                <FilterEmptyState filter={filter} />
+              ) : null
+            ) : (
+              <div className="space-y-4">
+                {visible.map((entry) =>
+                  entry.kind === "reflection" ? (
+                    <JournalEntry key={entry.id} r={entry.reflection} />
+                  ) : (
+                    <div
+                      key={entry.id}
+                      className="rounded-[2px] border px-4 sm:px-5"
+                      style={{
+                        borderColor: "var(--pq-ivory-line)",
+                        background: "var(--pq-card-veil)",
+                      }}
+                    >
+                      <ObservationNoteCard
+                        note={entry.note}
+                        onDeleted={() => {
+                          void mutateNotes();
+                        }}
+                      />
+                    </div>
+                  ),
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </>
+  );
+
+  const habitsPage = (
+    <>
       {/* Behavior-mirror section — the disposition + concentration mirrors,
           each with its OWN SWR + loading/error boundary so any single mirror
           failure can never take down the journal feed (or its siblings) below.
@@ -784,7 +831,7 @@ function JournalContent() {
           shows one legal banner — not one per mirror. The disclaimer renders
           unconditionally, independent of each mirror's data/empty/error state,
           and covers any future mirror added to this section (e.g. FOMO). */}
-      <section className={`mb-8 ${onPhone("habits")}`} aria-label={t("journal.page.kicker")}>
+      <section className="mb-8 md:order-2" aria-label={t("journal.page.kicker")}>
         <div className="mb-8">
           <HoldingMirror />
         </div>
@@ -810,112 +857,57 @@ function JournalContent() {
             PreTradeReflection alongside it, so it is the only one that can
             speak about the trade that did not happen, and it reads best after
             the reader has seen what the executed record looks like.
-            (2026-09-02 — until then the module had no UI at all.) */}
-        <div className="mb-6">
+            (2026-09-02 — until then the module had no UI at all.)
+            No bottom margin: the section's own mb-8 is the gap. On desktop
+            the section is a flex item, where a child margin no longer
+            collapses into it and the gap would grow. */}
+        <div>
           <FrictionOutcomeMirror />
         </div>
-
       </section>
+    </>
+  );
 
-      {/* Composer — the one place a record starts without a trade attached.
-          It sits ABOVE the chips on purpose: writing comes before reading
-          back (docs/design/observation-notes_2026-09-22.md §5 진입점). */}
-      <div className={onPhone("record")}>
-      <div className="mb-6">
-        <ErrorBoundary fallback={null}>
-          <ObservationNoteComposer
-            source="journal"
-            onCreated={() => {
-              void mutateNotes();
-            }}
-          />
-        </ErrorBoundary>
-      </div>
+  const pulsePage = (
+    // Weekly pulse — the user's own self-report, so it lives with the
+    // record. Moved from /profile 2026-09-12. The only pulse form in the
+    // app; /portfolio links here on Mondays (#weekly-pulse).
+    <div className="md:order-4 md:mt-12">
+      <WeeklyPulseSection />
+    </div>
+  );
 
-      {/* Chips + this-week count. Counts only — no score, no label (§4-2).
-          The count is dropped entirely when the notes feed failed: "0개" read
-          off a failed fetch is a false statement about the user's own record. */}
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <FilterChips value={filter} onChange={setTimelineFilter} />
-        {!notesFailed && (
-          <p
-            className="font-mono text-pq-caption text-[var(--pq-ivory-faint)]"
-            data-testid="journal-weekly-note-count"
-          >
-            이번 주 관찰 노트 {weekly.notes}개
-            <span className="mx-1.5 opacity-40">·</span>
-            종목 {weekly.tickers}개
-            {nextBefore !== null && (
-              <span className="ml-1.5 opacity-70">
-                (최근 {OBS_NOTE_FEED_LIMIT}개 기준)
-              </span>
-            )}
-          </p>
-        )}
-      </div>
+  return (
+    // On a phone the tab strip pins under the app bar, so anything that
+    // scrolls itself under "the sticky chrome" (the weekly pulse's
+    // scroll-margin) has to clear both bars.
+    <div className="mx-auto w-full max-w-2xl px-0 pb-2 md:px-6 md:py-8 max-md:[--pq-aux-sticky-top:calc(var(--pq-topbar-height)+3rem)]">
+      {/* Header — desktop only; the phone app bar already names the screen
+          and the capture links open the record page there. */}
+      <header className="mb-6 hidden md:block">
+        <RuledKicker>{t("journal.page.kicker")}</RuledKicker>
+        <EditorialHead as="h1" size={32} className="mt-3">
+          {t("journal.page.heading")}
+        </EditorialHead>
+        <Caption className="mt-2 max-w-lg">
+          {t("journal.page.headingDesc")}
+        </Caption>
+        <CaptureLinks className="mt-4" />
+      </header>
 
-      {/* Feed — 멈춤 기록 + 관찰 노트 in one reverse-chronological record. */}
-      {feedLoading ? (
-        <LoadingState />
-      ) : bothFailed ? (
-        <LoadFailure onRetry={retry} />
-      ) : (
-        <>
-          {reflectionsFailed && (
-            <FeedRetryStrip
-              label="멈춤 기록을 불러오지 못했습니다."
-              onRetry={() => void mutate()}
-            />
-          )}
-          {notesFailed && (
-            <FeedRetryStrip
-              label="관찰 노트를 불러오지 못했습니다."
-              onRetry={() => void mutateNotes()}
-            />
-          )}
-          {entries.length === 0 ? (
-            reflectionsFailed || notesFailed ? null : (
-              <EmptyState />
-            )
-          ) : visible.length === 0 ? (
-            filterEmptyIsHonest ? (
-              <FilterEmptyState filter={filter} />
-            ) : null
-          ) : (
-            <div className="space-y-4">
-              {visible.map((entry) =>
-                entry.kind === "reflection" ? (
-                  <JournalEntry key={entry.id} r={entry.reflection} />
-                ) : (
-                  <div
-                    key={entry.id}
-                    className="rounded-[2px] border px-4 sm:px-5"
-                    style={{
-                      borderColor: "var(--pq-ivory-line)",
-                      background: "var(--pq-card-veil)",
-                    }}
-                  >
-                    <ObservationNoteCard
-                      note={entry.note}
-                      onDeleted={() => {
-                        void mutateNotes();
-                      }}
-                    />
-                  </div>
-                ),
-              )}
-            </div>
-          )}
-        </>
-      )}
-      </div>
+      {/* Legal disclaimer mounted once at the bottom by (dashboard)/layout.tsx
+          — no page-level banner here (CEO 2026-05-24: disclaimer only at the
+          bottom, every page). */}
 
-      {/* Weekly pulse — the user's own self-report, so it lives with the
-          record. Moved from /profile 2026-09-12. The only pulse form in the
-          app; /portfolio links here on Mondays (#weekly-pulse). */}
-      <div className={`mt-12 ${onPhone("pulse")}`}>
-        <WeeklyPulseSection />
-      </div>
+      <JournalPager
+        ariaLabel="기록 화면"
+        requestedPage={JOURNAL_PAGE_IDS.indexOf(linkPage)}
+        pages={[
+          { id: "record", label: "기록", content: recordPage },
+          { id: "habits", label: "습관", content: habitsPage },
+          { id: "pulse", label: "주간 회고", content: pulsePage },
+        ]}
+      />
 
       <FootSignature />
     </div>

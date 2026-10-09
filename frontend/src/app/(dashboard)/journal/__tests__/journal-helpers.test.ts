@@ -3,6 +3,7 @@ import {
   entryTimestamp,
   absoluteDate,
   statusKind,
+  deepLinkPage,
 } from "@/app/(dashboard)/journal/page";
 import type { PreTradeReflection } from "@/lib/types";
 
@@ -73,5 +74,27 @@ describe("statusKind", () => {
     expect(statusKind(mk({ status: "cancelled" }))).toBe("cancelled");
     expect(statusKind(mk({ status: "ready" }))).toBe("pending");
     expect(statusKind(mk({ status: "pending" }))).toBe("pending");
+  });
+});
+
+describe("deepLinkPage", () => {
+  it("opens the record page by default", () => {
+    expect(deepLinkPage("", "")).toBe("record");
+  });
+
+  it("opens the weekly pulse page for /portfolio's Monday link", () => {
+    expect(deepLinkPage("", "#weekly-pulse")).toBe("pulse");
+  });
+
+  it("lands a fill_memo push (?pending=<id>) on the record page", () => {
+    expect(deepLinkPage("?pending=42", "")).toBe("record");
+  });
+
+  it("lets ?pending win over #weekly-pulse — the row to fill is on the record page", () => {
+    expect(deepLinkPage("?pending=42", "#weekly-pulse")).toBe("record");
+  });
+
+  it("ignores an empty ?pending=", () => {
+    expect(deepLinkPage("?pending=", "#weekly-pulse")).toBe("pulse");
   });
 });

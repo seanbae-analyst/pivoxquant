@@ -44,7 +44,7 @@
  *     (services/pre_trade/link.py).
  */
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
 import { ChevronRight } from "lucide-react";
@@ -58,6 +58,8 @@ import {
   Field,
   SectionLabel,
   QuestionsStep,
+  PAGER_SCREEN_CLASS,
+  PhoneActionBar,
   CooldownStep,
   TerminalStep,
   usePreTradeCycle,
@@ -68,6 +70,7 @@ import type { BackendPositionRow } from "@/components/portfolio/types";
 import { PORTFOLIO_POSITIONS } from "@/lib/endpoints";
 import { fetcher } from "@/lib/hooks";
 import { displayTicker, normalizeTicker } from "@/lib/format";
+import { useSlideIn, useSwipePager } from "@/lib/use-swipe-pager";
 
 export default function PreTradePage() {
   // Step 1 — setup (owned by this route page)
@@ -79,6 +82,9 @@ export default function PreTradePage() {
   // Step 2 — questions
   const [acks, setAcks] = useState<Record<number, boolean>>({});
   const [answers, setAnswers] = useState<Record<number, string>>({});
+  // Phone pager: setup slides in from the left when the user comes back to
+  // it from question 1; on first entry it just appears.
+  const [setupFromBack, setSetupFromBack] = useState(false);
 
   const allAcked = QUESTIONS.every((q) => acks[q.n]);
   const rationaleOk = rationale.trim().length >= MIN_RATIONALE_CHARS;
@@ -98,6 +104,12 @@ export default function PreTradePage() {
     cycle.setPhase("questions");
   }, [setupOk, cycle]);
 
+  // Answers and acks live here, so they survive the trip back to setup.
+  const backToSetup = useCallback(() => {
+    setSetupFromBack(true);
+    cycle.setPhase("setup");
+  }, [cycle]);
+
   const reset = useCallback(() => {
     setTicker("");
     setSide("ENTRY");
@@ -105,6 +117,7 @@ export default function PreTradePage() {
     setRationale("");
     setAcks({});
     setAnswers({});
+    setSetupFromBack(false);
     cycle.reset();
   }, [cycle]);
 
@@ -113,7 +126,11 @@ export default function PreTradePage() {
       <div className="space-y-10 pb-12">
         {/* ── Editorial header (v3 lock-in: Playfair UPRIGHT). Layout mounts
               a single DisclaimerBanner — pages MUST NOT mount their own. */}
-        <header className="space-y-3">
+        {/* Phone: the header (caption) belongs to setup only — past it, each
+            step is one screen under the app bar. md+ always shows it. */}
+        <header
+          className={`space-y-3 ${cycle.phase === "setup" ? "" : "hidden md:block"}`}
+        >
           {/* Phone: the app bar already says 멈춤 — keep only the caption. */}
           <div className="hidden md:block">
             <RuledKicker>멈춤 &middot; 진입 전 점검</RuledKicker>
@@ -149,6 +166,7 @@ export default function PreTradePage() {
             rationaleOk={rationaleOk}
             canAdvance={setupOk}
             onNext={advanceToQuestions}
+            enterFromBack={setupFromBack}
           />
         )}
 
@@ -166,7 +184,7 @@ export default function PreTradePage() {
             answers={answers} setAnswers={setAnswers}
             allAcked={allAcked}
             submitting={cycle.submitting}
-            onBack={() => cycle.setPhase("setup")}
+            onBack={backToSetup}
             onStart={cycle.startCooldown}
             pagedOnPhone
           />
@@ -211,92 +229,114 @@ function SetupStep(props: {
   rationaleOk: boolean;
   canAdvance: boolean;
   onNext: () => void;
+  /** Phone pager: slide in from the left (came back from question 1). */
+  enterFromBack: boolean;
 }) {
-  const { ticker, setTicker, side, setSide, sharesText, setSharesText, rationale, setRationale, rationaleOk, canAdvance, onNext } = props;
+  const { ticker, setTicker, side, setSide, sharesText, setSharesText, rationale, setRationale, rationaleOk, canAdvance, onNext, enterFromBack } = props;
   const remaining = Math.max(0, MIN_RATIONALE_CHARS - rationale.trim().length);
   const t = useT();
+  // Phone: swipe left = "다음 · 질문 7개", refused (springs back) until the
+  // setup is complete — the same gate as the button. Nothing lies before it.
+  const screenRef = useRef<HTMLDivElement>(null);
+  const swipe = useSwipePager(screenRef, {
+    enabled: true,
+    onNext: () => {
+      if (!canAdvance) return "blocked";
+      onNext();
+      return "moved";
+    },
+    onPrev: () => "blocked",
+  });
+  useSlideIn(screenRef, "setup", -1, { enabled: true, animateOnMount: enterFromBack });
 
   return (
     <section className="space-y-6">
       <SectionLabel n={1} title="거래 개요" />
-      <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-4">
-        <Field label="종목" htmlFor="pre-trade-ticker">
-          <TickerSearch
-            id="pre-trade-ticker"
-            value={ticker}
-            onChange={setTicker}
-            onPick={(r) => setTicker(r.ticker)}
-            ariaLabel="종목"
-            autoFocus
-            inputClassName="w-full bg-transparent border-b border-[rgba(245,240,232,0.15)] py-2 font-mono text-pq-lead uppercase outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)]"
-            inputStyle={{ letterSpacing: "0.04em" }}
+      <div
+        ref={screenRef}
+        {...swipe}
+        className={`space-y-6 ${PAGER_SCREEN_CLASS}`}
+        data-testid="setup-screen"
+      >
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-4">
+          <Field label="종목" htmlFor="pre-trade-ticker">
+            <TickerSearch
+              id="pre-trade-ticker"
+              value={ticker}
+              onChange={setTicker}
+              onPick={(r) => setTicker(r.ticker)}
+              ariaLabel="종목"
+              autoFocus
+              inputClassName="w-full bg-transparent border-b border-[rgba(245,240,232,0.15)] py-2 font-mono text-pq-lead uppercase outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)]"
+              inputStyle={{ letterSpacing: "0.04em" }}
+            />
+          </Field>
+          <Field label="방향">
+            <div className="flex gap-2 mt-1">
+              {(["ENTRY", "EXIT"] as const).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setSide(s)}
+                  aria-label={SIDE_LABEL_KO[s]}
+                  aria-pressed={side === s}
+                  className={`px-4 py-2 text-pq-eyebrow transition-colors ${
+                    side === s
+                      ? "bg-[rgba(245,240,232,0.10)] border border-[var(--pq-ivory)] text-[var(--pq-ivory)]"
+                      : "border border-[rgba(245,240,232,0.15)] text-[var(--pq-ivory-mid)] hover:border-[rgba(245,240,232,0.45)]"
+                  }`}
+                >
+                  {SIDE_LABEL_KO[s]}
+                </button>
+              ))}
+            </div>
+          </Field>
+          <Field label="수량 (선택)" htmlFor="pre-trade-shares">
+            <input
+              id="pre-trade-shares"
+              type="number"
+              inputMode="decimal"
+              min="0"
+              step="any"
+              value={sharesText}
+              onChange={(e) => setSharesText(e.target.value)}
+              placeholder="0"
+              className="w-full bg-transparent border-b border-[rgba(245,240,232,0.15)] py-2 font-mono text-pq-lead outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)]"
+            />
+          </Field>
+        </div>
+
+        {side === "EXIT" && <HeldPicker ticker={ticker} setTicker={setTicker} />}
+
+        <Field label={`이유 · 한 문단 (${MIN_RATIONALE_CHARS}자 이상)`} htmlFor="pre-trade-thesis">
+          <textarea
+            id="pre-trade-thesis"
+            value={rationale}
+            onChange={(e) => setRationale(e.target.value)}
+            rows={5}
+            placeholder="왜 지금 이 종목을 이 방향으로 들어가는가? 한 문단으로 정직하게."
+            className="w-full bg-transparent border border-[rgba(245,240,232,0.15)] rounded-[2px] p-3 text-sm leading-relaxed outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)] font-serif"
+            style={{ resize: "vertical" }}
           />
-        </Field>
-        <Field label="방향">
-          <div className="flex gap-2 mt-1">
-            {(["ENTRY", "EXIT"] as const).map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => setSide(s)}
-                aria-label={SIDE_LABEL_KO[s]}
-                aria-pressed={side === s}
-                className={`px-4 py-2 text-pq-eyebrow transition-colors ${
-                  side === s
-                    ? "bg-[rgba(245,240,232,0.10)] border border-[var(--pq-ivory)] text-[var(--pq-ivory)]"
-                    : "border border-[rgba(245,240,232,0.15)] text-[var(--pq-ivory-mid)] hover:border-[rgba(245,240,232,0.45)]"
-                }`}
-              >
-                {SIDE_LABEL_KO[s]}
-              </button>
-            ))}
+          <div className="mt-1 text-pq-mono-sm text-[var(--pq-ivory-faint)] tracking-[0.06em]">
+            {rationaleOk
+              ? (
+                <span className="text-[var(--pq-bronze)]">
+                  {t("preTrade.charsOk", { n: String(rationale.trim().length) })}
+                </span>
+              )
+              : (
+                <span>
+                  {t("preTrade.charsMore", {
+                    remaining: String(remaining),
+                    n: String(rationale.trim().length),
+                    min: String(MIN_RATIONALE_CHARS),
+                  })}
+                </span>
+              )}
           </div>
         </Field>
-        <Field label="수량 (선택)" htmlFor="pre-trade-shares">
-          <input
-            id="pre-trade-shares"
-            type="number"
-            inputMode="decimal"
-            min="0"
-            step="any"
-            value={sharesText}
-            onChange={(e) => setSharesText(e.target.value)}
-            placeholder="0"
-            className="w-full bg-transparent border-b border-[rgba(245,240,232,0.15)] py-2 font-mono text-pq-lead outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)]"
-          />
-        </Field>
       </div>
-
-      {side === "EXIT" && <HeldPicker ticker={ticker} setTicker={setTicker} />}
-
-      <Field label={`이유 · 한 문단 (${MIN_RATIONALE_CHARS}자 이상)`} htmlFor="pre-trade-thesis">
-        <textarea
-          id="pre-trade-thesis"
-          value={rationale}
-          onChange={(e) => setRationale(e.target.value)}
-          rows={5}
-          placeholder="왜 지금 이 종목을 이 방향으로 들어가는가? 한 문단으로 정직하게."
-          className="w-full bg-transparent border border-[rgba(245,240,232,0.15)] rounded-[2px] p-3 text-sm leading-relaxed outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)] font-serif"
-          style={{ resize: "vertical" }}
-        />
-        <div className="mt-1 text-pq-mono-sm text-[var(--pq-ivory-faint)] tracking-[0.06em]">
-          {rationaleOk
-            ? (
-              <span className="text-[var(--pq-bronze)]">
-                {t("preTrade.charsOk", { n: String(rationale.trim().length) })}
-              </span>
-            )
-            : (
-              <span>
-                {t("preTrade.charsMore", {
-                  remaining: String(remaining),
-                  n: String(rationale.trim().length),
-                  min: String(MIN_RATIONALE_CHARS),
-                })}
-              </span>
-            )}
-        </div>
-      </Field>
 
       <div className="flex flex-col items-end gap-2 pt-2">
         {!canAdvance && (
@@ -317,12 +357,27 @@ function SetupStep(props: {
           onClick={onNext}
           disabled={!canAdvance}
           aria-disabled={!canAdvance}
-          className="pq-ink-btn-bronze inline-flex items-center gap-2 px-5 py-2 text-pq-mono-sm disabled:opacity-30 disabled:cursor-not-allowed"
+          className="pq-ink-btn-bronze hidden md:inline-flex items-center gap-2 px-5 py-2 text-pq-mono-sm disabled:opacity-30 disabled:cursor-not-allowed"
         >
           다음 · 질문 7개
           <ChevronRight className="h-3.5 w-3.5" />
         </button>
       </div>
+
+      {/* Phone: the same step, pinned above the bottom nav. */}
+      <PhoneActionBar testId="setup-pager">
+        <button
+          type="button"
+          onClick={onNext}
+          disabled={!canAdvance}
+          aria-disabled={!canAdvance}
+          className="pq-ink-btn-bronze flex min-h-[48px] flex-1 items-center justify-center gap-2 text-[15px] disabled:opacity-30 disabled:cursor-not-allowed"
+          data-testid="setup-next-phone"
+        >
+          다음 · 질문 7개
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </PhoneActionBar>
     </section>
   );
 }

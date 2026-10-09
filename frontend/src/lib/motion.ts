@@ -30,6 +30,16 @@ export const PQ_DUR_BASE  = 0.3;  // 300ms — card / modal / drawer
 export const PQ_DUR_SLOW  = 0.5;  // 500ms — page transition
 export const PQ_DUR_CHART = 0.8;  // 800ms — chart count-up (CSS only; JS uses requestAnimationFrame)
 
+// ── Distance constants (px) ─────────────────────────────────────────────
+
+/**
+ * Horizontal offset a phone pager screen enters from (lib/use-swipe-pager).
+ * Between --motion-distance-md (16px) and --motion-distance-lg (64px, the
+ * full-page slide the app does not use): enough to read as "next screen",
+ * short enough that the content never leaves the viewport.
+ */
+export const PQ_PAGER_SLIDE_PX = 24;
+
 // ── Variants ─────────────────────────────────────────────────────────────
 
 /** Fade + slight rise — page-section entrance. Duration: PQ_DUR_SLOW (500ms). */

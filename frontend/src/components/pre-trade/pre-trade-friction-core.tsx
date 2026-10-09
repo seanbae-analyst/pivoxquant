@@ -28,6 +28,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   useSyncExternalStore,
 } from "react";
@@ -48,6 +49,11 @@ import {
   PERSONA_QUESTION_HINTS,
 } from "@/data/pre-trade-questions";
 import { cachedPersonaId } from "@/lib/cfo/hooks";
+import {
+  type PagerDir,
+  useSlideIn,
+  useSwipePager,
+} from "@/lib/use-swipe-pager";
 
 // useSyncExternalStore plumbing for the persona hint cache (QuestionsStep).
 // Both must be module-scope constants: React resubscribes whenever the
@@ -372,6 +378,86 @@ export function usePreTradeCycle(args: PreTradeCycleArgs): PreTradeCycle {
 
 /* ─── Questions step ─────────────────────────────────────────────────────── */
 
+/**
+ * Phone pager screens inside QuestionsStep: 0..6 are the seven questions,
+ * REVIEW_IDX is the last look before the start button.
+ */
+const REVIEW_IDX = QUESTIONS.length;
+
+type QuestionsPager = {
+  cur: number;
+  swipeBlocked: boolean;
+  swipe: ReturnType<typeof useSwipePager<HTMLDivElement>>;
+  ackAndNext: () => void;
+  prev: () => void;
+  jump: (i: number) => void;
+};
+
+/**
+ * Phone paging for QuestionsStep (2026-10-07 one-per-screen; 2026-10-09
+ * swipe + slide, CEO "화면 넘기는 식으로 앱처럼").
+ *
+ * The "검토했음 · 다음" button ticks the current question and moves on, as
+ * before. A swipe NEVER ticks anything: it pages forward only from a question
+ * that is already ticked (going back and forth over answered screens), and
+ * otherwise springs back with a hint. A tick is what the audit row records as
+ * "(acknowledged)"; an accidental gesture must not sign it. Swiping back from
+ * the first question returns to setup, like the "이전" button.
+ */
+function useQuestionsPager(args: {
+  /** The screen element that slides and takes the swipe. */
+  screenRef: React.RefObject<HTMLDivElement | null>;
+  enabled: boolean;
+  acks: Record<number, boolean>;
+  setAcks: (f: (prev: Record<number, boolean>) => Record<number, boolean>) => void;
+  submitting: boolean;
+  onBack?: () => void;
+}): QuestionsPager {
+  const { screenRef, enabled, acks, setAcks, submitting, onBack } = args;
+  const [nav, setNav] = useState<{ cur: number; dir: PagerDir }>({ cur: 0, dir: 1 });
+  const [blockedAt, setBlockedAt] = useState<number | null>(null);
+  const cur = nav.cur;
+  const curAcked = cur < REVIEW_IDX && !!acks[QUESTIONS[cur].n];
+
+  const go = (to: number, dir: PagerDir) => {
+    setBlockedAt(null);
+    setNav({ cur: to, dir });
+  };
+  const ackAndNext = () => {
+    const n = QUESTIONS[cur].n;
+    setAcks((p) => ({ ...p, [n]: true }));
+    go(cur + 1, 1);
+  };
+  const prev = () => (cur === 0 ? onBack?.() : go(cur - 1, -1));
+
+  const swipe = useSwipePager(screenRef, {
+    enabled: enabled && !submitting,
+    onNext: () => {
+      if (curAcked) {
+        go(cur + 1, 1);
+        return "moved";
+      }
+      if (cur < REVIEW_IDX) setBlockedAt(cur);
+      return "blocked"; // the review screen starts only from its button
+    },
+    onPrev: () => {
+      if (cur === 0 && !onBack) return "blocked";
+      prev();
+      return "moved";
+    },
+  });
+  useSlideIn(screenRef, cur, nav.dir, { enabled, animateOnMount: true });
+
+  return {
+    cur,
+    swipeBlocked: blockedAt === cur && !curAcked,
+    swipe,
+    ackAndNext,
+    prev,
+    jump: (i) => go(i, -1),
+  };
+}
+
 export function QuestionsStep(props: {
   acks: Record<number, boolean>;
   setAcks: (
@@ -389,10 +475,11 @@ export function QuestionsStep(props: {
   /** When true, render without the leading numbered SectionLabel (modal). */
   bare?: boolean;
   /**
-   * Phone only (2026-10-07, CEO "너무 웹사이트야"): one question per screen
-   * with a progress bar and a "검토했음 · 다음" button that ticks the current
-   * question and moves on. At md and up the list renders as before. The
-   * route page opts in; the modals keep the list.
+   * Phone only (2026-10-07, CEO "너무 웹사이트야"; 2026-10-09 swipe): one
+   * question per screen, sliding horizontally, with a segmented progress
+   * bar, a last review screen and a sticky action bar ("검토했음 · 다음" →
+   * "진입 시계 시작"). At md and up the list renders as before. The route
+   * page opts in; the modals keep the list.
    */
   pagedOnPhone?: boolean;
 }) {
@@ -408,9 +495,18 @@ export function QuestionsStep(props: {
     bare,
     pagedOnPhone = false,
   } = props;
-  const [cur, setCur] = useState(0);
-  const lastIdx = QUESTIONS.length - 1;
-  const paged = (i: number) => (pagedOnPhone && i !== cur ? "hidden md:block" : "");
+  const screenRef = useRef<HTMLDivElement>(null);
+  const pager = useQuestionsPager({
+    screenRef,
+    enabled: pagedOnPhone,
+    acks,
+    setAcks,
+    submitting,
+    onBack,
+  });
+  const { cur } = pager;
+  const onReview = pagedOnPhone && cur === REVIEW_IDX;
+  const ackCount = QUESTIONS.filter((q) => acks[q.n]).length;
 
   // Persona-aware hint lines (record-as-spine §7, 2026-06-10). Resolved
   // client-side from the usePersona() localStorage cache — no fetch from
@@ -437,117 +533,51 @@ export function QuestionsStep(props: {
   return (
     <section className="space-y-6">
       {!bare && <SectionLabel n={2} title="질문 7개" />}
-      {pagedOnPhone && (
-        <div className="md:hidden" data-testid="questions-progress">
-          <div className="flex items-center justify-between text-[13px] text-[var(--pq-ivory-dim)]">
-            <span>질문 {cur + 1} / {QUESTIONS.length}</span>
-            <span>검토 {QUESTIONS.filter((q) => acks[q.n]).length}</span>
-          </div>
-          <div className="mt-2 h-[2px] w-full bg-[var(--pq-ivory-line)]">
-            <div
-              className="h-full bg-[var(--pq-bronze)] transition-[width]"
-              style={{ width: `${((cur + 1) / QUESTIONS.length) * 100}%` }}
+      {pagedOnPhone && <PhoneProgress cur={cur} acks={acks} ackCount={ackCount} />}
+      <div
+        ref={screenRef}
+        {...pager.swipe}
+        className={pagedOnPhone ? PAGER_SCREEN_CLASS : undefined}
+        data-testid="questions-screen"
+      >
+        <ol className="space-y-5">
+          {QUESTIONS.map((q, i) => (
+            <QuestionItem
+              key={q.n}
+              q={q}
+              hint={hints?.[q.n]}
+              hiddenOnPhone={pagedOnPhone && i !== cur}
+              acked={!!acks[q.n]}
+              answer={answers[q.n] ?? ""}
+              setAcks={setAcks}
+              setAnswers={setAnswers}
             />
-          </div>
-        </div>
-      )}
-      <ol className="space-y-5">
-        {QUESTIONS.map((q, i) => (
-          <li
-            key={q.n}
-            className={`border-l-2 border-[var(--pq-ivory-line)] pl-5 hover:border-[var(--pq-bronze)] transition-colors ${paged(i)}`}
-            data-testid={`question-${q.n}`}
+          ))}
+        </ol>
+        {onReview && (
+          <ReviewScreen acks={acks} answers={answers} onJump={pager.jump} />
+        )}
+        {/* Under the question it refers to, not below the screen's height. */}
+        {pager.swipeBlocked && (
+          <p
+            role="status"
+            aria-live="polite"
+            className="mt-4 ml-[34px] pl-5 text-pq-mono-sm text-[var(--pq-bronze)] tracking-[0.06em] md:hidden"
+            data-testid="questions-swipe-hint"
           >
-            <div className="flex items-baseline gap-3">
-              <span
-                className="font-mono text-pq-eyebrow uppercase tracking-[0.22em] text-[var(--pq-bronze)] mt-0.5"
-                style={{ minWidth: 18 }}
-              >
-                {String(q.n).padStart(2, "0")}
-              </span>
-              <div className="flex-1 space-y-1">
-                {/* 2026-10-07 (CEO "영문 라벨도 한글로"): only the Korean line
-                    is shown. q.en stays in the data — it still labels each
-                    answer in the devil_advocate audit blob sent to /start. */}
-                <p className="font-serif text-pq-deck leading-snug text-[var(--pq-ivory)]">
-                  {q.ko}
-                </p>
-                {hints?.[q.n] && (
-                  <p
-                    className="font-serif text-pq-caption leading-snug"
-                    // 0.85 alpha — 12px text must clear the project's WCAG
-                    // ladder (globals.css: alpha 0.45 ≈ 3.99:1 is large-text
-                    // only; bronze 0.66 ≈ 3.65:1 failed AA for small text).
-                    style={{ color: "rgba(184,149,106,0.85)" }}
-                    data-testid={`persona-hint-${q.n}`}
-                  >
-                    {hints[q.n]}
-                  </p>
-                )}
-              </div>
-            </div>
-            <div className="mt-3 ml-[34px] flex flex-col gap-2">
-              <input
-                value={answers[q.n] ?? ""}
-                onChange={(e) =>
-                  setAnswers((prev) => ({ ...prev, [q.n]: e.target.value }))
-                }
-                placeholder="(선택) 한 줄로 답해보라"
-                aria-label={`질문 ${q.n} 답: ${q.ko}`}
-                className="w-full bg-transparent border-b border-[rgba(245,240,232,0.1)] py-1.5 text-pq-body-sm font-serif outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)]"
-              />
-              <label className="inline-flex items-center gap-2 cursor-pointer text-pq-mono-sm text-[var(--pq-ivory-dim)] hover:text-[var(--pq-bronze)]">
-                <input
-                  type="checkbox"
-                  checked={!!acks[q.n]}
-                  onChange={(e) =>
-                    setAcks((prev) => ({ ...prev, [q.n]: e.target.checked }))
-                  }
-                  className="accent-[var(--pq-bronze)]"
-                />
-                검토했음
-              </label>
-            </div>
-          </li>
-        ))}
-      </ol>
-
-      {pagedOnPhone && (
-        <div className="flex gap-3 md:hidden" data-testid="questions-pager">
-          <button
-            type="button"
-            onClick={() => (cur === 0 ? onBack?.() : setCur(cur - 1))}
-            disabled={submitting || (cur === 0 && !onBack)}
-            className="min-h-[48px] px-4 text-[15px] text-[var(--pq-ivory-dim)] disabled:opacity-30"
-            data-testid="questions-prev"
-          >
-            이전
-          </button>
-          {cur < lastIdx && (
-            <button
-              type="button"
-              onClick={() => {
-                const n = QUESTIONS[cur].n;
-                setAcks((prev) => ({ ...prev, [n]: true }));
-                setCur(cur + 1);
-              }}
-              className="pq-ink-btn-bronze flex min-h-[48px] flex-1 items-center justify-center text-[15px]"
-              data-testid="questions-next"
-            >
-              검토했음 · 다음
-            </button>
-          )}
-        </div>
-      )}
+            검토했음을 눌러야 다음 질문으로 넘어갑니다.
+          </p>
+        )}
+      </div>
 
       <div
         className={`flex-wrap gap-3 justify-between pt-3 border-t border-[var(--pq-ivory-line-soft)] ${
-          pagedOnPhone && cur < lastIdx ? "hidden md:flex" : "flex"
+          pagedOnPhone ? "hidden md:flex" : "flex"
         }`}
       >
-        {/* Paged on a phone, the pager's "이전" (previous question) is the
-            only back control — this one (→ setup) would sit right under it
-            with the same label on the last question. md+ is unchanged. */}
+        {/* Paged on a phone, the action bar's "이전" is the only back
+            control; this one (→ setup) and the start button below are the
+            md+ footer. */}
         {onBack ? (
           <button
             type="button"
@@ -571,6 +601,7 @@ export function QuestionsStep(props: {
           className={`pq-ink-btn-bronze inline-flex items-center gap-2 px-5 py-2 text-pq-mono-sm disabled:opacity-30 disabled:cursor-not-allowed ${
             pagedOnPhone && onBack ? "ml-auto" : ""
           }`}
+          data-testid="questions-start"
         >
           {submitting ? "시작하는 중…" : "진입 시계 시작"}
           <Gavel className="h-3.5 w-3.5" />
@@ -580,12 +611,256 @@ export function QuestionsStep(props: {
         <p
           aria-live="polite"
           role="status"
-          className="text-pq-mono-sm text-[var(--pq-ivory-faint)] text-right tracking-[0.06em]"
+          className={`text-pq-mono-sm text-[var(--pq-ivory-faint)] text-right tracking-[0.06em] ${
+            pagedOnPhone && !onReview ? "hidden md:block" : ""
+          }`}
         >
-          {`모든 질문에 ✓ 표시해야 진입 시계가 시작됩니다 (${QUESTIONS.filter((q) => acks[q.n]).length}/${QUESTIONS.length}).`}
+          {`모든 질문에 ✓ 표시해야 진입 시계가 시작됩니다 (${ackCount}/${QUESTIONS.length}).`}
         </p>
       )}
+
+      {pagedOnPhone && (
+        <PhoneActionBar testId="questions-pager">
+          <button
+            type="button"
+            onClick={pager.prev}
+            disabled={submitting || (cur === 0 && !onBack)}
+            className="min-h-[48px] px-4 text-[15px] text-[var(--pq-ivory-dim)] disabled:opacity-30"
+            data-testid="questions-prev"
+          >
+            이전
+          </button>
+          {onReview ? (
+            <button
+              type="button"
+              onClick={onStart}
+              disabled={!allAcked || submitting}
+              aria-disabled={!allAcked || submitting}
+              className="pq-ink-btn-bronze flex min-h-[48px] flex-1 items-center justify-center gap-2 text-[15px] disabled:opacity-30 disabled:cursor-not-allowed"
+              data-testid="questions-start-phone"
+            >
+              {submitting ? "시작하는 중…" : "진입 시계 시작"}
+              <Gavel className="h-4 w-4" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={pager.ackAndNext}
+              disabled={submitting}
+              className="pq-ink-btn-bronze flex min-h-[48px] flex-1 items-center justify-center text-[15px]"
+              data-testid="questions-next"
+            >
+              검토했음 · 다음
+            </button>
+          )}
+        </PhoneActionBar>
+      )}
     </section>
+  );
+}
+
+function QuestionItem(props: {
+  q: (typeof QUESTIONS)[number];
+  hint: string | undefined;
+  hiddenOnPhone: boolean;
+  acked: boolean;
+  answer: string;
+  setAcks: (f: (prev: Record<number, boolean>) => Record<number, boolean>) => void;
+  setAnswers: (f: (prev: Record<number, string>) => Record<number, string>) => void;
+}) {
+  const { q, hint, hiddenOnPhone, acked, answer, setAcks, setAnswers } = props;
+  return (
+    <li
+      className={`border-l-2 border-[var(--pq-ivory-line)] pl-5 hover:border-[var(--pq-bronze)] transition-colors ${
+        hiddenOnPhone ? "hidden md:block" : ""
+      }`}
+      data-testid={`question-${q.n}`}
+    >
+      <div className="flex items-baseline gap-3">
+        <span
+          className="font-mono text-pq-eyebrow uppercase tracking-[0.22em] text-[var(--pq-bronze)] mt-0.5"
+          style={{ minWidth: 18 }}
+        >
+          {String(q.n).padStart(2, "0")}
+        </span>
+        <div className="flex-1 space-y-1">
+          {/* 2026-10-07 (CEO "영문 라벨도 한글로"): only the Korean line
+              is shown. q.en stays in the data — it still labels each
+              answer in the devil_advocate audit blob sent to /start. */}
+          <p className="font-serif text-pq-deck leading-snug text-[var(--pq-ivory)]">
+            {q.ko}
+          </p>
+          {hint && (
+            <p
+              className="font-serif text-pq-caption leading-snug"
+              // 0.85 alpha — 12px text must clear the project's WCAG
+              // ladder (globals.css: alpha 0.45 ≈ 3.99:1 is large-text
+              // only; bronze 0.66 ≈ 3.65:1 failed AA for small text).
+              style={{ color: "rgba(184,149,106,0.85)" }}
+              data-testid={`persona-hint-${q.n}`}
+            >
+              {hint}
+            </p>
+          )}
+        </div>
+      </div>
+      <div className="mt-3 ml-[34px] flex flex-col gap-2">
+        <input
+          value={answer}
+          onChange={(e) =>
+            setAnswers((prev) => ({ ...prev, [q.n]: e.target.value }))
+          }
+          placeholder="(선택) 한 줄로 답해보라"
+          aria-label={`질문 ${q.n} 답: ${q.ko}`}
+          className="w-full bg-transparent border-b border-[rgba(245,240,232,0.1)] py-1.5 text-pq-body-sm font-serif outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)]"
+        />
+        <label className="inline-flex items-center gap-2 cursor-pointer text-pq-mono-sm text-[var(--pq-ivory-dim)] hover:text-[var(--pq-bronze)]">
+          <input
+            type="checkbox"
+            checked={acked}
+            onChange={(e) =>
+              setAcks((prev) => ({ ...prev, [q.n]: e.target.checked }))
+            }
+            className="accent-[var(--pq-bronze)]"
+          />
+          검토했음
+        </label>
+      </div>
+    </li>
+  );
+}
+
+/**
+ * Phone screen height: the viewport between the app bar and the bottom nav,
+ * less the step chrome above the screen (section label + progress, ~9rem)
+ * and the sticky action bar (~5rem), so each step reads as one screen and
+ * the bar sits at the bottom edge. Below md only; md+ is untouched.
+ */
+export const PAGER_SCREEN_CLASS =
+  "max-md:min-h-[calc(100dvh_-_var(--pq-topbar-height)_-_var(--pq-bottomnav-clearance)_-_14rem)]";
+
+function PhoneProgress({
+  cur,
+  acks,
+  ackCount,
+}: {
+  cur: number;
+  acks: Record<number, boolean>;
+  ackCount: number;
+}) {
+  return (
+    <div className="md:hidden" data-testid="questions-progress">
+      <div className="flex items-center justify-between text-[13px] text-[var(--pq-ivory-dim)]">
+        <span>
+          {cur === REVIEW_IDX ? "마지막 확인" : `질문 ${cur + 1} / ${QUESTIONS.length}`}
+        </span>
+        <span>
+          검토 {ackCount} / {QUESTIONS.length}
+        </span>
+      </div>
+      <div
+        className="mt-2 flex gap-1"
+        role="progressbar"
+        aria-label="검토한 질문"
+        aria-valuemin={0}
+        aria-valuemax={QUESTIONS.length}
+        aria-valuenow={ackCount}
+      >
+        {QUESTIONS.map((q, i) => (
+          <span
+            key={q.n}
+            data-testid={`progress-seg-${q.n}`}
+            data-state={acks[q.n] ? "acked" : i === cur ? "current" : "todo"}
+            className={`h-[3px] flex-1 transition-colors ${
+              acks[q.n]
+                ? "bg-[var(--pq-bronze)]"
+                : i === cur
+                  ? "bg-[var(--pq-ivory-mid)]"
+                  : "bg-[var(--pq-ivory-line)]"
+            }`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Last phone screen: every question with what the user wrote, tap to revisit. */
+function ReviewScreen({
+  acks,
+  answers,
+  onJump,
+}: {
+  acks: Record<number, boolean>;
+  answers: Record<number, string>;
+  onJump: (i: number) => void;
+}) {
+  return (
+    <div className="space-y-4 md:hidden" data-testid="questions-review">
+      <p className="font-serif text-pq-deck leading-snug text-[var(--pq-ivory)]">
+        일곱 개의 질문을 지나왔습니다.
+      </p>
+      <Caption>
+        고칠 답이 있으면 질문을 누르세요. 시작하면 아래 답이 이 멈춤의 기록에
+        그대로 남습니다.
+      </Caption>
+      <ol className="space-y-2">
+        {QUESTIONS.map((q, i) => {
+          const ans = (answers[q.n] ?? "").trim();
+          return (
+            <li key={q.n}>
+              <button
+                type="button"
+                onClick={() => onJump(i)}
+                className="w-full border-l-2 border-[var(--pq-ivory-line)] py-1.5 pl-4 text-left"
+                data-testid={`review-jump-${q.n}`}
+              >
+                <span className="block font-serif text-pq-body-sm leading-snug text-[var(--pq-ivory-mid)]">
+                  <span className="mr-2 font-mono text-pq-eyebrow tracking-[0.22em] text-[var(--pq-bronze)]">
+                    {String(q.n).padStart(2, "0")}
+                  </span>
+                  {q.ko}
+                </span>
+                <span
+                  className={`mt-1 block line-clamp-2 text-pq-mono-sm ${
+                    acks[q.n] ? "text-[var(--pq-ivory)]" : "text-[var(--pq-ivory-faint)]"
+                  }`}
+                >
+                  {acks[q.n] ? ans || "답 없이 검토함" : "검토 전"}
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}
+
+/**
+ * Phone-only action bar, sticky above the bottom nav (whose own padding
+ * already carries the home-indicator inset, so the offset adds the same
+ * env() term). Sticky, not fixed: it rides at the bottom edge while its
+ * step is on screen and settles at the end of the step otherwise, and no
+ * transformed ancestor can detach it. Hidden at md and up.
+ */
+export function PhoneActionBar({
+  children,
+  testId,
+}: {
+  children: React.ReactNode;
+  testId?: string;
+}) {
+  return (
+    <div
+      className="sticky z-30 -mx-4 flex gap-3 border-t border-[var(--pq-ivory-line)] bg-[var(--pq-ink)] px-4 py-3 md:hidden"
+      style={{
+        bottom: "calc(var(--pq-bottomnav-height) + env(safe-area-inset-bottom, 0px))",
+      }}
+      data-testid={testId}
+    >
+      {children}
+    </div>
   );
 }
 

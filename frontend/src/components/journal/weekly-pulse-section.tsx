@@ -113,8 +113,17 @@ export function WeeklyPulseSection() {
   // once more after the first paint settles.
   React.useEffect(() => {
     if (window.location.hash !== "#weekly-pulse") return;
+    // The window is scrolled by hand rather than with scrollIntoView: on a
+    // phone this section sits inside the journal's horizontal page track
+    // (journal-pager.tsx), and Chromium drops the scroll-margin for the outer
+    // scroller there, parking the heading under the sticky tab strip.
     const id = window.setTimeout(() => {
-      sectionRef.current?.scrollIntoView({ block: "start" });
+      const el = sectionRef.current;
+      if (!el) return;
+      const margin = parseFloat(getComputedStyle(el).scrollMarginTop) || 0;
+      window.scrollTo({
+        top: el.getBoundingClientRect().top + window.scrollY - margin,
+      });
     }, 400);
     return () => window.clearTimeout(id);
   }, []);
