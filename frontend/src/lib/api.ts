@@ -2,6 +2,25 @@ import { toast } from "sonner";
 import { hadSession } from "./had-session";
 import { currentLocationPath, loginHref } from "./login-redirect";
 import { isDemoMode, demoResponseFor } from "./demo";
+import { API } from "./endpoints";
+import { clearPersistedSwrCache } from "./persisted-swr-cache";
+
+/**
+ * Requests that end the account's session on this device. A success wipes the
+ * on-device screen cache (lib/persisted-swr-cache) right here, so it does not
+ * depend on which component made the call — DeleteAccountModal posts these
+ * directly and then full-navigates away without going through logout().
+ */
+const SESSION_ENDING_REQUESTS: ReadonlyArray<readonly [string, string]> = [
+  ["POST", API.auth.deleteRequest],
+  ["DELETE", API.auth.deleteAccount],
+  ["POST", API.auth.logout],
+];
+
+function endsSession(path: string, method: string | undefined): boolean {
+  const m = (method ?? "GET").toUpperCase();
+  return SESSION_ENDING_REQUESTS.some(([rm, rp]) => rm === m && rp === path);
+}
 
 /** Default request timeout in milliseconds. */
 const DEFAULT_TIMEOUT_MS = 30_000;
@@ -225,6 +244,7 @@ async function apiFetchOnce<T = unknown>(
       body && typeof body === "object" ? body : undefined,
     );
   }
+  if (endsSession(path, init?.method)) clearPersistedSwrCache();
   return res.json();
 }
 

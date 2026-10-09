@@ -6,13 +6,21 @@ import type { MetadataRoute } from "next";
 // redirects to /home for logged-in users, marketing for guests).
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    // 2026-09-02: "당신은 당신 포트폴리오의 CFO" 는 삭제된 artifact 리포트
-    // 파이프라인의 카피였다. 홈 화면에 설치되면 이 이름이 아이콘 밑에 박히므로
-    // 실제 하는 일로 교체 (layout.tsx SITE_TITLE_KR 과 같은 문장을 쓴다).
-    name: "PivoxQuant — 당신 포트폴리오의 CFO",
+    // Stable app identity (W3C manifest `id`): without it the browser keys the
+    // install on start_url, so changing start_url later would read as a
+    // different app.
+    id: "/",
+    // 2026-10-09: the installed app's name and the install sheet copy describe
+    // what the app does — the one loop it ships (멈춤 → 기록 → 거울), all of it
+    // on the user's own record. The earlier "당신 포트폴리오의 CFO / 장부를
+    // 결산" wording (and the 2026-09-02 note that synced it with layout.tsx
+    // SITE_TITLE_KR) is gone from the manifest: this is the name the OS shows
+    // under the icon and on the install sheet, so it names the product, not
+    // the metaphor. layout.tsx's web title is a separate (marketing) surface.
+    name: "PivoxQuant — 멈춤 · 기록 · 거울",
     short_name: "PivoxQuant",
     description:
-      "장부를 지키고 결산해 되돌려주는 CFO. 사기 전에 멈춰 이유를 적고, 그 기록으로 자신의 매매 습관을 되비춥니다. 관측 자료이며 투자 권유가 아닙니다.",
+      "사기 전에 멈춰 이유를 적고, 체결을 기록하고, 그 기록으로 말한 나와 실제의 나를 나란히 봅니다. 종목을 골라 주지 않습니다. 관측 자료이며 투자 권유가 아닙니다.",
     start_url: "/",
     scope: "/",
     display: "standalone",
@@ -40,32 +48,46 @@ export default function manifest(): MetadataRoute.Manifest {
       { src: "/icons/icon-144x144.png", sizes: "144x144", type: "image/png", purpose: "any" },
       { src: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png", purpose: "any" },
       { src: "/icons/icon-512x512.png", sizes: "512x512", type: "image/png", purpose: "any" },
-      // Maskable: reuses 512 until a true safe-zone asset is generated.
-      // Lighthouse accepts dual-purpose declarations; Chrome prefers explicit.
-      { src: "/icons/icon-512x512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
-      { src: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png", purpose: "maskable" },
+      { src: "/icons/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
+      // Maskable: a separate cut whose mark sits inside the 80% safe zone, so
+      // Android's circle / squircle / teardrop masks never clip the P or the dot.
+      // Sources + renderer: public/icons/*.svg, scripts/render-pwa-assets.mjs.
+      { src: "/icons/icon-maskable-192x192.png", sizes: "192x192", type: "image/png", purpose: "maskable" },
+      { src: "/icons/icon-maskable-512x512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
+    // Long-press shortcuts — the loop in the order it is lived: 멈춤 before a
+    // trade, 기록 after it, 거울 when looking back. Each carries its bottom-nav
+    // icon (public/icons/shortcut-*.svg) so the three rows are told apart.
     shortcuts: [
       {
-        name: "Portfolio",
-        short_name: "Portfolio",
-        description: "Open your portfolio dashboard.",
-        url: "/portfolio",
-        icons: [{ src: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" }],
+        name: "멈춤 — 사기 전에 이유 적기",
+        short_name: "멈춤",
+        description: "주문 전에 일곱 개의 질문에 답합니다.",
+        url: "/pre-trade",
+        icons: [
+          { src: "/icons/shortcut-pause-96x96.png", sizes: "96x96", type: "image/png" },
+          { src: "/icons/shortcut-pause-192x192.png", sizes: "192x192", type: "image/png" },
+        ],
       },
       {
-        name: "Mirror",
-        short_name: "Mirror",
-        description: "What you declared, next to what your record shows.",
-        url: "/mirror",
-        icons: [{ src: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" }],
-      },
-      {
-        name: "Journal",
-        short_name: "Journal",
-        description: "Your decision record.",
+        name: "기록 — 체결에 한 줄 남기기",
+        short_name: "기록",
+        description: "체결과 그때의 이유를 남깁니다.",
         url: "/journal",
-        icons: [{ src: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" }],
+        icons: [
+          { src: "/icons/shortcut-journal-96x96.png", sizes: "96x96", type: "image/png" },
+          { src: "/icons/shortcut-journal-192x192.png", sizes: "192x192", type: "image/png" },
+        ],
+      },
+      {
+        name: "거울 — 말한 나와 실제의 나",
+        short_name: "거울",
+        description: "가입 때 답한 습관과 최근 30일 기록을 나란히 봅니다.",
+        url: "/mirror",
+        icons: [
+          { src: "/icons/shortcut-mirror-96x96.png", sizes: "96x96", type: "image/png" },
+          { src: "/icons/shortcut-mirror-192x192.png", sizes: "192x192", type: "image/png" },
+        ],
       },
     ],
   };

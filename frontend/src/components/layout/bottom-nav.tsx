@@ -1,46 +1,42 @@
 "use client";
 
 /**
- * BottomNav — Dossier editorial bottom tab bar, mobile only.
+ * BottomNav — the phone tab bar.
  *
  * Rendered by <DashboardLayout/> below `md` (< 768px). Visual language
  * mirrors <TerminalSidebar/>: Vantablack ink ground, Ivory text, Bronze
  * accent on the active tab (top hairline + icon tint + label ink).
  *
- * Layout: 3 primary tabs (거울 / 멈춤 / 기록) + More. The fourth opens a
- * full drawer (ModalShell, slides from bottom) holding Portfolio and
- * Settings, plus a Bronze-accent Sign Out at the foot.
+ * 2026-09-20 — the bar became 거울 / 멈춤 / 기록 + 더보기 (the landing
+ * promises exactly those three screens and the CEO could not find 기록).
  *
- * 2026-09-20 — the bar used to be 거울 / Portfolio / 멈춤 with 기록 hidden
- * under More. The landing promises exactly three screens (멈춤 · 기록 ·
- * 거울, see landing/three-steps.tsx), and the CEO could not find 기록 on
- * a phone. The three loop screens now own the bar; Portfolio, which is
- * the only screen that needs a price feed, moved to the drawer.
+ * 2026-10-09 (CEO) — four tabs, no drawer: 거울 · 멈춤 · 기록 · 포트폴리오.
+ * 포트폴리오 was the only thing in the 더보기 drawer anyone opened; a drawer
+ * holding one screen is a website's hamburger, not an app's tab bar. 설정 and
+ * 로그아웃 live in the app bar's avatar menu (profile-dropdown.tsx, which also
+ * links /support). /settings and /support/* light no tab — they are reached
+ * from the avatar, like an app's account screen.
+ *
+ * Native behaviour:
+ *   - The tapped tab lights at once, not when the route commits.
+ *   - Tapping the tab you are on scrolls that screen back to the top.
+ *   - Press feedback (dim + icon press-in) is in globals.css
+ *     ("Touch feedback"), keyed on [data-pq-bottom-nav].
  *
  * Accessibility:
- *   - `role="navigation"` + `aria-label`.
- *   - 44×44 min touch target per tab.
- *   - `aria-current="page"` on the active route.
+ *   - `<nav aria-label>`; `aria-current="page"` on the shown route's tab.
+ *   - 64px-tall targets, a quarter of the width each.
  *   - `safe-area-inset-bottom` honoured via `.pq-bottom-nav` (see
  *     globals.css PWA standalone block).
  */
 
 import { useState } from "react";
+import type { MouseEvent } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import {
-  Briefcase,
-  MoreHorizontal,
-  X,
-  NotebookPen,
-  Settings as SettingsIcon,
-  LogOut,
-  Gavel,
-  Contrast,
-} from "lucide-react";
+import { usePathname } from "next/navigation";
+import { Briefcase, Contrast, Gavel, NotebookPen } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { ModalShell } from "@/components/ui/modal-shell";
-import { useAuth } from "@/lib/auth";
+import { SCROLL_TOP_EVENT } from "@/lib/scroll-top-event";
 
 type Tab = {
   href: string;
@@ -48,303 +44,107 @@ type Tab = {
   icon: LucideIcon;
 };
 
-type DrawerGroup = {
-  /** Uppercase serif label shown above the group. */
-  label: string;
-  items: Tab[];
-};
-
-// Primary bottom-bar tabs — 거울 / 멈춤 / 기록, the same order as the
-// desktop sidebar (terminal-sidebar.tsx). Labels are literal (no locale
-// dep) so a missing i18n key can never blank the bar on mobile.
-//
-// 거울 (Mirror) leads as the home; 멈춤 → 기록 → 거울 is the product loop.
-const PRIMARY_TABS: Tab[] = [
+// 거울 (Mirror) leads as the home; 멈춤 → 기록 → 거울 is the product loop;
+// 포트폴리오 last — the one screen that is a ledger rather than the loop.
+// Labels are literal (no locale dep) so a missing i18n key can never blank
+// the bar on mobile.
+export const PRIMARY_TABS: ReadonlyArray<Tab> = [
   { href: "/mirror", label: "거울", icon: Contrast },
   { href: "/pre-trade", label: "멈춤", icon: Gavel },
   { href: "/journal", label: "기록", icon: NotebookPen },
+  { href: "/portfolio", label: "포트폴리오", icon: Briefcase },
 ];
 
-// Drawer — everything the desktop sidebar has that the bar does not.
-const DRAWER_GROUPS: DrawerGroup[] = [
-  {
-    label: "더보기",
-    items: [
-      { href: "/portfolio", label: "포트폴리오", icon: Briefcase },
-    ],
-  },
-  {
-    label: "계정",
-    items: [
-      { href: "/settings", label: "설정", icon: SettingsIcon },
-    ],
-  },
-];
-
-const ALL_DRAWER_HREFS: string[] = DRAWER_GROUPS.flatMap((g) => g.items.map((it) => it.href));
-
-function isRouteActive(pathname: string | null, href: string): boolean {
+export function isRouteActive(pathname: string | null, href: string): boolean {
   if (!pathname) return false;
   return pathname === href || pathname.startsWith(href + "/");
 }
 
+function isPlainClick(e: MouseEvent): boolean {
+  return !(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0);
+}
+
+function prefersReducedMotion(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+  );
+}
+
 export function BottomNav() {
   const pathname = usePathname();
-  const router = useRouter();
-  const { logout } = useAuth();
-  const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // "More" is active whenever the current path matches a drawer-only
-  // route (one not already in the primary bar).
-  const primaryHrefs = new Set(PRIMARY_TABS.map((t) => t.href));
-  const moreActive = ALL_DRAWER_HREFS.some(
-    (href) => !primaryHrefs.has(href) && isRouteActive(pathname, href),
-  );
+  // A tab lights the moment it is tapped, not when the route commits (a cold
+  // route can take a second on a phone). Remembered against the pathname it
+  // was tapped on, so it expires by itself once the navigation lands — or if
+  // the user ends up somewhere else.
+  const [tapped, setTapped] = useState<{ href: string; from: string | null } | null>(null);
+  const pendingHref = tapped && tapped.from === pathname ? tapped.href : null;
+  const isLit = (href: string) =>
+    pendingHref ? pendingHref === href : isRouteActive(pathname, href);
 
-  async function handleSignOut() {
-    setDrawerOpen(false);
-    try {
-      await logout();
-    } finally {
-      router.push("/");
+  function onTabClick(e: MouseEvent<HTMLAnchorElement>, href: string) {
+    if (!isPlainClick(e)) return;
+    if (pathname === href) {
+      // Native tab bars: tapping the current tab scrolls it back to the top.
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? "auto" : "smooth" });
+      window.dispatchEvent(new Event(SCROLL_TOP_EVENT));
+      return;
     }
+    setTapped({ href, from: pathname });
   }
 
   return (
-    <>
-      <nav
-        className="pq-bottom-nav fixed inset-x-0 bottom-0 z-50 md:hidden"
-        aria-label="Primary mobile navigation"
-        data-pq-bottom-nav
-        style={{
-          background: "var(--pq-ink)",
-          borderTop: "0.5px solid var(--pq-ivory-line)",
-          paddingBottom: "env(safe-area-inset-bottom, 0px)",
-        }}
-      >
-        <ul className="flex h-16 items-stretch">
-          {PRIMARY_TABS.map((tab) => (
-            <BottomTab
-              key={tab.href}
-              tab={tab}
-              active={isRouteActive(pathname, tab.href)}
-            />
-          ))}
-          <li className="flex-1">
-            <button
-              type="button"
-              onClick={() => setDrawerOpen(true)}
-              aria-label="Open navigation menu"
-              aria-expanded={drawerOpen}
-              aria-haspopup="dialog"
-              className="group relative flex h-full w-full flex-col items-center justify-center gap-1"
-            >
-              <TopHairline active={moreActive || drawerOpen} />
-              <MoreHorizontal
-                className="h-[18px] w-[18px] shrink-0"
-                strokeWidth={1.5}
-                style={{
-                  color:
-                    moreActive || drawerOpen
-                      ? "var(--pq-bronze)"
-                      : "rgba(245, 240, 232, 0.5)",
-                }}
-              />
-              <span
-                className="font-serif"
-                style={{
-                  fontSize: "var(--pq-text-eyebrow)",
-                  color:
-                    moreActive || drawerOpen
-                      ? "var(--pq-ivory)"
-                      : "rgba(245, 240, 232, 0.55)",
-                }}
-              >
-                더보기
-              </span>
-            </button>
-          </li>
-        </ul>
-      </nav>
-
-      {drawerOpen && (
-        <ModalShell
-          onClose={() => setDrawerOpen(false)}
-          ariaLabel="Navigation menu"
-          className="!items-end"
-        >
-          <div
-            className="w-full rounded-t-[2px]"
-            style={{
-              background: "var(--pq-ink)",
-              borderTop: "0.5px solid rgba(245, 240, 232, 0.12)",
-              paddingBottom: "max(16px, env(safe-area-inset-bottom))",
-            }}
-          >
-            {/* Drawer header */}
-            <div
-              className="flex items-center justify-between px-5 py-4"
-              style={{
-                borderBottom: "0.5px solid var(--pq-ivory-line)",
-              }}
-            >
-              <span
-                className="font-serif uppercase"
-                style={{
-                  fontSize: "var(--pq-text-eyebrow)",
-                  letterSpacing: "0.24em",
-                  color: "var(--pq-ivory)",
-                }}
-              >
-                메뉴
-              </span>
-              <button
-                type="button"
-                onClick={() => setDrawerOpen(false)}
-                aria-label="Close menu"
-                className="flex h-11 w-11 items-center justify-center rounded-sm transition-colors hover:bg-[rgba(247,245,239,0.06)]"
-              >
-                <X
-                  className="h-4 w-4"
-                  strokeWidth={1.5}
-                  style={{ color: "rgba(245, 240, 232, 0.6)" }}
-                />
-              </button>
-            </div>
-
-            {/* Drawer body — 4-group IA mirroring the desktop sidebar */}
-            <div
-              className="max-h-[65vh] overflow-y-auto px-2 py-2"
-              role="list"
-            >
-              {DRAWER_GROUPS.map((group) => (
-                <DrawerGroupSection
-                  key={group.label}
-                  group={group}
-                  pathname={pathname}
-                  onNavigate={() => setDrawerOpen(false)}
-                />
-              ))}
-            </div>
-
-            {/* Sign out — Bronze-accent, hairline divider above */}
-            <div
-              className="px-2 pt-2"
-              style={{
-                borderTop: "0.5px solid var(--pq-ivory-line)",
-              }}
-            >
-              <button
-                type="button"
-                onClick={handleSignOut}
-                className="flex min-h-[44px] w-full items-center gap-3 rounded-sm font-serif uppercase transition-colors hover:bg-[rgba(184,149,106,0.08)]"
-                style={{
-                  padding: "13px 14px",
-                  fontSize: "var(--pq-text-body)",
-                  letterSpacing: "0.2em",
-                  color: "var(--pq-bronze)",
-                  borderLeft: "3px solid transparent",
-                }}
-              >
-                <LogOut
-                  className="h-[15px] w-[15px] shrink-0"
-                  strokeWidth={1.5}
-                  style={{ color: "var(--pq-bronze)" }}
-                />
-                로그아웃
-              </button>
-            </div>
-          </div>
-        </ModalShell>
-      )}
-    </>
+    <nav
+      className="pq-bottom-nav fixed inset-x-0 bottom-0 z-50 md:hidden"
+      aria-label="Primary mobile navigation"
+      data-pq-bottom-nav
+      data-pq-chrome
+      style={{
+        background: "var(--pq-ink)",
+        borderTop: "0.5px solid var(--pq-ivory-line)",
+        paddingBottom: "env(safe-area-inset-bottom, 0px)",
+      }}
+    >
+      <ul className="flex h-16 items-stretch">
+        {PRIMARY_TABS.map((tab) => (
+          <BottomTab
+            key={tab.href}
+            tab={tab}
+            active={isLit(tab.href)}
+            current={isRouteActive(pathname, tab.href)}
+            onClick={(e) => onTabClick(e, tab.href)}
+          />
+        ))}
+      </ul>
+    </nav>
   );
 }
 
 // ─── Subcomponents ────────────────────────────────────────────────────────────
 
-function DrawerGroupSection({
-  group,
-  pathname,
-  onNavigate,
+function BottomTab({
+  tab,
+  active,
+  current,
+  onClick,
 }: {
-  group: DrawerGroup;
-  pathname: string | null;
-  onNavigate: () => void;
+  tab: Tab;
+  /** Lit: the current route, or the tab just tapped while its route loads. */
+  active: boolean;
+  /** The route actually shown — what aria-current reports. */
+  current: boolean;
+  onClick: (e: MouseEvent<HTMLAnchorElement>) => void;
 }) {
-  return (
-    <div className="mb-1">
-      {/* Group header — bronze tint label + hairline divider */}
-      <div className="px-3 mt-4 mb-1.5" aria-hidden="true">
-        <span
-          className="font-serif uppercase"
-          style={{
-            fontSize: "var(--pq-text-eyebrow)",
-            letterSpacing: "0.22em",
-            color: "rgba(184, 149, 106, 0.78)",  /* 0.55 = 2.84:1; bronze needs ≥0.76 on #050505 */
-            display: "block",
-          }}
-        >
-          {group.label}
-        </span>
-        <div
-          className="mt-1 h-px"
-          style={{ backgroundColor: "var(--pq-ivory-line)" }}
-        />
-      </div>
-
-      <ul role="list">
-        {group.items.map((item) => {
-          const active = isRouteActive(pathname, item.href);
-          const Icon = item.icon;
-          return (
-            <li key={item.href}>
-              <Link
-                href={item.href}
-                onClick={onNavigate}
-                aria-current={active ? "page" : undefined}
-                className="flex min-h-[44px] items-center gap-3 rounded-sm font-serif uppercase transition-colors"
-                style={{
-                  padding: "13px 14px",
-                  fontSize: "var(--pq-text-body)",
-                  letterSpacing: "0.2em",
-                  color: active
-                    ? "var(--pq-ivory)"
-                    : "rgba(245, 240, 232, 0.62)",
-                  backgroundColor: active
-                    ? "rgba(247, 245, 239, 0.06)"
-                    : "transparent",
-                  borderLeft: active
-                    ? "3px solid var(--pq-bronze)"
-                    : "3px solid transparent",
-                }}
-              >
-                <Icon
-                  className="h-[15px] w-[15px] shrink-0"
-                  strokeWidth={1.5}
-                  style={{
-                    color: active
-                      ? "var(--pq-bronze)"
-                      : "rgba(245, 240, 232, 0.55)",
-                  }}
-                />
-                <span className="flex-1">{item.label}</span>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-    </div>
-  );
-}
-
-function BottomTab({ tab, active }: { tab: Tab; active: boolean }) {
   const Icon = tab.icon;
   return (
     <li className="flex-1">
       <Link
         href={tab.href}
-        aria-current={active ? "page" : undefined}
+        onClick={onClick}
+        aria-current={current ? "page" : undefined}
+        data-lit={active ? "true" : undefined}
         className="group relative flex h-full w-full flex-col items-center justify-center gap-1"
       >
         <TopHairline active={active} />
@@ -379,7 +179,8 @@ function TopHairline({ active }: { active: boolean }) {
       className="absolute inset-x-3 top-0 h-[2px]"
       style={{
         background: active ? "var(--pq-bronze)" : "transparent",
-        transition: "background 140ms ease-out",
+        transition:
+          "background var(--motion-duration-fast) var(--motion-easing-emphasized)",
       }}
     />
   );

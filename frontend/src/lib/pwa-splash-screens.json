@@ -1,0 +1,14 @@
+[
+  { "file": "splash-750x1334.png", "width": 375, "height": 667, "dpr": 2, "devices": "iPhone SE (2nd/3rd), 8, 7, 6s" },
+  { "file": "splash-828x1792.png", "width": 414, "height": 896, "dpr": 2, "devices": "iPhone 11, XR" },
+  { "file": "splash-1125x2436.png", "width": 375, "height": 812, "dpr": 3, "devices": "iPhone 13 mini, 12 mini, 11 Pro, XS, X" },
+  { "file": "splash-1170x2532.png", "width": 390, "height": 844, "dpr": 3, "devices": "iPhone 14, 13, 13 Pro, 12, 12 Pro" },
+  { "file": "splash-1179x2556.png", "width": 393, "height": 852, "dpr": 3, "devices": "iPhone 16, 15, 15 Pro, 14 Pro" },
+  { "file": "splash-1206x2622.png", "width": 402, "height": 874, "dpr": 3, "devices": "iPhone 17, 17 Pro, 16 Pro" },
+  { "file": "splash-1242x2208.png", "width": 414, "height": 736, "dpr": 3, "devices": "iPhone 8 Plus, 7 Plus" },
+  { "file": "splash-1242x2688.png", "width": 414, "height": 896, "dpr": 3, "devices": "iPhone 11 Pro Max, XS Max" },
+  { "file": "splash-1260x2736.png", "width": 420, "height": 912, "dpr": 3, "devices": "iPhone Air" },
+  { "file": "splash-1284x2778.png", "width": 428, "height": 926, "dpr": 3, "devices": "iPhone 14 Plus, 13 Pro Max, 12 Pro Max" },
+  { "file": "splash-1290x2796.png", "width": 430, "height": 932, "dpr": 3, "devices": "iPhone 16 Plus, 15 Plus, 15 Pro Max, 14 Pro Max" },
+  { "file": "splash-1320x2868.png", "width": 440, "height": 956, "dpr": 3, "devices": "iPhone 17 Pro Max, 16 Pro Max" }
+]

@@ -354,7 +354,8 @@ function ImportPageInner() {
         <Caption className="mt-2 max-w-lg">{t("journal.import.page.headingDesc")}</Caption>
         <Link
           href="/journal"
-          className="mt-3 inline-flex items-center gap-2 font-mono text-pq-eyebrow uppercase tracking-[0.16em] text-[var(--pq-bronze-light)] underline-offset-4 hover:underline"
+          // Phone: the app bar's ‹ carries back (top-bar.tsx subScreen).
+          className="mt-3 hidden items-center gap-2 font-mono text-pq-eyebrow uppercase tracking-[0.16em] text-[var(--pq-bronze-light)] underline-offset-4 hover:underline md:inline-flex"
         >
           {t("journal.import.page.backToJournal")}
         </Link>
@@ -458,7 +459,7 @@ function ImportPageInner() {
       {result && (
         <section
           ref={resultRef}
-          className="mt-8 scroll-mt-[calc(var(--pq-topbar-height)+1rem)] rounded-[2px] border p-5 sm:p-6"
+          className="mt-8 scroll-mt-[calc(var(--pq-aux-sticky-top)+1rem)] rounded-[2px] border p-5 sm:p-6"
           style={{ borderColor: "var(--pq-ivory-line)", background: "var(--pq-card-veil)" }}
           aria-label={t("journal.import.page.resultKicker")}
         >

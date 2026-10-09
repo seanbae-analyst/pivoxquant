@@ -3,9 +3,21 @@
 import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { useEffect, useSyncExternalStore } from "react";
-import LandingV2 from "@/components/landing/landing-v2";
-import { AppCover, AppWelcome, isStandaloneDisplay } from "@/components/pwa/app-welcome";
+import dynamic from "next/dynamic";
+import { AppCover, isStandaloneDisplay } from "@/components/pwa/app-cover";
 import { isDemoMode } from "@/lib/demo";
+
+// 2026-10-09 (perf): the landing (≈364KB gz with motion) and the welcome
+// cards are split out of "/"'s first chunk. The landing keeps SSR — crawlers
+// and link unfurlers still get the full HTML (see the 2026-09-02 note below)
+// — while the installed app, which shows AppCover / AppWelcome and never the
+// landing once it knows it is standalone, need not wait for that JS before
+// its cover is interactive. The cover itself is static (app-cover.tsx).
+const LandingV2 = dynamic(() => import("@/components/landing/landing-v2"));
+const AppWelcome = dynamic(
+  () => import("@/components/pwa/app-welcome").then((m) => m.AppWelcome),
+  { loading: () => <AppCover /> },
+);
 
 /**
  * Root LoadingScreen — Vantablack editorial treatment.
@@ -105,7 +117,9 @@ export default function Page() {
   // users a single frame is the right trade for a landing that is legible to
   // every crawler and chat preview.
   if (loading) return standalone ? <AppCover /> : <LandingOrAppSplash />;
-  if (user) return <LoadingScreen />;
+  // Installed app: hold the cover through the redirect to /mirror, so the
+  // launch reads splash → cover → 거울 with no pulse-dot loading screen.
+  if (user) return standalone ? <AppCover /> : <LoadingScreen />;
 
   // Opened from the home-screen icon: an app has no landing page (2026-10-07).
   if (standalone) return <AppWelcome />;

@@ -30,6 +30,28 @@ const OFFLINE_URL = "/offline.html";
 // Static assets to precache on install
 const PRECACHE_ASSETS = [OFFLINE_URL];
 
+// App shells of the phone tab destinations (2026-10-09). Measured before:
+// tapping 기록 offline replaced the whole app with offline.html — a client
+// navigation whose RSC fetch fails falls back to a full page load, and only
+// offline.html was cached. These pages render their content client-side from
+// /api (which is never cached here as a success — see networkFirst), so the
+// HTML is the same shell for everyone: no user data, only the locale cookie's
+// <html lang> and the per-response CSP nonce, which travels with the cached
+// response's own CSP header. With the shell cached, the app stays on screen
+// offline and says so inline (components/pwa/offline-banner.tsx), and a
+// launch opens from the cached shell at once while the network refreshes it
+// (stale-while-revalidate, navigationHandler). A deploy changes CACHE_VERSION
+// and the activate step drops every older shell along with the old caches.
+//
+// Best-effort: a shell that fails, redirects (beta gate / login) or is not
+// HTML is skipped and never blocks install. Each cached shell also pulls in
+// the /_next/static chunks and stylesheets it references.
+const APP_SHELL_ROUTES = ["/mirror", "/pre-trade", "/journal", "/portfolio", "/settings"];
+
+// A navigation that takes longer than this falls back to the cached shell
+// (when there is one) while the network response still refreshes the cache.
+const NAVIGATION_TIMEOUT_MS = 4000;
+
 // ── Cache strategy config ──────────────────────────────────────
 // NETWORK_ONLY covers anything sensitive (auth), live (realtime/daytrade),
 // LLM-generated (/api/ai), or inherently user-specific + mutating enough
@@ -86,10 +108,53 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
       .open(STATIC_CACHE)
-      .then((cache) => cache.addAll(PRECACHE_ASSETS))
+      .then((cache) =>
+        cache
+          .addAll(PRECACHE_ASSETS)
+          .then(() => Promise.allSettled(APP_SHELL_ROUTES.map((r) => precacheShell(cache, r)))),
+      )
       .then(() => self.skipWaiting()),
   );
 });
+
+/** True for a same-origin, non-redirected HTML 200 — the only shell we keep. */
+function isCacheableShell(response) {
+  if (!response || !response.ok || response.redirected) return false;
+  if (response.status !== 200) return false;
+  const type = response.headers.get("content-type") || "";
+  return type.includes("text/html");
+}
+
+/** Stamp `sw-cached-at` so cacheFirst can age the entry like its own. */
+async function putStamped(cache, request, response) {
+  const headers = new Headers(response.headers);
+  headers.set("sw-cached-at", Date.now().toString());
+  const body = await response.blob();
+  await cache.put(request, new Response(body, { status: response.status, headers }));
+}
+
+/** `/_next/static/...` script and stylesheet URLs referenced by an HTML page. */
+function staticChunkUrls(html) {
+  const urls = new Set();
+  const re = /(?:src|href)="(\/_next\/static\/[^"]+\.(?:js|css))"/g;
+  let m;
+  while ((m = re.exec(html)) !== null) urls.add(m[1]);
+  return [...urls];
+}
+
+async function precacheShell(cache, route) {
+  const response = await fetch(route, { credentials: "same-origin" });
+  if (!isCacheableShell(response)) return;
+  const html = await response.clone().text();
+  await cache.put(route, response);
+  await Promise.allSettled(
+    staticChunkUrls(html).map(async (url) => {
+      if (await cache.match(url)) return;
+      const res = await fetch(url);
+      if (res.ok) await putStamped(cache, url, res);
+    }),
+  );
+}
 
 // ── Activate ───────────────────────────────────────────────────
 self.addEventListener("activate", (event) => {
@@ -180,7 +245,7 @@ self.addEventListener("fetch", (event) => {
 
   // HTML navigation — network-first with offline fallback
   if (request.mode === "navigate") {
-    event.respondWith(navigationHandler(request));
+    event.respondWith(navigationHandler(request, event));
     return;
   }
 });
@@ -310,22 +375,52 @@ async function networkFirst(request, cacheName, maxAge) {
   }
 }
 
-async function navigationHandler(request) {
-  try {
-    const response = await fetch(request);
-    // Only cache successful navigations. Previously we cached every
-    // response regardless of status, which meant a transient 500/502
-    // could be served from cache on the next offline reload — users
-    // would see the broken page instead of offline.html. Status 0
-    // (opaque) is also excluded since we cannot inspect it.
-    if (response.ok && response.status >= 200 && response.status < 300) {
-      const cache = await caches.open(STATIC_CACHE);
-      cache.put(request, response.clone());
+async function navigationHandler(request, event) {
+  const cache = await caches.open(STATIC_CACHE);
+  const path = new URL(request.url).pathname;
+  // Shells are keyed by path; a query string (?tab=…) does not change them.
+  const cached = await cache.match(request, { ignoreSearch: true });
+
+  const network = fetch(request).then((response) => {
+    // Only cache a successful, non-redirected HTML navigation. A transient
+    // 500/502 must not be replayed offline, and a redirect (beta gate, login)
+    // must never be stored under the page's own URL.
+    if (isCacheableShell(response)) {
+      return cache.put(path, response.clone()).then(() => response);
     }
     return response;
+  });
+  // A failure after a cached answer was already served is expected.
+  network.catch(() => {});
+
+  // The phone tab destinations open from the cached shell at once
+  // (stale-while-revalidate): a launch no longer waits for a server render.
+  // The shell carries its own CSP header + nonce pair, so it stays
+  // self-consistent; its data comes from /api, never from this cache. The
+  // network answer refreshes the shell for the next launch.
+  if (cached && APP_SHELL_ROUTES.includes(path)) {
+    event.waitUntil(network.catch(() => {}));
+    return cached;
+  }
+
+  if (!cached) {
+    try {
+      return await network;
+    } catch {
+      return caches.match(OFFLINE_URL);
+    }
+  }
+
+  // Other cached pages: the network still wins when it answers in time; on a
+  // stalled connection or offline the cached copy keeps the app on screen.
+  const timeout = new Promise((resolve) =>
+    setTimeout(() => resolve(null), NAVIGATION_TIMEOUT_MS),
+  );
+  try {
+    const first = await Promise.race([network, timeout]);
+    return first || cached;
   } catch {
-    const cached = await caches.match(request);
-    return cached || caches.match(OFFLINE_URL);
+    return cached;
   }
 }
 

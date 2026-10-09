@@ -1,57 +1,57 @@
 import { SITE_URL } from "@/lib/site-url";
 import type { Metadata, Viewport } from "next";
-import {
-  Geist,
-  JetBrains_Mono,
-  Source_Serif_4,
-  Playfair_Display,
-} from "next/font/google";
+import localFont from "next/font/local";
 import { cookies, headers } from "next/headers";
 import { Toaster } from "sonner";
 import "./globals.css";
 import { Providers } from "./providers";
 import { CookieConsent } from "@/components/ui/cookie-consent";
 import { InstallPrompt } from "@/components/pwa/install-prompt";
+import { SPLASH_STARTUP_IMAGES } from "@/lib/pwa-splash";
+
+// Fonts are SELF-HOSTED (src/app/fonts/*.woff2, latin subset, variable wght —
+// all SIL OFL 1.1) since 2026-10-09. `next/font/google` fetches at build time,
+// and Turbopack intermittently failed every route with "next/font/google
+// queries have exactly one entry" when Google served a font URL it couldn't
+// parse (CI E2E on #642, local builds) — a build that depends on a third-party
+// response can break a prod deploy at random. One variable file per family
+// also replaces six static cuts (≈237KB → ≈150KB). Same CSS variables as before.
 
 // Geist — latin UI/headings. Pretendard (CDN link below) handles Korean.
-const geist = Geist({
+const geist = localFont({
+  src: "./fonts/geist-latin-var.woff2",
   variable: "--font-sans",
-  subsets: ["latin"],
+  weight: "100 900",
   display: "swap",
 });
 
-// Tabular-nums mono for prices, ratios, tickers
-const mono = JetBrains_Mono({
+// Tabular-nums mono for prices, ratios, tickers (400–600).
+const mono = localFont({
+  src: "./fonts/jetbrains-mono-latin-var.woff2",
   variable: "--font-mono",
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  weight: "400 600",
   display: "swap",
 });
 
-// Editorial serif for long-form reading surfaces (landing, /docs, terms, privacy).
-// Was "report surfaces (Morning Brief, Weekly Memo, 10-K Personal)" — those
-// artifacts were deleted in the 2026-08-31 prune; the font is still in use.
-// Design audit 2026-06-10 (P2): 75 call sites use `font-serif italic`, but
-// only the normal style was loaded — every editorial italic (brand wordmark,
-// deposition quotes, rationale pull-quotes) rendered as a browser-synthesized
-// oblique. Load the real italic cuts (build-time fetch, ~tens of KB).
-const serif = Source_Serif_4({
+// Editorial serif for long-form reading surfaces (landing, /docs, terms,
+// privacy). Normal style only — italic was removed from the whole UI on
+// 2026-06-15. Headings only → preload: false (body text is Geist/Pretendard).
+const serif = localFont({
+  src: "./fonts/source-serif-4-latin-var.woff2",
   variable: "--font-serif",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  style: ["normal", "italic"],
+  weight: "400 700",
   display: "swap",
+  preload: false,
 });
 
-// Display serif — high-contrast Didone-adjacent face used only on the
-// landing hero H1, splash wordmark, and persona hero name. Kept to three
-// weights (500/600/700) + italic to keep the font payload small; Next.js
-// fetches at build time so unused weights never reach the client.
-const display = Playfair_Display({
+// Display serif — landing hero H1, splash wordmark, persona hero name (500–700).
+// Still PRELOADED: the installed app's first paint is AppCover's PIVOXQUANT in
+// this face, right after an iOS launch image drawn from the same outlines
+// (public/splash). Without the preload the cover paints in Georgia and swaps.
+const display = localFont({
+  src: "./fonts/playfair-display-latin-var.woff2",
   variable: "--font-display",
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
-  style: ["normal", "italic"],
+  weight: "500 700",
   display: "swap",
 });
 
@@ -139,6 +139,10 @@ export const metadata: Metadata = {
     // iOS status bar when installed, matching the editorial dark vibe.
     statusBarStyle: "black-translucent",
     title: SITE_NAME,
+    // Launch images (2026-10-09): without an exact-match image iOS shows a
+    // white screen between the icon tap and the first paint. Each one is the
+    // AppCover picture, so icon → launch → cover is one continuous black.
+    startupImage: [...SPLASH_STARTUP_IMAGES],
   },
   other: {
     "mobile-web-app-capable": "yes",
@@ -195,6 +199,9 @@ export const metadata: Metadata = {
   // the metadata to the real filenames.
   icons: {
     icon: [
+      // 2026-10-09: the icon set was a leftover "STOCK PILOT" mark; redrawn as
+      // the PivoxQuant P (public/icons/*.svg → scripts/render-pwa-assets.mjs).
+      { url: "/icons/favicon.svg", type: "image/svg+xml" },
       { url: "/icons/favicon-48x48.png", sizes: "48x48", type: "image/png" },
       { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
       { url: "/icons/icon-512x512.png", sizes: "512x512", type: "image/png" },
@@ -339,8 +346,23 @@ export default async function RootLayout({
           <CookieConsent />
           <InstallPrompt />
         </Providers>
+        {/*
+         * Phone (sonner's ≤ 600px breakpoint): an iOS-style banner that drops
+         * in BELOW the status bar and the app bar — the installed app draws
+         * under a black-translucent status bar, so the default 16px top put
+         * toasts under the notch and over the screen title. Desktop keeps the
+         * default top-right 24px offset.
+         */}
         <Toaster
           position="top-right"
+          // Dark, then re-skinned on v3 tokens in globals.css ("Toasts") —
+          // the default light theme was a white card on a Vantablack app.
+          theme="dark"
+          mobileOffset={{
+            top: "calc(var(--pq-safe-top) + var(--pq-topbar-height) + 8px)",
+            left: "12px",
+            right: "12px",
+          }}
           toastOptions={{
             style: {
               fontFamily:

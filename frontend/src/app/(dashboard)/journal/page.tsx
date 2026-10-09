@@ -55,6 +55,9 @@ import { ImportInbox } from "@/components/journal/import-inbox";
 import { ObservationNoteComposer } from "@/components/journal/observation-note-composer";
 import { ObservationNoteCard } from "@/components/journal/observation-note-card";
 import { JournalPager } from "@/components/journal/journal-pager";
+import { PullToRefresh } from "@/components/layout/pull-to-refresh";
+import { revalidateKeys } from "@/lib/pull-to-refresh";
+import { API } from "@/lib/endpoints";
 import {
   entryTimestamp,
   filterTimeline,
@@ -643,6 +646,13 @@ function readDeepLinkPage(): JournalPageId {
  */
 const OBS_NOTE_FEED_LIMIT = 200;
 
+/** SWR keys of the /journal sections that fetch on their own (pull-to-refresh). */
+const JOURNAL_SECTION_KEYS: ReadonlyArray<string> = [
+  API.imports.pending,
+  API.profile.pulse,
+  ...Object.values(API.behavior),
+];
+
 function JournalContent() {
   const t = useT();
   const { reflections, isLoading, error, mutate } = usePreTradeJournal();
@@ -662,6 +672,19 @@ function JournalContent() {
     void mutate();
     void mutateNotes();
   }, [mutate, mutateNotes]);
+
+  // Phone pull-to-refresh: the feed's two hooks, plus the keys the sections
+  // below read through their own hooks (import inbox, the behavior mirrors,
+  // the weekly pulse) — the same keys, nothing renamed.
+  const refresh = useCallback(
+    () =>
+      Promise.all([
+        mutate(),
+        mutateNotes(),
+        revalidateKeys(JOURNAL_SECTION_KEYS),
+      ]),
+    [mutate, mutateNotes],
+  );
 
   const filter = useSyncExternalStore(
     subscribeFilter,
@@ -881,36 +904,38 @@ function JournalContent() {
     // On a phone the tab strip pins under the app bar, so anything that
     // scrolls itself under "the sticky chrome" (the weekly pulse's
     // scroll-margin) has to clear both bars.
-    <div className="mx-auto w-full max-w-2xl px-0 pb-2 md:px-6 md:py-8 max-md:[--pq-aux-sticky-top:calc(var(--pq-topbar-height)+3rem)]">
-      {/* Header — desktop only; the phone app bar already names the screen
-          and the capture links open the record page there. */}
-      <header className="mb-6 hidden md:block">
-        <RuledKicker>{t("journal.page.kicker")}</RuledKicker>
-        <EditorialHead as="h1" size={32} className="mt-3">
-          {t("journal.page.heading")}
-        </EditorialHead>
-        <Caption className="mt-2 max-w-lg">
-          {t("journal.page.headingDesc")}
-        </Caption>
-        <CaptureLinks className="mt-4" />
-      </header>
+    <PullToRefresh onRefresh={refresh}>
+      <div className="mx-auto w-full max-w-2xl px-0 pb-2 md:px-6 md:py-8 max-md:[--pq-aux-sticky-top:calc(var(--pq-topbar-height)+var(--pq-safe-top)+3rem)]">
+        {/* Header — desktop only; the phone app bar already names the screen
+            and the capture links open the record page there. */}
+        <header className="mb-6 hidden md:block">
+          <RuledKicker>{t("journal.page.kicker")}</RuledKicker>
+          <EditorialHead as="h1" size={32} className="mt-3">
+            {t("journal.page.heading")}
+          </EditorialHead>
+          <Caption className="mt-2 max-w-lg">
+            {t("journal.page.headingDesc")}
+          </Caption>
+          <CaptureLinks className="mt-4" />
+        </header>
 
-      {/* Legal disclaimer mounted once at the bottom by (dashboard)/layout.tsx
-          — no page-level banner here (CEO 2026-05-24: disclaimer only at the
-          bottom, every page). */}
+        {/* Legal disclaimer mounted once at the bottom by (dashboard)/layout.tsx
+            — no page-level banner here (CEO 2026-05-24: disclaimer only at the
+            bottom, every page). */}
 
-      <JournalPager
-        ariaLabel="기록 화면"
-        requestedPage={JOURNAL_PAGE_IDS.indexOf(linkPage)}
-        pages={[
-          { id: "record", label: "기록", content: recordPage },
-          { id: "habits", label: "습관", content: habitsPage },
-          { id: "pulse", label: "주간 회고", content: pulsePage },
-        ]}
-      />
+        <JournalPager
+          ariaLabel="기록 화면"
+          requestedPage={JOURNAL_PAGE_IDS.indexOf(linkPage)}
+          pages={[
+            { id: "record", label: "기록", content: recordPage },
+            { id: "habits", label: "습관", content: habitsPage },
+            { id: "pulse", label: "주간 회고", content: pulsePage },
+          ]}
+        />
 
-      <FootSignature />
-    </div>
+        <FootSignature />
+      </div>
+    </PullToRefresh>
   );
 }
 

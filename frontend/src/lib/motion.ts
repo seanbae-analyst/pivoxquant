@@ -40,6 +40,16 @@ export const PQ_DUR_CHART = 0.8;  // 800ms — chart count-up (CSS only; JS uses
  */
 export const PQ_PAGER_SLIDE_PX = 24;
 
+/**
+ * Horizontal offset a drill-down screen enters from on a phone
+ * (components/layout/phone-route-frame). A route push is a bigger move than
+ * paging inside one screen, so it travels further than PQ_PAGER_SLIDE_PX —
+ * but stays short of --motion-distance-lg (64px, the full-page slide the
+ * app does not use): the outgoing screen is already gone, so a long travel
+ * would only show empty ink.
+ */
+export const PQ_ROUTE_SLIDE_PX = 40;
+
 // ── Variants ─────────────────────────────────────────────────────────────
 
 /** Fade + slight rise — page-section entrance. Duration: PQ_DUR_SLOW (500ms). */

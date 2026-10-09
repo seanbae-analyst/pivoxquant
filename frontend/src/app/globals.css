@@ -409,15 +409,18 @@
      notch insets on installed PWAs.
        • TopBar wrapper ([data-pq-dash-topbar]) is `position: sticky; top: 0`
          and pins to the VIEWPORT scrollport top (the shell is min-h-screen, so
-         the body is the scroller). The shell's `padding-top: safe-area-top`
-         scrolls away with the content and does NOT shift the sticky offset, so
-         a sub-header that wants to pin flush under the TopBar uses the bare
-         TopBar height — adding the notch inset would leave an empty band the
-         height of the notch between the two bars on standalone PWAs.
+         the body is the scroller). 2026-10-09: the wrapper itself carries
+         `padding-top: --pq-safe-top`, like an iOS navigation bar that extends
+         under the status bar. Before, the inset was the SHELL's padding, which
+         scrolled away — so once the page scrolled, the pinned bar sat at y=0
+         under the black-translucent status bar and the clock covered the
+         screen title. The pinned bar is now safe-top + 56px tall, so a
+         sub-header that pins flush under it uses both (--pq-aux-sticky-top).
+         In a browser tab env(safe-area-inset-top) is 0 and nothing changes.
        • BottomNav height = 64px (h-16) + safe-area-bottom (home indicator). */
   --pq-topbar-height: 56px;
   --pq-bottomnav-height: 64px;
-  --pq-aux-sticky-top: var(--pq-topbar-height);
+  --pq-aux-sticky-top: calc(var(--pq-topbar-height) + var(--pq-safe-top));
   --pq-bottomnav-clearance: calc(
     var(--pq-bottomnav-height) + env(safe-area-inset-bottom, 0px) + 16px
   );
@@ -915,18 +918,32 @@
   [data-pq-bottom-nav] {
     padding-bottom: max(8px, env(safe-area-inset-bottom));
   }
-  /* Dashboard shell top padding respects the status bar. */
-  .pq-dash-shell,
-  [data-pq-dash-shell] {
-    padding-top: max(8px, env(safe-area-inset-top));
+  /* The app bar paints the status-bar band itself (see --pq-aux-sticky-top):
+     solid ink, so scrolled content never shows through under the clock. */
+  .pq-dash-topbar,
+  [data-pq-dash-topbar] {
+    background: var(--pq-ink);
+  }
+  /* Rubber-band overscroll: the bars stay put and the band that opens is ink.
+     `none` on the root scroller stops the page bounce (iOS 16+, Chrome), so
+     the sticky app bar can't be dragged down off the status bar and the
+     fixed bottom nav never shows a gap. Inner scrollers (pagers, drawers)
+     keep their own bounce. */
+  html,
+  body {
+    background-color: var(--pq-ink, #050505);
+    overscroll-behavior-y: none;
   }
   /* Disable user-select in chrome-like surfaces when the app is launched
      from the home screen — closer to a native app feel. Content still
-     selectable via .pq-selectable overrides. */
+     selectable via .pq-selectable overrides. Applied (data-pq-chrome) to the
+     bottom nav + drawer, app bar, pager tab strips / dots and the welcome
+     chrome. touch-callout: no iOS link-preview sheet on a long-pressed tab. */
   .pq-chrome,
   [data-pq-chrome] {
     -webkit-user-select: none;
     user-select: none;
+    -webkit-touch-callout: none;
   }
   .pq-selectable {
     -webkit-user-select: text;
@@ -938,16 +955,28 @@
    boot via display-mode matchMedia. Mirrors the media-query rules so
    iOS Safari's first paint still gets safe-area padding before the media
    query evaluates correctly. */
+.pwa-standalone,
 .pwa-standalone body {
   background-color: var(--pq-ink, #050505);
+  overscroll-behavior-y: none;
 }
 .pwa-standalone .pq-bottom-nav,
 .pwa-standalone [data-pq-bottom-nav] {
   padding-bottom: max(8px, env(safe-area-inset-bottom));
 }
-.pwa-standalone .pq-dash-shell,
-.pwa-standalone [data-pq-dash-shell] {
-  padding-top: max(8px, env(safe-area-inset-top));
+.pwa-standalone .pq-dash-topbar,
+.pwa-standalone [data-pq-dash-topbar] {
+  background: var(--pq-ink);
+}
+.pwa-standalone .pq-chrome,
+.pwa-standalone [data-pq-chrome] {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+.pwa-standalone .pq-selectable {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 /* What-If share card — screen-side belt-and-suspenders.
@@ -1803,6 +1832,18 @@ button:hover > .pq-ink-pill,
 .pq-ink-input::placeholder {
   /* a11y: WCAG AA — 0.35 (2.84:1) → 0.55 (5.64:1) on Vantablack */
   color: rgba(245, 240, 232, 0.55);
+}
+/* Korean placeholders in a mono field (2026-10-09 phone audit): JetBrains
+   Mono has no Hangul, so "종목명 또는 티커" set as fallback glyphs between
+   600-unit mono spaces — it read like a form, not an app. The hint is prose;
+   set it in the body sans. What the user TYPES keeps the mono face (tickers,
+   prices stay tabular). */
+input.font-mono::placeholder,
+textarea.font-mono::placeholder,
+.font-mono input::placeholder,
+.font-mono textarea::placeholder {
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, system-ui, sans-serif;
+  letter-spacing: normal;
 }
 .pq-ink-input:focus {
   outline: none;
@@ -3166,9 +3207,15 @@ i.italic,
    Revolut + Apple sticky-pin, scroll-scrub, fade-up.
    ══════════════════════════════════════════════ */
 
-/* Smooth scroll for anchor jumps. Respects reduced-motion automatically. */
-html {
-  scroll-behavior: smooth;
+/* Smooth scroll for the landing's anchor jumps — the landing only
+   (2026-10-09). On the whole document it also animated every scroll
+   restore and every route change's scroll-to-top inside the app, which reads
+   as the page sliding on its own. Browser tab only: the installed app has no
+   landing. Respects reduced-motion. */
+@media not all and (display-mode: standalone) {
+  html:not(.pwa-standalone):has([data-pq-landing]) {
+    scroll-behavior: smooth;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   html {
@@ -3956,6 +4003,9 @@ html {
   position: sticky;
   top: 0;
   z-index: 20;
+  /* Status-bar band (installed app, black-translucent). 0 in a browser tab.
+     See --pq-aux-sticky-top. */
+  padding-top: var(--pq-safe-top);
   backdrop-filter: blur(10px) saturate(1.15);
   -webkit-backdrop-filter: blur(10px) saturate(1.15);
   border-bottom: 0.5px solid rgba(184, 149, 106, 0.28);
@@ -5130,3 +5180,153 @@ html {
 }
 @page { size: A4; margin: 0; }
 
+/* ───────────────────────────────────────────────────────────
+   Touch feedback (2026-10-09 — "상당한 퀄리티의 앱처럼").
+   1. No grey/blue tap flash: the browser's highlight box ignores our radius
+      and colour, and a native app never shows one.
+   2. Instead, every pressable thing answers the finger: a dim on press
+      (iOS UIButton-style), a slight press-in on the primary CTAs and on the
+      bottom-nav icons. Press-in is instant; release eases back on the motion
+      tokens. Reduced motion keeps the dim and drops the scale.
+   Kept at the END of this file on purpose: the CTA classes declare their own
+   `transition` shorthands further up, and this block must come after them.
+   3. Touch screens have no hover — a tapped CTA must not stay in its hover
+      lift ("sticky hover") until the next tap elsewhere. */
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+@layer base {
+  /* Generic floor, in the base layer so any utility (opacity-0 on hidden
+     chrome, disabled:opacity-*) still wins over it. */
+  @media (hover: none) {
+    a[href]:active,
+    button:not(:disabled):active,
+    [role="button"]:not([aria-disabled="true"]):active,
+    summary:active {
+      opacity: 0.7;
+    }
+  }
+}
+.pq-ink-btn-bronze,
+.pq-ink-btn-ghost,
+.pq-auth-oauth-btn,
+[data-pq-press] {
+  transition-property: background-color, color, border-color, box-shadow, transform, opacity;
+  transition-duration: var(--motion-duration-fast);
+  transition-timing-function: var(--motion-easing-emphasized);
+}
+.pq-ink-btn-bronze:not(:disabled):not([aria-disabled="true"]):active,
+.pq-ink-btn-ghost:not(:disabled):not([aria-disabled="true"]):active,
+.pq-auth-oauth-btn:not([aria-disabled="true"]):active,
+[data-pq-press]:not(:disabled):active {
+  transform: scale(0.97);
+  opacity: 0.86;
+  box-shadow: none;
+  transition-duration: 0ms;
+}
+[data-pq-bottom-nav] :is(a, button),
+[data-pq-dash-topbar] :is(a, button),
+[data-pq-chrome] [role="tab"] {
+  transition: opacity var(--motion-duration-fast) var(--motion-easing-emphasized);
+}
+[data-pq-bottom-nav] :is(a, button) svg {
+  transition: transform var(--motion-duration-fast) var(--motion-easing-emphasized);
+}
+[data-pq-bottom-nav] :is(a, button):active,
+[data-pq-dash-topbar] :is(a, button):active,
+[data-pq-chrome] [role="tab"]:active {
+  opacity: 0.55;
+  transition-duration: 0ms;
+}
+[data-pq-bottom-nav] :is(a, button):active svg {
+  transform: scale(0.88);
+  transition-duration: 0ms;
+}
+@media (hover: none) {
+  .pq-ink-btn-bronze:hover:not(:active):not(:disabled):not([aria-disabled="true"]) {
+    background: var(--pq-bronze);
+    transform: none;
+    box-shadow: none;
+  }
+  .pq-ink-btn-ghost:hover:not(:active) {
+    border-color: rgba(245, 240, 232, 0.2);
+    background: transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pq-ink-btn-bronze:active,
+  .pq-ink-btn-ghost:active,
+  .pq-auth-oauth-btn:active,
+  [data-pq-press]:active,
+  [data-pq-bottom-nav] :is(a, button):active svg {
+    transform: none !important;
+  }
+}
+
+/* ───────────────────────────────────────────────────────────
+   Toasts (sonner, layout.tsx) — v3 skin over sonner's dark theme.
+   An opaque raised ink (a toast floats over content), ivory hairline,
+   4px card radius; the semantic tints stay quiet: bronze for success,
+   --pq-error for errors. Position/offsets live on <Toaster>.
+   `html` prefix: sonner injects its own <style> at runtime, possibly after
+   this sheet, with the same (0,2,0) selector — out-rank it, don't race it. */
+html [data-sonner-toaster][data-sonner-theme="dark"] {
+  --normal-bg: color-mix(in srgb, var(--pq-ivory) 7%, var(--pq-ink));
+  --normal-bg-hover: color-mix(in srgb, var(--pq-ivory) 11%, var(--pq-ink));
+  --normal-border: rgba(var(--pq-ivory-rgb), 0.14);
+  --normal-border-hover: rgba(var(--pq-ivory-rgb), 0.22);
+  --normal-text: var(--pq-ivory);
+  --success-bg: var(--normal-bg);
+  --success-border: rgba(var(--pq-bronze-rgb), 0.45);
+  --success-text: var(--pq-ivory);
+  --info-bg: var(--normal-bg);
+  --info-border: var(--normal-border);
+  --info-text: var(--pq-ivory);
+  --warning-bg: var(--normal-bg);
+  --warning-border: rgba(var(--pq-bronze-rgb), 0.45);
+  --warning-text: var(--pq-ivory);
+  --error-bg: var(--normal-bg);
+  --error-border: color-mix(in srgb, var(--pq-error) 55%, transparent);
+  --error-text: var(--pq-ivory);
+  --border-radius: var(--pq-radius-card);
+}
+[data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast][data-styled="true"] {
+  box-shadow: 0 10px 30px rgba(var(--pq-ink-rgb), 0.6);
+  font-size: var(--pq-text-body-sm);
+}
+[data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast] [data-description] {
+  color: var(--pq-ivory-mid);
+}
+[data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast][data-type="success"] [data-icon] {
+  color: var(--pq-bronze);
+}
+[data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast][data-type="error"] [data-icon] {
+  color: var(--pq-error);
+}
+
+/* ───────────────────────────────────────────────────────────
+   Cookie banner (components/ui/cookie-consent.tsx) — 2026-10-09.
+   Desktop: the full-width ink strip at the bottom edge.
+   Phone: an ink card floating 8px above the bottom edge — and above the
+   bottom nav when one is on screen (it used to cover the tab bar on the
+   first standalone launch). Placement/visual only; consent logic untouched. */
+.pq-cookie-banner {
+  background: var(--pq-ink);
+  border-top: 1px solid var(--pq-border);
+  box-shadow: 0 -8px 24px rgba(var(--pq-ink-rgb), 0.4);
+}
+@media (max-width: 767px) {
+  .pq-cookie-banner {
+    left: 12px;
+    right: 12px;
+    bottom: calc(8px + var(--pq-safe-bottom));
+    padding: 16px;
+    background: color-mix(in srgb, var(--pq-ivory) 6%, var(--pq-ink));
+    border: 0.5px solid rgba(var(--pq-ivory-rgb), 0.14);
+    border-radius: var(--pq-radius-card);
+    box-shadow: 0 12px 32px rgba(var(--pq-ink-rgb), 0.7);
+  }
+  body:has([data-pq-bottom-nav]) .pq-cookie-banner {
+    bottom: calc(var(--pq-bottomnav-height) + var(--pq-safe-bottom) + 8px);
+  }
+}

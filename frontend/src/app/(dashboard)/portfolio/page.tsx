@@ -55,7 +55,10 @@ import {
   PORTFOLIO_POSITIONS,
   PORTFOLIO_SUMMARY,
   PORTFOLIO_TRADES,
+  API,
 } from "@/lib/endpoints";
+import { PullToRefresh } from "@/components/layout/pull-to-refresh";
+import { revalidateKeys } from "@/lib/pull-to-refresh";
 
 import { CapitalCardV2 } from "@/components/settings/v2/capital-card-v2";
 import { PortfolioHeroV2 } from "@/components/portfolio/v2/portfolio-hero-v2";
@@ -117,12 +120,27 @@ export default function PortfolioPageV2() {
     data: posData,
     isLoading: posLoading,
     error: posErr,
+    mutate: mutatePositions,
   } = usePortfolioPositions<PositionsResponse>();
   const {
     data: sumData,
     isLoading: sumLoading,
     error: sumErr,
+    mutate: mutateSummary,
   } = usePortfolioSummary();
+
+  // Phone pull-to-refresh: the two book hooks, plus the trade list and the
+  // equity curve the pages read through their own hooks (same keys). The
+  // book stays on screen while it re-reads.
+  const pullRefresh = React.useCallback(
+    () =>
+      Promise.all([
+        mutatePositions(),
+        mutateSummary(),
+        revalidateKeys([PORTFOLIO_TRADES, API.portfolio.history("")]),
+      ]),
+    [mutatePositions, mutateSummary],
+  );
 
 
   // Skeleton flicker guard — same 1.2s window as v1.
@@ -515,70 +533,72 @@ export default function PortfolioPageV2() {
   // arrangement differs. The CFO status bar is desktop-only already.
   if (isPhone) {
     return (
-      <ErrorBoundary>
-        {errorBanner}
-        <PhonePager
-          label="포트폴리오 화면"
-          header={
-            <PortfolioPhoneSummary
-              marketDataDisplay={marketDataDisplay}
-              positionCount={positions.length}
-              loading={isInitialLoad}
-              costUsd={costUsdTotal}
-              costKrw={costKrwTotal}
-              navUsd={navUsdFinal}
-              navKrw={navKrwFinal}
-              nav={totalNav}
-              navCurrency={displayCurrency}
-              onAddPosition={() => setAddOpen(true)}
-            />
-          }
-          pages={[
-            {
-              id: "holdings",
-              label: "보유",
-              content: (
-                <>
-                  <WeeklyPulsePrompt />
-                  {positionsTable}
-                </>
-              ),
-            },
-            {
-              id: "overview",
-              label: "현황",
-              content: (
-                <>
-                  <PortfolioHeroV2 {...heroProps} showAddCta={false} dense />
-                  {equityCurve}
-                  <section aria-label="시드 자본">
-                    <CapitalCardV2 />
-                  </section>
-                </>
-              ),
-            },
-            {
-              id: "sectors",
-              label: "섹터",
-              content: (
-                <SectorDonutBlock
-                  positions={positions}
-                  fxRate={fxRate}
-                  displayCurrency={displayCurrency}
-                  marketDataDisplay={marketDataDisplay}
-                />
-              ),
-            },
-            {
-              id: "activity",
-              label: "최근 활동",
-              content: <RecentTransactionsBlock limit={6} />,
-            },
-          ]}
-        />
-        {footer}
-        {modals}
-      </ErrorBoundary>
+      <PullToRefresh onRefresh={pullRefresh}>
+        <ErrorBoundary>
+          {errorBanner}
+          <PhonePager
+            label="포트폴리오 화면"
+            header={
+              <PortfolioPhoneSummary
+                marketDataDisplay={marketDataDisplay}
+                positionCount={positions.length}
+                loading={isInitialLoad}
+                costUsd={costUsdTotal}
+                costKrw={costKrwTotal}
+                navUsd={navUsdFinal}
+                navKrw={navKrwFinal}
+                nav={totalNav}
+                navCurrency={displayCurrency}
+                onAddPosition={() => setAddOpen(true)}
+              />
+            }
+            pages={[
+              {
+                id: "holdings",
+                label: "보유",
+                content: (
+                  <>
+                    <WeeklyPulsePrompt />
+                    {positionsTable}
+                  </>
+                ),
+              },
+              {
+                id: "overview",
+                label: "현황",
+                content: (
+                  <>
+                    <PortfolioHeroV2 {...heroProps} showAddCta={false} dense />
+                    {equityCurve}
+                    <section aria-label="시드 자본">
+                      <CapitalCardV2 />
+                    </section>
+                  </>
+                ),
+              },
+              {
+                id: "sectors",
+                label: "섹터",
+                content: (
+                  <SectorDonutBlock
+                    positions={positions}
+                    fxRate={fxRate}
+                    displayCurrency={displayCurrency}
+                    marketDataDisplay={marketDataDisplay}
+                  />
+                ),
+              },
+              {
+                id: "activity",
+                label: "최근 활동",
+                content: <RecentTransactionsBlock limit={6} />,
+              },
+            ]}
+          />
+          {footer}
+          {modals}
+        </ErrorBoundary>
+      </PullToRefresh>
     );
   }
 

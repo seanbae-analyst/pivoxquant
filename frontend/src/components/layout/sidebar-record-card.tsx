@@ -32,10 +32,12 @@
  * `useFrictionOutcome("30d")` is a distinct key from the journal's all-time
  * read, by design (different window, both cached).
  *
- * Desktop only: the rail is `hidden md:block` in dashboard-layout.tsx, so
- * this never renders under the mobile bottom nav.
+ * Desktop only: the rail is `hidden md:block` in dashboard-layout.tsx, and
+ * the card itself mounts its reads only once an md+ viewport is confirmed
+ * on the client (useDesktopConfirmed), so a phone never fetches them.
  */
 
+import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useFrictionOutcome, usePreTradeJournal } from "@/lib/hooks";
 import { displayName, parseIsoUtc } from "@/lib/format";
@@ -148,7 +150,35 @@ const STATUS_LABEL: Record<PreTradeReflection["status"], string> = {
   ready: "미결",
 };
 
+/** Matches the rail's own breakpoint (`hidden md:block` → md = 768px). */
+const DESKTOP_QUERY = "(min-width: 768px)";
+
+function subscribeDesktop(onChange: () => void): () => void {
+  const mq = window.matchMedia?.(DESKTOP_QUERY);
+  mq?.addEventListener?.("change", onChange);
+  return () => mq?.removeEventListener?.("change", onChange);
+}
+
+/**
+ * True only once the client has confirmed an md+ viewport. Server render and
+ * hydration say false, so the card's two reads never start on a phone — the
+ * rail is CSS-hidden there, but a mounted card still fired both requests on
+ * every load (2026-10-09 perf audit). On desktop the card appears right after
+ * hydration, where it used to show its loading state anyway.
+ */
+function useDesktopConfirmed(): boolean {
+  return useSyncExternalStore(
+    subscribeDesktop,
+    () => window.matchMedia?.(DESKTOP_QUERY).matches ?? true,
+    () => false,
+  );
+}
+
 export function SidebarRecordCard() {
+  return useDesktopConfirmed() ? <RecordCardBody /> : null;
+}
+
+function RecordCardBody() {
   const outcome = useFrictionOutcome("30d");
   const journal = usePreTradeJournal();
 

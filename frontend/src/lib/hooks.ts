@@ -8,6 +8,10 @@ import {
   PUBLIC_MARKET_SNAPSHOT,
 } from "./endpoints";
 import { liveRefresh } from "./market-hours";
+import { isMarketDataDisplayEnabled } from "./market-display";
+
+/** Alerts poll when vendor display is off — the closed-market cadence. */
+export const ALERTS_IDLE_REFRESH_MS = 60_000;
 import type {
   ProfileResponse,
   AlertsResponse,
@@ -132,7 +136,12 @@ export function useAlerts() {
   // and was misled. Request the max (50) so the strip is accurate for the
   // typical user. Pagination/load-more is a separate enhancement.
   return useSWR<AlertsResponse>(`${API.alerts.list}?limit=50`, fetcher, {
-    refreshInterval: () => liveRefresh(10_000, 60_000),
+    // 2026-10-09 perf: the 10 s market-hours cadence existed for price
+    // alerts. With vendor display off (lib/market-display) `price_52w` is not
+    // sent at all and the remaining alert (`concentration`) is a daily job,
+    // so poll at the closed-market rate. Same key, same endpoint.
+    refreshInterval: () =>
+      isMarketDataDisplayEnabled() ? liveRefresh(10_000, 60_000) : ALERTS_IDLE_REFRESH_MS,
     // Bug #3 (HANDOVER v22): the alerts bell was one of the three explicit
     // duplicate-fetch culprits flagged on page nav. `refreshInterval`
     // already keeps the badge fresh; focus revalidate just compounds the
@@ -709,11 +718,23 @@ export interface PortfolioSummary {
 }
 
 export const PORTFOLIO_DEDUPE_MS = 10_000;
+
+/**
+ * Portfolio polling (2026-10-09 perf). The 5 s market-hours poll keeps vendor
+ * PRICES fresh. With vendor display off (lib/market-display, the default)
+ * the payload is cost-basis only — it changes when the user records a trade,
+ * and every writer already revalidates these keys (trade/add modals,
+ * import-inbox approve, pull-to-refresh, realtime off) — so polling buys
+ * nothing and costs a request every 5 s on a free-plan backend. 0 = off.
+ */
+export function portfolioRefreshInterval(): number {
+  return isMarketDataDisplayEnabled() ? liveRefresh(5_000, 60_000) : 0;
+}
 export const PORTFOLIO_FOCUS_THROTTLE_MS = 5_000;
 
 export function usePortfolioSummary() {
   return useSWR<PortfolioSummary>(PORTFOLIO_SUMMARY, fetcher, {
-    refreshInterval: () => liveRefresh(5_000, 60_000),
+    refreshInterval: portfolioRefreshInterval,
     // Bug #3 (HANDOVER v22): SSE pushes price ticks into this cache via
     // globalMutate(..., { revalidate: false }) (see realtime.tsx L337).
     // Combined with the 5-60s refreshInterval, focus revalidate adds no
@@ -760,7 +781,7 @@ export function useFxRate(): { rate: number | null; isStale: boolean } {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function usePortfolioPositions<T = any>() {
   return useSWR<T>(PORTFOLIO_POSITIONS, fetcher, {
-    refreshInterval: () => liveRefresh(5_000, 60_000),
+    refreshInterval: portfolioRefreshInterval,
     // Bug #3 (HANDOVER v22): same rationale as usePortfolioSummary — SSE
     // mutates this cache key directly (realtime.tsx L304), so focus
     // revalidate produces redundant network round-trips during nav.

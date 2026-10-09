@@ -5,10 +5,12 @@ import { useRouter, usePathname } from "next/navigation";
 import { ageConfirmationRequired, useAuth } from "@/lib/auth";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { DashboardSkeleton } from "@/components/ui/loading-skeleton";
+import { AuthWakeNotice } from "@/components/layout/auth-wake-notice";
 import { PushPermission } from "@/components/pwa/push-permission";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { RealtimeStatusBanner } from "@/components/ui/realtime-status-banner";
 import { DataStaleBanner } from "@/components/ui/data-stale-banner";
+import { PhoneRouteFrame } from "@/components/layout/phone-route-frame";
 import {
   clearStagedSnapshot,
   flushPendingCrossBorderConsent,
@@ -109,7 +111,9 @@ function shouldAlwaysExpand(pathname: string | null): boolean {
 }
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  // `waking` = auth state UNKNOWN (backend not answering yet): hold, never
+  // redirect — a cold server is not a logout (2026-10-09).
+  const { user, loading, waking } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -120,13 +124,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   useKeyboardNav();
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || waking) return;
     // Single prioritized guard: login → age confirmation (PIPA §22 ⑥) →
     // onboarding broker. Step 0 of onboarding is the broker-connect screen,
     // which then routes into the five-question wizard.
     const dest = nextAuthRedirect(user, currentLocationPath());
     if (dest) router.replace(dest);
-  }, [user, loading, router]);
+  }, [user, loading, waking, router]);
 
   // 정통망법 §50 ① — flush the staged signup-time consent snapshot to the
   // backend the first time we see an authenticated user. The signup gate
@@ -169,9 +173,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     }
   }, [loading, user]);
 
-  if (loading) {
+  if (loading || waking) {
     return (
       <DashboardLayout>
+        <AuthWakeNotice />
         <DashboardSkeleton />
       </DashboardLayout>
     );
@@ -203,7 +208,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         is transport-layer (SSE), this one is upstream KIS / FMP feed.
       */}
       <DataStaleBanner />
-      {children}
+      {/* Phone route motion + per-route scroll memory + offline line
+          (components/layout/phone-route-frame). Inert at md and up. */}
+      <PhoneRouteFrame>{children}</PhoneRouteFrame>
       {/*
         Single-source legal disclaimer footer — mounted once for every
         (dashboard) route, with the variant chosen by pathname.

@@ -15,6 +15,10 @@ vi.mock("@/lib/demo", () => ({ isDemoMode: () => false }));
 vi.mock("@/components/landing/landing-v2", () => ({ default: () => <div data-testid="landing" /> }));
 vi.mock("@/components/pwa/app-welcome", () => ({
   AppWelcome: () => <div data-testid="app-welcome" />,
+}));
+// 2026-10-09: the cover + standalone probe moved to app-cover.tsx so "/" can
+// lazy-load the welcome cards and the landing (next/dynamic).
+vi.mock("@/components/pwa/app-cover", () => ({
   AppCover: () => <div data-testid="app-cover" />,
   isStandaloneDisplay: () => standalone,
 }));
@@ -31,9 +35,9 @@ afterEach(() => {
 });
 
 describe("root page — browser vs installed app", () => {
-  it("browser: the landing sits in .pq-browser-only beside a standalone-only splash", () => {
+  it("browser: the landing sits in .pq-browser-only beside a standalone-only splash", async () => {
     render(<Page />);
-    const landing = screen.getByTestId("landing");
+    const landing = await screen.findByTestId("landing");
     expect(landing.closest(".pq-browser-only")).toBeTruthy();
     expect(document.querySelector(".pq-standalone-only [data-testid='app-cover']")).toBeTruthy();
   });
@@ -45,11 +49,21 @@ describe("root page — browser vs installed app", () => {
     expect(screen.getByTestId("app-cover")).toBeTruthy();
   });
 
-  it("installed app, signed out: the app welcome, never the landing", () => {
+  it("installed app, signed out: the app welcome, never the landing", async () => {
     standalone = true;
     auth.loading = false;
     render(<Page />);
-    expect(screen.getByTestId("app-welcome")).toBeTruthy();
+    expect(await screen.findByTestId("app-welcome")).toBeTruthy();
+    expect(screen.queryByTestId("landing")).toBeNull();
+  });
+
+  it("installed app, signed in: the cover holds through the redirect — no loading screen", () => {
+    standalone = true;
+    auth.loading = false;
+    auth.user = { id: 1 };
+    render(<Page />);
+    expect(screen.getByTestId("app-cover")).toBeTruthy();
+    expect(screen.queryByRole("status", { name: "Loading PivoxQuant" })).toBeNull();
     expect(screen.queryByTestId("landing")).toBeNull();
   });
 });

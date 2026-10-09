@@ -22,7 +22,8 @@ function BackLink() {
   return (
     <Link
       href="/support/inbox"
-      className="mb-6 inline-flex items-center gap-1.5 font-sans text-pq-caption transition-colors"
+      // Phone: the app bar's ‹ carries back (top-bar.tsx subScreen).
+      className="mb-6 hidden items-center gap-1.5 font-sans text-pq-caption transition-colors md:inline-flex"
       style={{ color: "var(--pq-ivory-dim)" }}
     >
       <ChevronLeft className="h-4 w-4" />

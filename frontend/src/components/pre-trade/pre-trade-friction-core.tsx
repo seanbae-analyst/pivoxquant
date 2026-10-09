@@ -384,6 +384,12 @@ export function usePreTradeCycle(args: PreTradeCycleArgs): PreTradeCycle {
  */
 const REVIEW_IDX = QUESTIONS.length;
 
+/** Where the phone question pager stands, and which way it last moved. */
+export type QuestionsNav = { cur: number; dir: PagerDir };
+
+/** Index of the review screen in the phone question pager (after Q1..Q7). */
+export const QUESTIONS_REVIEW_INDEX = REVIEW_IDX;
+
 type QuestionsPager = {
   cur: number;
   swipeBlocked: boolean;
@@ -412,9 +418,14 @@ function useQuestionsPager(args: {
   setAcks: (f: (prev: Record<number, boolean>) => Record<number, boolean>) => void;
   submitting: boolean;
   onBack?: () => void;
+  /** Controlled position (the route page keeps it, for the back gesture). */
+  nav?: QuestionsNav;
+  onNavChange?: (nav: QuestionsNav) => void;
 }): QuestionsPager {
   const { screenRef, enabled, acks, setAcks, submitting, onBack } = args;
-  const [nav, setNav] = useState<{ cur: number; dir: PagerDir }>({ cur: 0, dir: 1 });
+  const [ownNav, setOwnNav] = useState<QuestionsNav>({ cur: 0, dir: 1 });
+  const nav = args.nav ?? ownNav;
+  const setNav = args.onNavChange ?? setOwnNav;
   const [blockedAt, setBlockedAt] = useState<number | null>(null);
   const cur = nav.cur;
   const curAcked = cur < REVIEW_IDX && !!acks[QUESTIONS[cur].n];
@@ -482,6 +493,13 @@ export function QuestionsStep(props: {
    * page opts in; the modals keep the list.
    */
   pagedOnPhone?: boolean;
+  /**
+   * Controlled pager position (optional). The /pre-trade route keeps it so
+   * the system back gesture can step back through the questions; without
+   * it the pager keeps its own position, as the modals do.
+   */
+  nav?: QuestionsNav;
+  onNavChange?: (nav: QuestionsNav) => void;
 }) {
   const {
     acks,
@@ -503,6 +521,8 @@ export function QuestionsStep(props: {
     setAcks,
     submitting,
     onBack,
+    nav: props.nav,
+    onNavChange: props.onNavChange,
   });
   const { cur } = pager;
   const onReview = pagedOnPhone && cur === REVIEW_IDX;

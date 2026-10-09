@@ -44,7 +44,7 @@
  *     (services/pre_trade/link.py).
  */
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
 import { ChevronRight } from "lucide-react";
@@ -63,6 +63,7 @@ import {
   CooldownStep,
   TerminalStep,
   usePreTradeCycle,
+  type QuestionsNav,
 } from "@/components/pre-trade/pre-trade-friction-core";
 import { RelatedObservationNotes } from "@/components/pre-trade/related-observation-notes";
 import { TickerSearch } from "@/components/shared/ticker-search";
@@ -71,6 +72,10 @@ import { PORTFOLIO_POSITIONS } from "@/lib/endpoints";
 import { fetcher } from "@/lib/hooks";
 import { displayTicker, normalizeTicker } from "@/lib/format";
 import { useSlideIn, useSwipePager } from "@/lib/use-swipe-pager";
+import { useIsPhone } from "@/lib/use-phone";
+import { useHistorySteps } from "@/lib/use-history-steps";
+import { hapticTick } from "@/lib/haptics";
+import { preTradeStepAllowed, preTradeLinearStep } from "@/lib/pre-trade-steps";
 
 export default function PreTradePage() {
   // Step 1 — setup (owned by this route page)
@@ -85,6 +90,10 @@ export default function PreTradePage() {
   // Phone pager: setup slides in from the left when the user comes back to
   // it from question 1; on first entry it just appears.
   const [setupFromBack, setSetupFromBack] = useState(false);
+  // Phone question pager position — kept here (not inside QuestionsStep) so
+  // the system back gesture can walk back through the questions.
+  const [qNav, setQNav] = useState<QuestionsNav>({ cur: 0, dir: 1 });
+  const isPhone = useIsPhone();
 
   const allAcked = QUESTIONS.every((q) => acks[q.n]);
   const rationaleOk = rationale.trim().length >= MIN_RATIONALE_CHARS;
@@ -101,6 +110,9 @@ export default function PreTradePage() {
 
   const advanceToQuestions = useCallback(() => {
     if (!setupOk) return;
+    // Every visit to the questions starts at question 1, as it did when the
+    // pager kept its own position.
+    setQNav({ cur: 0, dir: 1 });
     cycle.setPhase("questions");
   }, [setupOk, cycle]);
 
@@ -118,8 +130,37 @@ export default function PreTradePage() {
     setAcks({});
     setAnswers({});
     setSetupFromBack(false);
+    setQNav({ cur: 0, dir: 1 });
     cycle.reset();
   }, [cycle]);
+
+  // Phone: Android back / the iOS edge swipe step back through setup → the
+  // seven questions → review, instead of leaving the page. A pop only ever
+  // moves between screens — starting the reflection stays the button's job,
+  // and once it has started (cooldown / finish) back leaves the page.
+  const { phase, setPhase } = cycle;
+  const linearStep = preTradeLinearStep(phase, qNav.cur);
+  useHistorySteps({
+    key: "pre-trade",
+    enabled: isPhone,
+    step: linearStep ?? 0,
+    locked: linearStep === null,
+    onPopTo: (target) => {
+      if (cycle.submitting) return false;
+      if (target > (linearStep ?? 0) && !preTradeStepAllowed(target, { setupOk, acks })) {
+        return false;
+      }
+      if (target === 0) {
+        backToSetup();
+        return true;
+      }
+      const cur = target - 1;
+      setQNav({ cur, dir: phase === "questions" && cur < qNav.cur ? -1 : 1 });
+      if (phase !== "questions") setPhase("questions");
+      return true;
+    },
+    onAdvance: () => hapticTick(),
+  });
 
   return (
     <ErrorBoundary>
@@ -187,6 +228,8 @@ export default function PreTradePage() {
             onBack={backToSetup}
             onStart={cycle.startCooldown}
             pagedOnPhone
+            nav={qNav}
+            onNavChange={setQNav}
           />
         )}
 
@@ -248,6 +291,12 @@ function SetupStep(props: {
     onPrev: () => "blocked",
   });
   useSlideIn(screenRef, "setup", -1, { enabled: true, animateOnMount: enterFromBack });
+  // Focus the ticker only where a keyboard is attached: on a phone autofocus
+  // throws the on-screen keyboard over the screen the moment it opens.
+  useEffect(() => {
+    if (!window.matchMedia?.("(pointer: fine)").matches) return;
+    document.getElementById("pre-trade-ticker")?.focus();
+  }, []);
 
   return (
     <section className="space-y-6">
@@ -266,7 +315,6 @@ function SetupStep(props: {
               onChange={setTicker}
               onPick={(r) => setTicker(r.ticker)}
               ariaLabel="종목"
-              autoFocus
               inputClassName="w-full bg-transparent border-b border-[rgba(245,240,232,0.15)] py-2 font-mono text-pq-lead uppercase outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)]"
               inputStyle={{ letterSpacing: "0.04em" }}
             />
