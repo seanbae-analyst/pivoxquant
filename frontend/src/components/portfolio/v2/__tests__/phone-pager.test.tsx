@@ -113,3 +113,53 @@ describe("PhonePager", () => {
     expect(screen.getByTestId("phone-pager-dots").children).toHaveLength(3);
   });
 });
+
+describe("PhonePager — nav=\"dots\" (story cards)", () => {
+  it("drops the tab strip and makes the dots the tablist, named by page label", () => {
+    render(<PhonePager label="카드" pages={PAGES} nav="dots" />);
+    expect(screen.queryByTestId("phone-pager-tabs")).toBeNull();
+    const list = screen.getByRole("tablist", { name: "카드" });
+    expect(list).toBe(screen.getByTestId("phone-pager-dots"));
+    expect(list).not.toHaveAttribute("aria-hidden");
+    const tabs = screen.getAllByRole("tab");
+    expect(tabs.map((t) => t.getAttribute("aria-label"))).toEqual(["보유", "현황", "섹터"]);
+    expect(tabs.map((t) => t.getAttribute("aria-selected"))).toEqual(["true", "false", "false"]);
+    const panel = screen.getByTestId("phone-page-a");
+    expect(panel).toHaveAttribute("aria-labelledby", tabs[0].id);
+    expect(screen.getByTestId("phone-page-b")).toHaveAttribute("inert");
+  });
+
+  it("a tapped dot moves the track", async () => {
+    render(<PhonePager label="카드" pages={PAGES} nav="dots" />);
+    const scrollTo = stubTrack(screen.getByTestId("phone-pager-track"));
+    await userEvent.click(screen.getByRole("tab", { name: "섹터" }));
+    expect(scrollTo).toHaveBeenCalledWith({ left: WIDTH * 2, behavior: "smooth" });
+    expect(screen.getByRole("tab", { name: "섹터" })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("a swipe moves the current dot", () => {
+    render(<PhonePager label="카드" pages={PAGES} nav="dots" />);
+    const track = screen.getByTestId("phone-pager-track");
+    stubTrack(track);
+    track.scrollLeft = WIDTH * 0.9;
+    fireEvent.scroll(track);
+    expect(screen.getByRole("tab", { name: "현황" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByTestId("phone-page-b")).not.toHaveAttribute("inert");
+  });
+
+  it("moves with the arrow keys from a focused dot", async () => {
+    render(<PhonePager label="카드" pages={PAGES} nav="dots" />);
+    stubTrack(screen.getByTestId("phone-pager-track"));
+    screen.getAllByRole("tab")[0].focus();
+    await userEvent.keyboard("{ArrowRight}");
+    expect(screen.getByRole("tab", { name: "현황" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "현황" })).toHaveFocus();
+  });
+
+  it("default nav keeps the labelled tab strip and decorative dots", () => {
+    render(<PhonePager label="화면" pages={PAGES} />);
+    expect(screen.getByTestId("phone-pager-tabs")).toHaveAttribute("role", "tablist");
+    expect(screen.getByTestId("phone-pager-dots")).toHaveAttribute("aria-hidden");
+    expect(screen.getByTestId("phone-pager-dots").querySelector("button")).toBeNull();
+  });
+});
