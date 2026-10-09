@@ -18,11 +18,13 @@
  * v3 tone: Vantablack + Bronze + Playfair UPRIGHT. POSITIVE/NEGATIVE/NEUTRAL.
  *
  * A11y: role=dialog, aria-modal, focus trap, Escape closes (when not mid-cycle).
+ * Shell: <Sheet /> — desktop markup unchanged; on a phone a bottom sheet that
+ * stacks over the host's sheet (drag / back / backdrop blocked mid-cooldown).
  */
 
 import * as React from "react";
 import { X } from "lucide-react";
-import { useFocusTrap } from "@/lib/useFocusTrap";
+import { Sheet } from "@/components/ui/sheet";
 import { type Side } from "@/lib/pre-trade";
 import {
   usePreTradeCycle,
@@ -69,7 +71,6 @@ export function PreTradeFrictionModal({
   onClose,
 }: PreTradeFrictionModalProps) {
   const headlineId = "pre-trade-modal-headline";
-  const trapRef = useFocusTrap<HTMLDivElement>(open);
 
   // Question acks/answers live here; reset whenever the modal (re)opens.
   const [acks, setAcks] = React.useState<Record<number, boolean>>({});
@@ -98,18 +99,10 @@ export function PreTradeFrictionModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  // Escape closes — but only when NOT mid-cooldown (don't let users bail the
-  // friction with a keystroke; they must Cancel explicitly during cooldown).
-  React.useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && cycle.phase !== "cooldown") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [open, onClose, cycle.phase]);
-
-  if (!open) return null;
+  // Escape / backdrop / back close — but NOT mid-cooldown (don't let users
+  // bail the friction with a keystroke; they must Cancel explicitly). Owned by
+  // <Sheet /> via `dismissible`.
+  const dismissible = cycle.phase !== "cooldown";
 
   const allAcked = QUESTIONS.every((q) => acks[q.n]);
   const displayName = tickerName || ticker;
@@ -119,12 +112,14 @@ export function PreTradeFrictionModal({
     side === "ENTRY" ? "멈춤 · 더하기 전" : "멈춤 · 줄이기 전";
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={headlineId}
-      className="pq-modal-v2"
-      style={{
+    <Sheet
+      open={open}
+      onClose={onClose}
+      ariaLabelledBy={headlineId}
+      dismissible={dismissible}
+      zIndex={1100}
+      desktopOverlayClassName="pq-modal-v2"
+      desktopOverlayStyle={{
         position: "fixed",
         inset: 0,
         zIndex: 1100,
@@ -137,23 +132,16 @@ export function PreTradeFrictionModal({
         padding: "8vh 20px calc(24px + env(safe-area-inset-bottom, 0px))",
         overflowY: "auto",
       }}
-      onClick={(e) => {
-        // Backdrop click closes only outside the active cooldown.
-        if (e.target === e.currentTarget && cycle.phase !== "cooldown") onClose();
+      desktopPanelStyle={{
+        width: "100%",
+        maxWidth: 620,
+        background: "rgba(184,149,106,0.025)",
+        border: "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
+        borderRadius: "var(--pq-radius-card, 4px)",
+        padding: "32px 32px 36px",
+        color: "var(--pq-ivory)",
       }}
     >
-      <div
-        ref={trapRef}
-        style={{
-          width: "100%",
-          maxWidth: 620,
-          background: "rgba(184,149,106,0.025)",
-          border: "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
-          borderRadius: "var(--pq-radius-card, 4px)",
-          padding: "32px 32px 36px",
-          color: "var(--pq-ivory)",
-        }}
-      >
         {/* Header */}
         <div
           style={{
@@ -279,8 +267,7 @@ export function PreTradeFrictionModal({
             resetLabel="닫기"
           />
         )}
-      </div>
-    </div>
+    </Sheet>
   );
 }
 

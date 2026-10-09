@@ -40,6 +40,10 @@ describe("PositionsTableV2 on a phone", () => {
     expect(cards).toHaveLength(1);
     expect(cards[0].textContent).toContain("10주");
     expect(cards[0].textContent).toContain("평균");
+    // 2026-10-09: the card is one tap target that opens an action sheet with
+    // the same four actions (was four 36px buttons on the card).
+    expect(screen.queryByRole("button", { name: "AAPL 정리 기록" })).toBeNull();
+    await userEvent.click(screen.getByTestId("position-card-open"));
     await userEvent.click(screen.getByRole("button", { name: "AAPL 정리 기록" }));
     expect(onAction).toHaveBeenCalledWith("sell", expect.objectContaining({ symbol: "AAPL" }));
   });

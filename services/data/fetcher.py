@@ -8,9 +8,12 @@ Supports US equities + Korean stocks (.KS / .KQ).
 import os
 import logging
 from datetime import datetime, timedelta, timezone
+from typing import TYPE_CHECKING
 
-import pandas as pd
 import requests
+
+if TYPE_CHECKING:  # annotations only — pandas is imported lazily where used
+    import pandas as pd
 
 from services.data import fmp
 from services.ticker_normalizer import normalize_ticker
@@ -1137,6 +1140,9 @@ class DataFetcher:
         if not _alpaca_hist_available or not _alpaca_hist_client:
             return None
         try:
+            # Lazy: pandas costs ~0.4s at import and this module loads at
+            # boot (routes.portfolio -> services.container). Cold start only.
+            import pandas as pd  # noqa: PLC0415
             from alpaca.data.requests import StockBarsRequest
             from alpaca.data.timeframe import TimeFrame
             from alpaca.data.enums import Adjustment

@@ -36,7 +36,7 @@ import { toast } from "sonner";
 import { PORTFOLIO_POSITIONS, PORTFOLIO_TRADES } from "@/lib/endpoints";
 import { apiFetch, ApiError } from "@/lib/api";
 import { displayTicker, isKrTicker, normalizeTicker } from "@/lib/format";
-import { useFocusTrap } from "@/lib/useFocusTrap";
+import { Sheet, SheetFooter, type SheetHandle } from "@/components/ui/sheet";
 import { currentLocationPath, loginHref } from "@/lib/login-redirect";
 import type { Position, TradeAction } from "@/components/portfolio/types";
 import { PreTradeFrictionModal } from "@/components/pre-trade/pre-trade-friction-modal";
@@ -134,7 +134,12 @@ export function TradeModalV2({
   onSuccess,
 }: TradeModalV2Props) {
   const headlineId = "trade-v2-headline";
-  const trapRef = useFocusTrap<HTMLDivElement>(open);
+  const sheetRef = React.useRef<SheetHandle>(null);
+  // Cancel / success close through the sheet so the phone exit animates.
+  const close = React.useCallback(() => {
+    if (sheetRef.current) sheetRef.current.dismiss();
+    else onClose();
+  }, [onClose]);
 
   // buy/sell carry a mode (record/review); edit has none. RECORD is default.
   const [mode, setMode] = React.useState<TradeMode>("record");
@@ -186,17 +191,10 @@ export function TradeModalV2({
     setDate(new Date().toISOString().slice(0, 10));
   }, [open, action, position]);
 
-  // Escape closes — only when the friction modal is NOT open.
-  React.useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !frictionOpen) onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [open, onClose, frictionOpen]);
+  // Escape / backdrop / back are owned by <Sheet /> (desktop and phone).
+  // While the friction modal is open it is the topmost sheet and takes them.
 
-  if (!open || !position) return null;
+  if (!position) return null;
 
   // Validate the form. For edit → commit immediately. For buy/sell → open
   // the reflection (real write happens on its onProceed).
@@ -218,7 +216,7 @@ export function TradeModalV2({
         });
         toast.success(copy.toast);
         onSuccess?.();
-        onClose();
+        close();
       } catch (err) {
         if (err instanceof ApiError && err.status === 401) {
           if (typeof window !== "undefined") window.location.href = loginHref(currentLocationPath());
@@ -294,7 +292,7 @@ export function TradeModalV2({
       onSuccess?.();
       // RECORD mode owns its own close (no friction modal to do it).
       if (mode === "record") {
-        onClose();
+        close();
       }
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -317,12 +315,15 @@ export function TradeModalV2({
   }
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={headlineId}
-      className="pq-modal-v2"
-      style={{
+    <>
+    <Sheet
+      ref={sheetRef}
+      open={open}
+      onClose={onClose}
+      ariaLabelledBy={headlineId}
+      showClose
+      desktopOverlayClassName="pq-modal-v2"
+      desktopOverlayStyle={{
         position: "fixed",
         inset: 0,
         zIndex: 1000,
@@ -335,22 +336,16 @@ export function TradeModalV2({
         padding: "10vh 24px calc(24px + env(safe-area-inset-bottom, 0px))",
         overflowY: "auto",
       }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
+      desktopPanelStyle={{
+        width: "100%",
+        maxWidth: 560,
+        background: "rgba(184,149,106,0.025)",
+        border: "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
+        borderRadius: "var(--pq-radius-card, 4px)",
+        padding: "40px 36px",
+        color: "var(--pq-ivory)",
       }}
     >
-      <div
-        ref={trapRef}
-        style={{
-          width: "100%",
-          maxWidth: 560,
-          background: "rgba(184,149,106,0.025)",
-          border: "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
-          borderRadius: "var(--pq-radius-card, 4px)",
-          padding: "40px 36px",
-          color: "var(--pq-ivory)",
-        }}
-      >
         {/* Hero */}
         <div style={{ marginBottom: 28 }}>
           <div
@@ -551,8 +546,8 @@ export function TradeModalV2({
           )}
 
           {/* Footer */}
-          <div
-            style={{
+          <SheetFooter
+            desktopStyle={{
               marginTop: 12,
               paddingTop: 20,
               borderTop:
@@ -577,7 +572,7 @@ export function TradeModalV2({
             <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
               <button
                 type="button"
-                onClick={onClose}
+                onClick={close}
                 className="font-mono"
                 style={{
                   background: "transparent",
@@ -614,9 +609,9 @@ export function TradeModalV2({
                 {submitting ? "저장 중…" : copy.cta}
               </button>
             </div>
-          </div>
+          </SheetFooter>
         </form>
-      </div>
+    </Sheet>
 
       {/* Inline Pre-Trade Friction — buy=ENTRY, sell=EXIT. Real POST on
           onProceed; Cancel writes nothing. (edit never opens this.) */}
@@ -631,12 +626,12 @@ export function TradeModalV2({
           // A buy after the seven questions is linked to the pause it just made.
           await commitTrade(action === "buy" ? reflectionId : undefined);
           setFrictionOpen(false);
-          onClose();
+          close();
         }}
         onCancel={() => setFrictionOpen(false)}
         onClose={() => setFrictionOpen(false)}
       />
-    </div>
+    </>
   );
 }
 

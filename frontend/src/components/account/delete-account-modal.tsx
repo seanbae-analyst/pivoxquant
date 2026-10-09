@@ -27,7 +27,7 @@
 import * as React from "react";
 import { AlertTriangle, X } from "lucide-react";
 import { toast } from "sonner";
-import { ModalShell } from "@/components/ui/modal-shell";
+import { MODAL_SHELL_OVERLAY_CLASS, Sheet, type SheetHandle } from "@/components/ui/sheet";
 import { apiFetch, ApiError } from "@/lib/api";
 import { API } from "@/lib/endpoints";
 
@@ -84,6 +84,18 @@ export function DeleteAccountModal({ onClose }: { onClose: () => void }) {
     if (typeof window !== "undefined") window.location.href = href;
   }, []);
 
+  // One <Sheet /> across all three phases (same element at the root of every
+  // return, so React keeps the instance — a phone sheet does not slide out and
+  // back in when the request succeeds). Desktop: ModalShell overlay + the
+  // same box as before.
+  const sheetRef = React.useRef<SheetHandle>(null);
+  const shell = {
+    desktopOverlayClassName: MODAL_SHELL_OVERLAY_CLASS,
+    desktopBackdropEvent: "mousedown" as const,
+    desktopScrollLock: true,
+    desktopPanelClassName: "my-auto w-full max-w-md",
+  };
+
   const boxStyle: React.CSSProperties = {
     background: "var(--pq-ink, #050505)",
     border: "1px solid rgba(245,240,232,0.12)",
@@ -94,8 +106,7 @@ export function DeleteAccountModal({ onClose }: { onClose: () => void }) {
   // ── Success panels ─────────────────────────────────────────────────────
   if (phase === "done-soft") {
     return (
-      <ModalShell onClose={() => leave("/")} ariaLabel="탈퇴 요청 접수">
-        <div className="my-auto w-full max-w-md" style={boxStyle}>
+      <Sheet open onClose={() => leave("/")} ariaLabel="탈퇴 요청 접수" {...shell} desktopPanelStyle={boxStyle}>
           <h3
             className="font-display"
             style={{ fontWeight: 500, fontSize: "var(--pq-text-h4)", color: "var(--pq-ivory)", marginBottom: 12 }}
@@ -119,15 +130,13 @@ export function DeleteAccountModal({ onClose }: { onClose: () => void }) {
           <button type="button" onClick={() => leave("/")} className="pq-ink-btn-bronze" style={{ width: "100%" }}>
             확인
           </button>
-        </div>
-      </ModalShell>
+      </Sheet>
     );
   }
 
   if (phase === "done-hard") {
     return (
-      <ModalShell onClose={() => leave("/")} ariaLabel="계정 삭제 완료">
-        <div className="my-auto w-full max-w-md" style={boxStyle}>
+      <Sheet open onClose={() => leave("/")} ariaLabel="계정 삭제 완료" {...shell} desktopPanelStyle={boxStyle}>
           <h3
             className="font-display"
             style={{ fontWeight: 500, fontSize: "var(--pq-text-h4)", color: "var(--pq-ivory)", marginBottom: 12 }}
@@ -144,15 +153,13 @@ export function DeleteAccountModal({ onClose }: { onClose: () => void }) {
           <button type="button" onClick={() => leave("/")} className="pq-ink-btn-bronze" style={{ width: "100%" }}>
             확인
           </button>
-        </div>
-      </ModalShell>
+      </Sheet>
     );
   }
 
   // ── Form ───────────────────────────────────────────────────────────────
   return (
-    <ModalShell onClose={busy ? () => {} : onClose} ariaLabel="계정 삭제">
-      <div className="my-auto w-full max-w-md" style={boxStyle}>
+    <Sheet ref={sheetRef} open onClose={onClose} dismissible={!busy} ariaLabel="계정 삭제" {...shell} desktopPanelStyle={boxStyle}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <AlertTriangle className="h-4 w-4" style={{ color: ERROR_COLOR }} />
@@ -165,7 +172,7 @@ export function DeleteAccountModal({ onClose }: { onClose: () => void }) {
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={() => (sheetRef.current ? sheetRef.current.dismiss() : onClose())}
             disabled={busy}
             aria-label="닫기"
             style={{ color: "var(--pq-ivory-dim)", background: "transparent", border: "none", cursor: busy ? "not-allowed" : "pointer" }}
@@ -272,8 +279,7 @@ export function DeleteAccountModal({ onClose }: { onClose: () => void }) {
             </button>
           </div>
         )}
-      </div>
-    </ModalShell>
+    </Sheet>
   );
 }
 

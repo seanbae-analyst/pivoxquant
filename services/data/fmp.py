@@ -12,8 +12,13 @@ import time
 import logging
 import requests
 import threading
-import pandas as pd
 from datetime import datetime, timedelta
+
+# pandas is imported inside the three functions that build DataFrames
+# (_get_history_kr / get_history / get_intraday) rather than here: it costs
+# ~0.4s of the app's import time, and this module is pulled in at boot via
+# routes.portfolio -> services.container -> services.data.fetcher while no
+# boot path builds a DataFrame. Render Free cold starts pay that on every wake.
 
 logger = logging.getLogger(__name__)
 
@@ -701,6 +706,8 @@ def _get_history_kr(ticker, period="3mo"):
     history cache so a 3mo window for a Korean ticker is only fetched
     once per hour. Returns an empty DataFrame on any failure — never raises.
     """
+    import pandas as pd  # noqa: PLC0415 — lazy, see module header
+
     cache_key = f"history:{ticker}:{period}"
     cached = _get_cache(cache_key, TTL_PRICE_HIST)
     if cached is not None:
@@ -740,6 +747,8 @@ def get_history(ticker, period="3mo"):
     cover KRX — this keeps engine.portfolio_analytics() working for mixed
     US/KR portfolios (Sharpe/MaxDD/AnnVol were previously null).
     """
+    import pandas as pd  # noqa: PLC0415 — lazy, see module header
+
     # Korean tickers → KIS adapter (FMP doesn't cover KRX)
     if isinstance(ticker, str) and (ticker.endswith(".KS") or ticker.endswith(".KQ")):
         return _get_history_kr(ticker, period)
@@ -1732,6 +1741,8 @@ def get_earnings_calendar(ticker=None, days_ahead=30):
 
 def get_intraday(ticker, interval="1min"):
     """Get intraday bars. Cache 60s. Stale-while-revalidate when budget low."""
+    import pandas as pd  # noqa: PLC0415 — lazy, see module header
+
     cache_key = f"intraday:{ticker}:{interval}"
     cached = _get_cache(cache_key, _intraday_ttl())
     if cached is not None:

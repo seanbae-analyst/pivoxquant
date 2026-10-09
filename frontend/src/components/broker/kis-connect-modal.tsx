@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ExternalLink, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
-import { ModalShell } from "@/components/ui/modal-shell";
+import { MODAL_SHELL_OVERLAY_CLASS, Sheet, SheetFooter } from "@/components/ui/sheet";
 import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
 import { useT } from "@/lib/locale";
@@ -73,11 +73,18 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
   };
 
   return (
-    <ModalShell onClose={onClose} ariaLabel="Connect Korea Investment & Securities">
-      <div
-        className="my-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto rounded-[2px] border border-[rgba(245,240,232,0.12)] p-5 sm:p-6 sm:max-h-[90vh]"
-        style={{ background: "rgba(10,10,10,0.96)" }}
-      >
+    // <Sheet />: desktop keeps the ModalShell overlay + this card exactly;
+    // a phone gets the bottom sheet (drag / back close, pinned Connect row).
+    <Sheet
+      open
+      onClose={onClose}
+      ariaLabel="Connect Korea Investment & Securities"
+      desktopOverlayClassName={MODAL_SHELL_OVERLAY_CLASS}
+      desktopBackdropEvent="mousedown"
+      desktopScrollLock
+      desktopPanelClassName="my-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto rounded-[2px] border border-[rgba(245,240,232,0.12)] p-5 sm:p-6 sm:max-h-[90vh]"
+      desktopPanelStyle={{ background: "rgba(10,10,10,0.96)" }}
+    >
         {/* Header */}
         <div className="mb-5 flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -224,7 +231,7 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
           )}
 
           {/* Actions */}
-          <div className="flex gap-2 pt-2">
+          <SheetFooter desktopClassName="flex gap-2 pt-2">
             <button
               type="submit"
               disabled={!canSubmit}
@@ -249,7 +256,7 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
             >
               {t("brokerOnboarding.cancel")}
             </button>
-          </div>
+          </SheetFooter>
         </form>
 
         {/* Issuance guide */}
@@ -288,7 +295,6 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
         <p className="mt-5 pt-4 border-t border-[var(--pq-ivory-line)] text-pq-eyebrow leading-relaxed text-[rgba(245,240,232,0.4)] tracking-[0.05em]">
           KIS integration is read-only. Orders are disabled in this release.
         </p>
-      </div>
-    </ModalShell>
+    </Sheet>
   );
 }

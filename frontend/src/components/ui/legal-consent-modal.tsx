@@ -28,7 +28,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ModalShell } from "@/components/ui/modal-shell";
+import { MODAL_SHELL_OVERLAY_CLASS, Sheet, SheetFooter } from "@/components/ui/sheet";
 
 const CONSENT_STORAGE_KEY = "pivox_signup_consents";
 
@@ -139,23 +139,31 @@ export function LegalConsentModal({
   };
 
   return (
-    <ModalShell
+    // Blocking: no backdrop / drag / Escape / back dismissal, and no history
+    // entry either (a gate must not trap the back button). Desktop keeps the
+    // ModalShell overlay + card; a phone gets a bottom sheet with the agree
+    // button pinned above the home indicator.
+    <Sheet
+      open
       onClose={() => {
         /* blocking — no-op */
       }}
+      dismissible={false}
       closeOnBackdrop={false}
+      closeOnBack={false}
       ariaLabel="가입 전 법적 동의"
+      desktopOverlayClassName={MODAL_SHELL_OVERLAY_CLASS}
+      desktopBackdropEvent="mousedown"
+      desktopScrollLock
+      desktopPanelClassName="w-full max-w-md p-6"
+      desktopPanelStyle={{
+        backgroundColor: "var(--pq-ink)",
+        color: "var(--pq-ivory)",
+        border: "1px solid var(--pq-border)",
+        borderRadius: "var(--pq-radius-card)",
+        boxShadow: "0 24px 56px rgba(0,0,0,0.6)",
+      }}
     >
-      <div
-        className="w-full max-w-md p-6"
-        style={{
-          backgroundColor: "var(--pq-ink)",
-          color: "var(--pq-ivory)",
-          border: "1px solid var(--pq-border)",
-          borderRadius: "var(--pq-radius-card)",
-          boxShadow: "0 24px 56px rgba(0,0,0,0.6)",
-        }}
-      >
         <h2
           className="text-lg font-bold font-display"
           style={{
@@ -309,11 +317,12 @@ export function LegalConsentModal({
           </label>
         </div>
 
+        <SheetFooter>
         <button
           type="button"
           disabled={!allRequired}
           onClick={handleSubmit}
-          className="mt-5 w-full px-4 py-3 text-sm font-semibold transition-all"
+          className="mt-5 w-full px-4 py-3 text-sm font-semibold transition-all max-md:mt-0"
           style={{
             borderRadius: "var(--pq-radius-cta)",
             backgroundColor: allRequired ? "var(--pq-bronze)" : "rgba(var(--pq-ivory-rgb), 0.06)",
@@ -342,7 +351,7 @@ export function LegalConsentModal({
             필수 항목 4개에 모두 동의해야 진행할 수 있습니다.
           </p>
         )}
-      </div>
-    </ModalShell>
+        </SheetFooter>
+    </Sheet>
   );
 }

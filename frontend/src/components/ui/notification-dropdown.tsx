@@ -6,6 +6,9 @@
  * Live-wired to /api/alerts (2026-04-22). All copy is observation-only:
  * "reached", "noted", "ready", "complete". No buy / sell / recommend /
  * advice / target language anywhere in this file.
+ *
+ * Phone (<768px, 2026-10-09): the panel opens as a full-height bottom sheet
+ * (components/ui/sheet.tsx) instead of a popover hanging off the top bar.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -19,6 +22,9 @@ import { API } from "@/lib/endpoints";
 import { useAuth } from "@/lib/auth";
 import { useLocale } from "@/lib/locale";
 import { relativeTime } from "@/lib/relative-time";
+import { useIsPhone } from "@/lib/use-phone";
+import { markOverlayNavigation } from "@/lib/use-back-dismiss";
+import { Sheet } from "@/components/ui/sheet";
 
 type AlertRow = {
   id: number;
@@ -53,6 +59,7 @@ export function NotificationDropdown() {
   const [open, setOpen] = useState(false);
   const [markingRead, setMarkingRead] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
+  const isPhone = useIsPhone();
 
   // BUG-8 FIX 2: unify the SWR cache key with `useAlerts()` in hooks.ts
   // so both subscriptions dedupe to a single request.
@@ -88,6 +95,9 @@ export function NotificationDropdown() {
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
+      // The phone panel is a sheet portaled to <body>; taps inside it are not
+      // "outside" (the sheet has its own backdrop dismissal).
+      if ((e.target as Element | null)?.closest?.("[data-pq-sheet-layer]")) return;
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     }
     function onEsc(e: KeyboardEvent) {
@@ -127,9 +137,144 @@ export function NotificationDropdown() {
       mutate();
     }
     if (item.link) {
+      // Leaving from inside the phone sheet: keep its back-entry cleanup from
+      // racing this navigation.
+      markOverlayNavigation();
       router.push(item.link);
     }
   }
+
+  const panelBody = (
+    <>
+      {/* Header */}
+      <div
+        className="flex items-center justify-between px-4 py-3 max-md:px-5 max-md:pt-1"
+        style={{ borderBottom: "0.5px solid var(--pq-hairline)" }}
+      >
+        <div>
+          <div
+            className="text-pq-eyebrow uppercase"
+            style={{ letterSpacing: "0.2em", color: "var(--pq-muted)" }}
+          >
+            {t("topbar.notifications")}
+          </div>
+          <div
+            className="text-base font-serif"
+            style={{ color: "var(--pq-ivory)" }}
+          >
+            {t("topbar.observations")}
+          </div>
+        </div>
+        {unread > 0 && (
+          <button
+            onClick={markAllRead}
+            type="button"
+            disabled={markingRead}
+            className="text-xs underline underline-offset-4 transition-colors disabled:opacity-50"
+            style={{ color: "var(--pq-bronze)" }}
+          >
+            {t("topbar.markAllRead")}
+          </button>
+        )}
+      </div>
+
+      {/* List */}
+      <div className="max-h-[360px] overflow-y-auto max-md:max-h-none max-md:overflow-visible">
+        {isLoading ? (
+          <div className="px-4 py-3">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="flex items-start gap-3 py-3">
+                <div
+                  className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
+                  style={{ background: "rgba(245,240,232,0.12)" }}
+                  aria-hidden
+                />
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <div
+                    className="h-3 w-4/5 rounded"
+                    style={{ background: "var(--pq-ivory-line)" }}
+                  />
+                  <div
+                    className="h-2 w-2/5 rounded"
+                    style={{ background: "var(--pq-ivory-line-soft)" }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : error ? (
+          <div
+            className="px-4 py-10 text-center text-sm font-serif"
+            style={{ color: "var(--pq-muted)" }}
+          >
+            {t("topbar.unableToLoad")}
+          </div>
+        ) : items.length === 0 ? (
+          <div
+            className="px-4 py-10 text-center text-sm font-serif"
+            style={{ color: "var(--pq-muted)" }}
+          >
+            {t("topbar.noAlertsYet")}
+          </div>
+        ) : (
+          items.map((n, i) => {
+            const unreadRow = !n.is_read;
+            const title = n.title || n.message || t("topbar.observations");
+            return (
+              <button
+                key={n.id}
+                type="button"
+                onClick={() => onItemClick(n)}
+                className={cn(
+                  "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-[rgba(var(--pq-bronze-wash-rgb),0.05)]",
+                  // Phone sheet: full-width rows on the sheet gutter.
+                  "max-md:min-h-[56px] max-md:px-5",
+                )}
+                style={{
+                  borderTop: i === 0 ? "none" : "0.5px solid var(--pq-hairline-soft)",
+                }}
+                role="menuitem"
+              >
+                <span
+                  className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
+                  style={{
+                    background: unreadRow ? "var(--pq-bronze)" : "transparent",
+                    border: unreadRow ? "none" : "0.5px solid var(--pq-hairline)",
+                  }}
+                  aria-hidden
+                />
+                <div className="min-w-0 flex-1">
+                  <p
+                    className="text-pq-body leading-snug font-serif"
+                    style={{
+                      color: unreadRow ? "var(--pq-ivory)" : "var(--pq-muted)",
+                      fontWeight: unreadRow ? 600 : 400,
+                    }}
+                  >
+                    {title}
+                  </p>
+                  {n.body && (
+                    <p
+                      className="mt-0.5 text-[9pt] leading-snug"
+                      style={{ color: "var(--pq-muted)" }}
+                    >
+                      {n.body}
+                    </p>
+                  )}
+                  <p
+                    className="mt-1 text-pq-mono-sm uppercase tabular-nums"
+                    style={{ letterSpacing: "0.12em", color: "var(--pq-muted)" }}
+                  >
+                    {relativeTime(n.created_at, locale, { verbose: true })}
+                  </p>
+                </div>
+              </button>
+            );
+          })
+        )}
+      </div>
+    </>
+  );
 
   return (
     /* Mobile (<sm): the root is NOT positioned, so the panel anchors to the
@@ -165,140 +310,25 @@ export function NotificationDropdown() {
         )}
       </button>
 
-      {open && (
+      {open && !isPhone && (
         <div
           className="absolute inset-x-4 top-full z-[100] mt-2 overflow-hidden sm:inset-x-auto sm:right-0 sm:w-[340px] rounded-xl shadow-[0_16px_48px_-16px_rgba(10,10,10,0.3)]"
           style={{ background: "color-mix(in srgb, var(--pq-ivory) 4%, var(--pq-ink))", border: "0.5px solid rgba(245,240,232,0.12)" }}
           role="menu"
         >
-          {/* Header */}
-          <div
-            className="flex items-center justify-between px-4 py-3"
-            style={{ borderBottom: "0.5px solid var(--pq-hairline)" }}
-          >
-            <div>
-              <div
-                className="text-pq-eyebrow uppercase"
-                style={{ letterSpacing: "0.2em", color: "var(--pq-muted)" }}
-              >
-                {t("topbar.notifications")}
-              </div>
-              <div
-                className="text-base font-serif"
-                style={{ color: "var(--pq-ivory)" }}
-              >
-                {t("topbar.observations")}
-              </div>
-            </div>
-            {unread > 0 && (
-              <button
-                onClick={markAllRead}
-                type="button"
-                disabled={markingRead}
-                className="text-xs underline underline-offset-4 transition-colors disabled:opacity-50"
-                style={{ color: "var(--pq-bronze)" }}
-              >
-                {t("topbar.markAllRead")}
-              </button>
-            )}
-          </div>
-
-          {/* List */}
-          <div className="max-h-[360px] overflow-y-auto">
-            {isLoading ? (
-              <div className="px-4 py-3">
-                {[0, 1, 2].map((i) => (
-                  <div key={i} className="flex items-start gap-3 py-3">
-                    <div
-                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
-                      style={{ background: "rgba(245,240,232,0.12)" }}
-                      aria-hidden
-                    />
-                    <div className="min-w-0 flex-1 space-y-1.5">
-                      <div
-                        className="h-3 w-4/5 rounded"
-                        style={{ background: "var(--pq-ivory-line)" }}
-                      />
-                      <div
-                        className="h-2 w-2/5 rounded"
-                        style={{ background: "var(--pq-ivory-line-soft)" }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : error ? (
-              <div
-                className="px-4 py-10 text-center text-sm font-serif"
-                style={{ color: "var(--pq-muted)" }}
-              >
-                {t("topbar.unableToLoad")}
-              </div>
-            ) : items.length === 0 ? (
-              <div
-                className="px-4 py-10 text-center text-sm font-serif"
-                style={{ color: "var(--pq-muted)" }}
-              >
-                {t("topbar.noAlertsYet")}
-              </div>
-            ) : (
-              items.map((n, i) => {
-                const unreadRow = !n.is_read;
-                const title = n.title || n.message || t("topbar.observations");
-                return (
-                  <button
-                    key={n.id}
-                    type="button"
-                    onClick={() => onItemClick(n)}
-                    className={cn(
-                      "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-[rgba(var(--pq-bronze-wash-rgb),0.05)]",
-                    )}
-                    style={{
-                      borderTop: i === 0 ? "none" : "0.5px solid var(--pq-hairline-soft)",
-                    }}
-                    role="menuitem"
-                  >
-                    <span
-                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
-                      style={{
-                        background: unreadRow ? "var(--pq-bronze)" : "transparent",
-                        border: unreadRow ? "none" : "0.5px solid var(--pq-hairline)",
-                      }}
-                      aria-hidden
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p
-                        className="text-pq-body leading-snug font-serif"
-                        style={{
-                          color: unreadRow ? "var(--pq-ivory)" : "var(--pq-muted)",
-                          fontWeight: unreadRow ? 600 : 400,
-                        }}
-                      >
-                        {title}
-                      </p>
-                      {n.body && (
-                        <p
-                          className="mt-0.5 text-[9pt] leading-snug"
-                          style={{ color: "var(--pq-muted)" }}
-                        >
-                          {n.body}
-                        </p>
-                      )}
-                      <p
-                        className="mt-1 text-pq-mono-sm uppercase tabular-nums"
-                        style={{ letterSpacing: "0.12em", color: "var(--pq-muted)" }}
-                      >
-                        {relativeTime(n.created_at, locale, { verbose: true })}
-                      </p>
-                    </div>
-                  </button>
-                );
-              })
-            )}
-          </div>
-
+          {panelBody}
         </div>
       )}
+
+      <Sheet
+        open={open && isPhone}
+        onClose={() => setOpen(false)}
+        ariaLabel={t("topbar.notifications")}
+        phoneFullHeight
+        phoneBodyClassName="px-0"
+      >
+        <div role="menu">{panelBody}</div>
+      </Sheet>
     </div>
   );
 }
