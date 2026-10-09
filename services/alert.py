@@ -36,12 +36,15 @@ ALLOWED_KINDS = {
 
 # Dedup windows for the wrappers below. The sweep in app.py runs once per
 # weekday, so a window must be longer than one sweep interval to hold.
-#   52w      — 24h per (user, kind, ticker): a fresh touch on a later day is
-#              a new observation (unchanged behaviour).
+#   52w      — 7d per (user, kind, ticker): a ticker sitting at its 52-week
+#              high/low touches it again on every sweep, so a 24h window
+#              re-alerted every weekday (and created_at drift made 24h vs a
+#              24h sweep interval a coin toss). Same weekly cadence as sector.
+#              Only fires while MARKET_DATA_DISPLAY_ENABLED is on (app.py).
 #   sector   — 7d per (user, sector): concentration is a standing condition,
 #              not an event; re-pushing it every weekday while it persists is
 #              noise. One reminder per sector per week.
-PRICE_52W_DEDUP_HOURS = 24
+PRICE_52W_DEDUP_HOURS = 7 * 24
 CONCENTRATION_DEDUP_HOURS = 7 * 24
 CONCENTRATION_TITLE_PREFIX = "Portfolio concentration — "
 

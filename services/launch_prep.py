@@ -265,24 +265,19 @@ def env_health_summary() -> dict:
     real_production = (
         os.environ.get("FLASK_ENV", "development").lower() == "production"
     )
-    # Names, not values. Counts alone forced a guess on 2026-09-10: the
-    # sweep read a count of 1 at the middle severity as "FMP_API_KEY is
-    # absent" when the inventory holds seven keys at that severity and the absent one
-    # was almost certainly SENDGRID_WEBHOOK_PUBLIC_KEY (SHIP_BLOCKERS A3).
-    # A var *name* on a health probe discloses nothing an attacker can
-    # use — every consumer of these keys already fails closed without
-    # them — and it turns a day of inference into one line of output.
+    # Counts only — never var names (2026-10-09). /api/health is public and
+    # unauthenticated; a list of which secrets are absent is a map of what
+    # this deploy is missing, handed to anyone. The names were added on
+    # 2026-09-10 because a count of 1 had to be guessed at — but the boot of
+    # every production worker already logs each missing var by name
+    # (``check_env(production=True)`` from app.py: "LAUNCH_PREP env-missing
+    # [RECOMMENDED] <NAME>"), so the operator reads the name from the Render
+    # deploy log, not from a public probe. Monitors (api-health.yml,
+    # keep-warm.yml, scripts/nightly/critical_endpoints.py) read only the
+    # status code and ``status`` — none of them parse these fields.
     return {
         "production": real_production,
         "missing_required": full["summary"]["missing_required"],
         "missing_recommended": full["summary"]["missing_recommended"],
-        "missing_required_names": [
-            c["name"] for c in full["checks"]
-            if not c["present"] and c["severity"] == "required"
-        ],
-        "missing_recommended_names": [
-            c["name"] for c in full["checks"]
-            if not c["present"] and c["severity"] == "recommended"  # // legal-ok
-        ],
         "total_checked": full["summary"]["total_checked"],
     }

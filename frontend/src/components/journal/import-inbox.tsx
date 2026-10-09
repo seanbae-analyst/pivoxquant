@@ -44,6 +44,7 @@ import { apiFetch, ApiError } from "@/lib/api";
 import { API, PORTFOLIO_POSITIONS, PORTFOLIO_SUMMARY, PORTFOLIO_TRADES } from "@/lib/endpoints";
 import { displayName, parseIsoUtc } from "@/lib/format";
 import { fadeUp } from "@/lib/motion";
+import { SIDE_BUY } from "@/lib/fill-side";
 import { sideLabelKo } from "@/components/pre-trade/pre-trade-friction-core";
 import {
   RuledKicker,
@@ -342,7 +343,7 @@ export function PendingTradeRow({
   const nameLabel = row.ticker ? displayName(row.ticker, row.name) : row.name;
   // Buy ↔ pause link (2026-09-29): buy rows with a resolved ticker only.
   const reflectionLink = useReflectionLink(
-    row.action === "BUY" && !row.needs_ticker ? row.ticker : null,
+    row.action === SIDE_BUY && !row.needs_ticker ? row.ticker : null,
     row.pre_trade_reflection_id,
   );
 

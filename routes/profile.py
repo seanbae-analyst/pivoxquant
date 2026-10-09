@@ -23,6 +23,7 @@ from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, request, jsonify, Response
 from flask_login import current_user
+from sqlalchemy import or_
 
 from extensions import db
 from models import (
@@ -1686,6 +1687,30 @@ def _serialize_checkout_expiration(c) -> dict:
     }
 
 
+def _export_companion_waitlist(user_id: int, email: str | None) -> list:
+    """Waitlist rows the §35 export owes the user — same match as erasure.
+
+    ``services/account_erasure._purge_companion_waitlist`` deletes rows by
+    ``user_id`` OR ``email_hash`` (a pre-login landing signup has no
+    ``user_id``). Export must see the same rows, or a row is erased without
+    ever having been disclosed. One OR query, so a row that matches both
+    keys comes back once; the hash is ``CompanionWaitlist.hash_email``
+    (one key rule for enrol / erase / export).
+    """
+    match = [CompanionWaitlist.user_id == user_id]
+    if email and email.strip():
+        match.append(
+            CompanionWaitlist.email_hash == CompanionWaitlist.hash_email(email)
+        )
+    return (
+        CompanionWaitlist.query
+        .filter(or_(*match))
+        .order_by(CompanionWaitlist.id.desc())
+        .limit(_EXPORT_WAITLIST_LIMIT)
+        .all()
+    )
+
+
 def _serialize_companion_waitlist(w) -> dict:
     """Journal Companion waitlist enrolment (CompanionWaitlist has no
     to_dict). ``email_hash`` is a SHA256 of the email — not reversible, but
@@ -2612,12 +2637,8 @@ def export_profile():
             .limit(_EXPORT_INQUIRY_LIMIT)
             .all()
         )
-        companion_waitlist = (
-            CompanionWaitlist.query
-            .filter_by(user_id=user_id)
-            .order_by(CompanionWaitlist.id.desc())
-            .limit(_EXPORT_WAITLIST_LIMIT)
-            .all()
+        companion_waitlist = _export_companion_waitlist(
+            user_id, getattr(user, "email", None),
         )
         portfolio_shares = (
             PortfolioShare.query

@@ -167,18 +167,30 @@ class TestEnvHealthSummary:
         assert s["production"] is False
 
 
-    def test_summary_names_the_missing_vars(self, lp, monkeypatch):
-        """Counts alone forced a guess on 2026-09-10 — the summary must
-        say WHICH recommended/required vars are absent (names only)."""
+    def test_summary_carries_counts_but_never_var_names(self, lp, monkeypatch):
+        """/api/health is public — the summary says HOW MANY vars are
+        missing, never WHICH (2026-10-09). The names live in the production
+        boot log (``check_env(production=True)``), not on a public probe."""
         monkeypatch.delenv("FMP_API_KEY", raising=False)
         monkeypatch.setenv("KIS_APP_KEY", "x")
         s = lp.env_health_summary()
-        assert "FMP_API_KEY" in s["missing_recommended_names"]
-        assert "KIS_APP_KEY" not in s["missing_recommended_names"]
-        assert len(s["missing_recommended_names"]) == s["missing_recommended"]
-        assert len(s["missing_required_names"]) == s["missing_required"]
-        # Names only — never values.
-        assert "x" not in str(s["missing_recommended_names"])
+        assert s["missing_recommended"] >= 1
+        assert set(s) == {
+            "production", "missing_required", "missing_recommended",
+            "total_checked",
+        }
+        assert "missing_required_names" not in s
+        assert "missing_recommended_names" not in s
+        inventory_names = {name for name, _, _ in lp._INVENTORY}
+        assert not any(name in str(s) for name in inventory_names), s
+
+    def test_boot_log_still_names_the_missing_vars(self, lp, monkeypatch, caplog):
+        """The operator's way to learn WHICH var is absent: the boot log."""
+        monkeypatch.delenv("FMP_API_KEY", raising=False)
+        caplog.clear()
+        with caplog.at_level(logging.INFO, logger="launch_prep"):
+            lp.check_env(production=True)
+        assert any("FMP_API_KEY" in r.getMessage() for r in caplog.records)
 
 
 class TestHealthEndpointIncludesEnv:
@@ -191,3 +203,19 @@ class TestHealthEndpointIncludesEnv:
         assert "total_checked" in body["env"]
         # The summary must be small.
         assert "checks" not in body["env"]
+
+    def test_public_health_never_lists_env_var_names(self, client, monkeypatch):
+        """Unauthenticated probe: counts yes, names of absent secrets no."""
+        from services.launch_prep import _INVENTORY
+
+        for name, _, _ in _INVENTORY:
+            monkeypatch.delenv(name, raising=False)
+        r = client.get("/api/health")
+        assert r.status_code == 200
+        body = r.get_json()
+        assert body["status"] == "ok"
+        assert body["env"]["missing_recommended"] >= 1
+        raw = r.get_data(as_text=True)
+        assert "_names" not in raw
+        leaked = [name for name, _, _ in _INVENTORY if name in raw]
+        assert leaked == [], leaked

@@ -145,15 +145,8 @@ export interface AlertItem {
   read_at?: string | null;
   is_read: boolean;
   created_at: string;
-  /**
-   * @deprecated Backend never returns this. Use `kind` instead.
-   * Kept optional for v1 callers — will be undefined at runtime.
-   */
-  type?: string;
-  /**
-   * @deprecated Backend never returns this. Kept optional for v1 callers.
-   */
-  data?: Record<string, unknown> | null;
+  // Legacy `type` / `data` were removed 2026-10-09 (design guard DS5):
+  // `serialize_alert` never emitted them and nothing read them. Use `kind`.
 }
 
 export interface AlertsResponse {

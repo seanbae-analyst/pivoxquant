@@ -12,6 +12,7 @@
 import { useT } from "@/lib/locale";
 import type { ParsedFill } from "@/lib/fill-ocr/parse";
 import { maskSourceText } from "@/lib/fill-ocr/mask";
+import { SIDE_BUY, SIDE_SELL } from "@/lib/fill-side";
 
 export type ReviewField = "date" | "time" | "name" | "code" | "side" | "shares" | "price" | "currency";
 
@@ -103,7 +104,7 @@ export function rowPayload(r: ReviewRow) {
     tz: r.tz ?? "KST",
     name: v.name,
     code: v.code,
-    action: v.side === "BUY" ? "buy" : "sell",
+    action: v.side === SIDE_BUY ? "buy" : "sell",
     shares: num(v.shares),
     price: num(v.price),
     currency: v.currency,
@@ -207,8 +208,8 @@ export function OcrReviewTable({
                 style={{ borderColor: r.values.side ? "rgba(245,240,232,0.15)" : "var(--pq-bronze)" }}
               >
                 <option value="">{t("journal.import.image.sideUnknown")}</option>
-                <option value="BUY">{t("journal.import.image.sideBuy")}</option>
-                <option value="SELL">{t("journal.import.image.sideSell")}</option>
+                <option value={SIDE_BUY}>{t("journal.import.image.sideBuy")}</option>
+                <option value={SIDE_SELL}>{t("journal.import.image.sideSell")}</option>
               </select>
               {cell(r, "shares", "", "decimal")}
               {cell(r, "price", "", "decimal")}

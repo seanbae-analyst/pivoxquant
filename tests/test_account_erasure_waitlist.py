@@ -120,3 +120,69 @@ def test_delete_account_route_purges_waitlist_email(app, client, make_user):
     with app.app_context():
         assert CompanionWaitlist.query.filter_by(
             email_hash=CompanionWaitlist.hash_email(user["email"])).count() == 0
+
+
+def test_export_shows_every_waitlist_row_erasure_would_delete(
+    app, client, make_user,
+):
+    """PIPA §35 export ↔ §21 erasure parity (2026-10-09).
+
+    Erasure deletes rows by user_id OR email_hash; the export used to read by
+    user_id only, so a pre-login landing signup with the user's address was
+    destroyed without ever being disclosed. Same match now, one row each.
+    """
+    from extensions import db
+    from models import CompanionWaitlist
+    from services.account_erasure import _purge_companion_waitlist
+
+    user = make_user(email="export_me@test.com")
+    uid = user["id"]
+    with app.app_context():
+        db.session.add_all([
+            _waitlist("alias_export@test.com", user_id=uid),
+            # Pre-login landing signup — no user_id, same address.
+            _waitlist(" Export_Me@Test.com", user_id=None),
+            _waitlist("someone_else@test.com", user_id=None),
+        ])
+        db.session.commit()
+
+    login = client.post("/api/auth/login",
+                        json={"email": user["email"], "password": user["password"]})
+    assert login.status_code == 200, login.data
+    resp = client.get("/api/profile/export")
+    assert resp.status_code == 200, resp.data
+    body = resp.get_json()
+
+    exported = sorted(w["email_plaintext"] for w in body["companion_waitlist"])
+    assert exported == [" Export_Me@Test.com", "alias_export@test.com"]
+    assert body["counts"]["companion_waitlist"] == 2
+    assert "someone_else@test.com" not in resp.get_data(as_text=True)
+    exported_ids = {w["id"] for w in body["companion_waitlist"]}
+
+    # The rows erasure would delete are exactly the rows the export showed.
+    with app.app_context():
+        before = {w.id for w in CompanionWaitlist.query.all()}
+        deleted = _purge_companion_waitlist(uid, user["email"])
+        after = {w.id for w in CompanionWaitlist.query.all()}
+        db.session.rollback()
+    assert deleted == len(exported_ids)
+    assert before - after == exported_ids
+
+
+def test_export_waitlist_row_matching_both_keys_appears_once(
+    app, client, make_user,
+):
+    """A row linked by user_id AND carrying the user's email hash is one row."""
+    from extensions import db
+
+    user = make_user(email="both_keys@test.com")
+    with app.app_context():
+        db.session.add(_waitlist("both_keys@test.com", user_id=user["id"]))
+        db.session.commit()
+
+    login = client.post("/api/auth/login",
+                        json={"email": user["email"], "password": user["password"]})
+    assert login.status_code == 200, login.data
+    body = client.get("/api/profile/export").get_json()
+    assert body["counts"]["companion_waitlist"] == 1
+    assert len(body["companion_waitlist"]) == 1
