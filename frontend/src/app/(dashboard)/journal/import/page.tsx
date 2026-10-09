@@ -23,11 +23,16 @@
  *     (manifest.ts) points Android's share sheet here with GET.
  *   - Results reuse <PendingTradeList /> from the /journal inbox so a row can
  *     be approved right here, or later at the top of /journal.
+ *   - Phone (<md, 2026-10-09 CEO "앱처럼"): the three input methods are
+ *     swipeable full-width pages (<JournalPager />) with a tab strip that
+ *     tracks the swipe, page dots, and the submit pinned above the bottom nav
+ *     (safe-area aware). The page in view is the submit target. At md and up
+ *     the pager dissolves and the original tab buttons + single panel return.
  *
  * Tone: v3 — Vantablack + Bronze + Playfair UPRIGHT.
  */
 
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { mutate } from "swr";
@@ -38,6 +43,7 @@ import { API } from "@/lib/endpoints";
 import { PendingTradeList } from "@/components/journal/import-inbox";
 import { ImageImportPanel } from "@/components/journal/image-import-panel";
 import { AiTextReadPanel } from "@/components/journal/ai-text-read-panel";
+import { JournalPager } from "@/components/journal/journal-pager";
 import {
   RuledKicker,
   Caption,
@@ -77,6 +83,23 @@ function writeConsent(key: string | null, on: boolean): void {
 
 type Tab = "file" | "text" | "image";
 
+/** Phone page order — also the desktop tab order. */
+const TABS: ReadonlyArray<Tab> = ["file", "text", "image"];
+
+/** Tailwind's `md` is 48rem; below it is the phone layout (journal-pager.tsx). */
+const PHONE_QUERY = "(max-width: 47.99rem)";
+
+function isPhoneViewport(): boolean {
+  return typeof window !== "undefined" && (window.matchMedia?.(PHONE_QUERY).matches ?? false);
+}
+
+function prefersReducedMotion(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false)
+  );
+}
+
 function ImportPageInner() {
   const t = useT();
   useLocale();
@@ -101,6 +124,20 @@ function ImportPageInner() {
   const [result, setResult] = useState<ImportCreateResponse | null>(null);
   const [rows, setRows] = useState<PendingTradeDTO[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const resultRef = useRef<HTMLElement | null>(null);
+
+  // The phone pager reports the page in view; it becomes the submit target.
+  const onPageChange = useCallback((i: number) => setTab(TABS[i] ?? "file"), []);
+
+  // Phone: the result lands below the pager, out of sight of the pinned
+  // submit — bring it into view. Desktop keeps its layout untouched.
+  useEffect(() => {
+    if (!result || !isPhoneViewport()) return;
+    resultRef.current?.scrollIntoView({
+      block: "start",
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
+    });
+  }, [result]);
 
   // Remembered consent — read after mount (and once the user id is known) so
   // SSR and the first client render agree.
@@ -193,8 +230,122 @@ function ImportPageInner() {
         : "border border-[rgba(245,240,232,0.15)] text-[var(--pq-ivory-mid)] hover:border-[rgba(245,240,232,0.45)]"
     }`;
 
+  const filePanel = (
+    <div className="mt-5 max-md:mt-1">
+      <FieldLabel tone="bronze">{t("journal.import.page.tabFile")}</FieldLabel>
+      <Caption className="mt-1">{t("journal.import.page.fileHint")}</Caption>
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <input
+          ref={fileInputRef}
+          id="import-file"
+          type="file"
+          accept={ACCEPT}
+          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+          className="sr-only"
+        />
+        <label
+          htmlFor="import-file"
+          className="pq-ink-btn-ghost cursor-pointer px-4 text-pq-mono-sm uppercase tracking-[0.22em] max-md:h-12 max-md:w-full max-md:justify-center"
+        >
+          {t("journal.import.page.fileChoose")}
+        </label>
+        <span
+          className="font-mono truncate max-md:w-full"
+          style={{ fontSize: "var(--pq-text-mono-sm)", color: "var(--pq-ivory-mid)" }}
+        >
+          {file ? file.name : t("journal.import.page.fileNone")}
+        </span>
+      </div>
+      {fileTooLarge && (
+        <Caption className="mt-2">
+          <span style={{ color: "var(--pq-error)" }}>
+            {t("journal.import.page.fileTooLarge")}
+          </span>
+        </Caption>
+      )}
+      {isPdf && (
+        <div className="mt-4">
+          <label htmlFor="import-pdf-password">
+            <FieldLabel tone="bronze">{t("journal.import.page.pdfPasswordLabel")}</FieldLabel>
+          </label>
+          <input
+            id="import-pdf-password"
+            type="password"
+            inputMode="numeric"
+            autoComplete="off"
+            maxLength={64}
+            value={pdfPassword}
+            onChange={(e) => setPdfPassword(e.target.value)}
+            className="pq-input-noom-mono mt-2 block w-full max-w-xs bg-transparent px-3 py-2 font-mono outline-none"
+            style={{
+              color: "var(--pq-ivory)",
+              border: "0.5px solid var(--pq-ivory-line)",
+              borderRadius: "var(--pq-radius-cta)",
+            }}
+          />
+          <Caption className="mt-1">{t("journal.import.page.pdfPasswordHint")}</Caption>
+        </div>
+      )}
+    </div>
+  );
+
+  const textPanel = (
+    <div className="mt-5 max-md:mt-1">
+      <label htmlFor="import-text">
+        <FieldLabel tone="bronze">{t("journal.import.page.textLabel")}</FieldLabel>
+      </label>
+      <Caption className="mt-1">{t("journal.import.page.textHint")}</Caption>
+      <textarea
+        id="import-text"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        rows={8}
+        className="mt-3 w-full bg-transparent border border-[rgba(245,240,232,0.15)] rounded-[2px] p-3 text-pq-body-sm leading-relaxed outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)] font-mono"
+        style={{ resize: "vertical" }}
+      />
+      {prefill && text === prefill && (
+        <Caption className="mt-1">{t("journal.import.page.sharePrefilled")}</Caption>
+      )}
+      <div className="mt-3 space-y-1">
+        <Caption>{t("journal.import.page.iosHint")}</Caption>
+        <Caption>{t("journal.import.page.androidHint")}</Caption>
+        <Caption>{t("journal.import.page.noImage")}</Caption>
+      </div>
+      {text.trim() !== "" && <AiTextReadPanel text={text} consent={consent} onResult={onImageResult} />}
+    </div>
+  );
+
+  const panels: Record<Tab, { label: string; content: React.ReactNode }> = {
+    file: { label: t("journal.import.page.tabFile"), content: filePanel },
+    text: { label: t("journal.import.page.tabText"), content: textPanel },
+    image: {
+      label: t("journal.import.page.tabImage"),
+      // The panel's own top margin is for the desktop tab row; under the
+      // phone strip it matches the other pages.
+      content: (
+        <div className="max-md:*:mt-1">
+          <ImageImportPanel consent={consent} onResult={onImageResult} />
+        </div>
+      ),
+    },
+  };
+
+  // Phone: every panel is a page in the pager. Desktop: the pager dissolves
+  // (md:contents) and only the selected tab's panel is shown, as before.
+  // `relative` keeps each panel's absolutely-positioned bits (the sr-only file
+  // inputs) inside its own page: otherwise they resolve against an ancestor
+  // outside the clipped track, sit at x = page × width and widen the document,
+  // which makes mobile browsers zoom the whole screen out.
+  const pages = TABS.map((id) => ({
+    id,
+    label: panels[id].label,
+    content: (
+      <div className={tab === id ? "relative" : "relative md:hidden"}>{panels[id].content}</div>
+    ),
+  }));
+
   return (
-    <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
+    <div className="mx-auto w-full max-w-2xl px-0 pb-2 md:px-6 md:py-8">
       <header className="mb-6">
         <RuledKicker>{t("journal.import.page.kicker")}</RuledKicker>
         <EditorialHead as="h1" size={32} className="mt-3">
@@ -211,12 +362,11 @@ function ImportPageInner() {
 
       <form
         onSubmit={submit}
-        className="rounded-[2px] border p-5 sm:p-6"
-        style={{ borderColor: "var(--pq-ivory-line)", background: "var(--pq-card-veil)" }}
+        className="rounded-[2px] md:border md:border-[var(--pq-ivory-line)] md:bg-[var(--pq-card-veil)] md:p-6"
         aria-label={t("journal.import.page.heading")}
       >
-        {/* Consent — opt-in, gates the submit. */}
-        <label className="flex items-start gap-3 cursor-pointer">
+        {/* Consent — opt-in, gates the submit. Shared by every input method. */}
+        <label className="flex items-start gap-3 cursor-pointer max-md:mb-4">
           <input
             type="checkbox"
             checked={consent}
@@ -237,147 +387,78 @@ function ImportPageInner() {
           </span>
         </label>
 
-        <HairlineSoft className="my-5" />
+        <HairlineSoft className="my-5 max-md:hidden" />
 
-        {/* Source tabs */}
-        <div className="flex gap-2" role="tablist" aria-label={t("journal.import.page.heading")}>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === "file"}
-            onClick={() => setTab("file")}
-            className={tabClass(tab === "file")}
-          >
-            {t("journal.import.page.tabFile")}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === "text"}
-            onClick={() => setTab("text")}
-            className={tabClass(tab === "text")}
-          >
-            {t("journal.import.page.tabText")}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === "image"}
-            onClick={() => setTab("image")}
-            className={tabClass(tab === "image")}
-            data-testid="import-tab-image"
-          >
-            {t("journal.import.page.tabImage")}
-          </button>
+        {/* Source tabs — desktop. The phone pager below carries its own strip. */}
+        <div
+          className="hidden gap-2 md:flex"
+          role="tablist"
+          aria-label={t("journal.import.page.heading")}
+          data-testid="import-tabs-desktop"
+        >
+          {TABS.map((id) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={tab === id}
+              onClick={() => setTab(id)}
+              className={tabClass(tab === id)}
+              data-testid={id === "image" ? "import-tab-image" : undefined}
+            >
+              {panels[id].label}
+            </button>
+          ))}
         </div>
 
-        {tab === "image" ? (
-          <ImageImportPanel consent={consent} onResult={onImageResult} />
-        ) : tab === "file" ? (
-          <div className="mt-5">
-            <FieldLabel tone="bronze">{t("journal.import.page.tabFile")}</FieldLabel>
-            <Caption className="mt-1">{t("journal.import.page.fileHint")}</Caption>
-            <div className="mt-3 flex flex-wrap items-center gap-3">
-              <input
-                ref={fileInputRef}
-                id="import-file"
-                type="file"
-                accept={ACCEPT}
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                className="sr-only"
-              />
-              <label
-                htmlFor="import-file"
-                className="pq-ink-btn-ghost cursor-pointer px-4 text-pq-mono-sm uppercase tracking-[0.22em]"
-              >
-                {t("journal.import.page.fileChoose")}
-              </label>
-              <span
-                className="font-mono truncate"
-                style={{ fontSize: "var(--pq-text-mono-sm)", color: "var(--pq-ivory-mid)" }}
-              >
-                {file ? file.name : t("journal.import.page.fileNone")}
-              </span>
-            </div>
-            {fileTooLarge && (
-              <Caption className="mt-2">
-                <span style={{ color: "var(--pq-error)" }}>
-                  {t("journal.import.page.fileTooLarge")}
-                </span>
-              </Caption>
-            )}
-            {isPdf && (
-              <div className="mt-4">
-                <label htmlFor="import-pdf-password">
-                  <FieldLabel tone="bronze">{t("journal.import.page.pdfPasswordLabel")}</FieldLabel>
-                </label>
-                <input
-                  id="import-pdf-password"
-                  type="password"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  maxLength={64}
-                  value={pdfPassword}
-                  onChange={(e) => setPdfPassword(e.target.value)}
-                  className="pq-input-noom-mono mt-2 block w-full max-w-xs bg-transparent px-3 py-2 font-mono outline-none"
-                  style={{
-                    color: "var(--pq-ivory)",
-                    border: "0.5px solid var(--pq-ivory-line)",
-                    borderRadius: "var(--pq-radius-cta)",
-                  }}
-                />
-                <Caption className="mt-1">{t("journal.import.page.pdfPasswordHint")}</Caption>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="mt-5">
-            <label htmlFor="import-text">
-              <FieldLabel tone="bronze">{t("journal.import.page.textLabel")}</FieldLabel>
-            </label>
-            <Caption className="mt-1">{t("journal.import.page.textHint")}</Caption>
-            <textarea
-              id="import-text"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              rows={8}
-              className="mt-3 w-full bg-transparent border border-[rgba(245,240,232,0.15)] rounded-[2px] p-3 text-pq-body-sm leading-relaxed outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)] font-mono"
-              style={{ resize: "vertical" }}
-            />
-            {prefill && text === prefill && (
-              <Caption className="mt-1">{t("journal.import.page.sharePrefilled")}</Caption>
-            )}
-            <div className="mt-3 space-y-1">
-              <Caption>{t("journal.import.page.iosHint")}</Caption>
-              <Caption>{t("journal.import.page.androidHint")}</Caption>
-              <Caption>{t("journal.import.page.noImage")}</Caption>
-            </div>
-            {text.trim() !== "" && <AiTextReadPanel text={text} consent={consent} onResult={onImageResult} />}
-          </div>
-        )}
+        <JournalPager
+          ariaLabel={t("journal.import.page.heading")}
+          requestedPage={TABS.indexOf(tab)}
+          onPageChange={onPageChange}
+          pages={pages}
+        />
 
-        <div className={`mt-5 flex items-center gap-3${tab === "image" ? " hidden" : ""}`}>
-          <button
-            type="submit"
-            disabled={!canSubmit}
-            aria-disabled={!canSubmit}
-            className="pq-ink-btn-bronze inline-flex items-center px-5 py-2 text-pq-mono-sm uppercase tracking-[0.22em] disabled:opacity-30 disabled:cursor-not-allowed"
-          >
-            {submitting ? t("journal.import.page.submitting") : t("journal.import.page.submit")}
-          </button>
+        {/* Submit — desktop: an inline row under the panel, as before. Phone:
+            pinned above the bottom nav (whose own padding carries the
+            home-indicator inset, hence --pq-safe-bottom in the offset); the
+            bottom padding leaves room for the pager's page dots. z-[5] keeps
+            it under the app bar (z-20) and the tab strip (z-10) once it
+            scrolls up with the form. The capture page has its own read/send
+            steps, so it shows no bar. */}
+        <div
+          className={
+            tab === "image"
+              ? undefined
+              : "max-md:sticky max-md:z-[5] max-md:-mx-4 max-md:mt-6 max-md:border-t max-md:border-[var(--pq-ivory-line)] max-md:bg-[var(--pq-ink)] max-md:px-4 max-md:pt-3 max-md:pb-9"
+          }
+          style={{ bottom: "calc(var(--pq-bottomnav-height) + var(--pq-safe-bottom))" }}
+          data-testid="import-action-bar"
+        >
+          <div className={`mt-5 flex items-center gap-3 max-md:mt-0${tab === "image" ? " hidden" : ""}`}>
+            <button
+              type="submit"
+              disabled={!canSubmit}
+              aria-disabled={!canSubmit}
+              className="pq-ink-btn-bronze inline-flex items-center px-5 py-2 text-pq-mono-sm uppercase tracking-[0.22em] disabled:opacity-30 disabled:cursor-not-allowed max-md:h-12 max-md:w-full max-md:justify-center"
+              data-testid="import-submit"
+            >
+              {submitting ? t("journal.import.page.submitting") : t("journal.import.page.submit")}
+            </button>
+          </div>
+
+          {error && (
+            <Caption className="mt-3 max-md:mt-2">
+              <span style={{ color: "var(--pq-error)" }}>{error}</span>
+            </Caption>
+          )}
         </div>
-
-        {error && (
-          <Caption className="mt-3">
-            <span style={{ color: "var(--pq-error)" }}>{error}</span>
-          </Caption>
-        )}
       </form>
 
       {/* Result — factual counts + the rows, approvable in place. */}
       {result && (
         <section
-          className="mt-8 rounded-[2px] border p-5 sm:p-6"
+          ref={resultRef}
+          className="mt-8 scroll-mt-[calc(var(--pq-topbar-height)+1rem)] rounded-[2px] border p-5 sm:p-6"
           style={{ borderColor: "var(--pq-ivory-line)", background: "var(--pq-card-veil)" }}
           aria-label={t("journal.import.page.resultKicker")}
         >

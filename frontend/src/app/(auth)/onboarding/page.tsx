@@ -15,6 +15,13 @@ import { PQ_EASE, PQ_DUR_BASE, PQ_DUR_SLOW } from "@/lib/motion";
 import { useLocale } from "@/lib/locale";
 import { currentLocationPath, loginHref } from "@/lib/login-redirect";
 import { retakeChangesLeft } from "@/lib/profile-retake";
+import { useIsPhone } from "@/lib/use-phone";
+import type { PagerDir } from "@/lib/use-swipe-pager";
+import {
+  OnboardingPhoneProgress,
+  OnboardingSwipeHintLine,
+  useOnboardingPager,
+} from "@/components/onboarding/onboarding-phone";
 import {
   WIZARD_QUESTIONS,
   LEGAL_QUESTION,
@@ -78,6 +85,52 @@ function saveAnswers(answers: Record<string, string | string[] | number>) {
   } catch {
     // storage full -- silent fail
   }
+}
+
+type Answers = Record<string, string | string[] | number>;
+
+/**
+ * Whether `step` (0..4 questions, 5 legal) is answered — the one gate for the
+ * Next button, the keyboard, and the phone swipe alike.
+ */
+function isStepAnswered(step: number, answers: Answers): boolean {
+  if (step === WIZARD_QUESTIONS.length) {
+    const legalAnswers = (answers.legal_confirmations ?? []) as string[];
+    const requiredValues = LEGAL_QUESTION.options
+      .filter((o) => o.required)
+      .map((o) => String(o.value));
+    return requiredValues.every((v) => legalAnswers.includes(v));
+  }
+
+  const question = WIZARD_QUESTIONS[step];
+  if (!question) return false;
+
+  const ans = answers[question.id];
+
+  if (question.type === "single") {
+    return ans !== undefined && ans !== "";
+  }
+  if (question.type === "multi") {
+    return Array.isArray(ans) && ans.length > 0;
+  }
+  if (question.type === "slider") {
+    return ans !== undefined;
+  }
+  return false;
+}
+
+/**
+ * Footer button text: the md+ footer keeps its English labels; the phone bar
+ * speaks the user's locale (like the 멈춤 phone bar).
+ */
+function NavLabel({ phone, desktop }: { phone: string; desktop: string }) {
+  if (phone === desktop) return <>{desktop}</>;
+  return (
+    <>
+      <span className="md:hidden">{phone}</span>
+      <span className="hidden md:inline">{desktop}</span>
+    </>
+  );
 }
 
 // ── Subcomponents ────────────────────────────────────────────────────────────
@@ -463,7 +516,7 @@ function ResultScreen({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: PQ_DUR_SLOW, ease: PQ_EASE }}
-      className="flex flex-col items-center px-4 py-8"
+      className="flex flex-col items-center px-4 py-8 max-md:min-h-[100dvh] max-md:pt-[calc(var(--pq-safe-top)_+_32px)] max-md:pb-0"
     >
       <motion.p
         initial={{ opacity: 0, y: 10 }}
@@ -508,7 +561,7 @@ function ResultScreen({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5, duration: PQ_DUR_SLOW, ease: PQ_EASE }}
-        className="mt-8 w-full max-w-sm space-y-3"
+        className="mt-8 w-full max-w-sm space-y-3 max-md:mb-10"
       >
         {statements.map((st, i) => (
           <motion.div
@@ -539,14 +592,21 @@ function ResultScreen({
         ))}
       </motion.dl>
 
-      {/* CTA */}
+      {/* CTA — on a phone the screen fills the viewport and the button sits
+          in a bottom bar above the home indicator (sticky when the answers
+          run longer than the screen); at md and up the wrapper is
+          `display: contents`, so the desktop layout is the button alone. */}
+      <div
+        className="contents max-md:sticky max-md:bottom-0 max-md:z-20 max-md:-mx-4 max-md:mt-auto max-md:block max-md:self-stretch max-md:border-t max-md:border-[var(--pq-ivory-line)] max-md:bg-[var(--pq-ink)] max-md:px-4 max-md:pt-3 max-md:pb-[calc(var(--pq-safe-bottom)_+_12px)]"
+        data-testid="onboarding-result-cta-bar"
+      >
       <motion.button
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 1.0, duration: PQ_DUR_SLOW, ease: PQ_EASE }}
         onClick={onContinue}
         disabled={loading}
-        className="mt-10 flex w-full max-w-sm items-center justify-center gap-2 px-8 py-4 text-base font-bold transition-all duration-300 hover:shadow-xl active:scale-[0.98] disabled:opacity-60"
+        className="mt-10 max-md:mt-0 max-md:min-h-[48px] max-md:max-w-none flex w-full max-w-sm items-center justify-center gap-2 px-8 py-4 text-base font-bold transition-all duration-300 hover:shadow-xl active:scale-[0.98] disabled:opacity-60"
         style={{
           transitionTimingFunction: "var(--motion-easing-emphasized, cubic-bezier(0.16, 1, 0.3, 1))",
           backgroundColor: "var(--pq-bronze)",
@@ -564,6 +624,7 @@ function ResultScreen({
           </>
         )}
       </motion.button>
+      </div>
     </motion.div>
   );
 }
@@ -625,13 +686,17 @@ export default function OnboardingPage() {
 function OnboardingWizard() {
   const router = useRouter();
   const { user, loading: authLoading, refresh } = useAuth();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
+  const ko = locale === "ko";
   const retake = useSearchParams().get("retake") === "1";
+  // Phone (< md): one step per screen, swiped (useOnboardingPager). md+ keeps
+  // the AnimatePresence slide and the English footer, unchanged.
+  const isPhone = useIsPhone();
 
   // Steps: 0..4 = wizard questions, 5 = legal, 6 = result screen
   const [step, setStep] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, string | string[] | number>>(loadSavedAnswers);
-  const [direction, setDirection] = useState(1); // 1 = forward, -1 = back
+  const [answers, setAnswers] = useState<Answers>(loadSavedAnswers);
+  const [direction, setDirection] = useState<PagerDir>(1); // 1 = forward, -1 = back
   const [submitting, setSubmitting] = useState(false);
   // The backend's echo of the user's own answers (v3). Set once the POST
   // succeeds; the result screen renders it verbatim.
@@ -639,6 +704,8 @@ function OnboardingWizard() {
   const [finishing, setFinishing] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  // The step screen that slides on a phone (the swipe surface is <main>).
+  const screenRef = useRef<HTMLDivElement>(null);
 
   // Redirect if not logged in, or if onboarding is already complete
   useEffect(() => {
@@ -747,32 +814,12 @@ function OnboardingWizard() {
     step < WIZARD_QUESTIONS.length ? WIZARD_QUESTIONS[step] : null;
 
   // Check if current step answer is valid
-  const isStepValid = useMemo(() => {
-    if (isResultScreen) return true;
-
-    if (isLegalStep) {
-      const legalAnswers = (answers.legal_confirmations ?? []) as string[];
-      const requiredValues = LEGAL_QUESTION.options
-        .filter((o) => o.required)
-        .map((o) => String(o.value));
-      return requiredValues.every((v) => legalAnswers.includes(v));
-    }
-
-    if (!currentQuestion) return false;
-
-    const ans = answers[currentQuestion.id];
-
-    if (currentQuestion.type === "single") {
-      return ans !== undefined && ans !== "";
-    }
-    if (currentQuestion.type === "multi") {
-      return Array.isArray(ans) && ans.length > 0;
-    }
-    if (currentQuestion.type === "slider") {
-      return ans !== undefined;
-    }
-    return false;
-  }, [answers, isLegalStep, isResultScreen, currentQuestion]);
+  const isStepValid = isResultScreen || isStepAnswered(step, answers);
+  // Per-step answered flags for the phone progress segments.
+  const answeredSteps = useMemo(
+    () => Array.from({ length: TOTAL_STEPS }, (_, i) => isStepAnswered(i, answers)),
+    [answers],
+  );
 
   // ── Answer handlers ──────────────────────────────────────────────────────
 
@@ -908,6 +955,19 @@ function OnboardingWizard() {
       containerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
     }
   }, [step]);
+
+  // Phone swipe + slide. Mounted with the wizard only; the result screen and
+  // the retake-limit screen render without these handlers.
+  const pager = useOnboardingPager({
+    screenRef,
+    step,
+    dir: direction,
+    stepValid: isStepValid,
+    isLegalStep,
+    busy: submitting,
+    goNext,
+    goBack,
+  });
 
   const [skipping, setSkipping] = useState(false);
   const handleSkip = useCallback(async () => {
@@ -1053,6 +1113,20 @@ function OnboardingWizard() {
 
   const displayStep = step + 1;
   const category = isLegalStep ? "F" : (currentQuestion?.category ?? "A");
+  const stepBody = isLegalStep ? (
+    <LegalStep
+      answers={(answers.legal_confirmations ?? []) as string[]}
+      onToggle={handleLegalToggle}
+    />
+  ) : currentQuestion ? (
+    <QuestionScreen
+      question={currentQuestion}
+      answer={answers[currentQuestion.id]}
+      onSingleSelect={handleSingleSelect}
+      onMultiToggle={handleMultiToggle}
+      onSliderChange={handleSliderChange}
+    />
+  ) : null;
 
   return (
     <div
@@ -1064,7 +1138,7 @@ function OnboardingWizard() {
     >
       {/* Top bar */}
       <header
-        className="sticky top-0 z-20 backdrop-blur-xl px-4 py-3 sm:px-6"
+        className="sticky top-0 z-20 backdrop-blur-xl px-4 py-3 sm:px-6 max-md:pt-[calc(var(--pq-safe-top)_+_12px)]"
         style={{
           borderBottom: "1px solid var(--pq-border)",
           backgroundColor: "rgba(5,5,5,0.85)",
@@ -1117,7 +1191,15 @@ function OnboardingWizard() {
               </button>
             )}
           </div>
-          <ProgressBar current={displayStep} total={TOTAL_STEPS} category={category} />
+          <div className="hidden md:block">
+            <ProgressBar current={displayStep} total={TOTAL_STEPS} category={category} />
+          </div>
+          <OnboardingPhoneProgress
+            step={step}
+            questionCount={WIZARD_QUESTIONS.length}
+            answered={answeredSteps}
+            ko={ko}
+          />
         </div>
       </header>
 
@@ -1127,63 +1209,67 @@ function OnboardingWizard() {
           tall). Without bottom padding, the scrollable container's last
           child sits flush against the footer top edge and the footer's
           backdrop-blur overlay obscures it. */}
-      <main ref={containerRef} className="flex-1 overflow-y-auto px-4 sm:px-6">
-        <div className="mx-auto max-w-lg py-6 pb-24">
-          <AnimatePresence mode="wait" custom={direction}>
-            <motion.div
-              key={step}
-              custom={direction}
-              variants={{
-                enter: (d: number) => ({ x: d * 80, opacity: 0 }),
-                center: { x: 0, opacity: 1 },
-                exit: (d: number) => ({ x: d * -80, opacity: 0 }),
-              }}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{ duration: PQ_DUR_BASE, ease: PQ_EASE }}
-            >
-              {isLegalStep ? (
-                <LegalStep
-                  answers={(answers.legal_confirmations ?? []) as string[]}
-                  onToggle={handleLegalToggle}
-                />
-              ) : currentQuestion ? (
-                <QuestionScreen
-                  question={currentQuestion}
-                  answer={answers[currentQuestion.id]}
-                  onSingleSelect={handleSingleSelect}
-                  onMultiToggle={handleMultiToggle}
-                  onSliderChange={handleSliderChange}
-                />
-              ) : null}
-            </motion.div>
-          </AnimatePresence>
+      {/* Phone: the whole pane between the bars is the swipe surface; the
+          inner screen is what slides (useSlideIn) and follows the finger. */}
+      <main
+        ref={containerRef}
+        {...pager.swipe}
+        className="flex-1 overflow-y-auto px-4 sm:px-6"
+        data-testid="onboarding-pane"
+      >
+        <div
+          ref={screenRef}
+          className="mx-auto max-w-lg py-6 pb-24"
+          data-testid="onboarding-screen"
+        >
+          {isPhone ? (
+            <div key={step}>{stepBody}</div>
+          ) : (
+            <AnimatePresence mode="wait" custom={direction}>
+              <motion.div
+                key={step}
+                custom={direction}
+                variants={{
+                  enter: (d: number) => ({ x: d * 80, opacity: 0 }),
+                  center: { x: 0, opacity: 1 },
+                  exit: (d: number) => ({ x: d * -80, opacity: 0 }),
+                }}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{ duration: PQ_DUR_BASE, ease: PQ_EASE }}
+              >
+                {stepBody}
+              </motion.div>
+            </AnimatePresence>
+          )}
+          <OnboardingSwipeHintLine hint={pager.hint} ko={ko} />
         </div>
       </main>
 
       {/* Footer navigation */}
+      {/* Phone: a sticky action bar above the home indicator (safe-area). */}
       <footer
-        className="sticky bottom-0 z-20 backdrop-blur-xl px-4 py-4 sm:px-6"
+        className="sticky bottom-0 z-20 backdrop-blur-xl px-4 py-4 sm:px-6 max-md:pt-3 max-md:pb-[calc(var(--pq-safe-bottom)_+_12px)]"
         style={{
           borderTop: "1px solid var(--pq-border)",
           backgroundColor: "rgba(5,5,5,0.85)",
         }}
       >
-        <div className="mx-auto flex max-w-lg items-center justify-between gap-4">
+        <div className="mx-auto flex max-w-lg items-center justify-between gap-4 max-md:gap-3">
           {/* Back */}
           <button
             type="button"
             onClick={goBack}
             disabled={step === 0}
-            className="flex items-center gap-1 px-5 py-2.5 text-sm font-semibold transition-all duration-200 disabled:opacity-30 disabled:hover:bg-transparent"
+            className="flex items-center gap-1 px-5 py-2.5 text-sm font-semibold transition-all duration-200 disabled:opacity-30 disabled:hover:bg-transparent max-md:min-h-[48px] max-md:px-3 max-md:text-[15px]"
             style={{
               color: "rgba(var(--pq-ivory-rgb), 0.6)",
               borderRadius: "var(--pq-radius-cta)",
             }}
           >
             <ChevronLeft size={16} />
-            Back
+            <NavLabel phone={ko ? "이전" : "Back"} desktop="Back" />
           </button>
 
           {/* Next */}
@@ -1191,7 +1277,8 @@ function OnboardingWizard() {
             type="button"
             onClick={goNext}
             disabled={!isStepValid}
-            className="flex items-center gap-1 px-7 py-2.5 text-sm font-bold transition-all duration-300 active:scale-[0.97] disabled:cursor-not-allowed"
+            className="flex items-center gap-1 px-7 py-2.5 text-sm font-bold transition-all duration-300 active:scale-[0.97] disabled:cursor-not-allowed max-md:min-h-[48px] max-md:flex-1 max-md:justify-center max-md:text-[15px]"
+            data-testid="onboarding-next"
             style={{
               transitionTimingFunction: "var(--motion-easing-emphasized, cubic-bezier(0.16, 1, 0.3, 1))",
               borderRadius: "var(--pq-radius-cta)",
@@ -1204,8 +1291,8 @@ function OnboardingWizard() {
             {isLegalStep
               ? submitting
                 ? <Loader2 size={16} className="animate-spin" />
-                : "Save"
-              : "Next"}
+                : <NavLabel phone={ko ? "저장" : "Save"} desktop="Save" />
+              : <NavLabel phone={ko ? "다음" : "Next"} desktop="Next" />}
             {!(isLegalStep && submitting) && <ChevronRight size={16} />}
           </button>
         </div>

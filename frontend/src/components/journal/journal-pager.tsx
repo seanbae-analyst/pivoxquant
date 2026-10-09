@@ -97,11 +97,18 @@ export function JournalPager({
   pages,
   requestedPage,
   ariaLabel,
+  onPageChange,
 }: {
   pages: ReadonlyArray<JournalPage>;
   /** A deep link's page (e.g. #weekly-pulse). Jumps there whenever it changes. */
   requestedPage: number;
   ariaLabel: string;
+  /**
+   * Called with the new page's index once a page change commits (a settled
+   * swipe, a tapped tab, or a requested page). Optional — /journal does not
+   * need it; /journal/import keeps its submit target on the page in view.
+   */
+  onPageChange?: (index: number) => void;
 }) {
   const isPhone = useMediaQuery(PHONE_QUERY);
   const reducedMotion = useMediaQuery(REDUCED_MOTION_QUERY);
@@ -121,6 +128,12 @@ export function JournalPager({
   const pendingScroll = useRef<number | null>(null);
   const settleTimer = useRef<number | null>(null);
   const frame = useRef<number | null>(null);
+  // Held in a ref so an inline callback does not re-create commit/settle (and
+  // re-subscribe the track's listeners) on every parent render.
+  const onPageChangeRef = useRef(onPageChange);
+  useEffect(() => {
+    onPageChangeRef.current = onPageChange;
+  }, [onPageChange]);
 
   /** Document y at which the track's top sits flush under the sticky strip. */
   const anchorY = useCallback((): number => {
@@ -175,6 +188,7 @@ export function JournalPager({
       activeRef.current = next;
       setActive(next);
       setNear(next);
+      onPageChangeRef.current?.(next);
     },
     [anchorY, readDepth, isPhone],
   );
@@ -355,7 +369,7 @@ export function JournalPager({
               role={isPhone ? "tabpanel" : undefined}
               aria-labelledby={isPhone ? `journal-tab-${p.id}` : undefined}
               inert={isPhone && !current}
-              className={`w-full shrink-0 snap-start snap-always px-4 pt-4 md:contents ${current ? "" : "h-0"}`}
+              className={`relative w-full shrink-0 snap-start snap-always px-4 pt-4 md:contents ${current ? "" : "h-0"}`}
               data-testid={`journal-page-${p.id}`}
               data-active={current ? "true" : "false"}
             >

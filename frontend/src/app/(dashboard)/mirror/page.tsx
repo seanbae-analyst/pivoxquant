@@ -16,6 +16,10 @@
  * scores are not made (CLAUDE.md). The drift this page reads is the text
  * descriptor from persona_history.compute_drift, not a score.
  *
+ * 2026-10-09 (CEO "앱처럼"): on a phone (<768px, incl. the installed PWA)
+ * the ready state is MirrorPhoneCards — the same blocks as swipeable story
+ * cards. Skeleton / error / empty states and the desktop column are as before.
+ *
  * Legal: 3 disclosed buckets only, POSITIVE/NEGATIVE/NEUTRAL framing, no
  * advice, no score on the radar. No italic (CEO 2026-06-15).
  */
@@ -23,23 +27,13 @@ import * as React from "react";
 
 import { useAuth } from "@/lib/auth";
 import { useMirrorHome } from "@/lib/hooks";
+import { useIsPhone } from "@/lib/use-phone";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { EditorialHead, FootSignature } from "@/components/ui/editorial";
 import { MirrorHeadline } from "@/components/mirror/mirror-headline";
-import { SelfObservedRadar } from "@/components/mirror/self-observed-radar";
+import { MirrorRadarPanel } from "@/components/mirror/mirror-radar-panel";
+import { MirrorPhoneCards } from "@/components/mirror/mirror-phone-cards";
 import { OneThingNudge } from "@/components/mirror/one-thing-nudge";
-
-function LegendDot({ colorVar, label }: { colorVar: string; label: string }) {
-  return (
-    <span className="inline-flex items-center gap-1.5">
-      <span
-        className="inline-block h-2 w-2 rounded-full"
-        style={{ background: `var(${colorVar})` }}
-      />
-      {label}
-    </span>
-  );
-}
 
 function MirrorSkeleton() {
   const bar = { background: "rgba(var(--pq-ivory-rgb), 0.06)" };
@@ -55,6 +49,7 @@ function MirrorSkeleton() {
 export default function MirrorPage() {
   const { loading: authLoading } = useAuth();
   const { data, isLoading, error } = useMirrorHome();
+  const isPhone = useIsPhone();
 
   // A 200 is not the same as a usable payload. A backend that answers this
   // route with a partial body — `{}` from a proxy stub, a half-migrated
@@ -70,6 +65,28 @@ export default function MirrorPage() {
   const showError = !showSkeleton && Boolean(error);
   const showEmpty = !showSkeleton && !showError && !ready;
 
+  const errorLine = (
+    <p className="text-[13px]" style={{ color: "rgba(var(--pq-ivory-rgb), 0.55)" }}>
+      거울을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
+    </p>
+  );
+
+  // Phone, ready: the story cards fill the space between the app bar and the
+  // bottom nav (PhonePager sizes itself), so no page wrapper or extra gutter.
+  // The footer signature is desktop-only, so there is nothing to put under it.
+  // A failed revalidation over cached data keeps the cards and shows the same
+  // error line above them, as the desktop column does.
+  if (isPhone && ready && data && !showSkeleton) {
+    return (
+      <ErrorBoundary>
+        <MirrorPhoneCards
+          data={data}
+          header={showError ? <div className="pb-3">{errorLine}</div> : undefined}
+        />
+      </ErrorBoundary>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[rgb(5,5,5)] text-[var(--pq-ivory)]">
 
@@ -82,14 +99,7 @@ export default function MirrorPage() {
 
         {showSkeleton && <MirrorSkeleton />}
 
-        {showError && (
-          <p
-            className="text-[13px]"
-            style={{ color: "rgba(var(--pq-ivory-rgb), 0.55)" }}
-          >
-            거울을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
-          </p>
-        )}
+        {showError && errorLine}
 
         {showEmpty && (
           <div className="space-y-3">
@@ -111,44 +121,7 @@ export default function MirrorPage() {
             <div className="space-y-8">
               <MirrorHeadline data={data} />
 
-              <section
-                className="rounded-[4px] p-4"
-                style={{ border: "1px solid var(--pq-ivory-line)" }}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="text-[12.5px]" style={{ color: "var(--pq-ivory)" }}>
-                    선언 vs 관찰
-                  </div>
-                  <div
-                    className="flex items-center gap-3 text-[10.5px]"
-                    style={{ color: "rgba(var(--pq-ivory-rgb), 0.55)" }}
-                  >
-                    <LegendDot colorVar="--pq-bronze" label="선언(설문)" />
-                    <LegendDot colorVar="--pq-ivory" label="관찰(30일)" />
-                  </div>
-                </div>
-
-                <div className="mt-2 flex justify-center">
-                  <SelfObservedRadar
-                    className="w-full max-w-[460px]"
-                    labels={data.radar.labels}
-                    declared={data.radar.declared}
-                    observed={data.radar.observed}
-                    measured={
-                      data.radar.observed_axes
-                        ? data.radar.keys.map((k) => data.radar.observed_axes!.includes(k))
-                        : undefined
-                    }
-                  />
-                </div>
-
-                <p
-                  className="mt-1 text-center text-[10.5px]"
-                  style={{ color: "var(--pq-bronze)" }}
-                >
-                  각 축의 % = 최근 30일 관찰값 · — = 아직 잴 기록이 부족 · 브론즈=선언, 아이보리=관찰
-                </p>
-              </section>
+              <MirrorRadarPanel data={data} />
 
               <OneThingNudge data={data} />
             </div>

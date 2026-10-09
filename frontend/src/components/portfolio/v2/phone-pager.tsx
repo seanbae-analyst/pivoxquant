@@ -21,6 +21,12 @@
  *
  * Reduced motion: a tapped tab jumps instead of gliding, and the indicator
  * dots stop animating their width.
+ *
+ * `nav="dots"` (2026-10-09, /mirror story cards): no tab strip — the dots
+ * under the track become the tablist instead (each a 44px tap target named
+ * by its page label), so a row of full-width cards reads like a story while
+ * keeping the same tab / panel semantics and keyboard model. Default "tabs"
+ * is the /portfolio layout, unchanged.
  */
 
 import * as React from "react";
@@ -43,6 +49,11 @@ interface PhonePagerProps {
   header?: React.ReactNode;
   /** Page shown first. Defaults to 0. */
   initialIndex?: number;
+  /**
+   * "tabs" (default): labelled tab strip on top, decorative dots below.
+   * "dots": no tab strip — the dots are the (tappable) tablist.
+   */
+  nav?: "tabs" | "dots";
 }
 
 /** A tap-initiated glide gives up waiting for its target after this long. */
@@ -53,7 +64,13 @@ function clampIndex(i: number, n: number): number {
   return Math.max(0, Math.min(n - 1, i));
 }
 
-export function PhonePager({ pages, label, header, initialIndex = 0 }: PhonePagerProps) {
+export function PhonePager({
+  pages,
+  label,
+  header,
+  initialIndex = 0,
+  nav = "tabs",
+}: PhonePagerProps) {
   const n = pages.length;
   const reduce = useReducedMotion();
   const baseId = React.useId();
@@ -180,49 +197,56 @@ export function PhonePager({ pages, label, header, initialIndex = 0 }: PhonePage
     ? "none"
     : `width ${PQ_DUR_FAST}s ${EASE_CSS}, background-color ${PQ_DUR_FAST}s ${EASE_CSS}`;
   const tabTransition = reduce ? "none" : `color ${PQ_DUR_FAST}s ${EASE_CSS}`;
+  const dotStyle = (i: number): React.CSSProperties => ({
+    width: i === index ? 18 : 6,
+    background: i === index ? "var(--pq-bronze)" : "rgba(var(--pq-ivory-rgb), 0.22)",
+    transition: dotTransition,
+  });
 
   return (
     <div className="pq-phone-pager" data-testid="phone-pager">
       {header}
 
-      <div
-        role="tablist"
-        aria-label={label}
-        onKeyDown={onTabKeyDown}
-        className="pq-phone-pager-tabs"
-        style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }}
-        data-testid="phone-pager-tabs"
-      >
-        {pages.map((p, i) => (
-          <button
-            key={p.id}
-            ref={(el) => {
-              tabRefs.current[i] = el;
-            }}
-            type="button"
-            role="tab"
-            id={tabId(i)}
-            aria-selected={i === index}
-            aria-controls={panelId(i)}
-            tabIndex={i === index ? 0 : -1}
-            onClick={() => goTo(i)}
-            className="pq-phone-pager-tab"
-            style={{ transition: tabTransition }}
-            data-active={i === index ? "true" : undefined}
-          >
-            {p.label}
-          </button>
-        ))}
-        <span
-          ref={underlineRef}
-          aria-hidden
-          className="pq-phone-pager-underline"
-          // `transform` is painted from the scroll position (paintUnderline),
-          // never from a render — a render at the 50% mark of a swipe would
-          // snap it to the next tab while the finger is still mid-way.
-          style={{ width: `${100 / n}%` }}
-        />
-      </div>
+      {nav === "tabs" && (
+        <div
+          role="tablist"
+          aria-label={label}
+          onKeyDown={onTabKeyDown}
+          className="pq-phone-pager-tabs"
+          style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }}
+          data-testid="phone-pager-tabs"
+        >
+          {pages.map((p, i) => (
+            <button
+              key={p.id}
+              ref={(el) => {
+                tabRefs.current[i] = el;
+              }}
+              type="button"
+              role="tab"
+              id={tabId(i)}
+              aria-selected={i === index}
+              aria-controls={panelId(i)}
+              tabIndex={i === index ? 0 : -1}
+              onClick={() => goTo(i)}
+              className="pq-phone-pager-tab"
+              style={{ transition: tabTransition }}
+              data-active={i === index ? "true" : undefined}
+            >
+              {p.label}
+            </button>
+          ))}
+          <span
+            ref={underlineRef}
+            aria-hidden
+            className="pq-phone-pager-underline"
+            // `transform` is painted from the scroll position (paintUnderline),
+            // never from a render — a render at the 50% mark of a swipe would
+            // snap it to the next tab while the finger is still mid-way.
+            style={{ width: `${100 / n}%` }}
+          />
+        </div>
+      )}
 
       <div
         ref={trackRef}
@@ -251,18 +275,41 @@ export function PhonePager({ pages, label, header, initialIndex = 0 }: PhonePage
         ))}
       </div>
 
-      <div className="pq-phone-pager-dots" aria-hidden data-testid="phone-pager-dots">
-        {pages.map((p, i) => (
-          <span
-            key={p.id}
-            style={{
-              width: i === index ? 18 : 6,
-              background: i === index ? "var(--pq-bronze)" : "rgba(var(--pq-ivory-rgb), 0.22)",
-              transition: dotTransition,
-            }}
-          />
-        ))}
-      </div>
+      {nav === "dots" ? (
+        <div
+          role="tablist"
+          aria-label={label}
+          onKeyDown={onTabKeyDown}
+          className="pq-phone-pager-dots"
+          data-testid="phone-pager-dots"
+        >
+          {pages.map((p, i) => (
+            <button
+              key={p.id}
+              ref={(el) => {
+                tabRefs.current[i] = el;
+              }}
+              type="button"
+              role="tab"
+              id={tabId(i)}
+              aria-label={p.label}
+              aria-selected={i === index}
+              aria-controls={panelId(i)}
+              tabIndex={i === index ? 0 : -1}
+              onClick={() => goTo(i)}
+              className="pq-phone-pager-dot"
+            >
+              <span style={dotStyle(i)} />
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="pq-phone-pager-dots" aria-hidden data-testid="phone-pager-dots">
+          {pages.map((p, i) => (
+            <span key={p.id} style={dotStyle(i)} />
+          ))}
+        </div>
+      )}
 
       <style jsx>{`
         /* Fills the space between the TopBar and the BottomNav, so each page
@@ -359,7 +406,29 @@ export function PhonePager({ pages, label, header, initialIndex = 0 }: PhonePage
           flex-shrink: 0;
         }
         .pq-phone-pager-dots span {
+          display: block;
           height: 6px;
+          border-radius: 9999px;
+        }
+        /* Dots-mode tab: the visible dot stays 6px, the tap target is 44px
+           tall and at least 24px wide (the row is short, so a wider target
+           cannot hit a neighbour). */
+        .pq-phone-pager-dot {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 24px;
+          height: 44px;
+          padding: 0 3px;
+          margin: -12px 0;
+          background: transparent;
+          border: none;
+          cursor: pointer;
+          -webkit-tap-highlight-color: transparent;
+        }
+        .pq-phone-pager-dot:focus-visible {
+          outline: 1px solid var(--pq-bronze);
+          outline-offset: -10px;
           border-radius: 9999px;
         }
         @media (prefers-reduced-motion: reduce) {

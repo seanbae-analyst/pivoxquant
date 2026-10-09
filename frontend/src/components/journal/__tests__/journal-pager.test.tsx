@@ -135,6 +135,30 @@ describe("JournalPager on a phone", () => {
   });
 });
 
+describe("JournalPager onPageChange", () => {
+  beforeEach(() => mockViewport(true));
+
+  it("reports each committed page, from a swipe and from a requested page", () => {
+    const onPageChange = vi.fn();
+    const { rerender } = render(
+      <JournalPager pages={PAGES} requestedPage={0} ariaLabel="기록 화면" onPageChange={onPageChange} />,
+    );
+    const track = screen.getByTestId("journal-pager");
+    Object.defineProperty(track, "clientWidth", { value: WIDTH, configurable: true });
+    expect(onPageChange).not.toHaveBeenCalled();
+    swipeTo(track, 1);
+    expect(onPageChange).toHaveBeenLastCalledWith(1);
+    rerender(
+      <JournalPager pages={PAGES} requestedPage={2} ariaLabel="기록 화면" onPageChange={onPageChange} />,
+    );
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+    expect(onPageChange).toHaveBeenLastCalledWith(2);
+    expect(onPageChange).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe("JournalPager on desktop", () => {
   beforeEach(() => mockViewport(false));
 

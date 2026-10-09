@@ -16,7 +16,7 @@ import type { MirrorHomeResponse, MirrorGapDimension } from "@/lib/types";
 
 /** Axis values are 0–1 normalised, so the sentence gives direction only —
  *  the chip under it carries the %p. Holding period reads as length. */
-function directionWord(dim: MirrorGapDimension): string {
+export function directionWord(dim: MirrorGapDimension): string {
   if (dim.key === "holding_period") return dim.direction === "up" ? "길게" : "짧게";
   return dim.direction === "up" ? "높게" : "낮게";
 }
@@ -44,9 +44,13 @@ export function leadSentence(d: MirrorHomeResponse): string {
   return "선언한 항목에서 최근 30일 행동은 선언과 크게 다르지 않게 관찰됩니다.";
 }
 
-function GapChip({ dim }: { dim: MirrorGapDimension }) {
+/** "↑30%p" — the gap magnitude in percentage points of the 0–1 axis. */
+export function gapMagnitude(dim: MirrorGapDimension): string {
   const arrow = dim.direction === "up" ? "↑" : "↓";
-  const mag = Math.round(Math.abs(dim.delta) * 100);
+  return `${arrow}${Math.round(Math.abs(dim.delta) * 100)}%p`;
+}
+
+function GapChip({ dim }: { dim: MirrorGapDimension }) {
   return (
     <span
       className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[13px]"
@@ -57,17 +61,24 @@ function GapChip({ dim }: { dim: MirrorGapDimension }) {
     >
       {dim.label}
       <span style={{ color: "var(--pq-bronze)", fontFamily: "var(--pq-font-mono)" }}>
-        {arrow}{mag}%p
+        {gapMagnitude(dim)}
       </span>
     </span>
   );
 }
 
-export function MirrorHeadline({ data }: { data: MirrorHomeResponse }) {
-  const gap = data.gap.slice(0, 3);
-
+/** Eyebrow + the one sentence. Shared by the desktop column and the first
+ *  phone story card (mirror-phone-cards.tsx). */
+export function MirrorLead({
+  data,
+  className = "mt-3 text-[clamp(1.5rem,3.4vw,2.1rem)] leading-[1.4]",
+}: {
+  data: MirrorHomeResponse;
+  /** Heading size / spacing — the phone card sets its own. */
+  className?: string;
+}) {
   return (
-    <section>
+    <>
       <div
         className="text-[10.5px] uppercase tracking-[0.25em]"
         style={{ color: "var(--pq-bronze)" }}
@@ -76,7 +87,7 @@ export function MirrorHeadline({ data }: { data: MirrorHomeResponse }) {
       </div>
 
       <h1
-        className="mt-3 text-[clamp(1.5rem,3.4vw,2.1rem)] leading-[1.4]"
+        className={className}
         /* --pq-font-display, not the raw next/font --font-display: the alias
             is the one that carries the Korean face (globals.css @theme note).
             Playfair has no Hangul, and this headline is Korean. */
@@ -87,6 +98,40 @@ export function MirrorHeadline({ data }: { data: MirrorHomeResponse }) {
       >
         {leadSentence(data)}
       </h1>
+    </>
+  );
+}
+
+/** The drift descriptor (persona_history.compute_drift text — not a score),
+ *  or nothing when the backend has none. */
+export function DriftChip({
+  data,
+  className = "mt-4",
+}: {
+  data: MirrorHomeResponse;
+  className?: string;
+}) {
+  if (!data.drift.available || !data.drift.descriptor) return null;
+  return (
+    <div
+      className={`${className} inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px]`}
+      style={{
+        color: "rgba(var(--pq-ivory-rgb), 0.78)",
+        border: "1px solid rgba(var(--pq-bronze-rgb), 0.4)",
+      }}
+    >
+      <span style={{ color: "var(--pq-bronze)" }}>◇</span>
+      {data.drift.descriptor}
+    </div>
+  );
+}
+
+export function MirrorHeadline({ data }: { data: MirrorHomeResponse }) {
+  const gap = data.gap.slice(0, 3);
+
+  return (
+    <section>
+      <MirrorLead data={data} />
 
       {gap.length > 0 && (
         <div className="mt-5">
@@ -104,18 +149,7 @@ export function MirrorHeadline({ data }: { data: MirrorHomeResponse }) {
         </div>
       )}
 
-      {data.drift.available && data.drift.descriptor && (
-        <div
-          className="mt-4 inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px]"
-          style={{
-            color: "rgba(var(--pq-ivory-rgb), 0.78)",
-            border: "1px solid rgba(var(--pq-bronze-rgb), 0.4)",
-          }}
-        >
-          <span style={{ color: "var(--pq-bronze)" }}>◇</span>
-          {data.drift.descriptor}
-        </div>
-      )}
+      <DriftChip data={data} />
     </section>
   );
 }
