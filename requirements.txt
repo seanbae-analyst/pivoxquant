@@ -1,6 +1,15 @@
 flask==3.0.3
 flask-login==0.6.3
 flask-sqlalchemy==3.1.1
+# SQLAlchemy < 2.1 (2026-10-09): 2.1 changed the default driver for a plain
+# `postgresql://` URL from psycopg2 to psycopg (v3), which this image does not
+# install (psycopg2-binary below). It came in unpinned through flask-sqlalchemy,
+# so every Render build after the pip layer cache dropped resolved 2.1.x and the
+# gunicorn worker died on `import psycopg` (ModuleNotFoundError → "Worker
+# exited with code 3"). Reproduced and verified with python3.11 + gunicorn
+# gevent against PostgreSQL. Moving to 2.1 means adding psycopg[binary] (or
+# naming +psycopg2 in the URL) in the same change.
+SQLAlchemy>=2.0.30,<2.1
 flask-migrate>=4.1.0
 flask-cors==4.0.1
 pandas==2.2.2
