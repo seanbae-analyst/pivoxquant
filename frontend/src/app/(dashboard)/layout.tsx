@@ -19,6 +19,7 @@ import {
 } from "@/lib/consents";
 import { useKeyboardNav } from "@/lib/use-keyboard-nav";
 import { currentLocationPath, loginHref } from "@/lib/login-redirect";
+import { isStandaloneDisplay } from "@/components/pwa/app-cover";
 
 /* ──────────────────────────────────────────────────────────────────
    Path → DisclaimerBanner type resolver
@@ -83,8 +84,13 @@ export function nextAuthRedirect(
   /** Path+query the visitor asked for — carried to /login as ?next= so the
    *  OAuth round-trip lands them back here (2026-09-29). */
   currentPath?: string | null,
+  /** Launched as the installed app (display-mode standalone). The manifest
+   *  opens it on /mirror (2026-10-09), so a signed-out launch must go to the
+   *  app's own front door ("/" → AppCover/AppWelcome, which sends returning
+   *  guests on to /login) instead of straight to the web login. */
+  opts?: { standalone?: boolean },
 ): string | null {
-  if (!user) return loginHref(currentPath);
+  if (!user) return opts?.standalone ? "/" : loginHref(currentPath);
   // PIPA §22 ⑥ minor-protection gate: OAuth provisioned the account but the
   // age confirmation (self-declaration) is still outstanding. The backend
   // already returns 403 AGE_CONFIRMATION_REQUIRED on data endpoints; this
@@ -128,7 +134,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     // Single prioritized guard: login → age confirmation (PIPA §22 ⑥) →
     // onboarding broker. Step 0 of onboarding is the broker-connect screen,
     // which then routes into the five-question wizard.
-    const dest = nextAuthRedirect(user, currentLocationPath());
+    const dest = nextAuthRedirect(user, currentLocationPath(), {
+      standalone: isStandaloneDisplay(),
+    });
     if (dest) router.replace(dest);
   }, [user, loading, waking, router]);
 

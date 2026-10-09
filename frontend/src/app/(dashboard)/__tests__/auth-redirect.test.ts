@@ -80,4 +80,19 @@ describe("nextAuthRedirect", () => {
   it("treats a missing age_confirmation_required as not-required (legacy users)", () => {
     expect(nextAuthRedirect({ onboarding_completed: true })).toBeNull();
   });
+
+  // 2026-10-09: the installed app opens on /mirror (manifest start_url).
+  it("sends a signed-out INSTALLED-app launch to the app front door, not the web login", () => {
+    expect(nextAuthRedirect(null, "/mirror", { standalone: true })).toBe("/");
+  });
+
+  it("keeps the web login (with ?next=) for a signed-out browser visit", () => {
+    expect(nextAuthRedirect(null, "/mirror", { standalone: false })).toMatch(/^\/login/);
+  });
+
+  it("standalone does not change the gates for a signed-in user", () => {
+    expect(
+      nextAuthRedirect({ onboarding_completed: false }, "/mirror", { standalone: true }),
+    ).toBe("/onboarding/broker");
+  });
 });
