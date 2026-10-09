@@ -8,7 +8,6 @@ import { Providers } from "./providers";
 import { CookieConsent } from "@/components/ui/cookie-consent";
 import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { SPLASH_STARTUP_IMAGES } from "@/lib/pwa-splash";
-import { EARLY_WAKE_INLINE_SCRIPT } from "@/lib/early-wake-inline";
 
 // Fonts are SELF-HOSTED (src/app/fonts/*.woff2, latin subset, variable wght —
 // all SIL OFL 1.1) since 2026-10-09. `next/font/google` fetches at build time,
@@ -272,14 +271,6 @@ export default async function RootLayout({
             __html: `if(window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone){document.documentElement.classList.add('pwa-standalone');}`,
           }}
         />
-        {/* Render Free cold start (~44s): start waking the backend before any
-            JS loads. Cookie-less, deduped with the bundled wake (lib/early-wake.ts). */}
-        {process.env.NEXT_PUBLIC_DEMO_MODE !== "1" && (
-          <script
-            nonce={nonce}
-            dangerouslySetInnerHTML={{ __html: EARLY_WAKE_INLINE_SCRIPT }}
-          />
-        )}
         {/* SEO/Performance audit (2026-05-09): the previous link was just a
             stylesheet (`as="style"` without `rel="preload"` does nothing).
             Hint the browser to preload the CSS in parallel with the rest
