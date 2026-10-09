@@ -104,11 +104,33 @@ export default function Page() {
   // LoadingScreen while the effect above redirects to /mirror. Costing signed-in
   // users a single frame is the right trade for a landing that is legible to
   // every crawler and chat preview.
-  if (loading) return <LandingV2 />;
+  if (loading) return standalone ? <LoadingScreen /> : <LandingOrAppSplash />;
   if (user) return <LoadingScreen />;
 
   // Opened from the home-screen icon: an app has no landing page (2026-10-07).
   if (standalone) return <AppWelcome />;
 
-  return <LandingV2 />;
+  return <LandingOrAppSplash />;
+}
+
+/**
+ * The landing for a browser — but the server (and the first client paint)
+ * can't tell a browser from the home-screen app, so the installed app used to
+ * flash the whole web landing before swapping to the app screen (2026-10-09).
+ * CSS knows before any JS runs (`display-mode: standalone`, plus the
+ * `.pwa-standalone` class layout.tsx sets at boot): it hides the landing and
+ * shows the splash there, keeping the HTML identical for hydration and for
+ * crawlers / link unfurlers.
+ */
+function LandingOrAppSplash() {
+  return (
+    <>
+      <div className="pq-browser-only">
+        <LandingV2 />
+      </div>
+      <div className="pq-standalone-only" aria-hidden>
+        <LoadingScreen />
+      </div>
+    </>
+  );
 }

@@ -261,7 +261,7 @@ export default async function RootLayout({
         <script
           nonce={nonce}
           dangerouslySetInnerHTML={{
-            __html: `if(window.matchMedia('(display-mode: standalone)').matches){document.documentElement.classList.add('pwa-standalone');}`,
+            __html: `if(window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone){document.documentElement.classList.add('pwa-standalone');}`,
           }}
         />
         {/* SEO/Performance audit (2026-05-09): the previous link was just a
