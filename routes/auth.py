@@ -1,6 +1,7 @@
 """Auth routes: register, login, logout, me, Google OAuth, Kakao OAuth."""
 from __future__ import annotations
 
+import hmac
 import logging
 import os
 import secrets
@@ -8,7 +9,10 @@ import time
 from urllib.parse import urlparse
 
 from authlib.integrations.flask_client import OAuth
-from flask import Blueprint, request, jsonify, redirect, session, current_app
+from flask import (
+    Blueprint, request, jsonify, redirect, session, current_app,
+    after_this_request, make_response,
+)
 from flask_login import login_user, logout_user, current_user
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from sqlalchemy.exc import IntegrityError, OperationalError, DBAPIError
@@ -490,23 +494,39 @@ def _resolve_frontend_url() -> str:
     return os.environ.get("FRONTEND_URL", "http://localhost:3000").rstrip("/")
 
 
-# ── Stateless OAuth state (HMAC signed token) ───────────────────────────────
+# ── OAuth state: HMAC-signed token + browser-binding cookie ─────────────────
 #
-# Why stateless:
-#   Vercel rewrites `/api/*` to Railway. Session cookies issued on the
-#   /api/auth/google redirect don't always round-trip back to the callback,
-#   so authlib's session-based state check (`_state_<name>_<state>`) fails
-#   with state_mismatch. We sign state as a self-contained token so
-#   verification does not require the cookie surviving the round-trip.
+# Why the state is self-contained (signed) rather than session-held:
+#   Vercel rewrites `/api/*` to the backend (Render). The Flask session cookie
+#   issued on the /api/auth/google redirect didn't reliably survive to the
+#   callback (it is one client-side cookie that every concurrent XHR response
+#   rewrites), so authlib's session-based state check (`_state_<name>_<state>`)
+#   failed with state_mismatch. The signed state carries everything authlib
+#   needs (nonce, redirect_uri) plus our bookkeeping (origin, provider, next).
 #
-# The signed state carries everything authlib needs (nonce, redirect_uri)
-# plus our own bookkeeping (origin, provider). On the callback we:
-#   1. Verify the HMAC signature + timestamp (10-min expiry).
-#   2. Rehydrate authlib's `_state_<name>_<state>` session slot in-process
+# Why a signature alone is NOT enough (login CSRF, fixed 2026-10-09):
+#   A signed state proves *we* minted it, not that *this browser* started the
+#   flow. An attacker could start a login on their own account, stop before the
+#   callback, and lure a victim to `/api/auth/<p>/callback?code=<attacker's>&
+#   state=<attacker's valid state>` — the victim would be logged in as the
+#   attacker (and their journal entries would land in the attacker's account).
+#   So the login-start route also sets a short-lived, HttpOnly, SameSite=Lax,
+#   per-provider cookie holding the payload's random ``k``; the callback
+#   requires that cookie to equal ``payload["k"]`` and expires it (one-time).
+#
+#   Same host: the start link (`API.auth.google`, a relative `/api/...` href)
+#   and the callback (`redirect_uri = {origin}/api/auth/<p>/callback`) are both
+#   served on the frontend host through the next.config rewrite, so the cookie
+#   is stored for — and sent back to — that host. No Domain attribute is ever
+#   set (CLAUDE.md trap 15). With Secure (prod) the name carries the `__Host-`
+#   prefix so a sibling subdomain cannot plant it. The callback is a top-level
+#   GET redirect from the provider (no form_post), so SameSite=Lax sends it.
+#
+# On the callback we:
+#   1. Verify the HMAC signature + timestamp (_OAUTH_STATE_MAX_AGE) + provider.
+#   2. Require the binding cookie to match ``payload["k"]`` (then expire it).
+#   3. Rehydrate authlib's `_state_<name>_<state>` session slot in-process
 #      so `authorize_access_token()` can read it back out.
-#
-# This keeps the authlib code path untouched while removing the
-# cross-request session-cookie dependency that was causing state_mismatch.
 
 _OAUTH_STATE_MAX_AGE = 300  # seconds (5 minutes; was 600 — security M5 2026-05-10
                             # narrows replay window for leaked state tokens)
@@ -571,7 +591,9 @@ def _build_signed_state(provider: str, origin: str, redirect_uri: str,
         "o": origin,              # frontend origin for final redirect
         "p": provider,            # "google" | "kakao"
         "r": redirect_uri,        # exact redirect_uri used in the request
-        "k": secrets.token_urlsafe(8),  # anti-replay nonce for the payload
+        # Browser-binding nonce — echoed in the login-start cookie and compared
+        # on the callback (_oauth_state_bound_to_browser). 128 bits.
+        "k": secrets.token_urlsafe(16),
     }
     if ref_code:
         # Defensive cap — referral codes are 8-char; never carry more than 16.
@@ -617,6 +639,83 @@ def _verify_signed_state(signed: str | None, expected_provider: str) -> dict | N
             "OAuth state verify: state provider mismatch (got=%s expected=%s)",
             payload.get("p"), expected_provider,
         )
+        return None
+    return payload
+
+
+def _oauth_bind_cookie_secure() -> bool:
+    """Mirror the session cookie's Secure flag (True in prod, False on http dev)."""
+    return bool(current_app.config.get("SESSION_COOKIE_SECURE", False))
+
+
+def _oauth_bind_cookie_name(provider: str) -> str:
+    """Per-provider name so a parallel Google + Kakao start don't clobber.
+
+    ``__Host-`` (Secure, Path=/, no Domain) is used whenever the cookie is
+    Secure, so no other *.pivoxquant.com host can inject a value for it.
+    """
+    base = f"pq_oauth_bind_{provider}"
+    return f"__Host-{base}" if _oauth_bind_cookie_secure() else base
+
+
+def _set_oauth_bind_cookie(response, provider: str, signed_state: str):
+    """Attach the browser-binding cookie (payload ``k``) to the start redirect."""
+    payload = _state_serializer().loads(signed_state, max_age=_OAUTH_STATE_MAX_AGE)
+    response.set_cookie(
+        _oauth_bind_cookie_name(provider),
+        value=payload["k"],
+        max_age=_OAUTH_STATE_MAX_AGE,
+        path="/",
+        secure=_oauth_bind_cookie_secure(),
+        httponly=True,
+        samesite="Lax",
+    )
+    return response
+
+
+def _expire_oauth_bind_cookie_after_request(provider: str) -> None:
+    """One-time use: whatever the callback returns, the binding cookie dies."""
+    @after_this_request
+    def _expire(response):
+        response.set_cookie(
+            _oauth_bind_cookie_name(provider),
+            value="",
+            max_age=0,
+            expires=0,
+            path="/",
+            secure=_oauth_bind_cookie_secure(),
+            httponly=True,
+            samesite="Lax",
+        )
+        return response
+
+
+def _oauth_state_bound_to_browser(provider: str, payload: dict) -> bool:
+    """True iff this browser holds the binding cookie for ``payload["k"]``."""
+    expected = payload.get("k") if isinstance(payload, dict) else None
+    presented = request.cookies.get(_oauth_bind_cookie_name(provider))
+    if not isinstance(expected, str) or not expected or not presented:
+        logger.warning(
+            "OAuth state verify: browser-binding cookie missing (provider=%s)", provider,
+        )
+        return False
+    if not hmac.compare_digest(presented.encode("utf-8"), expected.encode("utf-8")):
+        logger.warning(
+            "OAuth state verify: browser-binding cookie mismatch (provider=%s)", provider,
+        )
+        return False
+    return True
+
+
+def _verify_oauth_callback_state(received_state: str | None, provider: str) -> dict | None:
+    """Callback-side state check: signature + expiry + provider + browser binding.
+
+    Schedules the binding cookie's expiry on every path (success or failure)
+    so a state can be consumed at most once per browser.
+    """
+    _expire_oauth_bind_cookie_after_request(provider)
+    payload = _verify_signed_state(received_state, expected_provider=provider)
+    if payload is None or not _oauth_state_bound_to_browser(provider, payload):
         return None
     return payload
 
@@ -1040,8 +1139,9 @@ def me():
 def google_login():
     """Redirect user to Google's OAuth consent screen.
 
-    Uses a stateless HMAC-signed state token so the callback does not
-    depend on session cookies surviving the Vercel → Railway round-trip.
+    The state is an HMAC-signed token (no Flask-session dependency) and the
+    response also sets the browser-binding cookie the callback requires
+    (login-CSRF defence — see the "OAuth state" block above).
     """
     origin = _resolve_frontend_url()
     redirect_uri = f"{origin}/api/auth/google/callback"
@@ -1065,19 +1165,23 @@ def google_login():
     _log_auth_event(email=None, provider="google", event_type="start")
     # authlib will also write a session slot under _state_google_<signed_state>;
     # that slot is redundant (we rehydrate it on callback) but harmless.
-    return oauth.google.authorize_redirect(redirect_uri, nonce=nonce, state=signed_state)
+    response = make_response(
+        oauth.google.authorize_redirect(redirect_uri, nonce=nonce, state=signed_state)
+    )
+    return _set_oauth_bind_cookie(response, "google", signed_state)
 
 
 @auth_bp.route("/google/callback")
 def google_callback():
     """Handle the OAuth callback from Google.
 
-    Verifies our HMAC-signed state (stateless — no session cookie required),
+    Verifies our HMAC-signed state AND that this browser holds the matching
+    one-time binding cookie set at login start (no Flask-session dependency),
     rehydrates the authlib session slot in-process, then lets authlib
     exchange the code for a token normally.
     """
     received_state = request.args.get("state")
-    payload = _verify_signed_state(received_state, expected_provider="google")
+    payload = _verify_oauth_callback_state(received_state, "google")
     if not payload:
         # Fallback origin for the error redirect only.
         origin = _resolve_frontend_url()
@@ -1280,7 +1384,7 @@ def google_callback():
 def kakao_login():
     """Redirect user to Kakao's OAuth consent screen.
 
-    Uses a stateless HMAC-signed state token (see google_login for rationale).
+    Signed state + browser-binding cookie (see google_login for rationale).
     """
     origin = _resolve_frontend_url()
     if not os.environ.get("KAKAO_CLIENT_ID"):
@@ -1296,17 +1400,20 @@ def kakao_login():
         origin, redirect_uri,
     )
     _log_auth_event(None, "kakao", "start")
-    return oauth.kakao.authorize_redirect(redirect_uri, state=signed_state)
+    response = make_response(
+        oauth.kakao.authorize_redirect(redirect_uri, state=signed_state)
+    )
+    return _set_oauth_bind_cookie(response, "kakao", signed_state)
 
 
 @auth_bp.route("/kakao/callback")
 def kakao_callback():
     """Handle the OAuth callback from Kakao.
 
-    Stateless state verification — see google_callback for rationale.
+    Signed state + browser-binding cookie check — see google_callback.
     """
     received_state = request.args.get("state")
-    payload = _verify_signed_state(received_state, expected_provider="kakao")
+    payload = _verify_oauth_callback_state(received_state, "kakao")
     if not payload:
         origin = _resolve_frontend_url()
         logger.info("OAuth callback: provider=kakao origin=%s state_ok=False", origin)

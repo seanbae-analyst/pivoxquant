@@ -90,12 +90,12 @@ def test_delete_account_purges_all_user_fk_tables(app, client, make_user):
             ).scalar()
             assert n == 0, f"{tbl} not purged ({n} rows remain)"
 
-        # companion_waitlist: row survives, user_id detached (SET NULL).
+        # companion_waitlist: the linked row is deleted outright (2026-10-09) —
+        # detaching user_id used to leave email_plaintext / email_hash behind.
         cw = db.session.execute(
-            text("SELECT COUNT(*) FROM companion_waitlist WHERE user_id = :u"),
-            {"u": uid},
+            text("SELECT COUNT(*) FROM companion_waitlist")
         ).scalar()
-        assert cw == 0, "companion_waitlist user_id not detached"
+        assert cw == 0, "companion_waitlist row (email hash/plaintext) not purged"
 
         # funnel_events: deliberately NOT a FK — the analytics snapshot survives.
         fe = db.session.execute(

@@ -18,7 +18,7 @@ the route commits.
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 
 from extensions import db
 from models import Position, PreTradeReflection, TradeHistory
@@ -28,7 +28,7 @@ from services.kr_stock_registry import get_name
 from services.position_writes import FREE_POSITION_CAP
 from services.ticker_normalizer import is_korean_ticker
 
-from . import utcnow_naive
+from . import KST_OFFSET, utcnow_naive
 
 CLOSE_EPS = 0.0001
 PRE_TRADE_WINDOW = timedelta(days=7)
@@ -171,6 +171,26 @@ def _enforce_position_cap(user_id: int) -> None:
         )
 
 
+def _date_only(traded_at: datetime) -> bool:
+    """A fill stored with no time of day. The row has no flag for it, so this
+    is the 00:00 convention ``services.imports.kst_to_utc`` and
+    ``pre_trade.friction_outcome._at_or_after`` already rely on."""
+    return (traded_at.hour, traded_at.minute, traded_at.second, traded_at.microsecond) == (0, 0, 0, 0)
+
+
+def _reflection_ceiling(traded_at: datetime) -> datetime:
+    """Exclusive upper bound on a matching reflection's ``created_at``.
+
+    A timed fill: reflections at or before it. A date-only fill is stored
+    as its KST date at 00:00 (unshifted), so compared as an instant every
+    pause from the same day fell *after* it and never matched (2026-10-09).
+    It takes reflections up to the end of that KST day instead — the same
+    calendar-day rule as ``friction_outcome._at_or_after``."""
+    if _date_only(traded_at):
+        return datetime.combine(traded_at.date(), time()) + timedelta(days=1) - KST_OFFSET
+    return traded_at + timedelta(microseconds=1)
+
+
 class PreTradeIndex:
     """Prefetch every reflection that could match a batch, then answer
     ``match(ticker, traded_at)`` in memory (one query per batch, not per row)."""
@@ -189,7 +209,9 @@ class PreTradeIndex:
             .filter(PreTradeReflection.user_id == user_id,
                     PreTradeReflection.intended_ticker.in_(list(candidates)),
                     PreTradeReflection.created_at >= start - PRE_TRADE_WINDOW,
-                    PreTradeReflection.created_at <= end)
+                    # over-fetch by a day: a date-only row's ceiling is up
+                    # to 15h past its 00:00 stamp; match() filters exactly
+                    PreTradeReflection.created_at < end + timedelta(days=1))
             .order_by(PreTradeReflection.created_at.desc())
             .all()
         )
@@ -200,17 +222,19 @@ class PreTradeIndex:
         if not ticker or traded_at is None:
             return None
         keys = [ticker] + ([ticker.split(".", 1)[0]] if "." in ticker else [])
+        ceiling = _reflection_ceiling(traded_at)
         best: tuple[datetime, int] | None = None
         for k in keys:
             for created, rid in self.rows.get(k, []):
-                if created <= traded_at and created >= traded_at - PRE_TRADE_WINDOW:
+                if created < ceiling and created >= traded_at - PRE_TRADE_WINDOW:
                     if best is None or created > best[0]:
                         best = (created, rid)
         return best[1] if best else None
 
 
 def match_pre_trade(user_id: int, ticker: str | None, traded_at: datetime | None) -> int | None:
-    """Latest reflection for the same ticker in the 7 days before the fill."""
+    """Latest reflection for the same ticker in the 7 days before the fill
+    (a date-only fill: up to the end of its KST day)."""
     if not ticker or traded_at is None:
         return None
     candidates = {ticker}
@@ -221,7 +245,7 @@ def match_pre_trade(user_id: int, ticker: str | None, traded_at: datetime | None
         .filter(
             PreTradeReflection.user_id == user_id,
             PreTradeReflection.intended_ticker.in_(list(candidates)),
-            PreTradeReflection.created_at <= traded_at,
+            PreTradeReflection.created_at < _reflection_ceiling(traded_at),
             PreTradeReflection.created_at >= traded_at - PRE_TRADE_WINDOW,
         )
         .order_by(PreTradeReflection.created_at.desc())

@@ -10,7 +10,8 @@ closes the gap between "the fill happened" and "the user opened the app":
     (/journal?pending=<id>, which focuses that row's reason field);
   * ``notify_fill_memo`` — one web push per webhook call (not per fill), only
     for rows that are actually waiting (duplicates and errors are skipped),
-    gated by the user's ``fill_memo`` push setting.
+    gated by the user's ``fill_memo`` push setting, never to an account
+    pending deletion.
 
 Wording: a record prompt — what happened and "why" — never a judgement of
 the trade, never a direction word in the push text.
@@ -63,7 +64,12 @@ def notify_fill_memo(user_id: int, rows: Iterable[dict]) -> bool:
         from models import User
         from extensions import db
         u = db.session.get(User, user_id)
-        if u is None or not u.notification_channel_enabled(EVENT_ID, "push"):
+        # PIPA §21 grace window: no push to an account pending deletion
+        # (same guard as services/alert.py). The webhook already refuses such
+        # a token; this keeps any other caller from reaching them.
+        if u is None or u.deletion_requested_at is not None:
+            return False
+        if not u.notification_channel_enabled(EVENT_ID, "push"):
             return False
         if len(waiting) == 1:
             body = f"{_label(waiting[0])} 체결이 들어왔습니다. 잊기 전에 이유를 한 줄 남겨 두세요."

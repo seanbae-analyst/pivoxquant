@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import { Check, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { mutate as swrMutate } from "swr";
 
 import { useAuth } from "@/lib/auth";
 import { ApiError, apiFetch } from "@/lib/api";
@@ -13,6 +14,7 @@ import { API } from "@/lib/endpoints";
 import { PQ_EASE, PQ_DUR_BASE, PQ_DUR_SLOW } from "@/lib/motion";
 import { useLocale } from "@/lib/locale";
 import { currentLocationPath, loginHref } from "@/lib/login-redirect";
+import { retakeChangesLeft } from "@/lib/profile-retake";
 import {
   WIZARD_QUESTIONS,
   LEGAL_QUESTION,
@@ -566,6 +568,45 @@ function ResultScreen({
   );
 }
 
+// ── Retake limit ─────────────────────────────────────────────────────────────
+
+/** `?retake=1` with no changes left — shown instead of the wizard. */
+function RetakeLimitScreen({ onBack }: { onBack: () => void }) {
+  const { t } = useLocale();
+  return (
+    <div
+      className="flex min-h-[100dvh] flex-col items-center justify-center px-6"
+      style={{ backgroundColor: "var(--pq-ink)", color: "var(--pq-ivory)" }}
+    >
+      <div className="w-full max-w-md" role="status" data-testid="retake-limit">
+        <h1 className="font-display text-2xl leading-snug [word-break:keep-all]">
+          {t("settingsV2.retake.limitReached")}
+        </h1>
+        <p
+          className="mt-3 text-[15px] leading-relaxed [word-break:keep-all]"
+          style={{ color: "rgba(var(--pq-ivory-rgb), 0.7)" }}
+        >
+          {t("settingsV2.retake.limitHelp")}
+        </p>
+        <button
+          type="button"
+          onClick={onBack}
+          className="mt-8 inline-flex min-h-[44px] items-center gap-1 text-sm font-semibold"
+          style={{
+            color: "var(--pq-ivory)",
+            border: "1px solid var(--pq-border)",
+            borderRadius: "var(--pq-radius-cta, 2px)",
+            padding: "8px 16px",
+          }}
+        >
+          <ChevronLeft size={16} />
+          {t("settingsV2.retake.backToSettings")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Page ────────────────────────────────────────────────────────────────
 
 // `?retake=1` (설정 → "다섯 문항 다시 답하기"): an already-onboarded user
@@ -584,6 +625,7 @@ export default function OnboardingPage() {
 function OnboardingWizard() {
   const router = useRouter();
   const { user, loading: authLoading, refresh } = useAuth();
+  const { t } = useLocale();
   const retake = useSearchParams().get("retake") === "1";
 
   // Steps: 0..4 = wizard questions, 5 = legal, 6 = result screen
@@ -816,6 +858,9 @@ function OnboardingWizard() {
         { method: retake ? "PUT" : "POST", body: JSON.stringify({ answers }) },
       );
       setDeclared(Array.isArray(res?.declared) ? res.declared : []);
+      // The mirror home caches its read for 60s (useMirrorHome). Drop the
+      // cached read so /mirror shows the answers just saved, not the old ones.
+      void swrMutate(API.mirror.home);
       // Clean up stored progress (answers now live server-side).
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem("pivoxquant_onboarding_full_answers");
@@ -824,7 +869,12 @@ function OnboardingWizard() {
       containerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
       if (err instanceof ApiError && err.code === "PROFILE_CHANGE_LIMIT") {
-        toast.error("다시 답할 수 있는 횟수를 모두 썼습니다.");
+        toast.error(t("settingsV2.retake.limitReached"));
+        return;
+      }
+      // Retrying cannot fix a missing profile — say so instead of "retry".
+      if (err instanceof ApiError && err.code === "PROFILE_NOT_FOUND") {
+        toast.error(t("settingsV2.retake.notFound"));
         return;
       }
       // Sonner toast keeps the user in-flow; answers stay in localStorage so
@@ -836,7 +886,7 @@ function OnboardingWizard() {
     } finally {
       setSubmitting(false);
     }
-  }, [answers, submitting, retake]);
+  }, [answers, submitting, retake, t]);
 
   const goNext = useCallback(() => {
     if (!isStepValid && !isResultScreen) return;
@@ -969,6 +1019,14 @@ function OnboardingWizard() {
   // Already onboarded — don't flash the wizard while redirect runs
   if (user.onboarding_completed === true && !retake) return null;
 
+  // Retake with no changes left: say so before the six screens, not after
+  // (the server would refuse the PUT with PROFILE_CHANGE_LIMIT). Skipped on
+  // the result screen — the refresh after the last allowed retake drops the
+  // count to 0 while that screen is still up.
+  if (retake && !isResultScreen && retakeChangesLeft(user) === 0) {
+    return <RetakeLimitScreen onBack={() => router.replace("/settings")} />;
+  }
+
   // ── Result screen ────────────────────────────────────────────────────────
 
   if (isResultScreen) {
@@ -1040,7 +1098,7 @@ function OnboardingWizard() {
                   padding: "8px 14px",
                 }}
               >
-                그만두기
+                {t("settingsV2.retake.quit")}
               </button>
             ) : (
               <button

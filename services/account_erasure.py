@@ -11,8 +11,9 @@
 단계 (순서 유지):
   1. 모델이 있는 유저 소유 테이블을 명시적으로 DELETE (FK CASCADE 위의
      이중 안전장치 — prod FK drift 에 파기가 막히지 않게). FK 순서가
-     중요한 곳은 목록 순서로 지킨다. companion_waitlist 는 지우지 않고
-     user_id 만 NULL 로 떼어 낸다 (익명 대기 신호는 남긴다).
+     중요한 곳은 목록 순서로 지킨다. companion_waitlist 는 user_id 로
+     연결된 행과 같은 이메일 해시의 행을 함께 지운다 (email_plaintext ·
+     email_hash 가 남으면 파기가 아니다).
   2. 동적 FK 스윕 — 라이브 DB 를 introspect 해서 users.id 를 참조하는 남은
      행을 모두 지운다 (모델 없는 migration-only 테이블, 예: morning_briefs).
      funnel_events 는 FK 가 없어 건드리지 않는다 (의도된 익명 분석 스냅숏).
@@ -49,7 +50,30 @@ def hash_email(email: str) -> str:
     return hashlib.sha256(salt + (email or "").encode("utf-8")).hexdigest()
 
 
-def _explicit_ops(user_id: int):
+def _purge_companion_waitlist(user_id: int, email: str | None) -> int:
+    """대기자 명단 행을 지운다 — user_id 로 연결된 행 + 같은 이메일 해시 행.
+
+    예전엔 user_id 만 NULL 로 떼어 내 ``email_plaintext``(원문 이메일)와
+    ``email_hash``(무솔트 SHA256 — 사전 대입으로 되돌릴 수 있다)가 남았다.
+    로그인 전에 랜딩에서 등록한 행은 user_id 가 없으니 이메일 해시로 찾는다.
+    해시는 ``CompanionWaitlist.hash_email`` 을 그대로 쓴다 (키 규칙 한 벌).
+    ``CompanionWaitlist.purge_by_email`` 은 커밋하므로 여기선 못 쓴다 —
+    이 모듈은 커밋하지 않고, 표마다 SAVEPOINT 안에서 돈다.
+    """
+    from sqlalchemy import or_
+    from models import CompanionWaitlist
+
+    match = [CompanionWaitlist.user_id == user_id]
+    if email and email.strip():
+        match.append(
+            CompanionWaitlist.email_hash == CompanionWaitlist.hash_email(email)
+        )
+    return CompanionWaitlist.query.filter(or_(*match)).delete(
+        synchronize_session=False,
+    )
+
+
+def _explicit_ops(user_id: int, email: str | None = None):
     """(테이블 이름, 실행 함수) 목록 — 순서가 곧 FK 순서다.
 
     새 유저 소유 모델을 추가하면 여기 한 곳에만 넣으면 된다.
@@ -66,7 +90,7 @@ def _explicit_ops(user_id: int):
         PositionDDCheck, Inquiry, ObservationNote,
         ScheduledEmail, NpsFeedback,
         CheckoutExpiration, PortfolioNavSnapshot, UserAgentAudit,
-        CompanionWaitlist, ImportBatch, ImportToken, PendingTrade,
+        ImportBatch, ImportToken, PendingTrade,
     )
 
     def _d(model):
@@ -114,18 +138,16 @@ def _explicit_ops(user_id: int):
         # user_agent_audit: 모델 FK 가 CASCADE — 2년 보존을 하려면 nullable
         # user_id + SET NULL + 변호사 확인이 먼저다 (legal_question_queue).
         ("user_agent_audit", _d(UserAgentAudit)),
-        # companion_waitlist: SET NULL — 익명 대기 신호는 남기고 유저만 뗀다.
-        ("companion_waitlist", lambda: CompanionWaitlist.query.filter_by(
-            user_id=user_id).update({CompanionWaitlist.user_id: None},
-                                    synchronize_session=False)),
+        # companion_waitlist: 행째 지운다 — 이메일 원문·해시가 남으면 안 된다.
+        ("companion_waitlist",
+         lambda: _purge_companion_waitlist(user_id, email)),
     ]
 
 
 def purge_user_rows(user_id: int, email: str | None = None) -> tuple[dict, list]:
     """유저 소유 행을 전부 지운다. ``(counts, failures)`` 를 돌려준다.
 
-    ``counts``  — 테이블 이름 → 지운 행 수. companion_waitlist 는
-                  ``companion_waitlist_detached``, auth_events 익명화는
+    ``counts``  — 테이블 이름 → 지운 행 수. auth_events 익명화는
                   ``auth_events_anonymized`` 키로 센다.
     ``failures`` — 실패한 테이블 이름 목록. 실패한 표는 그 SAVEPOINT 만
                   롤백되고 나머지는 계속된다 (예외를 던지지 않는다).
@@ -139,14 +161,11 @@ def purge_user_rows(user_id: int, email: str | None = None) -> tuple[dict, list]
     failures: list[str] = []
 
     # 1. 명시 목록 — 표마다 SAVEPOINT.
-    for label, op in _explicit_ops(user_id):
+    for label, op in _explicit_ops(user_id, email):
         try:
             with db.session.begin_nested():
                 n = int(op() or 0)
-            if label == "companion_waitlist":
-                counts["companion_waitlist_detached"] = n
-            else:
-                counts[label] = n
+            counts[label] = n
         except Exception as exc:  # noqa: BLE001 — 표 단위 실패 격리
             failures.append(label)
             logger.warning(

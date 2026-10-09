@@ -65,7 +65,23 @@ describe("QuestionsStep · pagedOnPhone", () => {
     expect(onBack).toHaveBeenCalled();
   });
 
+  it("on the last question a phone has one back control (the pager's)", () => {
+    const onBack = vi.fn();
+    render(<Host paged onBack={onBack} />);
+    for (let i = 0; i < 6; i++) fireEvent.click(screen.getByTestId("questions-next"));
+    expect(screen.getByTestId("questions-progress").textContent).toContain("질문 7 / 7");
+    // Footer "← 이전" (→ setup) is hidden below md; still there on desktop.
+    expect(screen.getByTestId("questions-footer-back").className).toContain("hidden md:inline-block");
+    // The pager's "이전" steps back one question, not to setup.
+    fireEvent.click(screen.getByTestId("questions-prev"));
+    expect(onBack).not.toHaveBeenCalled();
+    expect(screen.getByTestId("questions-progress").textContent).toContain("질문 6 / 7");
+  });
+
   it("without the prop, the list renders as before", () => {
+    const { unmount } = render(<Host paged={false} onBack={() => {}} />);
+    expect(screen.getByTestId("questions-footer-back").className).not.toContain("hidden");
+    unmount();
     render(<Host paged={false} />);
     expect(screen.queryByTestId("questions-pager")).toBeNull();
     for (let n = 1; n <= 7; n++) expect(hiddenOnPhone(screen.getByTestId(`question-${n}`))).toBe(false);

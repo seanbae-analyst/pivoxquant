@@ -17,6 +17,8 @@
 * 멈춤은 **본인 것**이고 **같은 종목**이어야 한다 (``005930`` ↔ ``005930.KS``
   처럼 거래소 접미사만 다른 건 같은 종목).
 * 멈춤 하나는 매수 하나에만 잇는다 — 이미 다른 매수에 이어진 멈춤은 거부한다.
+  DB 유니크 제약이 없으므로 이 검사는 잠금 아래에서 돈다
+  (:func:`resolve_reflection_link` 참조).
 * 시세를 부르지 않는다. 사용자 자신의 행만 읽는다.
 
 명시 거절 (``TradeHistory.reflection_declined``)
@@ -34,7 +36,7 @@ from typing import Any
 
 from extensions import db
 from models import PreTradeReflection, TradeHistory
-from services.pre_trade.friction_outcome import _is_buy_side, _norm, _utc_now
+from services.pre_trade.friction_outcome import _is_buy_side, _norm, _utc_now, ticker_key
 
 # 매수 기록 화면에 "최근 멈춤"으로 띄우는 창. 연결 자체는 창 밖 멈춤도 받는다
 # (사용자가 고른 것) — 창은 후보를 보여 주는 범위일 뿐이다.
@@ -58,25 +60,14 @@ class ReflectionLinkError(Exception):
         self.kr = kr
 
 
-# 한국 거래소 접미사만 뗀다. 미국 클래스주(BRK.A / BRK.B, BF.A / BF.B)의
-# ".A" 는 거래소가 아니라 다른 종목이다 — 첫 "." 에서 자르면 둘이 같아진다.
-_KR_SUFFIXES = (".KS", ".KQ", ".KRX")
-
-
-def _base(ticker: Any) -> str:
-    t = _norm(ticker)
-    for suffix in _KR_SUFFIXES:
-        if t.endswith(suffix):
-            return t[: -len(suffix)]
-    return t
-
-
 def same_ticker(a: Any, b: Any) -> bool:
-    """거래소 접미사(.KS/.KQ)만 다른 표기는 같은 종목으로 본다."""
-    na, nb = _norm(a), _norm(b)
-    if not na or not nb:
+    """거래소 접미사(.KS/.KQ)만 다른 표기는 같은 종목으로 본다.
+
+    키는 ``friction_outcome.ticker_key`` — 추정 귀속(7일 창)과 같은 규칙이다.
+    """
+    if not _norm(a) or not _norm(b):
         return False
-    return na == nb or _base(na) == _base(nb)
+    return ticker_key(a) == ticker_key(b)
 
 
 def _linked_ids(user_id: int) -> set[int]:
@@ -127,6 +118,20 @@ def linkable_reflections(
     return out
 
 
+def _lock_reflection_query(user_id: int, reflection_id: int):
+    """``SELECT … FOR UPDATE`` on the user's own reflection row.
+
+    Exposed so a test can compile it against the Postgres dialect — SQLite
+    no-ops ``with_for_update`` and cannot show the lock.
+    """
+    return (
+        db.session.query(PreTradeReflection)
+        .filter(PreTradeReflection.id == int(reflection_id),
+                PreTradeReflection.user_id == int(user_id))
+        .with_for_update()
+    )
+
+
 def resolve_reflection_link(
     user_id: int,
     raw_id: Any,
@@ -138,6 +143,19 @@ def resolve_reflection_link(
 
     값이 없으면(None / "" ) None — 연결 없이 기록한다. 있는데 유효하지 않으면
     :class:`ReflectionLinkError`. 아무것도 쓰지 않는다 (호출자가 매수 행에 넣는다).
+
+    잠금 (2026-10-09): "이미 이어졌나" 검사는 잠금 없이 돌았고 유니크 제약도
+    없어서, 같은 멈춤을 고른 동시 매수 둘이 모두 통과해 둘 다 이어졌다.
+    이제 User 행 → 멈춤 행 순서로 ``FOR UPDATE`` 를 잡은 뒤 검사한다.
+    User 를 먼저 잡는 건 저장소의 잠금 순서(User→Position, position_writes)
+    를 지키기 위해서다 — 가져오기 승인은 이 함수를 Position 잠금 전에,
+    POST /trades 는 User 잠금 전에 부르므로, 멈춤 행만 잡으면 경로마다
+    순서가 달라 교착이 생길 수 있다. 이미 User 를 잡은 호출자(POST
+    /positions)에겐 같은 트랜잭션의 재잠금이라 no-op 이다.
+    잠금은 호출자의 커밋까지 유지된다 — 호출자는 이 호출과 매수 행 쓰기
+    사이에 커밋하지 말 것. 두 번째 요청은 첫 요청의 커밋 뒤에 깨어나
+    (READ COMMITTED) 새로 이어진 행을 보고 ``REFLECTION_LINK_ALREADY_USED``
+    를 받는다. SQLite 는 잠금을 무시한다 (단일 writer).
     """
     if raw_id is None or raw_id == "":
         return None
@@ -157,7 +175,11 @@ def resolve_reflection_link(
             en="A pause record can only be linked to a recorded purchase.",
             kr="멈춤 기록은 매수 기록에만 연결할 수 있습니다.",
         )
-    r = PreTradeReflection.query.filter_by(id=rid, user_id=int(user_id)).first()
+    # .first(), not lock_user_row's .one(): a missing user must surface as
+    # NOT_FOUND below, not as NoResultFound.
+    from services.position_writes import lock_user_row_query
+    lock_user_row_query(int(user_id)).first()
+    r = _lock_reflection_query(user_id, rid).one_or_none()
     if r is None:
         raise ReflectionLinkError(
             "REFLECTION_LINK_NOT_FOUND",

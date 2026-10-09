@@ -461,3 +461,39 @@ def test_two_pauses_do_not_share_one_buy():
     r = out["realised"]
     assert r["with_friction"]["n"] == 2
     assert r["without_friction"]["n"] == 0
+
+
+# ═════════════════════════════════════════════════════════════════════
+class TestKrSuffixEquivalence:
+    """2026-10-09: 추정 귀속도 link.same_ticker 와 같은 종목 판정을 쓴다.
+
+    전에는 ``_norm`` 정확 비교라 멈춤 ``035720.KQ`` 와 매수 ``035720.KS``
+    (또는 접미사 없는 ``035720``)가 다른 종목으로 갈렸다 — 명시 연결은
+    되는데 7일 창 추정·취소 후 매수 추적은 안 되는 불일치.
+    """
+
+    def test_cancelled_kq_pause_then_ks_buy_is_bought_later(self):
+        r = _refl("035720.KQ", cancelled=BASE)
+        trades = [_trade("035720.KS", "BUY", BASE + timedelta(days=2))]
+        out = compute_friction_outcome([r], trades, now=BASE + timedelta(days=30))
+        assert out["cancelled_followthrough"]["bought_later_anyway"] == 1
+
+    def test_proceeded_bare_code_pause_attributes_kq_buy(self):
+        refls = [_refl("035720", proceeded=BASE)]
+        trades = _round_trip("035720.KQ", BASE + timedelta(days=1), 100.0, 120.0)
+        out = compute_friction_outcome(refls, trades, now=BASE + timedelta(days=60))
+        assert out["realised"]["with_friction"]["n"] == 1
+        assert out["realised"]["without_friction"]["n"] == 0
+
+    def test_us_class_shares_stay_distinct(self):
+        r = _refl("BRK.A", cancelled=BASE)
+        trades = [_trade("BRK.B", "BUY", BASE + timedelta(days=1))]
+        out = compute_friction_outcome([r], trades, now=BASE + timedelta(days=30))
+        assert out["cancelled_followthrough"]["bought_later_anyway"] == 0
+
+    def test_link_same_ticker_uses_the_same_key(self):
+        """한 벌 — link.same_ticker 는 friction_outcome.ticker_key 로 판정한다."""
+        from services.pre_trade import friction_outcome, link
+        assert link.same_ticker("035720.KQ", "035720.KS") is True
+        assert friction_outcome.ticker_key("035720.KQ") == friction_outcome.ticker_key("035720.KS")
+        assert not hasattr(link, "_base"), "suffix rule must live in one place"

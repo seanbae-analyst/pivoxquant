@@ -97,6 +97,19 @@ def _signed_state(app, origin="http://localhost:3000"):
         )
 
 
+def _bind_browser(app, raw_client, provider, state):
+    """Give the test browser the login-start binding cookie for ``state``.
+
+    These tests build the state directly instead of hitting the start route,
+    so they must also plant the cookie that route would have set (login-CSRF
+    defence, 2026-10-09 — the callback rejects a state without it).
+    """
+    with app.test_request_context("/"):
+        k = auth_mod._state_serializer().loads(state)["k"]
+        name = auth_mod._oauth_bind_cookie_name(provider)
+    raw_client.set_cookie(name, k)
+
+
 def _fake_token(*, sub, email, email_verified=True, name="Test User"):
     return {
         "userinfo": {
@@ -118,6 +131,7 @@ def _drive_google_callback(app, raw_client, token_dict, *, origin="http://localh
     (state verify, provisioning, guard, login) runs the real code.
     """
     state = _signed_state(app, origin)
+    _bind_browser(app, raw_client, "google", state)
     fake_google = MagicMock()
     fake_google.authorize_access_token.return_value = token_dict
     fake_oauth = SimpleNamespace(google=fake_google)
@@ -292,6 +306,7 @@ def _kakao_signed_state(app, origin="http://localhost:3000"):
 def _drive_kakao_callback(app, raw_client, profile, *, origin="http://localhost:3000"):
     """kakao_callback 을 토큰 교환 + /v2/user/me 만 가짜로 바꿔 끝까지 돌린다."""
     state = _kakao_signed_state(app, origin)
+    _bind_browser(app, raw_client, "kakao", state)
     fake_kakao = MagicMock()
     fake_kakao.authorize_access_token.return_value = {"access_token": "t"}
     resp = MagicMock()
