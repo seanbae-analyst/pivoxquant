@@ -1,7 +1,7 @@
 /**
  * "/" on a phone (2026-10-09): the home-screen app used to paint the whole web
  * landing before swapping to the app screen. The landing now always ships
- * inside .pq-browser-only next to a .pq-standalone-only splash, so CSS hides
+ * inside .pq-browser-only next to a .pq-standalone-only cover (the landing's PIVOXQUANT page), so CSS hides
  * it in the installed app before hydration; once the client knows it is
  * standalone, the landing is never rendered at all.
  */
@@ -15,6 +15,7 @@ vi.mock("@/lib/demo", () => ({ isDemoMode: () => false }));
 vi.mock("@/components/landing/landing-v2", () => ({ default: () => <div data-testid="landing" /> }));
 vi.mock("@/components/pwa/app-welcome", () => ({
   AppWelcome: () => <div data-testid="app-welcome" />,
+  AppCover: () => <div data-testid="app-cover" />,
   isStandaloneDisplay: () => standalone,
 }));
 
@@ -34,14 +35,14 @@ describe("root page — browser vs installed app", () => {
     render(<Page />);
     const landing = screen.getByTestId("landing");
     expect(landing.closest(".pq-browser-only")).toBeTruthy();
-    expect(document.querySelector(".pq-standalone-only [role='status']")).toBeTruthy();
+    expect(document.querySelector(".pq-standalone-only [data-testid='app-cover']")).toBeTruthy();
   });
 
-  it("installed app while auth loads: splash only, never the landing", () => {
+  it("installed app while auth loads: the cover only, never the landing", () => {
     standalone = true;
     render(<Page />);
     expect(screen.queryByTestId("landing")).toBeNull();
-    expect(screen.getByRole("status")).toBeTruthy();
+    expect(screen.getByTestId("app-cover")).toBeTruthy();
   });
 
   it("installed app, signed out: the app welcome, never the landing", () => {

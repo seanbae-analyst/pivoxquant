@@ -40,6 +40,57 @@ const CARDS: ReadonlyArray<{ kicker: string; title: string; body: string }> = [
   },
 ];
 
+/**
+ * The landing's page 0 (landing/splash-page.tsx) — PIVOXQUANT alone on
+ * Vantablack. The app opens on it (2026-10-09, CEO: "웹페이지처럼 딱 아무것도
+ * 없이 … 그거 두고 넘기는 식"), and the "/" splash uses the same cover so
+ * launch → cover → first card never changes picture.
+ */
+export function AppCover({ hint }: { hint?: string }) {
+  return (
+    <div
+      className="relative flex h-full min-h-[100dvh] w-full items-center justify-center px-6"
+      style={{ background: "var(--pq-ink)", color: "var(--pq-ivory)" }}
+      data-testid="app-cover"
+    >
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 80% 80% at 50% 50%, rgba(245,240,232,0.03) 0%, rgba(245,240,232,0.012) 40%, transparent 75%)",
+        }}
+      />
+      <span
+        className="pq-splash-wordmark font-serif"
+        style={{
+          fontSize: "min(var(--pq-text-display), 10vw)",
+          letterSpacing: "0.22em",
+          lineHeight: 1,
+          fontWeight: 500,
+          textTransform: "uppercase",
+          textAlign: "center",
+        }}
+      >
+        PIVOXQUANT
+      </span>
+      {hint && (
+        <span
+          className="pointer-events-none absolute left-0 right-0 text-center font-serif"
+          style={{
+            bottom: "clamp(28px, 5vh, 56px)",
+            fontSize: "var(--pq-text-eyebrow)",
+            letterSpacing: "0.24em",
+            color: "rgba(var(--pq-bronze-rgb), 0.80)",
+          }}
+        >
+          {hint}
+        </span>
+      )}
+    </div>
+  );
+}
+
 /** True when launched from the home-screen icon (Android standalone or iOS). */
 export function isStandaloneDisplay(): boolean {
   if (typeof window === "undefined") return false;
@@ -88,39 +139,37 @@ export function AppWelcome() {
     el.scrollTo({ left: i * el.clientWidth, behavior: "smooth" });
   };
 
-  if (seen !== false) return <div className="min-h-[100dvh]" style={{ background: "var(--pq-ink)" }} />;
+  // Unknown, or already seen (→ /login): hold the cover, the picture the app opened on.
+  if (seen !== false) return <AppCover />;
 
-  const last = index >= CARDS.length - 1;
+  // Slide 0 is the cover; slides 1..N are the cards.
+  const slides = CARDS.length + 1;
+  const onCover = index === 0;
+  const last = index >= slides - 1;
+
+  // Chrome (top bar, dots, buttons) stays off the cover so it reads like the
+  // landing's first page; it fades in from the first card on.
+  const chrome = `transition-opacity duration-300 ${onCover ? "pointer-events-none opacity-0" : "opacity-100"}`;
 
   return (
     <div
-      className="flex min-h-[100dvh] flex-col text-[var(--pq-ivory)]"
-      style={{
-        background: "var(--pq-ink)",
-        paddingTop: "env(safe-area-inset-top, 0px)",
-        paddingBottom: "env(safe-area-inset-bottom, 0px)",
-      }}
+      className="relative min-h-[100dvh] text-[var(--pq-ivory)]"
+      style={{ background: "var(--pq-ink)" }}
       data-testid="app-welcome"
     >
-      <div className="flex items-center justify-between px-6 pt-5">
-        <span className="font-serif text-[17px]">PivoxQuant</span>
-        {!last && (
-          <button
-            type="button"
-            onClick={() => goTo(CARDS.length - 1)}
-            className="min-h-[44px] px-2 text-[14px] text-[var(--pq-ivory-dim)]"
-          >
-            건너뛰기
-          </button>
-        )}
-      </div>
-
       <div
         ref={track}
         onScroll={onScroll}
-        className="flex flex-1 snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="absolute inset-0 flex snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         data-testid="app-welcome-track"
       >
+        <section
+          className="w-full shrink-0 snap-center"
+          aria-label="PivoxQuant"
+          onClick={() => goTo(1)}
+        >
+          <AppCover hint="넘겨 보세요  →" />
+        </section>
         {CARDS.map((c, i) => (
           <section
             key={c.kicker}
@@ -141,15 +190,37 @@ export function AppWelcome() {
         ))}
       </div>
 
-      <div className="px-6 pb-6">
+      <div
+        className={`absolute left-0 right-0 top-0 flex items-center justify-between px-6 pt-5 ${chrome}`}
+        style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 20px)" }}
+        aria-hidden={onCover}
+      >
+        <span className="font-serif text-[17px]">PivoxQuant</span>
+        {!last && (
+          <button
+            type="button"
+            onClick={() => goTo(slides - 1)}
+            tabIndex={onCover ? -1 : 0}
+            className="min-h-[44px] px-2 text-[14px] text-[var(--pq-ivory-dim)]"
+          >
+            건너뛰기
+          </button>
+        )}
+      </div>
+
+      <div
+        className={`absolute bottom-0 left-0 right-0 px-6 ${chrome}`}
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 24px)" }}
+        aria-hidden={onCover}
+      >
         <div className="mb-6 flex justify-center gap-2" aria-hidden>
           {CARDS.map((c, i) => (
             <span
               key={c.kicker}
               className="h-[6px] rounded-full transition-all"
               style={{
-                width: i === index ? 18 : 6,
-                background: i === index ? "var(--pq-bronze)" : "var(--pq-ivory-line)",
+                width: i + 1 === index ? 18 : 6,
+                background: i + 1 === index ? "var(--pq-bronze)" : "var(--pq-ivory-line)",
               }}
             />
           ))}
@@ -177,6 +248,7 @@ export function AppWelcome() {
           <button
             type="button"
             onClick={() => goTo(index + 1)}
+            tabIndex={onCover ? -1 : 0}
             className="pq-ink-btn-bronze flex min-h-[52px] w-full items-center justify-center text-[16px]"
             data-testid="app-welcome-next"
           >

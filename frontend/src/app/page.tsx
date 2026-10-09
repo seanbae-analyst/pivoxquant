@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { useEffect, useSyncExternalStore } from "react";
 import LandingV2 from "@/components/landing/landing-v2";
-import { AppWelcome, isStandaloneDisplay } from "@/components/pwa/app-welcome";
+import { AppCover, AppWelcome, isStandaloneDisplay } from "@/components/pwa/app-welcome";
 import { isDemoMode } from "@/lib/demo";
 
 /**
@@ -104,7 +104,7 @@ export default function Page() {
   // LoadingScreen while the effect above redirects to /mirror. Costing signed-in
   // users a single frame is the right trade for a landing that is legible to
   // every crawler and chat preview.
-  if (loading) return standalone ? <LoadingScreen /> : <LandingOrAppSplash />;
+  if (loading) return standalone ? <AppCover /> : <LandingOrAppSplash />;
   if (user) return <LoadingScreen />;
 
   // Opened from the home-screen icon: an app has no landing page (2026-10-07).
@@ -129,7 +129,7 @@ function LandingOrAppSplash() {
         <LandingV2 />
       </div>
       <div className="pq-standalone-only" aria-hidden>
-        <LoadingScreen />
+        <AppCover />
       </div>
     </>
   );
