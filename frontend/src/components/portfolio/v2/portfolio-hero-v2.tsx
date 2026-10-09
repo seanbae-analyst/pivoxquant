@@ -70,6 +70,13 @@ interface PortfolioHeroV2Props {
   unrealizedKrw?: number;
   realizedUsd?: number;
   realizedKrw?: number;
+  /**
+   * Phone pager page (2026-10-09): the always-visible summary above the pages
+   * already carries the "종목 추가" button, so the page copy of the hero drops
+   * its own and the editorial top padding. Both default to the desktop look.
+   */
+  showAddCta?: boolean;
+  dense?: boolean;
 }
 
 /** Per-figure sign color (KR convention): gain carmine, loss indigo, flat bronze. */
@@ -170,6 +177,8 @@ export function PortfolioHeroV2({
   unrealizedKrw,
   realizedUsd,
   realizedKrw,
+  showAddCta = true,
+  dense = false,
 }: PortfolioHeroV2Props) {
   const { locale, t } = useLocale();
   /** `dashboard.portfolio.hero.*` keys. */
@@ -262,9 +271,9 @@ export function PortfolioHeroV2({
       className="pq-portfolio-hero-v2"
       style={{
         // CEO 2026-05-28 직격 #5: 모바일 hero padding clamp
-        padding: "clamp(40px, 8vw, 80px) 0 clamp(28px, 6vw, 64px)",
+        padding: dense ? "4px 0 20px" : "clamp(40px, 8vw, 80px) 0 clamp(28px, 6vw, 64px)",
         borderBottom: "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
-        marginBottom: "clamp(24px, 5vw, 40px)",
+        marginBottom: dense ? 24 : "clamp(24px, 5vw, 40px)",
       }}
     >
       {/* Phone: the app bar names the screen (2026-10-07). */}
@@ -445,6 +454,7 @@ export function PortfolioHeroV2({
       )}
 
       {/* CTAs */}
+      {showAddCta ? (
       <div
         style={{
           display: "flex",
@@ -475,6 +485,7 @@ export function PortfolioHeroV2({
           종목 추가 →
         </button>
       </div>
+      ) : null}
     </section>
   );
 }

@@ -16,6 +16,12 @@
  *   - WeeklyPulsePrompt          (Monday-only link to the pulse form on /journal)
  *   - FootSignature              (reused)
  *
+ * Phone (<768px, incl. the installed PWA — 2026-10-09):
+ *   PortfolioPhoneSummary (always on screen) + PhonePager, four swipeable
+ *   pages: 보유 (holdings cards) · 현황 (hero, curve when the vendor gate is
+ *   on, seed capital) · 섹터 · 최근 활동. Same components and props as the
+ *   desktop column; desktop markup is unchanged.
+ *
  * Modals:
  *   - AddPositionModalV2         (state-controlled)
  *   - TradeModalV2               (state-controlled, selected position)
@@ -34,6 +40,7 @@ import { FootSignature } from "@/components/ui/editorial";
 import { FxAttribution } from "@/components/ui/fx-attribution";
 import { useAuth } from "@/lib/auth";
 import { resolveMarketDataDisplay } from "@/lib/market-display";
+import { useIsPhone } from "@/lib/use-phone";
 
 import { LivingCFOStatusBar } from "@/components/dashboard/living-cfo-status";
 import { WeeklyPulsePrompt } from "@/components/dashboard/weekly-pulse-prompt";
@@ -59,6 +66,8 @@ import { RecentTransactionsBlock } from "@/components/portfolio/v2/recent-transa
 import { AddPositionModalV2 } from "@/components/portfolio/v2/add-position-modal-v2";
 import { TradeModalV2 } from "@/components/portfolio/v2/trade-modal-v2";
 import { ObservationNoteModalV2 } from "@/components/portfolio/v2/observation-note-modal-v2";
+import { PhonePager } from "@/components/portfolio/v2/phone-pager";
+import { PortfolioPhoneSummary } from "@/components/portfolio/v2/portfolio-phone-summary";
 
 import {
   toPosition,
@@ -278,6 +287,7 @@ export default function PortfolioPageV2() {
   // When a cross-currency book has no FX rate it is dropped rather than
   // reported from a partial sum.
   const { user } = useAuth();
+  const isPhone = useIsPhone();
   const cashPct: number | undefined = React.useMemo(() => {
     if (marketDataDisplay) return sumData?.cashPct;
     const capUsd = Number(user?.available_capital ?? 0) || 0;
@@ -356,39 +366,36 @@ export default function PortfolioPageV2() {
     };
   }, [sumData, positions]);
 
-  return (
-    <ErrorBoundary>
-      {/* ═══════════ TOP TICKER — live strip (full bleed) ═══════════ */}
-      <div
-        className="-mx-4 md:-ml-10 md:-mr-10 mb-4"
-        style={{ maxWidth: "100vw" }}
-      >
-      </div>
+  // ── Shared pieces ────────────────────────────────────────────────
+  // Built once and placed by either layout below, so the desktop column and
+  // the phone pager can never drift apart in props or in what they show.
+  const heroProps: React.ComponentProps<typeof PortfolioHeroV2> = {
+    marketDataDisplay,
+    costUsd: costUsdTotal,
+    costKrw: costKrwTotal,
+    nav: totalNav,
+    navCurrency: displayCurrency,
+    navUsd: navUsdFinal,
+    navKrw: navKrwFinal,
+    positionCount: positions.length,
+    cashPct,
+    lastReconciledAt,
+    onAddPosition: () => setAddOpen(true),
+    loading: isInitialLoad,
+    todayPnl: kpis.todayPnl,
+    todayPnlPct: kpis.todayPnlPct,
+    unrealized: kpis.unrealized,
+    realizedYtd: kpis.realizedYtd,
+    todayPnlUsd: sumData?.todayPnlUsd,
+    todayPnlKrw: sumData?.todayPnlKrw,
+    unrealizedUsd: sumData?.unrealizedUsd,
+    unrealizedKrw: sumData?.unrealizedKrw,
+    realizedUsd: sumData?.realizedUsd,
+    realizedKrw: sumData?.realizedKrw,
+  };
 
-      {/* ═══════════ CFO STATUS — sticky hairline ═══════════
-          Mobile fix (2026-05-05): top:0 was overlapping the 56px TopBar.
-          Anchor below the TopBar so the sticky bar slides under the
-          header rather than colliding with it.
-          z-10 (2026-05-13 thorough-fix sweep): z-40 created a stacking
-          context above the TopBar wrapper (z=20), clipping
-          NotificationDropdown panel. */}
-      <div
-        className="sticky z-10 -mx-4 mb-2 hidden md:-ml-8 md:-mr-10 md:block"
-        style={{
-          // Pin beneath the TopBar (56px) incl. notch safe-area on PWAs.
-          // Token: --pq-aux-sticky-top (globals.css).
-          top: "var(--pq-aux-sticky-top)",
-          // FINDING-022: solid ink — semi-transparent bar bled scrolled content.
-          background: "var(--pq-ink)",
-        }}
-      >
-        <LivingCFOStatusBar />
-      </div>
-
-      {/* Monday nudge toward the weekly pulse. The form itself lives on
-          /journal only (2026-09-29 — this used to auto-open it as a modal). */}
-      <WeeklyPulsePrompt />
-
+  const errorBanner = (
+    <>
       {/* ═══════════ ERROR BANNER (v1 parity) ═══════════ */}
       {hasLoadError && (
         <div
@@ -433,6 +440,182 @@ export default function PortfolioPageV2() {
           </button>
         </div>
       )}
+    </>
+  );
+
+  const equityCurve = marketDataDisplay ? (
+    <EquityCurveBlock
+      currency={displayCurrency}
+      currentNav={totalNav}
+      navUsd={navUsdFinal}
+      navKrw={navKrwFinal}
+      hasPositions={positions.length > 0}
+      // `dataPending` outlives the 1.2s `showSkeleton` window on purpose:
+      // while either response is missing we do not know the NAV, and an
+      // em-dash is the honest rendering of that for as long as it lasts.
+      loading={dataPending || isInitialLoad}
+    />
+  ) : null;
+
+  const positionsTable = (
+    <PositionsTableV2
+      marketDataDisplay={marketDataDisplay}
+      positions={positions}
+      totalNav={totalNav}
+      fxRate={fxRate}
+      displayCurrency={displayCurrency}
+      loading={posLoading}
+      onAction={openAction}
+      onObservationNote={setNotePosition}
+      onAddPosition={() => setAddOpen(true)}
+    />
+  );
+
+  // FxAttribution — required on both layouts; see "Foot signature" below.
+  const footer = (
+    <div className="mt-6">
+      <FxAttribution style={{ marginBottom: 14 }} />
+      <FootSignature note="PivoxQuant · 직접 입력한 기록 · 투자자문이 아닙니다" />
+    </div>
+  );
+
+  const modals = (
+    <>
+      {/* ═══════════ MODALS ═══════════ */}
+      <AddPositionModalV2
+        open={addOpen}
+        onClose={() => { setAddOpen(false); setAddImport(false); }}
+        onSuccess={refreshAll}
+        startWithImport={addImport}
+      />
+      <TradeModalV2
+        key={targetPosition?.id ?? "none"}
+        open={tradeAction !== null && targetPosition !== null}
+        onClose={closeTrade}
+        action={tradeAction ?? "buy"}
+        position={targetPosition}
+        onSuccess={refreshAll}
+      />
+      {/* 관찰 노트 — no onSuccess refresh: a note does not change the book,
+          so there is nothing on this page to revalidate. */}
+      <ObservationNoteModalV2
+        key={notePosition?.id ?? "no-note"}
+        open={notePosition !== null}
+        symbol={notePosition?.symbol ?? null}
+        name={notePosition?.name ?? null}
+        onClose={() => setNotePosition(null)}
+      />
+    </>
+  );
+
+  // ═══════════ PHONE (<768px, incl. the installed PWA) ═══════════
+  // CEO 2026-10-09: "포트폴리오 부분도 화면 넘어가는식으로 … 앱은". The long
+  // column becomes four swipeable pages under a summary that stays on screen.
+  // Same components, same props, same SWR keys as desktop — only the
+  // arrangement differs. The CFO status bar is desktop-only already.
+  if (isPhone) {
+    return (
+      <ErrorBoundary>
+        {errorBanner}
+        <PhonePager
+          label="포트폴리오 화면"
+          header={
+            <PortfolioPhoneSummary
+              marketDataDisplay={marketDataDisplay}
+              positionCount={positions.length}
+              loading={isInitialLoad}
+              costUsd={costUsdTotal}
+              costKrw={costKrwTotal}
+              navUsd={navUsdFinal}
+              navKrw={navKrwFinal}
+              nav={totalNav}
+              navCurrency={displayCurrency}
+              onAddPosition={() => setAddOpen(true)}
+            />
+          }
+          pages={[
+            {
+              id: "holdings",
+              label: "보유",
+              content: (
+                <>
+                  <WeeklyPulsePrompt />
+                  {positionsTable}
+                </>
+              ),
+            },
+            {
+              id: "overview",
+              label: "현황",
+              content: (
+                <>
+                  <PortfolioHeroV2 {...heroProps} showAddCta={false} dense />
+                  {equityCurve}
+                  <section aria-label="시드 자본">
+                    <CapitalCardV2 />
+                  </section>
+                </>
+              ),
+            },
+            {
+              id: "sectors",
+              label: "섹터",
+              content: (
+                <SectorDonutBlock
+                  positions={positions}
+                  fxRate={fxRate}
+                  displayCurrency={displayCurrency}
+                  marketDataDisplay={marketDataDisplay}
+                />
+              ),
+            },
+            {
+              id: "activity",
+              label: "최근 활동",
+              content: <RecentTransactionsBlock limit={6} />,
+            },
+          ]}
+        />
+        {footer}
+        {modals}
+      </ErrorBoundary>
+    );
+  }
+
+  return (
+    <ErrorBoundary>
+      {/* ═══════════ TOP TICKER — live strip (full bleed) ═══════════ */}
+      <div
+        className="-mx-4 md:-ml-10 md:-mr-10 mb-4"
+        style={{ maxWidth: "100vw" }}
+      >
+      </div>
+
+      {/* ═══════════ CFO STATUS — sticky hairline ═══════════
+          Mobile fix (2026-05-05): top:0 was overlapping the 56px TopBar.
+          Anchor below the TopBar so the sticky bar slides under the
+          header rather than colliding with it.
+          z-10 (2026-05-13 thorough-fix sweep): z-40 created a stacking
+          context above the TopBar wrapper (z=20), clipping
+          NotificationDropdown panel. */}
+      <div
+        className="sticky z-10 -mx-4 mb-2 hidden md:-ml-8 md:-mr-10 md:block"
+        style={{
+          // Pin beneath the TopBar (56px) incl. notch safe-area on PWAs.
+          // Token: --pq-aux-sticky-top (globals.css).
+          top: "var(--pq-aux-sticky-top)",
+          // FINDING-022: solid ink — semi-transparent bar bled scrolled content.
+          background: "var(--pq-ink)",
+        }}
+      >
+        <LivingCFOStatusBar />
+      </div>
+
+      {/* Monday nudge toward the weekly pulse. The form itself lives on
+          /journal only (2026-09-29 — this used to auto-open it as a modal). */}
+      <WeeklyPulsePrompt />
+
+      {errorBanner}
 
       {/* ═══════════ HERO ═══════════
           bug-hunter Bug #3: first paint flashed every KPI as "—" because the
@@ -441,30 +624,7 @@ export default function PortfolioPageV2() {
           before `sumData` arrives, dropping us out of the skeleton path.
           Gate on either fetch being in-flight without data, while honoring
           the existing 1.2s flicker guard. */}
-      <PortfolioHeroV2
-        marketDataDisplay={marketDataDisplay}
-        costUsd={costUsdTotal}
-        costKrw={costKrwTotal}
-        nav={totalNav}
-        navCurrency={displayCurrency}
-        navUsd={navUsdFinal}
-        navKrw={navKrwFinal}
-        positionCount={positions.length}
-        cashPct={cashPct}
-        lastReconciledAt={lastReconciledAt}
-        onAddPosition={() => setAddOpen(true)}
-        loading={isInitialLoad}
-        todayPnl={kpis.todayPnl}
-        todayPnlPct={kpis.todayPnlPct}
-        unrealized={kpis.unrealized}
-        realizedYtd={kpis.realizedYtd}
-        todayPnlUsd={sumData?.todayPnlUsd}
-        todayPnlKrw={sumData?.todayPnlKrw}
-        unrealizedUsd={sumData?.unrealizedUsd}
-        unrealizedKrw={sumData?.unrealizedKrw}
-        realizedUsd={sumData?.realizedUsd}
-        realizedKrw={sumData?.realizedKrw}
-      />
+      <PortfolioHeroV2 {...heroProps} />
 
       {/* ═══════════ EQUITY CURVE ═══════════
           Every number in this block is a vendor price: the NAV series is a
@@ -474,32 +634,10 @@ export default function PortfolioPageV2() {
           종가 스냅샷으로 그려집니다" and would be selling a screen we do not
           have. Nothing replaces it: a placeholder explaining the absence
           would be the same promise in smaller type. */}
-      {marketDataDisplay && (
-        <EquityCurveBlock
-          currency={displayCurrency}
-          currentNav={totalNav}
-          navUsd={navUsdFinal}
-          navKrw={navKrwFinal}
-          hasPositions={positions.length > 0}
-          // `dataPending` outlives the 1.2s `showSkeleton` window on purpose:
-          // while either response is missing we do not know the NAV, and an
-          // em-dash is the honest rendering of that for as long as it lasts.
-          loading={dataPending || isInitialLoad}
-        />
-      )}
+      {equityCurve}
 
       {/* ═══════════ POSITIONS TABLE ═══════════ */}
-      <PositionsTableV2
-        marketDataDisplay={marketDataDisplay}
-        positions={positions}
-        totalNav={totalNav}
-        fxRate={fxRate}
-        displayCurrency={displayCurrency}
-        loading={posLoading}
-        onAction={openAction}
-        onObservationNote={setNotePosition}
-        onAddPosition={() => setAddOpen(true)}
-      />
+      {positionsTable}
 
       {/* ═══════════ SEED CAPITAL ═══════════
           Moved here from /settings on 2026-09-10. This is the number the
@@ -558,35 +696,9 @@ export default function PortfolioPageV2() {
           (services/fx_service.py), whose free terms require attribution on
           the page the rates are used with. /portfolio is the only screen
           with a `useFxRate()` consumer today. */}
-      <div className="mt-6">
-        <FxAttribution style={{ marginBottom: 14 }} />
-        <FootSignature note="PivoxQuant · 직접 입력한 기록 · 투자자문이 아닙니다" />
-      </div>
+      {footer}
 
-      {/* ═══════════ MODALS ═══════════ */}
-      <AddPositionModalV2
-        open={addOpen}
-        onClose={() => { setAddOpen(false); setAddImport(false); }}
-        onSuccess={refreshAll}
-        startWithImport={addImport}
-      />
-      <TradeModalV2
-        key={targetPosition?.id ?? "none"}
-        open={tradeAction !== null && targetPosition !== null}
-        onClose={closeTrade}
-        action={tradeAction ?? "buy"}
-        position={targetPosition}
-        onSuccess={refreshAll}
-      />
-      {/* 관찰 노트 — no onSuccess refresh: a note does not change the book,
-          so there is nothing on this page to revalidate. */}
-      <ObservationNoteModalV2
-        key={notePosition?.id ?? "no-note"}
-        open={notePosition !== null}
-        symbol={notePosition?.symbol ?? null}
-        name={notePosition?.name ?? null}
-        onClose={() => setNotePosition(null)}
-      />
+      {modals}
     </ErrorBoundary>
   );
 }

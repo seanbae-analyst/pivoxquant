@@ -34,6 +34,9 @@
  *   - Vantablack background, ivory text, bronze hairline border.
  *   - Hover: bronze border + subtle ink lift.
  *   - Mono uppercase label ("CONTINUE WITH GOOGLE / KAKAO").
+ *   - Phone (< 768px, 2026-10-09): login/page.tsx restyles the
+ *     `.pq-auth-oauth-btn` anchors to 56px sans labels with no tracking —
+ *     wide mono tracking broke Korean labels apart ("G O O G L E 로 계 속").
  */
 
 import * as React from "react";
@@ -218,7 +221,7 @@ export function OAuthButtonsV2({
           idle it is `sr-only`, i.e. position:absolute, so it is not a flex
           item and adds no gap to the card. */}
       <p
-        className={busy ? "font-mono uppercase" : "sr-only"}
+        className={busy ? "pq-auth-wake-note font-mono uppercase" : "sr-only"}
         aria-live="polite"
         style={busy ? { ...noteBase, color: "var(--pq-ivory-dim)" } : undefined}
       >
@@ -231,7 +234,7 @@ export function OAuthButtonsV2({
           style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}
         >
           <p
-            className="font-mono uppercase"
+            className="pq-auth-wake-note font-mono uppercase"
             style={{ ...noteBase, color: "var(--pq-negative, #d18888)" }}
           >
             {t("auth.login.wakeFailed")}
@@ -239,7 +242,10 @@ export function OAuthButtonsV2({
           <button
             type="button"
             onClick={retry}
-            className="font-mono uppercase"
+            // `pq-auth-wake-retry` / `pq-auth-wake-note`: the phone auth
+            // entry (login/page.tsx) grows this to a 48px tap target and
+            // sets the notes in plain sans (no wide tracking on Korean).
+            className="pq-auth-wake-retry font-mono uppercase"
             style={{
               padding: "8px 18px",
               borderRadius: 2,

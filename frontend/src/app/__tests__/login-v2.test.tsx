@@ -137,6 +137,25 @@ describe("AuthEntryPage", () => {
     }
   });
 
+  // 2026-10-09: phone redesign — the app cover's PIVOXQUANT wordmark heads the
+  // sign-in screen (and its loading frame) so cover → sign-in is one picture.
+  it("renders the phone wordmark block in both the live and loading frames", () => {
+    const { unmount } = renderWithLocale(<AuthEntryPage />);
+    const brand = screen.getByTestId("auth-phone-brand");
+    expect(brand).toHaveTextContent("PIVOXQUANT");
+    expect(brand.querySelector(".pq-splash-wordmark")).toBeTruthy();
+    // The OAuth anchors keep the class the phone 56px rule targets.
+    const google = screen
+      .getAllByRole("link")
+      .find((l) => l.getAttribute("href")?.includes("/api/auth/google"));
+    expect(google).toHaveClass("pq-auth-oauth-btn");
+    unmount();
+
+    authState.loading = true;
+    renderWithLocale(<AuthEntryPage />);
+    expect(screen.getByTestId("auth-phone-brand")).toHaveTextContent("PIVOXQUANT");
+  });
+
   it("sends an already-signed-in visitor to the safe next, not /mirror", () => {
     searchParamsMock = new URLSearchParams("next=/journal");
     authState.user = { id: 1 };

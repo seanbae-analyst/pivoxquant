@@ -82,6 +82,7 @@ import {
   type ConsentKey,
   type ConsentState,
 } from "@/components/auth/v2/consent-stack";
+import { AuthPhoneBrand } from "@/components/auth/v2/auth-phone-brand";
 
 /**
  * Map backend code → user-facing copy. The server answers this endpoint
@@ -277,7 +278,7 @@ export default function OAuthFinalizePage() {
 
   return (
     <div
-      className="flex min-h-[100dvh] items-center justify-center px-6 py-16"
+      className="pq-finalize-shell flex min-h-[100dvh] items-center justify-center px-6 py-16"
       style={{ background: "var(--pq-ink, #050505)" }}
     >
       <form
@@ -290,6 +291,12 @@ export default function OAuthFinalizePage() {
           gap: 24,
         }}
       >
+        {/* Phone only — the app's wordmark, small, so the step right after
+            the sign-in screen still reads as the same app. */}
+        <div className="pq-finalize-phone-only pq-finalize-brand" aria-hidden>
+          <AuthPhoneBrand size="compact" />
+        </div>
+
         <header style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <span
             className="font-mono"
@@ -375,6 +382,7 @@ export default function OAuthFinalizePage() {
 
           <button
             type="submit"
+            className="pq-finalize-submit"
             disabled={!canSubmit}
             aria-describedby={errorMsg ? "oauth_finalize_error" : undefined}
             style={{
@@ -402,7 +410,7 @@ export default function OAuthFinalizePage() {
 
           {!consentsReady && (
             <span
-              className="font-mono"
+              className="pq-finalize-hint font-mono"
               style={{
                 fontSize: "var(--pq-text-eyebrow)",
                 lineHeight: 1.6,
@@ -421,6 +429,47 @@ export default function OAuthFinalizePage() {
           )}
         </div>
       </form>
+
+      {/* Phone (< 768px) — 2026-10-09, same pass as the sign-in screen
+          (login/page.tsx): safe-area insets, content from the top instead of
+          vertically centred (the consent list is taller than the screen),
+          a 56px submit with a plain sans label, and the Korean helper line
+          out of wide mono tracking. Desktop is untouched — every rule is
+          phone-scoped. Gate logic, consents and the POST are unchanged. */}
+      <style jsx>{`
+        :global(.pq-finalize-phone-only) {
+          display: none;
+        }
+        @media (max-width: 767px) {
+          :global(.pq-finalize-shell) {
+            align-items: flex-start !important;
+            padding: calc(var(--pq-safe-top) + 20px)
+              calc(var(--pq-safe-right) + 8px)
+              calc(var(--pq-safe-bottom) + 32px)
+              calc(var(--pq-safe-left) + 8px) !important;
+          }
+          :global(.pq-finalize-brand) {
+            display: flex;
+            justify-content: center;
+            padding-bottom: 8px;
+          }
+          :global(.pq-finalize-submit) {
+            min-height: 56px;
+            font-family: var(--pq-font-sans) !important;
+            font-size: var(--pq-text-h6) !important;
+            font-weight: 500;
+            letter-spacing: 0.02em !important;
+            text-transform: none !important;
+          }
+          :global(.pq-finalize-hint) {
+            font-family: var(--pq-font-sans) !important;
+            font-size: var(--pq-text-caption) !important;
+            letter-spacing: 0 !important;
+            text-align: center;
+            word-break: keep-all;
+          }
+        }
+      `}</style>
     </div>
   );
 }
