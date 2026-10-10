@@ -27,6 +27,15 @@
  * by its page label), so a row of full-width cards reads like a story while
  * keeping the same tab / panel semantics and keyboard model. Default "tabs"
  * is the /portfolio layout, unchanged.
+ *
+ * Collapsing header (2026-10-10, /portfolio "앱처럼"): `header` may be a
+ * function of `{ collapsed }`. `collapsed` turns true once the current page is
+ * scrolled past HEADER_COLLAPSE_AT and back to false only near its top
+ * (hysteresis), so a large title can shrink to one line the way a native
+ * large-title bar does. A page too short to absorb the space it gains never
+ * collapses — that would clamp its scroll back up and bounce the header.
+ * `dots={false}` drops the decorative dots under a tab strip (the strip's
+ * underline already says where you are).
  */
 
 import * as React from "react";
@@ -46,8 +55,9 @@ interface PhonePagerProps {
   pages: ReadonlyArray<PhonePage>;
   /** Accessible name of the tab strip. */
   label: string;
-  /** Rendered above the tab strip and kept in view (compact summary). */
-  header?: React.ReactNode;
+  /** Rendered above the tab strip and kept in view (compact summary). A
+   *  function receives whether the current page has been scrolled down. */
+  header?: React.ReactNode | ((state: { collapsed: boolean }) => React.ReactNode);
   /** Page shown first. Defaults to 0. */
   initialIndex?: number;
   /**
@@ -55,11 +65,29 @@ interface PhonePagerProps {
    * "dots": no tab strip — the dots are the (tappable) tablist.
    */
   nav?: "tabs" | "dots";
+  /** "tabs" mode only: draw the decorative dots under the track. Default true. */
+  dots?: boolean;
 }
 
 /** A tap-initiated glide gives up waiting for its target after this long. */
 const TAP_LOCK_MS = 900;
 const EASE_CSS = `cubic-bezier(${PQ_EASE.join(", ")})`;
+/** Page scrollTop (px) past which a function header is told to collapse… */
+export const HEADER_COLLAPSE_AT = 24;
+/** …and at or below which it opens again. */
+export const HEADER_EXPAND_AT = 4;
+/** Scroll room a page needs to collapse without its scroll clamping back. */
+export const HEADER_COLLAPSE_ROOM = 120;
+
+/** Hysteresis for the collapsing header (pure — unit tested). */
+export function nextHeaderCollapsed(
+  collapsed: boolean,
+  scrollTop: number,
+  scrollRoom: number,
+): boolean {
+  if (collapsed) return scrollTop > HEADER_EXPAND_AT;
+  return scrollTop > HEADER_COLLAPSE_AT && scrollRoom > HEADER_COLLAPSE_ROOM;
+}
 
 function clampIndex(i: number, n: number): number {
   return Math.max(0, Math.min(n - 1, i));
@@ -71,6 +99,7 @@ export function PhonePager({
   header,
   initialIndex = 0,
   nav = "tabs",
+  dots = true,
 }: PhonePagerProps) {
   const n = pages.length;
   const reduce = useReducedMotion();
@@ -87,6 +116,11 @@ export function PhonePager({
   const pendingRef = React.useRef<number | null>(null);
   const pendingTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const frame = React.useRef<number | null>(null);
+  const rootRef = React.useRef<HTMLDivElement>(null);
+  const collapsible = typeof header === "function";
+  const [collapsed, setCollapsed] = React.useState(false);
+  /** Mirror of `collapsed` for the scroll handler (written in handlers only). */
+  const collapsedRef = React.useRef(false);
 
   const paintUnderline = React.useCallback((progress: number) => {
     const el = underlineRef.current;
@@ -187,6 +221,30 @@ export function PhonePager({
     return () => ro.disconnect();
   }, [paintUnderline]);
 
+  // Collapsing header. Page scroll events do not bubble, so listen in the
+  // capture phase on the root and read only the current page.
+  React.useEffect(() => {
+    const root = rootRef.current;
+    if (!collapsible || !root) return;
+    const update = (page: HTMLElement | null | undefined) => {
+      if (!page) return;
+      const room = page.scrollHeight - page.clientHeight;
+      const next = nextHeaderCollapsed(collapsedRef.current, page.scrollTop, room);
+      if (next !== collapsedRef.current) {
+        collapsedRef.current = next;
+        setCollapsed(next);
+      }
+    };
+    const onScrollCapture = (e: Event) => {
+      const page = pageRefs.current[indexRef.current];
+      if (e.target === page) update(page);
+    };
+    root.addEventListener("scroll", onScrollCapture, { capture: true, passive: true });
+    // A newly current page brings its own scroll position with it.
+    update(pageRefs.current[index]);
+    return () => root.removeEventListener("scroll", onScrollCapture, { capture: true });
+  }, [collapsible, index]);
+
   React.useEffect(
     () => () => {
       if (frame.current !== null) cancelAnimationFrame(frame.current);
@@ -222,8 +280,13 @@ export function PhonePager({
   });
 
   return (
-    <div className="pq-phone-pager" data-testid="phone-pager">
-      {header}
+    <div
+      ref={rootRef}
+      className="pq-phone-pager"
+      data-testid="phone-pager"
+      data-header-collapsed={collapsible ? String(collapsed) : undefined}
+    >
+      {typeof header === "function" ? header({ collapsed }) : header}
 
       {nav === "tabs" && (
         <div
@@ -323,13 +386,13 @@ export function PhonePager({
             </button>
           ))}
         </div>
-      ) : (
+      ) : dots ? (
         <div className="pq-phone-pager-dots" aria-hidden data-pq-chrome data-testid="phone-pager-dots">
           {pages.map((p, i) => (
             <span key={p.id} style={dotStyle(i)} />
           ))}
         </div>
-      )}
+      ) : null}
 
       <style jsx>{`
         /* Fills the space between the TopBar and the BottomNav, so each page

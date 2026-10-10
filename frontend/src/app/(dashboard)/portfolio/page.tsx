@@ -16,11 +16,13 @@
  *   - WeeklyPulsePrompt          (Monday-only link to the pulse form on /journal)
  *   - FootSignature              (reused)
  *
- * Phone (<768px, incl. the installed PWA — 2026-10-09):
- *   PortfolioPhoneSummary (always on screen) + PhonePager, four swipeable
- *   pages: 보유 (holdings cards) · 현황 (hero, curve when the vendor gate is
- *   on, seed capital) · 섹터 · 최근 활동. Same components and props as the
- *   desktop column; desktop markup is unchanged.
+ * Phone (<768px, incl. the installed PWA — 2026-10-09, reworked 2026-10-10):
+ *   PortfolioPhoneSummary (large title, folds to one line on scroll) +
+ *   PhonePager, three swipeable pages: 보유 (tappable holding rows → sheet) ·
+ *   현황 (PortfolioPhoneOverview: summary rows, curve when the vendor gate is
+ *   on, sector strip, seed capital row → sheet, FX attribution) · 최근 활동
+ *   (trades grouped by day). Same data and props as the desktop column;
+ *   desktop markup is unchanged.
  *
  * Modals:
  *   - AddPositionModalV2         (state-controlled)
@@ -71,6 +73,7 @@ import { TradeModalV2 } from "@/components/portfolio/v2/trade-modal-v2";
 import { ObservationNoteModalV2 } from "@/components/portfolio/v2/observation-note-modal-v2";
 import { PhonePager } from "@/components/portfolio/v2/phone-pager";
 import { PortfolioPhoneSummary } from "@/components/portfolio/v2/portfolio-phone-summary";
+import { PortfolioPhoneOverview } from "@/components/portfolio/v2/portfolio-phone-overview";
 
 import {
   toPosition,
@@ -527,10 +530,16 @@ export default function PortfolioPageV2() {
   );
 
   // ═══════════ PHONE (<768px, incl. the installed PWA) ═══════════
-  // CEO 2026-10-09: "포트폴리오 부분도 화면 넘어가는식으로 … 앱은". The long
-  // column becomes four swipeable pages under a summary that stays on screen.
-  // Same components, same props, same SWR keys as desktop — only the
-  // arrangement differs. The CFO status bar is desktop-only already.
+  // CEO 2026-10-09: "포트폴리오 부분도 화면 넘어가는식으로 … 앱은", then
+  // 2026-10-10: "너무 웹사이트 같음 앱처럼 해줘봐". A large-title balance that
+  // folds to one line as a page scrolls, over three swipeable pages:
+  //   보유      — tappable holding rows → detail + action sheet
+  //   현황      — grouped summary rows, curve (gate on), sector strip,
+  //               seed capital row → sheet; FX attribution at the end
+  //   최근 활동 — trades grouped by day
+  // Same data, same props, same SWR keys as desktop — only the arrangement
+  // and the phone variants of the blocks differ. The CFO status bar stays
+  // desktop-only.
   if (isPhone) {
     return (
       <PullToRefresh onRefresh={pullRefresh}>
@@ -538,7 +547,8 @@ export default function PortfolioPageV2() {
           {errorBanner}
           <PhonePager
             label="포트폴리오 화면"
-            header={
+            dots={false}
+            header={({ collapsed }) => (
               <PortfolioPhoneSummary
                 marketDataDisplay={marketDataDisplay}
                 positionCount={positions.length}
@@ -550,8 +560,9 @@ export default function PortfolioPageV2() {
                 nav={totalNav}
                 navCurrency={displayCurrency}
                 onAddPosition={() => setAddOpen(true)}
+                collapsed={collapsed}
               />
-            }
+            )}
             pages={[
               {
                 id: "holdings",
@@ -567,24 +578,19 @@ export default function PortfolioPageV2() {
                 id: "overview",
                 label: "현황",
                 content: (
-                  <>
-                    <PortfolioHeroV2 {...heroProps} showAddCta={false} dense />
-                    {equityCurve}
-                    <section aria-label="시드 자본">
-                      <CapitalCardV2 />
-                    </section>
-                  </>
-                ),
-              },
-              {
-                id: "sectors",
-                label: "섹터",
-                content: (
-                  <SectorDonutBlock
-                    positions={positions}
-                    fxRate={fxRate}
-                    displayCurrency={displayCurrency}
-                    marketDataDisplay={marketDataDisplay}
+                  <PortfolioPhoneOverview
+                    hero={heroProps}
+                    curve={equityCurve}
+                    sectors={
+                      <SectorDonutBlock
+                        positions={positions}
+                        fxRate={fxRate}
+                        displayCurrency={displayCurrency}
+                        marketDataDisplay={marketDataDisplay}
+                        variant="plain"
+                      />
+                    }
+                    footer={footer}
                   />
                 ),
               },
@@ -595,7 +601,6 @@ export default function PortfolioPageV2() {
               },
             ]}
           />
-          {footer}
           {modals}
         </ErrorBoundary>
       </PullToRefresh>

@@ -234,7 +234,10 @@ export function EquityCurveBlock({
           marginBottom: 20,
         }}
       >
-        <div>
+        {/* Phone (2026-10-10): the 현황 page labels this section itself
+            ("자산 흐름"); the editorial eyebrow + 30px headline are desktop
+            page chrome. Class-only — desktop markup is unchanged. */}
+        <div className="hidden md:block">
           <div
             className="font-mono"
             style={{

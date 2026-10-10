@@ -1,6 +1,7 @@
 /**
- * /portfolio on a phone (CEO 2026-10-09 — "화면 넘어가는식으로"): a summary
- * that stays on screen above four swipeable pages.
+ * /portfolio on a phone (CEO 2026-10-09 — "화면 넘어가는식으로"; 2026-10-10 —
+ * "너무 웹사이트 같음 앱처럼"): a large-title summary that stays on screen above
+ * three swipeable pages (보유 · 현황 · 최근 활동).
  *
  * What must hold on the phone layout, both positions of the vendor gate:
  *   - every section is still there (holdings, hero, seed capital, sectors,
@@ -115,20 +116,49 @@ describe("/portfolio phone pager — vendor gate OFF (shipped default)", () => {
     mockedFx.mockReturnValue({ rate: 1400, isStale: false });
   });
 
-  it("lays the sections out as four tabbed pages", async () => {
+  it("lays the sections out as three tabbed pages (2026-10-10)", async () => {
     await renderPage();
     const tabs = within(screen.getByRole("tablist", { name: "포트폴리오 화면" })).getAllByRole("tab");
-    expect(tabs.map((t) => t.textContent)).toEqual(["보유", "현황", "섹터", "최근 활동"]);
+    expect(tabs.map((t) => t.textContent)).toEqual(["보유", "현황", "최근 활동"]);
     expect(tabs[0]).toHaveAttribute("aria-selected", "true");
+    // The tab strip already says where you are — no carousel dots under it.
+    expect(screen.queryByTestId("phone-pager-dots")).toBeNull();
 
     expect(within(screen.getByTestId("phone-page-holdings")).getAllByTestId("position-card")).toHaveLength(2);
     const overview = screen.getByTestId("phone-page-overview");
     expect(within(overview).getByText("올해 실현 손익")).toBeInTheDocument();
-    expect(within(overview).getByTestId("capital-card-stub")).toBeInTheDocument();
-    expect(within(screen.getByTestId("phone-page-sectors")).getByText("섹터 · 구성")).toBeInTheDocument();
+    // Sectors moved onto 현황 as a composition strip, under its own label.
+    expect(within(overview).getByText("섹터 구성")).toBeInTheDocument();
+    expect(within(overview).getByTestId("sector-plain")).toBeInTheDocument();
     expect(within(screen.getByTestId("phone-page-activity")).getByTestId("recent-tx-stub")).toBeInTheDocument();
-    // Desktop-only chrome stays off the phone tree.
+    // FX attribution + foot signature end the 현황 page instead of trailing
+    // under the pager like a web footer.
+    expect(within(overview).getByText(/투자자문이 아닙니다/)).toBeInTheDocument();
+    // Desktop-only chrome stays off the phone tree; the editorial hero
+    // paragraph is not on the phone either.
     expect(screen.queryByTestId("cfo-bar-stub")).toBeNull();
+    expect(document.querySelector(".pq-portfolio-hero-v2")).toBeNull();
+  });
+
+  it("seed capital is a row on 현황 that opens the same form in a sheet", async () => {
+    await renderPage();
+    const overview = screen.getByTestId("phone-page-overview");
+    const row = within(overview).getByTestId("portfolio-capital-open");
+    // useAuth mock: available_capital 1000 USD, no KRW → one line, no "KRW 0".
+    expect(row).toHaveTextContent("USD 1,000");
+    expect(row.textContent).not.toMatch(/KRW/);
+    expect(screen.queryByTestId("capital-card-stub")).toBeNull();
+    await userEvent.click(row);
+    expect(screen.getByTestId("capital-card-stub")).toBeInTheDocument();
+  });
+
+  it("summary rows show no market-price row with the gate off", async () => {
+    await renderPage();
+    const overview = screen.getByTestId("phone-page-overview");
+    expect(within(overview).queryByText("오늘")).toBeNull();
+    expect(within(overview).queryByText("평가 손익")).toBeNull();
+    expect(within(overview).queryByText("마지막 관측")).toBeNull();
+    expect(within(overview).getByText("+USD 42")).toBeInTheDocument();
   });
 
   it("keeps a cost-basis summary on screen, one figure per currency", async () => {
@@ -162,10 +192,10 @@ describe("/portfolio phone pager — vendor gate OFF (shipped default)", () => {
 
   it("taps a tab to move to its page", async () => {
     await renderPage();
-    const tab = screen.getByRole("tab", { name: "섹터" });
+    const tab = screen.getByRole("tab", { name: "최근 활동" });
     await userEvent.click(tab);
     expect(tab).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByTestId("phone-page-sectors")).not.toHaveAttribute("inert");
+    expect(screen.getByTestId("phone-page-activity")).not.toHaveAttribute("inert");
     expect(screen.getByTestId("phone-page-holdings")).toHaveAttribute("inert");
   });
 });
@@ -185,7 +215,11 @@ describe("/portfolio phone pager — vendor gate ON", () => {
     await renderPage();
     expect(screen.getByTestId("portfolio-phone-summary")).toHaveTextContent("보유 2종목 · 평가액");
     expect(screen.getByTestId("portfolio-phone-summary-amount").textContent).toBe("USD 1,500 · KRW 1,400,000");
-    expect(within(screen.getByTestId("phone-page-overview")).getByTestId("equity-curve-stub")).toBeInTheDocument();
+    const overview = screen.getByTestId("phone-page-overview");
+    expect(within(overview).getByTestId("equity-curve-stub")).toBeInTheDocument();
+    expect(within(overview).getByText("자산 흐름")).toBeInTheDocument();
+    expect(within(overview).getByText("마지막 관측")).toBeInTheDocument();
+    expect(within(overview).getByText("현금 비중")).toBeInTheDocument();
     expect(screen.queryByTestId("portfolio-cost-basis-note")).toBeNull();
   });
 });

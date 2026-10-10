@@ -24,6 +24,13 @@ interface SectorDonutBlockProps {
    * Defaults to true — the enabled path is unchanged.
    */
   marketDataDisplay?: boolean;
+  /**
+   * "card" (default): the desktop corner card — donut + legend in a box.
+   * "plain" (phone 현황 page, 2026-10-10): no box, no eyebrow (the page has
+   * its own section label) — one stacked bar over a full-width legend list,
+   * the composition strip finance apps use. Same buckets, same percentages.
+   */
+  variant?: "card" | "plain";
 }
 
 interface SectorBucket {
@@ -94,6 +101,7 @@ export function SectorDonutBlock({
   fxRate,
   displayCurrency = "USD",
   marketDataDisplay = true,
+  variant = "card",
 }: SectorDonutBlockProps) {
   const t = useT();
   const sectors = React.useMemo(
@@ -119,6 +127,63 @@ export function SectorDonutBlock({
       return acc;
     }, []);
   }, [sectors, CIRC]);
+
+  if (variant === "plain") {
+    return (
+      <div data-testid="sector-plain">
+        {sectors.length === 0 ? (
+          <p className="py-6 text-center text-pq-body text-[var(--pq-ivory-dim)]">
+            아직 섹터 구성이 없습니다.
+          </p>
+        ) : (
+          <>
+            <div
+              role="img"
+              aria-label={`섹터 ${sectors.length}개 구성: ${sectors
+                .map((s) => `${s.name} ${s.pct.toFixed(1)}%`)
+                .join(", ")}`}
+              className="flex h-2 w-full gap-[2px] overflow-hidden rounded-sm"
+            >
+              {sectors.map((s) => (
+                <span
+                  key={s.name}
+                  className="block h-full"
+                  style={{ flexGrow: s.pct, flexBasis: 0, background: s.color }}
+                />
+              ))}
+            </div>
+            <ul className="-mx-4 mt-3">
+              {sectors.map((s, i) => (
+                <li
+                  key={s.name}
+                  className={`flex min-h-[44px] items-center gap-3 px-4 ${
+                    i > 0 ? "border-t border-[var(--pq-ivory-line)]" : ""
+                  }`}
+                >
+                  <span
+                    aria-hidden
+                    className="block h-2.5 w-2.5 shrink-0 rounded-sm"
+                    style={{ background: s.color }}
+                  />
+                  <span className="min-w-0 flex-1 truncate text-pq-body text-[var(--pq-ivory)]">
+                    {s.name}
+                  </span>
+                  <span className="font-mono text-pq-body tabular-nums text-[var(--pq-ivory-strong)]">
+                    {s.pct.toFixed(1)}%
+                  </span>
+                </li>
+              ))}
+            </ul>
+            {!marketDataDisplay ? (
+              <div data-testid="sector-cost-basis-note" className="mt-2">
+                <Caption>{t("journal.concentrationMirror.costBasisNote")}</Caption>
+              </div>
+            ) : null}
+          </>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div
