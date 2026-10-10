@@ -6,6 +6,7 @@ import { useEffect, useSyncExternalStore } from "react";
 import dynamic from "next/dynamic";
 import { AppCover, isStandaloneDisplay } from "@/components/pwa/app-cover";
 import { isDemoMode } from "@/lib/demo";
+import { hadSession } from "@/lib/had-session";
 
 // 2026-10-09 (perf): the landing (≈364KB gz with motion) and the welcome
 // cards are split out of "/"'s first chunk. The landing keeps SSR — crawlers
@@ -74,12 +75,28 @@ function LoadingScreen() {
 const noopSubscribe = () => () => {};
 
 export default function Page() {
-  const { user, loading } = useAuth();
+  const { user, loading, waking } = useAuth();
   const router = useRouter();
   const demo = isDemoMode();
   // The server cannot know how the page was opened; its snapshot (false) keeps
   // hydration on the landing, and the client snapshot takes over after.
   const standalone = useSyncExternalStore(noopSubscribe, isStandaloneDisplay, () => false);
+  const returning = useSyncExternalStore(noopSubscribe, hadSession, () => false);
+
+  // Installed app, auth not known yet, and this device has held a session
+  // (2026-10-10). Measured on a cold backend before this: a signed-in launch
+  // at "/" held the bare cover for ~9 s, then — the unknown state read as a
+  // guest — went to the welcome cards (or /login once they had been seen);
+  // when the wake took longer than the auth poll's deadline nothing ever
+  // re-checked, and the cover stayed up for good ("PIVOXQUANT 화면에서
+  // 멈춤"). The home tab already handles an unknown state: (dashboard) holds
+  // its skeleton with the "server is waking" line and a retry, and sends a
+  // definite signed-out answer back here — which no longer matches (neither
+  // loading nor waking), so this cannot loop.
+  const openHome = standalone && !demo && returning && (loading || waking);
+  useEffect(() => {
+    if (openHome) router.replace("/mirror");
+  }, [openHome, router]);
 
   useEffect(() => {
     // Real app: send a logged-in user straight to /home. In DEMO the demo user
@@ -122,7 +139,9 @@ export default function Page() {
   if (user) return standalone ? <AppCover /> : <LoadingScreen />;
 
   // Opened from the home-screen icon: an app has no landing page (2026-10-07).
-  if (standalone) return <AppWelcome />;
+  // Still unknown (waking) for a returning user: hold the cover through the
+  // redirect above. A first-time visitor gets the cards, which need no server.
+  if (standalone) return openHome ? <AppCover /> : <AppWelcome />;
 
   return <LandingOrAppSplash />;
 }

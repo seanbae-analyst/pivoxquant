@@ -12,9 +12,17 @@
  * So while the auth state is "unknown" this polls the cheap, cookie-less
  * `/api/health` probe every WAKE_POLL_INTERVAL_MS and re-runs the auth probe
  * the moment it answers 200 — instead of waiting for the auth probe's own
- * retry timer. It gives up at WAKE_DEADLINE_MS (the same deadline the OAuth
- * buttons use) and reports `gaveUp`, so the shell can show an honest error
- * with a retry button rather than a spinner forever.
+ * retry timer. At WAKE_DEADLINE_MS (the same deadline the OAuth buttons use)
+ * it reports `gaveUp`, so the shell can show an honest error with a retry
+ * button rather than a spinner forever.
+ *
+ * 2026-10-10: past the deadline it keeps checking, every
+ * AFTER_DEADLINE_POLL_MS. Measured locally (backend answering at 100 s): the
+ * poll stopped at 75 s, the auth probe's own retries ran out at ~88 s, and
+ * the screen never recovered after the server came up — on the installed
+ * app's cover that read as a frozen app. A Render cold start that has to pull
+ * the image can run past the deadline, so the error line now clears on its
+ * own once the server answers; the retry button still checks at once.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -31,11 +39,15 @@ import {
  */
 export const AUTH_AFTER_HEALTHY_BACKOFF_MS = 10_000;
 
+/** Health-poll gap once the deadline has passed (gaveUp is showing). */
+export const AFTER_DEADLINE_POLL_MS = 15_000;
+
 export interface AuthWakePollOptions {
   pollIntervalMs?: number;
   deadlineMs?: number;
   probeTimeoutMs?: number;
   healthyBackoffMs?: number;
+  afterDeadlinePollMs?: number;
 }
 
 export interface AuthWakePoll {
@@ -74,32 +86,44 @@ export function useAuthWakePoll(
     deadlineMs = WAKE_DEADLINE_MS,
     probeTimeoutMs = WAKE_PROBE_TIMEOUT_MS,
     healthyBackoffMs = AUTH_AFTER_HEALTHY_BACKOFF_MS,
+    afterDeadlinePollMs = AFTER_DEADLINE_POLL_MS,
   } = options;
   const [gaveUp, setGaveUp] = useState(false);
   // Bumped by retry() so the effect below restarts its loop.
   const [round, setRound] = useState(0);
 
   useEffect(() => {
-    if (!unknown || gaveUp) return;
+    if (!unknown) return;
     const ac = new AbortController();
     const deadline = Date.now() + deadlineMs;
     void (async () => {
-      while (!ac.signal.aborted && Date.now() < deadline) {
+      // Runs until the auth probe answers (`unknown` flips off and this
+      // effect is cleaned up), the component unmounts, or retry() restarts it.
+      while (!ac.signal.aborted) {
+        const late = Date.now() >= deadline;
+        if (late) setGaveUp(true);
         const healthy = await probeBackendOnce(probeTimeoutMs, ac.signal);
         if (ac.signal.aborted) return;
         if (healthy) {
           const data = await revalidate().catch(() => undefined);
-          // An answer flips `unknown` off and this effect is cleaned up.
           if (data !== undefined || ac.signal.aborted) return;
           await sleep(healthyBackoffMs, ac.signal);
         } else {
-          await sleep(pollIntervalMs, ac.signal);
+          await sleep(late ? afterDeadlinePollMs : pollIntervalMs, ac.signal);
         }
       }
-      if (!ac.signal.aborted) setGaveUp(true);
     })();
     return () => ac.abort();
-  }, [unknown, gaveUp, round, revalidate, deadlineMs, pollIntervalMs, probeTimeoutMs, healthyBackoffMs]);
+  }, [
+    unknown,
+    round,
+    revalidate,
+    deadlineMs,
+    pollIntervalMs,
+    probeTimeoutMs,
+    healthyBackoffMs,
+    afterDeadlinePollMs,
+  ]);
 
   const retry = useCallback(() => {
     setGaveUp(false);
