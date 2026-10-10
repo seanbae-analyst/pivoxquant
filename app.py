@@ -1718,9 +1718,56 @@ def _init_scheduler(app):
     else:
         logger.warning(
             "scheduler NOT started pid=%s — another process holds the "
-            "scheduler advisory lock (deploy overlap). Jobs registered but "
-            "idle in this process.", os.getpid(),
+            "scheduler advisory lock (deploy overlap). Jobs registered; "
+            "retrying the lock in the background.", os.getpid(),
         )
+        _retry_scheduler_lock_in_background(sched)
+
+
+#: Deploy-overlap lock retry (2026-10-10). Render's zero-downtime deploy keeps
+#: the old instance up for a short while after the new one boots, so the new
+#: one used to lose the lock race and then never start its scheduler — no
+#: crons and no self_keepalive until its next cold boot. Measured: after the
+#: 2026-10-10 #650 deploy the new instance ran without a scheduler, idled out
+#: and slept mid-afternoon (next request 34 s). It now keeps trying until the
+#: old instance is gone.
+SCHEDULER_LOCK_RETRY_SECONDS = 30
+SCHEDULER_LOCK_RETRY_WINDOW_SECONDS = 30 * 60
+
+
+def _retry_scheduler_lock_in_background(
+    sched,
+    interval_s: float | None = None,
+    window_s: float | None = None,
+) -> threading.Thread:
+    """Retry the scheduler advisory lock off the boot path; start on success."""
+    import time as _time
+
+    interval = SCHEDULER_LOCK_RETRY_SECONDS if interval_s is None else interval_s
+    window = SCHEDULER_LOCK_RETRY_WINDOW_SECONDS if window_s is None else window_s
+
+    def _loop():
+        deadline = _time.monotonic() + window
+        while _time.monotonic() < deadline:
+            _time.sleep(interval)
+            try:
+                if _try_acquire_scheduler_lock():
+                    sched.start()
+                    logger.info(
+                        "scheduler started after deploy overlap (advisory lock "
+                        "acquired on retry) pid=%s", os.getpid(),
+                    )
+                    return
+            except Exception:
+                logger.exception("scheduler lock retry failed")
+        logger.warning(
+            "scheduler lock still held elsewhere after %ss — giving up in pid=%s",
+            int(window), os.getpid(),
+        )
+
+    t = threading.Thread(target=_loop, name="scheduler-lock-retry", daemon=True)
+    t.start()
+    return t
 
 
 # ── Create app instance ───────────────────────────────────────────────────────
