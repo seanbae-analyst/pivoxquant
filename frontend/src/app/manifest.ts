@@ -1,13 +1,13 @@
 import type { MetadataRoute } from "next";
 
 // PivoxQuant PWA manifest — Vantablack Luxe theme, editorial shortcuts.
-// start_url "/mirror" (2026-10-09, was "/"): a signed-in launch opens the home
-// tab directly instead of loading "/" (landing JS + a redirect hop; measured
-// warm launch 2.8s → 1.4s). A signed-out launch is sent by the dashboard guard
-// to "/" — AppCover/AppWelcome — never to the web login (see
-// (dashboard)/layout.tsx nextAuthRedirect `standalone`). A cold backend holds
-// on the "waking" state instead of redirecting. `id: "/"` keeps the installed
-// app's identity unchanged across this switch.
+// start_url "/" (2026-10-10; was "/mirror" for one day). Every launch opens
+// on the PIVOXQUANT cover and its cards (components/pwa/app-welcome.tsx); the
+// last card leads into the app or to sign-in — CEO: "원래대로 pivoxquant 화면
+// 나오고 거기서 넘기다가 로그인 가던가". The backend wakes behind the cover.
+// An install made while start_url was "/mirror" keeps that URL (iOS saves it
+// at install); lib/launch-cover.ts sends such a launch to "/" once per
+// session. `id: "/"` keeps the installed app's identity across the switch.
 export default function manifest(): MetadataRoute.Manifest {
   return {
     // Stable app identity (W3C manifest `id`): without it the browser keys the
@@ -25,7 +25,7 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "PivoxQuant",
     description:
       "사기 전에 멈춰 이유를 적고, 체결을 기록하고, 그 기록으로 말한 나와 실제의 나를 나란히 봅니다. 종목을 골라 주지 않습니다. 관측 자료이며 투자 권유가 아닙니다.",
-    start_url: "/mirror",
+    start_url: "/",
     scope: "/",
     display: "standalone",
     display_override: ["standalone", "minimal-ui"],
