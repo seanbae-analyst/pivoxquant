@@ -534,6 +534,35 @@ def create_app(
     return app
 
 
+def _self_keepalive_ping() -> int | None:
+    """One request to this service's own public URL — Render Free keep-awake.
+
+    Render spins a Free web service down after 15 minutes without INBOUND
+    traffic, and a cold start makes the next visitor wait 45 s to over a
+    minute. A request to the service's public URL goes through Render's proxy
+    like any visitor's, so it counts as inbound. The scheduler fires this
+    every 10 minutes from 08:00 to 23:50 KST — the day window the CEO chose
+    on 2026-10-10 ("서버 깨는거 왜 이리 오래 걸리냐"). The GitHub Actions
+    keep-warm schedule alone did not hold the window: measured 2026-10-04..10,
+    its runs landed hours late or not at all (keep-warm.yml now only helps
+    wake the instance in the morning; this keeps it awake once it is up).
+    Budget: .github/workflows/keep-warm.yml §3.
+
+    ``RENDER_EXTERNAL_URL`` is set by Render on every web service; anywhere
+    else (local, tests) this is a no-op. Returns the HTTP status, or None.
+    """
+    base = (os.environ.get("RENDER_EXTERNAL_URL") or "").strip().rstrip("/")
+    if not base.startswith("https://"):
+        return None
+    try:
+        import requests
+
+        return requests.get(f"{base}/api/health", timeout=10).status_code
+    except Exception:
+        logger.debug("self keepalive ping failed", exc_info=True)
+        return None
+
+
 def _create_missing_tables():
     """``db.create_all()`` with ONE existence query instead of one per table.
 
@@ -1610,6 +1639,19 @@ def _init_scheduler(app):
         hour=6, minute=35,
         timezone="Asia/Seoul",
         id="price_alerts_daily",
+        max_instances=1,
+        coalesce=True,
+    )
+
+    # Render Free keep-awake through the KST day window (2026-10-10) — see
+    # _self_keepalive_ping. Fires only while this process is up; the morning
+    # wake comes from keep-warm.yml or the first visitor.
+    sched.add_job(
+        _self_keepalive_ping,
+        trigger="cron",
+        hour="8-23", minute="*/10",
+        timezone="Asia/Seoul",
+        id="self_keepalive",
         max_instances=1,
         coalesce=True,
     )
