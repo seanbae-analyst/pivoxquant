@@ -220,6 +220,33 @@ describe("AuthProvider — loading latches; unknown is `waking`", () => {
     expect(screen.getByTestId("loading").textContent).toBe("false");
   });
 
+  it("keeps checking past the deadline and recovers by itself when the server answers late", async () => {
+    render(tree(<AuthProbe />));
+    // Past the deadline and past the probe's own retry budget (~88 s).
+    await advance(100_000);
+    expect(screen.getByTestId("failed").textContent).toBe("true");
+    const before = healthCalls;
+
+    // The server finally answers — nobody presses retry.
+    meRoute = async () => json(200, { authenticated: true, user: { id: 5 } });
+    healthRoute = healthOk;
+    await advance(16_000);
+    expect(healthCalls).toBeGreaterThan(before);
+    expect(screen.getByTestId("user").textContent).toBe("5");
+    expect(screen.getByTestId("waking").textContent).toBe("false");
+    expect(screen.getByTestId("failed").textContent).toBe("false");
+  });
+
+  it("past the deadline it polls slowly, not every 2 s", async () => {
+    render(tree(<AuthProbe />));
+    await advance(100_000);
+    const before = healthCalls;
+    await advance(30_000);
+    // 15 s gap → at most 2–3 probes in 30 s (was 15 at the 2 s cadence).
+    expect(healthCalls - before).toBeLessThanOrEqual(3);
+    expect(healthCalls - before).toBeGreaterThanOrEqual(1);
+  });
+
   it("retry after giving up re-runs the probe and recovers", async () => {
     render(tree(<AuthProbe />));
     await advance(80_000);

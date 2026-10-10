@@ -506,7 +506,7 @@ def create_app(
 
     # Database init & migrations
     with app.app_context():
-        db.create_all()
+        _create_missing_tables()
         _run_migrations(app)
 
     # Cache warm-up — off the boot path.
@@ -532,6 +532,32 @@ def create_app(
         _init_scheduler(app)
 
     return app
+
+
+def _create_missing_tables():
+    """``db.create_all()`` with ONE existence query instead of one per table.
+
+    Still runs on every boot and still creates every table the models define
+    that the database lacks — only the check is batched. ``create_all()`` asks
+    the database about each of the ~39 tables in turn (``has_table``); on
+    Render Free (Singapore) against the Supabase pooler (Seoul) each of those
+    is a network round trip inside the cold start a sleeping app makes its
+    first visitor wait through (measured 2026-10-10 against PostgreSQL: 59 SQL
+    statements per boot, 39 of them these checks). One catalog read lists the
+    tables; ``create_all`` then runs, with its own per-table check, only for
+    the ones missing. Any failure falls back to the plain ``create_all()``.
+    """
+    from sqlalchemy import inspect as _inspect
+
+    try:
+        existing = set(_inspect(db.engine).get_table_names())
+        missing = [t for t in db.metadata.sorted_tables if t.name not in existing]
+    except Exception:
+        logger.warning("create_all: batched table check failed — full create_all", exc_info=True)
+        db.create_all()
+        return
+    if missing:
+        db.metadata.create_all(bind=db.engine, tables=missing)
 
 
 def _run_migrations(app):
@@ -588,9 +614,28 @@ def _do_migrations():
 
     inspector = _inspect(db.engine)
 
+    # 2026-10-10 (cold start): every table's columns in ONE catalog read
+    # (get_multi_columns) instead of one get_columns() per table — 14 round
+    # trips per boot on PostgreSQL. It is a snapshot taken before any ALTER
+    # below, as the inspector's own per-table cache already was. A table that
+    # is not in it (absent at snapshot time) is read live, exactly as before.
+    try:
+        _columns_by_table = {
+            name: {c["name"]: c for c in cols}
+            for (_schema, name), cols in inspector.get_multi_columns().items()
+        }
+    except Exception:
+        logger.debug("migrations: batched column read failed — per-table reads", exc_info=True)
+        _columns_by_table = {}
+
+    def _table_columns(table_name):
+        if table_name in _columns_by_table:
+            return _columns_by_table[table_name]
+        return {c["name"]: c for c in inspector.get_columns(table_name)}
+
     def _existing_columns(table_name):
         try:
-            return {col["name"] for col in inspector.get_columns(table_name)}
+            return set(_table_columns(table_name))
         except Exception:
             return set()
 
@@ -643,7 +688,7 @@ def _do_migrations():
         if not is_postgres:
             return
         try:
-            col = {c["name"]: c for c in inspector.get_columns(table)}.get(column)
+            col = _table_columns(table).get(column)
         except Exception:
             return
         if col is None:
