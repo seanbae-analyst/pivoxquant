@@ -29,6 +29,7 @@ import { toast } from "sonner";
 
 import { apiFetch, ApiError } from "@/lib/api";
 import { API } from "@/lib/endpoints";
+import { IOS_APP_STEP_KEYS } from "@/lib/fill-setup";
 import { parseIsoUtc } from "@/lib/format";
 import { useImportTokens } from "@/lib/hooks";
 import { useLocale, useT } from "@/lib/locale";
@@ -424,6 +425,20 @@ export function ImportTokensSection() {
                 {IOS_STEPS.map((n) => (
                   <li key={n}>
                     <Caption>{t(`settingsV2.importTokens.ios${n}`)}</Caption>
+                  </li>
+                ))}
+              </ol>
+            </div>
+
+            {/* iOS 27 Notification trigger — for brokers whose fill notice is an
+                app push (토스증권). Trial: lib/fill-setup.ts says why. */}
+            <div className="mt-5" data-testid="import-token-ios-app">
+              <FieldLabel tone="bronze">{t("settingsV2.importTokens.iosAppKicker")}</FieldLabel>
+              <Caption className="mt-1">{t("settingsV2.importTokens.iosAppCaveat")}</Caption>
+              <ol className="mt-2 space-y-1">
+                {IOS_APP_STEP_KEYS.map((k) => (
+                  <li key={k}>
+                    <Caption>{t(k)}</Caption>
                   </li>
                 ))}
               </ol>

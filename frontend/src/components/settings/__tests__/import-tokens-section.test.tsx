@@ -199,6 +199,12 @@ describe("ImportTokensSection", () => {
     for (const n of [1, 2, 3, 4, 5, 6]) {
       expect(within(ios).getByText(`settingsV2.importTokens.ios${n}`)).toBeInTheDocument();
     }
+    // iOS 27 앱 알림 경로(토스증권처럼 푸시로 오는 증권사)도 같이 나온다 — 시험 중 문구와 함께.
+    const iosApp = within(reveal).getByTestId("import-token-ios-app");
+    expect(within(iosApp).getByText("settingsV2.importTokens.iosAppCaveat")).toBeInTheDocument();
+    for (const k of ["iosApp1", "iosApp2", "ios3", "ios4", "iosApp5", "iosApp6", "ios7"]) {
+      expect(within(iosApp).getByText(`settingsV2.importTokens.${k}`)).toBeInTheDocument();
+    }
     expect(within(reveal).getByText("settingsV2.importTokens.test2")).toBeInTheDocument();
 
     // Contract: POST tokens with {name, consent:true}; list re-fetched.

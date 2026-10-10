@@ -759,7 +759,7 @@
       "guideIntro": "When your broker sends a 'filled' notification, your phone forwards that text to PivoxQuant for you. Fills land on the pending list on the Journal page without typing each one; approve them with your reason and they are recorded. The token is the key that proves the phone is sending for your account.",
       "guideNeedKicker": "What you need",
       "guideNeedAndroid": "Android — the MacroDroid app (Play Store, free). It reads your broker app's fill push or KakaoTalk message as is.",
-      "guideNeedIos": "iPhone — the built-in Shortcuts app. Fill notices must arrive by text message (SMS); Shortcuts cannot read other apps' push or KakaoTalk messages. If your broker has no SMS notice, use screenshot or paste import on the Journal page instead.",
+      "guideNeedIos": "iPhone — the built-in Shortcuts app. If fill notices arrive by text message (SMS), it works on any iOS. If they arrive as an app push, as with Toss Securities, it needs iOS 27 or later and is still a trial. If neither works, use screenshot or paste import on the Journal page instead.",
       "guideStepsKicker": "Steps",
       "guideStep1": "① Issue a token below. Name it after the device (e.g. Galaxy MacroDroid).",
       "guideStep2": "② Copy the token shown right after issuing. It cannot be shown again once you close it.",
@@ -779,20 +779,26 @@
       "android5": "5. Add a header: name Authorization, value the 'Bearer …' line above, pasted as is.",
       "android6": "6. Content type application/json; body {\"text\":\"[notification]\"}. [notification] is the MacroDroid variable that becomes the received notification text.",
       "android7": "7. Save, then allow MacroDroid 'Notification access' in the phone settings. Exempting it from battery optimisation keeps it from missing notices.",
-      "iosKicker": "iPhone · Shortcuts",
+      "iosKicker": "iPhone · Shortcuts — by text message",
       "ios1": "1. In your broker app (or via its support line), switch fill notices to text message (SMS).",
-      "ios2": "2. Shortcuts → Automation → New Automation → 'Message'. Set 'Message contains' to '체결' and choose 'Run Immediately'.",
-      "ios3": "3. Add action → 'Get Contents of URL'. Paste the 'Address to send to' as the URL.",
+      "ios2": "2. In Shortcuts, tap + to create a new shortcut, then Edit → Automation → 'Message'. Set 'Message Contains' to '체결'. (iOS 26 and earlier: Automation tab → New Automation → 'Message', same value, and choose 'Run Immediately'.)",
+      "ios3": "3. Below it, Add action → 'Get Contents of URL'. Paste the 'Address to send to' as the URL.",
       "ios4": "4. Change Method to POST and add a header: key Authorization, value the 'Bearer …' line above.",
       "ios5": "5. Request Body JSON → Add new field (Text): key text, value the 'Shortcut Input' variable (the received message).",
-      "ios6": "6. Tap Done to save.",
+      "ios6": "6. Tap Edit → ⓘ → Privacy, turn on 'Allow Running When Locked', then tap Done to save. With it on, the shortcut runs on every fill without asking. (On iOS 26 and earlier, 'Run Immediately' in step 2 does the same.)",
       "curlKicker": "PC and other tools (curl)",
       "testKicker": "Check that it works",
       "test1": "When the next fill notice arrives, look at the pending list at the top of the Journal page. The 'Last used' time in the token list below also changes.",
-      "test2": "Nothing arrived? Check that the notice text contains '체결', that the header value starts with 'Bearer ', and that MacroDroid's notification access is on.",
+      "test2": "Nothing arrived? Check that the notice text contains '체결', that the header value starts with 'Bearer ', and that MacroDroid's notification access (on iPhone, step 6's 'Allow Running When Locked') is on.",
       "loading": "Loading",
       "guideMemo": "When a fill arrives, PivoxQuant sends a push right away (Settings → Notifications, 'A fill just arrived'). Tapping it opens that fill's reason box so you can note why before you forget.",
-      "ios7": "7. (Optional) To open the reason box right after a fill: below 'Get Contents of URL', add 'Get Dictionary Value' (key: memo_url), then 'Open URLs'."
+      "ios7": "7. (Optional) To open the reason box right after a fill: below 'Get Contents of URL', add 'Get Dictionary Value' (key: memo_url), then 'Open URLs'.",
+      "iosAppKicker": "iPhone · Shortcuts — by app notification (iOS 27, trial)",
+      "iosAppCaveat": "Trial — this is new in iOS 27, and PivoxQuant may not be able to read every broker's notification wording. If nothing reaches the pending list, add the fill with paste import on the Journal page.",
+      "iosApp1": "1. Check that your iPhone runs iOS 27 or later (Settings → General → About). If not, Settings → General → Software Update.",
+      "iosApp2": "2. In Shortcuts, tap + to create a new shortcut, then Edit → Automation → 'Notification'. Pick your broker's app (Toss for Toss Securities, KakaoTalk if notices come as KakaoTalk messages) and set the filter's 'Message' to '체결'.",
+      "iosApp5": "5. Request Body JSON → Add new field (Text): key text. In the value, insert the 'Shortcut Input' variable twice and set one to 'Title' and the other to 'Body' (tap the variable to choose).",
+      "iosApp6": "6. Tap Done to save. If Edit → ⓘ → Privacy shows 'Allow Running When Locked', turn it on. If it does not, each fill brings one notification asking to run the shortcut; tap it to send."
     },
     "notice": {
       "title": "Notice / 면책 고지.",
@@ -909,6 +915,35 @@
     "phone": {
       "android": "Android",
       "ios": "iPhone"
+    },
+    "brokerLabel": "Your broker",
+    "brokerPrompt": "Pick one to see the setup that fits it first. This is optional.",
+    "broker": {
+      "toss": "Toss Securities",
+      "kis": "Korea Investment",
+      "kiwoom": "Kiwoom",
+      "kb": "KB Securities",
+      "mirae": "Mirae Asset",
+      "samsung": "Samsung Securities",
+      "nh": "NH Investment",
+      "other": "Other"
+    },
+    "hint": {
+      "toss": "Toss Securities sends fill notices as a push from the Toss app (KakaoTalk or SMS only when a push cannot be delivered). The app to listen to is 'Toss'.",
+      "kis": "Korea Investment notifies your phone as soon as a fill happens. Check in the app's alert settings whether fill notices can come by text message. Its fill email arrives the next morning, so it is not used here.",
+      "kiwoom": "Kiwoom's app alerts can come by text message, KakaoTalk or app push. Choose where fill notices go in the app's alert settings.",
+      "kb": "KB Securities sends fill notices by text message (free) or app push.",
+      "check": "Check in your broker app's alert settings, or with its support line, whether fill notices can come by text message."
+    },
+    "iosRouteLabel": "How your iPhone receives it",
+    "iosRoute": {
+      "sms": "By text message",
+      "app": "By app notification"
+    },
+    "status": {
+      "android": "Android — MacroDroid reads your broker app's push or KakaoTalk message as is, on any Android version.",
+      "iosSms": "iPhone · text message — works on any iOS. Your broker has to send fill notices by text message.",
+      "iosApp": "iPhone · app notification — needs iOS 27 or later. It is new, so this is a trial."
     },
     "keyKicker": "1 · Create a connection key",
     "issue": "Create connection key",
