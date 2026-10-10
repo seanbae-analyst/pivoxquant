@@ -79,3 +79,46 @@ def test_registered_every_10_minutes_08_to_24_kst():
     # Last ping 23:50; the instance may sleep after ~00:05 until the next morning.
     fire = job.trigger.get_next_fire_time(None, datetime(2026, 10, 10, 23, 51, tzinfo=seoul))
     assert (fire.day, fire.hour, fire.minute) == (11, 8, 0)
+
+
+# ── Deploy overlap: the new instance keeps trying for the scheduler lock ──
+
+
+def test_lock_lost_at_boot_is_retried_and_the_scheduler_starts():
+    class _Sched:
+        started = 0
+
+        def start(self):
+            self.started += 1
+
+    sched = _Sched()
+    answers = iter([False, False, True])
+    with patch.object(app_module, "_try_acquire_scheduler_lock", side_effect=lambda: next(answers)):
+        t = app_module._retry_scheduler_lock_in_background(sched, interval_s=0.01, window_s=5)
+        t.join(timeout=5)
+    assert sched.started == 1
+
+
+def test_lock_retry_gives_up_after_its_window():
+    class _Sched:
+        started = 0
+
+        def start(self):
+            self.started += 1
+
+    sched = _Sched()
+    with patch.object(app_module, "_try_acquire_scheduler_lock", return_value=False):
+        t = app_module._retry_scheduler_lock_in_background(sched, interval_s=0.01, window_s=0.05)
+        t.join(timeout=5)
+    assert not t.is_alive()
+    assert sched.started == 0
+
+
+def test_init_scheduler_retries_when_the_lock_is_held_elsewhere():
+    from apscheduler.schedulers.background import BackgroundScheduler
+
+    with patch.object(BackgroundScheduler, "start", lambda self, *a, **k: None), \
+         patch.object(app_module, "_try_acquire_scheduler_lock", return_value=False), \
+         patch.object(app_module, "_retry_scheduler_lock_in_background") as retry:
+        app_module._init_scheduler(app_module.app)
+    retry.assert_called_once()

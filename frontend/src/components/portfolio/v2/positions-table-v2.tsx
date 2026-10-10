@@ -18,7 +18,8 @@ import { useT } from "@/lib/locale";
 import { useIsPhone } from "@/lib/use-phone";
 import { Sheet } from "@/components/ui/sheet";
 import { Caption, EditorialHead } from "@/components/ui/editorial";
-import { fmtMoneyPlain, fmtPctSignedMinus, pctColor, displayTicker, normalizeTicker } from "@/lib/format";
+import { ChevronRight } from "lucide-react";
+import { fmtMoneyPlain, fmtPctSignedMinus, pctColor, priceDir, displayTicker, normalizeTicker } from "@/lib/format";
 import type { Position, TradeAction } from "@/components/portfolio/types";
 
 type SortKey =
@@ -288,6 +289,23 @@ export function PositionsTableV2({
     { key: "sector", label: "섹터", align: "left" },
   ];
 
+  // Phone (2026-10-10, CEO "앱처럼"): its own tree — a full-bleed list of
+  // tappable rows under one column label, no boxed card, no section headline.
+  // Desktop below is untouched.
+  if (isPhone) {
+    return (
+      <PhoneHoldings
+        rows={rows}
+        loading={!!loading}
+        marketDataDisplay={marketDataDisplay}
+        onAction={onAction}
+        onObservationNote={onObservationNote}
+        onAddPosition={onAddPosition}
+        costBasisNote={t("journal.concentrationMirror.costBasisNote")}
+      />
+    );
+  }
+
   return (
     <section aria-label="보유 종목" style={{ marginBottom: 40 }}>
       <div
@@ -415,23 +433,8 @@ export function PositionsTableV2({
             </div>
           </div>
         ) : (
-          /* Phone (2026-10-07): one card per holding instead of a table
-             that scrolls sideways — the AVG COST column was cut off at 390px. */
-          isPhone ? (
-            <ul data-testid="positions-cards">
-              {rows.map((r, i) => (
-                <PositionCard
-                  key={r.raw.id}
-                  row={r}
-                  first={i === 0}
-                  onAction={onAction}
-                  onObservationNote={onObservationNote}
-                  marketDataDisplay={marketDataDisplay}
-                />
-              ))}
-            </ul>
-          ) : (
-          /* Mobile fix (2026-05-05): wrap the 8-col table in overflow-x-auto
+          /* Phone holdings are a separate tree (PhoneHoldings, early return
+             above). Mobile fix (2026-05-05): wrap the 8-col table in overflow-x-auto
              so the table can horizontal-scroll within the section instead
              of forcing the entire page to horizontal-scroll on mobile. */
           <div className="overflow-x-auto" style={{ width: "100%" }}>
@@ -493,7 +496,6 @@ export function PositionsTableV2({
             </tbody>
           </table>
           </div>
-          )
         )}
       </div>
 
@@ -750,11 +752,150 @@ function PositionRow({
 }
 
 /**
- * Phone card for one holding — same values and actions as PositionRow.
+ * Phone holdings (2026-10-10, CEO "너무 웹사이트 같음 앱처럼").
  *
- * 2026-10-09: the four bordered 36px buttons per card (추가 / 정리 / 수정 /
- * 관찰 노트) became one tap target — tapping the card opens an action sheet
- * with the same four actions as full-width 52px rows. Same handlers.
+ * Was: an "N개 종목" eyebrow over a bordered box of three-line cards, each
+ * repeating "비중 · 취득가 기준", with nothing saying a card could be tapped.
+ * Now a native list — full-bleed rows with hairline separators inset past
+ * the monogram, one column label for the whole list, a chevron on every row,
+ * and a pressed state. A row opens a bottom sheet with the holding's details
+ * and the same four actions (추가 / 정리 / 수정 / 관찰 노트, same handlers).
+ *
+ * Values per row, by the vendor-display gate:
+ *   OFF (shipped default) — right column is the cost-basis weight, with the
+ *     row's cost (shares × average cost) under it. The column label says
+ *     "비중 · 취득가 기준" once, the way a table header would.
+ *   ON — right column is the market value, with the P/L % under it in the
+ *     KR convention colour (pctColor) and a ▲ / ▼ glyph.
+ */
+function PhoneHoldings({
+  rows,
+  loading,
+  marketDataDisplay,
+  onAction,
+  onObservationNote,
+  onAddPosition,
+  costBasisNote,
+}: {
+  rows: DerivedPosition[];
+  loading: boolean;
+  marketDataDisplay: boolean;
+  onAction?: (action: TradeAction, position: Position) => void;
+  onObservationNote?: (position: Position) => void;
+  onAddPosition?: () => void;
+  costBasisNote: string;
+}) {
+  if (loading && rows.length === 0) {
+    return (
+      <section aria-label="보유 종목" aria-busy="true" data-testid="positions-phone">
+        <div role="status" className="sr-only">보유 종목을 불러오는 중…</div>
+        <ul aria-hidden className="-mx-4">
+          {[0, 1, 2, 3].map((i) => (
+            <li key={i} className="flex items-center gap-3 px-4 py-3.5">
+              <span className="pq-skeleton-dark block h-9 w-9 shrink-0 rounded-full" />
+              <span className="flex flex-1 flex-col gap-2">
+                <span className="pq-skeleton-dark block h-4 w-28" />
+                <span className="pq-skeleton-dark block h-3 w-40" />
+              </span>
+              <span className="pq-skeleton-dark block h-4 w-14" />
+            </li>
+          ))}
+        </ul>
+      </section>
+    );
+  }
+
+  if (rows.length === 0) {
+    return (
+      <section
+        aria-label="보유 종목"
+        data-testid="positions-phone"
+        className="flex min-h-[50vh] flex-col items-center justify-center px-4 text-center"
+      >
+        <p className="text-pq-h6 font-medium text-[var(--pq-ivory)]">
+          아직 기록된 보유 종목이 없습니다
+        </p>
+        <p className="mt-2 max-w-[300px] text-pq-body-sm leading-[1.55] text-[var(--pq-ivory-dim)]">
+          지금 들고 있는 종목을 직접 입력하거나, 증권사 앱 잔고 화면 캡처로 한 번에 올릴 수 있습니다.
+        </p>
+        {onAddPosition && (
+          <button
+            type="button"
+            onClick={onAddPosition}
+            className="pq-cta-bronze mt-6 inline-flex min-h-[48px] items-center rounded-sm bg-[var(--pq-bronze)] px-6 text-pq-body font-medium text-[var(--pq-ink)] transition-opacity active:opacity-80"
+          >
+            보유종목 추가
+          </button>
+        )}
+      </section>
+    );
+  }
+
+  return (
+    <section aria-label="보유 종목" data-testid="positions-phone">
+      <div className="flex items-baseline justify-between pb-2 text-pq-caption text-[var(--pq-ivory-dim)]">
+        <span>{rows.length}개 종목</span>
+        {marketDataDisplay ? (
+          <span>평가액 · 손익률</span>
+        ) : (
+          <span data-testid="position-card-weight-basis">{weightLabel(false)}</span>
+        )}
+      </div>
+      <ul className="-mx-4 border-y border-[var(--pq-ivory-line)]" data-testid="positions-cards">
+        {rows.map((r, i) => (
+          <PositionCard
+            key={r.raw.id}
+            row={r}
+            first={i === 0}
+            onAction={onAction}
+            onObservationNote={onObservationNote}
+            marketDataDisplay={marketDataDisplay}
+          />
+        ))}
+      </ul>
+      {!marketDataDisplay ? (
+        <div data-testid="positions-cost-basis-note" className="mt-3">
+          <Caption>{costBasisNote}</Caption>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+/** First visible character of a holding's display name — "삼", "A". */
+function monogramOf(title: string): string {
+  const ch = Array.from(title.trim())[0] ?? "·";
+  return ch.toUpperCase();
+}
+
+function Monogram({ title, size = 36 }: { title: string; size?: 36 | 44 }) {
+  return (
+    <span
+      aria-hidden
+      className={`flex shrink-0 items-center justify-center rounded-full border border-[var(--pq-ivory-line)] font-serif text-[var(--pq-ivory-mid)] ${
+        size === 44 ? "h-11 w-11 text-pq-h5" : "h-9 w-9 text-pq-lead"
+      }`}
+    >
+      {monogramOf(title)}
+    </span>
+  );
+}
+
+/** "▲ +12.34%" / "▼ −3.20%" / "0.00%" — colour + glyph, never colour alone. */
+function PctWithGlyph({ pct }: { pct: number }) {
+  const dir = priceDir(pct);
+  return (
+    <span style={{ color: pctColor(pct) }}>
+      {dir === "up" ? "▲ " : dir === "down" ? "▼ " : ""}
+      {fmtPctSigned(pct)}
+    </span>
+  );
+}
+
+/**
+ * One holding row — same values and actions as the desktop PositionRow.
+ * Tapping it opens a sheet: the holding's figures, then the four actions as
+ * full-width 52px rows (same handlers as the desktop buttons).
  */
 function PositionCard({
   row,
@@ -776,6 +917,8 @@ function PositionCard({
   const hasActions = !!(onAction || onObservationNote);
   const [sheetOpen, setSheetOpen] = React.useState(false);
   const titleId = `position-actions-${p.id}`;
+  const weightText = `${Number.isFinite(row.weight) ? row.weight.toFixed(1) : "—"}%`;
+  const costAmount = p.shares * p.avgCost;
 
   // Close the action sheet, then hand off to the host (which opens its own
   // trade / note sheet in the same tick).
@@ -786,47 +929,44 @@ function PositionCard({
 
   const summary = (
     <>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="truncate font-serif text-[17px] text-[var(--pq-ivory)]">
-            {title}
-          </div>
-          <div className="mt-0.5 font-mono text-[12px] text-[var(--pq-ivory-dim)]">{name}</div>
-        </div>
-        <div className="shrink-0 text-right">
-          <div className="font-mono text-[15px] text-[var(--pq-ivory)]">
-            {Number.isFinite(row.weight) ? row.weight.toFixed(1) : "—"}%
-          </div>
-          {/* Same basis label as the table header — a bare % on a phone
-              would read as a market weight. */}
-          {!marketDataDisplay && (
-            <div
-              className="mt-0.5 font-mono text-[11px] text-[var(--pq-ivory-dim)]"
-              data-testid="position-card-weight-basis"
-            >
-              {weightLabel(false)}
-            </div>
-          )}
-        </div>
-      </div>
-      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[13px] text-[var(--pq-ivory-mid)]">
-        <span>{fmtShares(p.shares)}주</span>
-        <span>평균 {fmtMoney(p.avgCost, cur)}</span>
-        {marketDataDisplay && (
+      <Monogram title={title} />
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-pq-lead font-medium text-[var(--pq-ivory)]">
+          {title}
+        </span>
+        <span className="mt-0.5 block truncate font-mono text-pq-caption tabular-nums text-[var(--pq-ivory-dim)]">
+          {fmtShares(p.shares)}주 · 평균 {fmtMoney(p.avgCost, cur)}
+        </span>
+      </span>
+      <span className="shrink-0 text-right font-mono tabular-nums">
+        {marketDataDisplay ? (
           <>
-            <span>평가 {fmtMoney(row.mv, cur)}</span>
-            <span style={{ color: pctColor(row.plPct) }}>{fmtPctSigned(row.plPct)}</span>
+            <span className="block text-pq-body text-[var(--pq-ivory)]">{fmtMoney(row.mv, cur)}</span>
+            <span className="mt-0.5 block text-pq-caption">
+              <PctWithGlyph pct={row.plPct} />
+            </span>
+          </>
+        ) : (
+          <>
+            <span className="block text-pq-body text-[var(--pq-ivory)]">{weightText}</span>
+            <span className="mt-0.5 block text-pq-caption text-[var(--pq-ivory-dim)]">
+              {fmtMoney(costAmount, cur)}
+            </span>
           </>
         )}
-      </div>
+      </span>
     </>
   );
 
   return (
-    <li
-      className={first ? "" : "border-t border-[var(--pq-ivory-line)]"}
-      data-testid="position-card"
-    >
+    <li className="relative" data-testid="position-card">
+      {/* Hairline inset past the monogram, like a native grouped list. */}
+      {!first && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute right-0 top-0 left-[64px] h-px bg-[var(--pq-ivory-line)]"
+        />
+      )}
       {hasActions ? (
         <button
           type="button"
@@ -835,12 +975,13 @@ function PositionCard({
           aria-expanded={sheetOpen}
           aria-label={`${title} — 기록 동작 열기`}
           data-testid="position-card-open"
-          className="block w-full px-4 py-4 text-left transition-colors active:bg-[var(--pq-ivory-line-faint)]"
+          className="flex min-h-[64px] w-full items-center gap-3 py-3 pl-4 pr-2 text-left transition-colors active:bg-[var(--pq-ivory-line-faint)] [-webkit-tap-highlight-color:transparent]"
         >
           {summary}
+          <ChevronRight aria-hidden className="h-4 w-4 shrink-0 text-[var(--pq-ivory-dim)]" />
         </button>
       ) : (
-        <div className="px-4 py-4">{summary}</div>
+        <div className="flex min-h-[64px] items-center gap-3 px-4 py-3">{summary}</div>
       )}
 
       {hasActions && (
@@ -850,18 +991,41 @@ function PositionCard({
           ariaLabelledBy={titleId}
           testId="position-action-sheet"
         >
-          <div className="pb-2 pt-1">
-            <div
-              id={titleId}
-              className="truncate font-serif text-pq-h4 text-[var(--pq-ivory)]"
-            >
-              {title}
-            </div>
-            <div className="mt-0.5 font-mono text-pq-caption tabular-nums text-[var(--pq-ivory-dim)]">
-              {fmtShares(p.shares)}주 · 평균 {fmtMoney(p.avgCost, cur)}
+          <div className="flex items-center gap-3 pb-3 pt-1">
+            <Monogram title={title} size={44} />
+            <div className="min-w-0">
+              <div id={titleId} className="truncate font-serif text-pq-h4 text-[var(--pq-ivory)]">
+                {title}
+              </div>
+              <div className="mt-0.5 truncate font-mono text-pq-caption text-[var(--pq-ivory-dim)]">
+                {name}
+                {p.sector ? ` · ${p.sector}` : ""}
+              </div>
             </div>
           </div>
-          <ul className="-mx-5 mt-2 border-t border-[var(--pq-ivory-line)]" role="list">
+
+          <dl
+            className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-[var(--pq-ivory-line)] py-4"
+            data-testid="position-sheet-figures"
+          >
+            <SheetFigure label="수량" value={`${fmtShares(p.shares)}주`} />
+            <SheetFigure label="평균가" value={fmtMoney(p.avgCost, cur)} />
+            {marketDataDisplay ? (
+              <>
+                <SheetFigure label="현재가" value={fmtMoney(p.current, cur)} />
+                <SheetFigure label="평가액" value={fmtMoney(row.mv, cur)} />
+                <SheetFigure label="손익률" value={<PctWithGlyph pct={row.plPct} />} />
+                <SheetFigure label={weightLabel(true)} value={weightText} />
+              </>
+            ) : (
+              <>
+                <SheetFigure label="취득금액" value={fmtMoney(costAmount, cur)} />
+                <SheetFigure label={weightLabel(false)} value={weightText} />
+              </>
+            )}
+          </dl>
+
+          <ul className="-mx-5 border-t border-[var(--pq-ivory-line)]" role="list">
             {onAction && (
               <>
                 <SheetActionRow label="추가" hint="더 산 내역을 기록" ariaLabel={`${name} 추가 기록`} onClick={() => run(() => onAction("buy", p))} />
@@ -876,6 +1040,17 @@ function PositionCard({
         </Sheet>
       )}
     </li>
+  );
+}
+
+function SheetFigure({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-pq-caption text-[var(--pq-ivory-dim)]">{label}</dt>
+      <dd className="mt-0.5 truncate font-mono text-pq-body tabular-nums text-[var(--pq-ivory)]">
+        {value}
+      </dd>
+    </div>
   );
 }
 
@@ -896,10 +1071,11 @@ function SheetActionRow({
         type="button"
         onClick={onClick}
         aria-label={ariaLabel}
-        className="flex min-h-[52px] w-full items-center justify-between gap-3 px-5 py-3 text-left transition-colors active:bg-[var(--pq-ivory-line-faint)]"
+        className="flex min-h-[52px] w-full items-center gap-3 px-5 py-3 text-left transition-colors active:bg-[var(--pq-ivory-line-faint)] [-webkit-tap-highlight-color:transparent]"
       >
-        <span className="text-pq-h6 text-[var(--pq-ivory)]">{label}</span>
+        <span className="flex-1 text-pq-h6 text-[var(--pq-ivory)]">{label}</span>
         <span className="text-pq-caption text-[var(--pq-ivory-dim)]">{hint}</span>
+        <ChevronRight aria-hidden className="h-4 w-4 shrink-0 text-[var(--pq-ivory-dim)]" />
       </button>
     </li>
   );

@@ -64,7 +64,20 @@ const ROW_VALUE_STYLE: React.CSSProperties = {
   color: "var(--pq-ivory-strong)",
 };
 
-export function CapitalCardV2() {
+interface CapitalCardV2Props {
+  /**
+   * "card" (default): the bordered card /portfolio shows on desktop.
+   * "sheet" (2026-10-10, phone /portfolio): the same help text, current
+   * values and form with no box and no eyebrow — the bottom sheet it sits in
+   * already carries the title.
+   */
+  variant?: "card" | "sheet";
+  /** Called after a successful save (the phone sheet closes itself). */
+  onSaved?: () => void;
+}
+
+export function CapitalCardV2({ variant = "card", onSaved }: CapitalCardV2Props = {}) {
+  const isCard = variant === "card";
   const { user, refresh } = useAuth();
   const t = useT();
 
@@ -117,6 +130,7 @@ export function CapitalCardV2() {
       });
       await refresh();
       toast.success(t("settingsV1.toast.seedSaved"));
+      onSaved?.();
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : t("settingsV1.toast.seedFailed"),
@@ -129,15 +143,21 @@ export function CapitalCardV2() {
   return (
     <div
       id="capital"
-      style={{
-        background: "rgba(255,255,255,0.02)",
-        border: "1px solid var(--pq-ivory-line)",
-        borderRadius: 4,
-        padding: 24,
-        position: "relative",
-        scrollMarginTop: 96,
-      }}
+      style={
+        isCard
+          ? {
+              background: "rgba(255,255,255,0.02)",
+              border: "1px solid var(--pq-ivory-line)",
+              borderRadius: 4,
+              padding: 24,
+              position: "relative",
+              scrollMarginTop: 96,
+            }
+          : { position: "relative" }
+      }
     >
+      {isCard && (
+      <>
       <span
         className="font-mono"
         style={{
@@ -163,6 +183,8 @@ export function CapitalCardV2() {
       >
         시드 자본 · 분석 기준
       </div>
+      </>
+      )}
       <p
         className="font-serif"
         style={{

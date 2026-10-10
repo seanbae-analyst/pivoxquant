@@ -8,7 +8,13 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, screen, cleanup, fireEvent, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { PhonePager } from "@/components/portfolio/v2/phone-pager";
+import {
+  HEADER_COLLAPSE_AT,
+  HEADER_COLLAPSE_ROOM,
+  HEADER_EXPAND_AT,
+  PhonePager,
+  nextHeaderCollapsed,
+} from "@/components/portfolio/v2/phone-pager";
 
 const reduced = vi.hoisted(() => ({ value: false }));
 vi.mock("motion/react", () => ({ useReducedMotion: () => reduced.value }));
@@ -161,5 +167,65 @@ describe("PhonePager — nav=\"dots\" (story cards)", () => {
     expect(screen.getByTestId("phone-pager-tabs")).toHaveAttribute("role", "tablist");
     expect(screen.getByTestId("phone-pager-dots")).toHaveAttribute("aria-hidden");
     expect(screen.getByTestId("phone-pager-dots").querySelector("button")).toBeNull();
+  });
+
+  it("dots={false} drops the decorative dots but keeps the tab strip", () => {
+    render(<PhonePager label="화면" pages={PAGES} dots={false} />);
+    expect(screen.queryByTestId("phone-pager-dots")).toBeNull();
+    expect(screen.getAllByRole("tab")).toHaveLength(3);
+  });
+});
+
+describe("PhonePager — collapsing header (2026-10-10)", () => {
+  it("nextHeaderCollapsed: collapses past the threshold only with room, opens near the top", () => {
+    // Not yet collapsed: needs both distance and room to absorb the space.
+    expect(nextHeaderCollapsed(false, HEADER_COLLAPSE_AT + 1, HEADER_COLLAPSE_ROOM + 1)).toBe(true);
+    expect(nextHeaderCollapsed(false, HEADER_COLLAPSE_AT, 999)).toBe(false);
+    expect(nextHeaderCollapsed(false, 200, HEADER_COLLAPSE_ROOM)).toBe(false);
+    // Collapsed: stays so until the page is back near its top (hysteresis).
+    expect(nextHeaderCollapsed(true, HEADER_COLLAPSE_AT - 10, 0)).toBe(true);
+    expect(nextHeaderCollapsed(true, HEADER_EXPAND_AT, 999)).toBe(false);
+  });
+
+  it("a function header follows the current page's scroll; a node header is left alone", () => {
+    const header = vi.fn(({ collapsed }: { collapsed: boolean }) => (
+      <div data-testid="hdr">{collapsed ? "small" : "large"}</div>
+    ));
+    render(<PhonePager label="화면" pages={PAGES} header={header} />);
+    expect(screen.getByTestId("hdr")).toHaveTextContent("large");
+    expect(screen.getByTestId("phone-pager")).toHaveAttribute("data-header-collapsed", "false");
+
+    const page = screen.getByTestId("phone-page-a");
+    Object.defineProperty(page, "scrollHeight", { configurable: true, value: 2000 });
+    Object.defineProperty(page, "clientHeight", { configurable: true, value: 500 });
+    page.scrollTop = 300;
+    fireEvent.scroll(page);
+    expect(screen.getByTestId("hdr")).toHaveTextContent("small");
+    expect(screen.getByTestId("phone-pager")).toHaveAttribute("data-header-collapsed", "true");
+
+    page.scrollTop = 0;
+    fireEvent.scroll(page);
+    expect(screen.getByTestId("hdr")).toHaveTextContent("large");
+  });
+
+  it("ignores scrolls of a page that is not the current one", () => {
+    render(
+      <PhonePager
+        label="화면"
+        pages={PAGES}
+        header={({ collapsed }) => <div data-testid="hdr">{collapsed ? "small" : "large"}</div>}
+      />,
+    );
+    const other = screen.getByTestId("phone-page-b");
+    Object.defineProperty(other, "scrollHeight", { configurable: true, value: 2000 });
+    Object.defineProperty(other, "clientHeight", { configurable: true, value: 500 });
+    other.scrollTop = 300;
+    fireEvent.scroll(other);
+    expect(screen.getByTestId("hdr")).toHaveTextContent("large");
+  });
+
+  it("a plain node header gets no collapse attribute", () => {
+    render(<PhonePager label="화면" pages={PAGES} header={<div>요약</div>} />);
+    expect(screen.getByTestId("phone-pager")).not.toHaveAttribute("data-header-collapsed");
   });
 });

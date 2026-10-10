@@ -16,6 +16,7 @@
 import * as React from "react";
 import { fmtMoneyPlain, pctColor, displayTicker, parseIsoUtc } from "@/lib/format";
 import { useLocale } from "@/lib/locale";
+import { useIsPhone } from "@/lib/use-phone";
 import { useTransactions, type TransactionRow } from "./hooks-v2";
 
 interface RecentTransactionsBlockProps {
@@ -94,16 +95,67 @@ function amountColor(signed: number): string {
   return pctColor(signed);
 }
 
+/** KST calendar day of a stamp — "2026-06-15" — or null when unparseable. */
+export function kstDayKey(iso: string | undefined): string | null {
+  if (!iso) return null;
+  const d = parseIsoUtc(iso);
+  if (!d) return null;
+  return d.toLocaleDateString("en-CA", { timeZone: "Asia/Seoul" });
+}
+
+/** "6월 15일 (월)" / "Jun 15 (Mon)" — the day header of a phone group. */
+function dayHeading(iso: string | undefined, locale: "ko" | "en"): string {
+  const d = iso ? parseIsoUtc(iso) : null;
+  if (!d) return "—";
+  const tz = "Asia/Seoul";
+  if (locale === "ko") {
+    const md = d.toLocaleDateString("ko-KR", { timeZone: tz, month: "long", day: "numeric" });
+    const wd = d.toLocaleDateString("ko-KR", { timeZone: tz, weekday: "short" });
+    return `${md} (${wd})`;
+  }
+  const md = d.toLocaleDateString("en-US", { timeZone: tz, month: "short", day: "numeric" });
+  const wd = d.toLocaleDateString("en-US", { timeZone: tz, weekday: "short" });
+  return `${md} (${wd})`;
+}
+
+/** Consecutive rows of the same KST day, in the order the backend sent them. */
+export function groupByDay<T extends { date?: string }>(rows: T[]): Array<{ key: string; date?: string; rows: T[] }> {
+  const groups: Array<{ key: string; date?: string; rows: T[] }> = [];
+  for (const r of rows) {
+    const key = kstDayKey(r.date) ?? "unknown";
+    const last = groups[groups.length - 1];
+    if (last && last.key === key) last.rows.push(r);
+    else groups.push({ key, date: r.date, rows: [r] });
+  }
+  return groups;
+}
+
 export function RecentTransactionsBlock({
   limit = 7,
 }: RecentTransactionsBlockProps) {
   const { locale, t } = useLocale();
+  const isPhone = useIsPhone();
   const { data, isLoading, error } = useTransactions(limit);
 
   const trades: TransactionRow[] = React.useMemo(() => {
     if (!data) return [];
     return (data.trades ?? data.transactions ?? []).slice(0, limit);
   }, [data, limit]);
+
+  // Phone (2026-10-10, CEO "앱처럼"): no boxed card repeating the tab's own
+  // name — a list grouped under day headers, the way a banking app shows a
+  // statement. Same rows, labels, amounts and colours as the card below.
+  if (isPhone) {
+    return (
+      <PhoneActivity
+        trades={trades}
+        loading={isLoading && trades.length === 0}
+        failed={Boolean(error)}
+        locale={locale}
+        t={t}
+      />
+    );
+  }
 
   return (
     <div
@@ -235,6 +287,103 @@ export function RecentTransactionsBlock({
         </ul>
       )}
     </div>
+  );
+}
+
+function PhoneActivity({
+  trades,
+  loading,
+  failed,
+  locale,
+  t,
+}: {
+  trades: TransactionRow[];
+  loading: boolean;
+  failed: boolean;
+  locale: "ko" | "en";
+  t: (key: string, params?: Record<string, string>) => string;
+}) {
+  if (loading) {
+    return (
+      <section aria-label="최근 활동" aria-busy="true" data-testid="activity-phone">
+        <div role="status" className="sr-only">{t("dashboard.portfolio.activity.loading")}</div>
+        <ul aria-hidden className="-mx-4">
+          {[0, 1, 2, 3].map((i) => (
+            <li key={i} className="flex items-center justify-between gap-3 px-4 py-3.5">
+              <span className="flex flex-col gap-2">
+                <span className="pq-skeleton-dark block h-4 w-24" />
+                <span className="pq-skeleton-dark block h-3 w-36" />
+              </span>
+              <span className="pq-skeleton-dark block h-4 w-20" />
+            </li>
+          ))}
+        </ul>
+      </section>
+    );
+  }
+  if (failed || trades.length === 0) {
+    return (
+      <section
+        aria-label="최근 활동"
+        data-testid="activity-phone"
+        className="flex min-h-[40vh] items-center justify-center px-4 text-center text-pq-body text-[var(--pq-ivory-dim)]"
+      >
+        {t("dashboard.portfolio.activity.empty")}
+      </section>
+    );
+  }
+  return (
+    <section aria-label="최근 활동" data-testid="activity-phone" className="-mx-4">
+      {groupByDay(trades).map((g, gi) => (
+        <div key={g.key} role="group" aria-label={dayHeading(g.date, locale)}>
+          {/* Not sticky: an opaque sticky band would cut across the page's
+              background light. */}
+          <div
+            aria-hidden
+            className={`px-4 pb-2 text-pq-caption text-[var(--pq-ivory-dim)] ${gi === 0 ? "pt-0" : "pt-5"}`}
+          >
+            {dayHeading(g.date, locale)}
+          </div>
+          <ul className="border-y border-[var(--pq-ivory-line)]">
+            {g.rows.map((tx, i) => {
+              const { label, signed } = actionLabel(
+                tx,
+                t("dashboard.portfolio.activity.holdingAdded"),
+                t("dashboard.portfolio.activity.holdingAdjusted"),
+              );
+              const cur = (tx.currency as "USD" | "KRW") ?? "USD";
+              const shares = tx.qty ?? tx.shares ?? 0;
+              const price = tx.price ?? 0;
+              const amount = (tx.amount ?? shares * price) || 0;
+              return (
+                <li
+                  key={tx.id ?? `${tx.symbol}-${tx.date}-${i}`}
+                  className={`flex min-h-[60px] items-center justify-between gap-3 px-4 py-3 ${
+                    i > 0 ? "border-t border-[var(--pq-ivory-line)]" : ""
+                  }`}
+                  data-testid="activity-row"
+                >
+                  <div className="min-w-0">
+                    <div className="truncate text-pq-lead font-medium text-[var(--pq-ivory)]">
+                      {tx.symbol ? displayTicker(tx.symbol, tx.name) : (tx.name ?? "—")}
+                    </div>
+                    <div className="mt-0.5 truncate font-mono text-pq-caption tabular-nums text-[var(--pq-ivory-dim)]">
+                      {label} · {t("dashboard.portfolio.activity.sharesUnit", { n: String(shares) })} @ {fmtMoney(price, cur)}
+                    </div>
+                  </div>
+                  <span
+                    className="shrink-0 font-mono text-pq-body tabular-nums"
+                    style={{ color: amountColor(signed) }}
+                  >
+                    {fmtSignedAmount(amount, signed, cur)}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))}
+    </section>
   );
 }
 

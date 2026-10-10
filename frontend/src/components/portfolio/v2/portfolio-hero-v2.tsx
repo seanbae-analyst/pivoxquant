@@ -23,7 +23,7 @@ import { PRICE_COLOR_HEX } from "@/lib/format";
 import { useLocale } from "@/lib/locale";
 import { relativeTime as localisedRelativeTime } from "@/lib/relative-time";
 
-interface PortfolioHeroV2Props {
+export interface PortfolioHeroV2Props {
   /**
    * Vendor market-data display gate (lib/market-display.ts). When false the
    * hero switches to cost basis: `취득금액` instead of NAV, no Today /
@@ -80,7 +80,7 @@ interface PortfolioHeroV2Props {
 }
 
 /** Per-figure sign color (KR convention): gain carmine, loss indigo, flat bronze. */
-function signColor(n: number | undefined): string {
+export function signColor(n: number | undefined): string {
   if (n == null || !Number.isFinite(n) || n === 0) return "var(--pq-bronze)";
   return n > 0 ? PRICE_COLOR_HEX.up : PRICE_COLOR_HEX.down;
 }
@@ -139,12 +139,121 @@ function fmtMoneySigned(
   return `${sign}${currency === "KRW" ? "KRW " : "USD "}${body}`;
 }
 
+/**
+ * One money line of a P&L figure. `color: null` = the single display-currency
+ * fallback, which the caller colours by its own tone.
+ *
+ * 2026-10-10: lifted out of the hero's render closures so the phone 현황 page
+ * (portfolio-phone-overview.tsx) prints the same lines under the same
+ * currency rules — never a second copy of them. The hero renders the exact
+ * markup it did before.
+ */
+export interface PnlLine {
+  key: string;
+  text: string;
+  color: string | null;
+}
+
+export interface PnlLineContext {
+  /** A positive USD amount is on the book (NAV with the gate on, cost off). */
+  hasUs: boolean;
+  /** Same for KRW. */
+  hasKr: boolean;
+  navCurrency: "USD" | "KRW";
+}
+
+/** Which currencies the book holds — the hero's own `hasUs` / `hasKr`. */
+export function pnlContext({
+  marketDataDisplay = true,
+  navUsd,
+  navKrw,
+  costUsd,
+  costKrw,
+  navCurrency = "USD",
+}: {
+  marketDataDisplay?: boolean;
+  navUsd?: number;
+  navKrw?: number;
+  costUsd?: number;
+  costKrw?: number;
+  navCurrency?: "USD" | "KRW";
+}): PnlLineContext {
+  const amountUsd = marketDataDisplay ? navUsd : costUsd;
+  const amountKrw = marketDataDisplay ? navKrw : costKrw;
+  return {
+    hasUs: typeof amountUsd === "number" && amountUsd > 0,
+    hasKr: typeof amountKrw === "number" && amountKrw > 0,
+    navCurrency,
+  };
+}
+
+/**
+ * P&L KPIs: when both markets are held, the US (USD) and KR (KRW) figures,
+ * each coloured by its own sign — instead of one USD-unified number
+ * (CEO 2026-05-24). Single-market books show the NATIVE figure: the
+ * `unified` fallbacks are USD-unified, and labelling them with navCurrency
+ * (KRW for a KR-only book) printed a ~1380× wrong number (v52 regression).
+ */
+export function splitPnlLines(
+  usd: number | undefined,
+  krw: number | undefined,
+  unified: number | undefined,
+  { hasUs, hasKr, navCurrency }: PnlLineContext,
+): PnlLine[] {
+  const usdLine = { key: "USD", text: fmtMoneySigned(usd, "USD"), color: signColor(usd) };
+  const krwLine = { key: "KRW", text: fmtMoneySigned(krw, "KRW"), color: signColor(krw) };
+  if (hasUs && hasKr) return [usdLine, krwLine];
+  if (!hasUs && hasKr) return [krwLine];
+  if (hasUs && !hasKr) return [usdLine];
+  return [{ key: "unified", text: fmtMoneySigned(unified, navCurrency), color: null }];
+}
+
+/**
+ * Realized P&L is a record of closed trades per currency, not a market
+ * reading: a currency with nothing realized this year has no line (a mixed
+ * book that sold only US stock printed "+USD 3,180" over "KRW 0"). The two
+ * currencies are never summed. Nothing realized in either → one plain 0.
+ * Books without the per-currency split keep the single-figure fallback.
+ */
+export function realizedPnlLines(
+  realizedUsd: number | undefined,
+  realizedKrw: number | undefined,
+  realizedYtd: number | undefined,
+  ctx: PnlLineContext,
+): PnlLine[] {
+  const split = realizedUsd != null || realizedKrw != null;
+  if (!split) return splitPnlLines(realizedUsd, realizedKrw, realizedYtd, ctx);
+  const lines: PnlLine[] = [];
+  if (realizedUsd != null && Number.isFinite(realizedUsd) && realizedUsd !== 0) {
+    lines.push({ key: "USD", text: fmtMoneySigned(realizedUsd, "USD"), color: signColor(realizedUsd) });
+  }
+  if (realizedKrw != null && Number.isFinite(realizedKrw) && realizedKrw !== 0) {
+    lines.push({ key: "KRW", text: fmtMoneySigned(realizedKrw, "KRW"), color: signColor(realizedKrw) });
+  }
+  if (lines.length === 0) return [{ key: "zero", text: "0", color: signColor(0) }];
+  return lines;
+}
+
+/** Hero markup for a set of lines: coloured divs, or the bare fallback text. */
+function renderPnlLines(lines: PnlLine[]): React.ReactNode {
+  if (lines.length === 1 && lines[0].color === null) return lines[0].text;
+  return (
+    <>
+      {lines.map((l) => (
+        <div key={l.key} style={{ color: l.color ?? undefined }}>
+          {l.text}
+        </div>
+      ))}
+    </>
+  );
+}
+
 /* 2026-09-19: this used to be a second, English-only copy of the relative-time
    formatter ("just now" / "3h ago"), which printed English inside the Korean
    deck sentence and lacked the naive-UTC guard that drifts KST readings by 9h.
    It now delegates to the shared locale-aware helper; only the null case
    ("never") stays here, because the shared helper has no such case. */
-function relativeTime(
+export function relativeTime(
   iso: string | null | undefined,
   locale: "ko" | "en",
   neverLabel: string,
@@ -220,58 +329,19 @@ export function PortfolioHeroV2({
   // figures, each colored by its own sign — instead of one USD-unified number
   // (CEO 2026-05-24: "today 부분은 여전히 usd만"). Otherwise the single
   // display-currency value (existing behavior).
+  // Line rules live in splitPnlLines / realizedPnlLines (shared with the phone
+  // 현황 page); these wrappers only add the loading dash.
+  const pnlCtx: PnlLineContext = { hasUs, hasKr, navCurrency };
   const splitPnl = (
     usd: number | undefined,
     krw: number | undefined,
     unified: number | undefined,
-  ): React.ReactNode => {
-    if (loading) return "—";
-    if (hasUs && hasKr) {
-      return (
-        <>
-          <div style={{ color: signColor(usd) }}>{fmtMoneySigned(usd, "USD")}</div>
-          <div style={{ color: signColor(krw) }}>{fmtMoneySigned(krw, "KRW")}</div>
-        </>
-      );
-    }
-    // Single-market books: show the NATIVE figure with its own label/color.
-    // The `unified` fallbacks are USD-unified — labeling them with navCurrency
-    // (KRW for a KR-only book) printed a ~1380× wrong number (v52 regression).
-    if (!hasUs && hasKr) {
-      return <div style={{ color: signColor(krw) }}>{fmtMoneySigned(krw, "KRW")}</div>;
-    }
-    if (hasUs && !hasKr) {
-      return <div style={{ color: signColor(usd) }}>{fmtMoneySigned(usd, "USD")}</div>;
-    }
-    return fmtMoneySigned(unified, navCurrency, loading);
-  };
-  // Realized P&L is a record of closed trades per currency, not a market
-  // reading: a currency with nothing realized this year has no line (a mixed
-  // book that sold only US stock printed "+USD 3,180" over "KRW 0"). The two
-  // currencies are never summed. Nothing realized in either → one plain 0.
-  // Books without the per-currency split keep the single-figure fallback.
-  const realizedPnl = (): React.ReactNode => {
-    if (loading) return "—";
-    const split = realizedUsd != null || realizedKrw != null;
-    if (!split) return splitPnl(realizedUsd, realizedKrw, realizedYtd);
-    const lines: Array<{ cur: "USD" | "KRW"; v: number }> = [];
-    if (realizedUsd != null && Number.isFinite(realizedUsd) && realizedUsd !== 0) {
-      lines.push({ cur: "USD", v: realizedUsd });
-    }
-    if (realizedKrw != null && Number.isFinite(realizedKrw) && realizedKrw !== 0) {
-      lines.push({ cur: "KRW", v: realizedKrw });
-    }
-    if (lines.length === 0) return <div style={{ color: signColor(0) }}>0</div>;
-    return (
-      <>
-        {lines.map(({ cur, v }) => (
-          <div key={cur} style={{ color: signColor(v) }}>
-            {fmtMoneySigned(v, cur)}
-          </div>
-        ))}
-      </>
-    );
-  };
+  ): React.ReactNode =>
+    loading ? "—" : renderPnlLines(splitPnlLines(usd, krw, unified, pnlCtx));
+  const realizedPnl = (): React.ReactNode =>
+    loading
+      ? "—"
+      : renderPnlLines(realizedPnlLines(realizedUsd, realizedKrw, realizedYtd, pnlCtx));
   const positionsText = loading
     ? "—"
     : positionCount != null
