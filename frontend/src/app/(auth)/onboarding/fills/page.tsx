@@ -15,6 +15,12 @@
  * otherwise (IMPORT_CONSENT_REQUIRED). The raw token is shown once, exactly
  * as in ImportTokensSection, and the copy fields / steps are the same i18n
  * keys, so the two places cannot drift apart.
+ *
+ * 2026-10-10, CEO: "증권사별로 아니면 폰 별로 해당 가능한 기능들 세팅하게끔".
+ * Phone → broker → (iPhone) SMS or app notification, then one line on what
+ * that combination needs, then only its steps. The rules live in
+ * lib/fill-setup.ts. Picking a broker is optional; without one the iPhone
+ * opens on SMS, as before.
  */
 
 import { useEffect, useState } from "react";
@@ -28,10 +34,19 @@ import { useImportTokens, usePortfolioPositions } from "@/lib/hooks";
 import { useT } from "@/lib/locale";
 import { currentLocationPath, loginHref } from "@/lib/login-redirect";
 import { detectPhone, type PhoneKind } from "@/lib/phone";
+import {
+  FILL_BROKERS,
+  brokerHintKey,
+  defaultIosRoute,
+  fillRoute,
+  kickerKey,
+  statusKey,
+  stepKeys,
+  type FillBroker,
+  type IosRoute,
+} from "@/lib/fill-setup";
 import type { ImportTokenCreateResponse } from "@/lib/types";
 import {
-  ANDROID_STEPS,
-  IOS_STEPS,
   MACRODROID_BODY,
   CopyField,
   authHeaderValue,
@@ -52,6 +67,8 @@ export default function OnboardingFillsPage() {
   const { data: posData } = usePortfolioPositions<{ positions?: unknown[] }>();
 
   const [phone, setPhone] = useState<PhoneKind>("android");
+  const [broker, setBroker] = useState<FillBroker | null>(null);
+  const [iosRoute, setIosRoute] = useState<IosRoute>("sms");
   const [origin, setOrigin] = useState("");
   const [consent, setConsent] = useState(false);
   const [issuing, setIssuing] = useState(false);
@@ -99,9 +116,14 @@ export default function OnboardingFillsPage() {
 
   const next = () => router.push("/onboarding");
 
+  const pickBroker = (b: FillBroker) => {
+    setBroker(b);
+    setIosRoute(defaultIosRoute(b));
+  };
+
   if (authLoading || !user || user.onboarding_completed === true) return null;
 
-  const steps = phone === "android" ? ANDROID_STEPS : IOS_STEPS;
+  const route = fillRoute(phone, iosRoute);
 
   return (
     <div className="flex min-h-[100dvh] flex-col bg-[var(--pq-ink)] text-[var(--pq-ivory)]">
@@ -142,8 +164,68 @@ export default function OnboardingFillsPage() {
             ))}
           </div>
 
+          {/* Broker — optional; it picks the iPhone route and adds one sourced hint. */}
+          <section className="mt-6" aria-labelledby="fills-broker-label">
+            <div id="fills-broker-label" className="text-[13px] tracking-[0.16em] text-[var(--pq-bronze)]">
+              {t("fillsOnboarding.brokerLabel")}
+            </div>
+            <p className="mt-1 text-[13px] leading-relaxed text-[var(--pq-ivory-faint)] [word-break:keep-all]">
+              {t("fillsOnboarding.brokerPrompt")}
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {FILL_BROKERS.map((b) => (
+                <button
+                  key={b}
+                  type="button"
+                  aria-pressed={broker === b}
+                  onClick={() => pickBroker(b)}
+                  className="min-h-[44px] rounded-[2px] border px-3 text-[14px]"
+                  style={{
+                    borderColor: broker === b ? "var(--pq-bronze)" : "var(--pq-ivory-line)",
+                    color: broker === b ? "var(--pq-ivory)" : "var(--pq-ivory-dim)",
+                  }}
+                  data-testid={`fills-broker-${b}`}
+                >
+                  {t(`fillsOnboarding.broker.${b}`)}
+                </button>
+              ))}
+            </div>
+            {broker && (
+              <p className="mt-3 text-[14px] leading-relaxed text-[var(--pq-ivory-mid)] [word-break:keep-all]" data-testid="fills-broker-hint">
+                {t(brokerHintKey(broker))}
+              </p>
+            )}
+          </section>
+
+          {/* iPhone — SMS works on any iOS; an app's push needs iOS 27. */}
+          {phone === "ios" && (
+            <div
+              role="radiogroup"
+              aria-label={t("fillsOnboarding.iosRouteLabel")}
+              className="mt-5 grid grid-cols-2 gap-2"
+            >
+              {(["sms", "app"] as const).map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  role="radio"
+                  aria-checked={iosRoute === r}
+                  onClick={() => setIosRoute(r)}
+                  className="min-h-[44px] rounded-[2px] border px-2 text-[14px] [word-break:keep-all]"
+                  style={{
+                    borderColor: iosRoute === r ? "var(--pq-bronze)" : "var(--pq-ivory-line)",
+                    color: iosRoute === r ? "var(--pq-ivory)" : "var(--pq-ivory-dim)",
+                  }}
+                  data-testid={`fills-ios-route-${r}`}
+                >
+                  {t(`fillsOnboarding.iosRoute.${r}`)}
+                </button>
+              ))}
+            </div>
+          )}
+
           <p className="mt-4 text-[14px] leading-relaxed text-[var(--pq-ivory-mid)] [word-break:keep-all]" data-testid="fills-need">
-            {t(phone === "android" ? "settingsV2.importTokens.guideNeedAndroid" : "settingsV2.importTokens.guideNeedIos")}
+            {t(statusKey(route))}
           </p>
 
           {/* 1 — the key. */}
@@ -205,14 +287,19 @@ export default function OnboardingFillsPage() {
           </section>
 
           {/* 2 — the phone side. */}
-          <section className="mt-6" data-testid={`fills-steps-${phone}`}>
+          <section className="mt-6" data-testid={`fills-steps-${phone}`} data-route={route}>
             <div className="text-[13px] tracking-[0.16em] text-[var(--pq-bronze)]">
-              {t(phone === "android" ? "settingsV2.importTokens.androidKicker" : "settingsV2.importTokens.iosKicker")}
+              {t(kickerKey(route))}
             </div>
+            {route === "ios-app" && (
+              <p className="mt-2 text-[14px] leading-relaxed text-[var(--pq-ivory-mid)] [word-break:keep-all]" data-testid="fills-ios-app-caveat">
+                {t("settingsV2.importTokens.iosAppCaveat")}
+              </p>
+            )}
             <ol className="mt-3 space-y-2">
-              {steps.map((n) => (
-                <li key={n} className="text-[14px] leading-relaxed text-[var(--pq-ivory-mid)] [word-break:keep-all]">
-                  {t(`settingsV2.importTokens.${phone}${n}`)}
+              {stepKeys(route).map((k) => (
+                <li key={k} className="text-[14px] leading-relaxed text-[var(--pq-ivory-mid)] [word-break:keep-all]">
+                  {t(k)}
                 </li>
               ))}
             </ol>
