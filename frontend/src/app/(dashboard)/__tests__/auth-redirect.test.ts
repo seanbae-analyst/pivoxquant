@@ -81,7 +81,7 @@ describe("nextAuthRedirect", () => {
     expect(nextAuthRedirect({ onboarding_completed: true })).toBeNull();
   });
 
-  // 2026-10-09: the installed app opens on /mirror (manifest start_url).
+  // Inside the installed app a signed-out user goes to the cover and cards ("/").
   it("sends a signed-out INSTALLED-app launch to the app front door, not the web login", () => {
     expect(nextAuthRedirect(null, "/mirror", { standalone: true })).toBe("/");
   });

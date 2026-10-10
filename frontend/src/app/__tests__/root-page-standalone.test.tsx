@@ -12,8 +12,8 @@ const auth = { user: null as null | { id: number }, loading: true, waking: false
 vi.mock("@/lib/auth", () => ({ useAuth: () => auth }));
 const replace = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace, push: vi.fn() }) }));
-let returning = false;
-vi.mock("@/lib/had-session", () => ({ hadSession: () => returning }));
+const markLaunchCovered = vi.fn();
+vi.mock("@/lib/launch-cover", () => ({ markLaunchCovered: () => markLaunchCovered() }));
 vi.mock("@/lib/demo", () => ({ isDemoMode: () => false }));
 vi.mock("@/components/landing/landing-v2", () => ({ default: () => <div data-testid="landing" /> }));
 vi.mock("@/components/pwa/app-welcome", () => ({
@@ -33,11 +33,11 @@ import Page from "../page";
 afterEach(() => {
   cleanup();
   standalone = false;
-  returning = false;
   auth.user = null;
   auth.loading = true;
   auth.waking = false;
   replace.mockReset();
+  markLaunchCovered.mockReset();
 });
 
 describe("root page — browser vs installed app", () => {
@@ -48,76 +48,35 @@ describe("root page — browser vs installed app", () => {
     expect(document.querySelector(".pq-standalone-only [data-testid='app-cover']")).toBeTruthy();
   });
 
-  it("installed app while auth loads: the cover only, never the landing", () => {
+  // 2026-10-10, CEO: every launch of the installed app opens on the cover and
+  // its cards — signed in or not, server awake or not — and "/" never sends it
+  // on by itself (it used to jump to /mirror for a signed-in user).
+  it.each([
+    ["auth still loading", { loading: true, waking: false, user: null }],
+    ["server waking", { loading: false, waking: true, user: null }],
+    ["signed out", { loading: false, waking: false, user: null }],
+    ["signed in", { loading: false, waking: false, user: { id: 1 } }],
+  ])("installed app, %s: the cover and cards, never the landing, no redirect", async (_label, state) => {
     standalone = true;
-    render(<Page />);
-    expect(screen.queryByTestId("landing")).toBeNull();
-    expect(screen.getByTestId("app-cover")).toBeTruthy();
-  });
-
-  it("installed app, signed out: the app welcome, never the landing", async () => {
-    standalone = true;
-    auth.loading = false;
+    Object.assign(auth, state);
     render(<Page />);
     expect(await screen.findByTestId("app-welcome")).toBeTruthy();
     expect(screen.queryByTestId("landing")).toBeNull();
+    expect(replace).not.toHaveBeenCalled();
   });
 
-  it("installed app, signed in: the cover holds through the redirect — no loading screen", () => {
+  it("installed app: marks this launch as covered", async () => {
     standalone = true;
+    render(<Page />);
+    await screen.findByTestId("app-welcome");
+    expect(markLaunchCovered).toHaveBeenCalled();
+  });
+
+  it("browser, signed in: still goes straight to the app", () => {
     auth.loading = false;
     auth.user = { id: 1 };
     render(<Page />);
-    expect(screen.getByTestId("app-cover")).toBeTruthy();
-    expect(screen.queryByRole("status", { name: "Loading PivoxQuant" })).toBeNull();
-    expect(screen.queryByTestId("landing")).toBeNull();
-  });
-
-  // 2026-10-10: a signed-in launch on a cold backend held the bare cover, then
-  // read the unknown state as a guest — and, once the poll gave up, stayed on
-  // the cover for good. A device that has held a session opens the home tab,
-  // whose shell holds a skeleton with the wake line and a retry.
-  it("installed app, auth unknown (waking), device has held a session: opens the home tab", () => {
-    standalone = true;
-    returning = true;
-    auth.loading = false;
-    auth.waking = true;
-    render(<Page />);
     expect(replace).toHaveBeenCalledWith("/mirror");
-    expect(screen.getByTestId("app-cover")).toBeTruthy();
-    expect(screen.queryByTestId("app-welcome")).toBeNull();
-  });
-
-  it("installed app, auth still loading, device has held a session: opens the home tab at once", () => {
-    standalone = true;
-    returning = true;
-    render(<Page />);
-    expect(replace).toHaveBeenCalledWith("/mirror");
-  });
-
-  it("installed app, auth unknown, first-time device: the welcome cards (no server needed)", async () => {
-    standalone = true;
-    auth.loading = false;
-    auth.waking = true;
-    render(<Page />);
-    expect(await screen.findByTestId("app-welcome")).toBeTruthy();
-    expect(replace).not.toHaveBeenCalled();
-  });
-
-  it("installed app, a definite signed-out answer: the welcome, never back to /mirror (no loop)", async () => {
-    standalone = true;
-    returning = true;
-    auth.loading = false;
-    auth.waking = false;
-    render(<Page />);
-    expect(await screen.findByTestId("app-welcome")).toBeTruthy();
-    expect(replace).not.toHaveBeenCalled();
-  });
-
-  it("browser tab: a returning device still gets the landing while auth loads", async () => {
-    returning = true;
-    render(<Page />);
-    expect(await screen.findByTestId("landing")).toBeTruthy();
-    expect(replace).not.toHaveBeenCalled();
+    expect(markLaunchCovered).not.toHaveBeenCalled();
   });
 });

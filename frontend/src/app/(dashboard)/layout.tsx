@@ -20,6 +20,7 @@ import {
 import { useKeyboardNav } from "@/lib/use-keyboard-nav";
 import { currentLocationPath, loginHref } from "@/lib/login-redirect";
 import { isStandaloneDisplay } from "@/components/pwa/app-cover";
+import { shouldOpenOnCover } from "@/lib/launch-cover";
 
 /* ──────────────────────────────────────────────────────────────────
    Path → DisclaimerBanner type resolver
@@ -84,10 +85,9 @@ export function nextAuthRedirect(
   /** Path+query the visitor asked for — carried to /login as ?next= so the
    *  OAuth round-trip lands them back here (2026-09-29). */
   currentPath?: string | null,
-  /** Launched as the installed app (display-mode standalone). The manifest
-   *  opens it on /mirror (2026-10-09), so a signed-out launch must go to the
-   *  app's own front door ("/" → AppCover/AppWelcome, which sends returning
-   *  guests on to /login) instead of straight to the web login. */
+  /** Launched as the installed app (display-mode standalone). A signed-out
+   *  user goes to the app's own front door ("/" → the cover and cards, whose
+   *  last card offers sign-up / sign-in) instead of straight to the web login. */
   opts?: { standalone?: boolean },
 ): string | null {
   if (!user) return opts?.standalone ? "/" : loginHref(currentPath);
@@ -128,6 +128,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   // Single mount point — listener guards against editable targets and
   // modifier chords so palette ⌘K and normal typing are unaffected.
   useKeyboardNav();
+
+  // An install that saved start_url "/mirror" (2026-10-09 → 10) still opens on
+  // the cover, once per launch (lib/launch-cover.ts).
+  useEffect(() => {
+    if (shouldOpenOnCover()) router.replace("/");
+  }, [router]);
 
   useEffect(() => {
     if (loading || waking) return;
