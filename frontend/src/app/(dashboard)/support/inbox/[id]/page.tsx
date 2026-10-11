@@ -36,11 +36,11 @@ function LoadingState() {
   return (
     <div className="space-y-4" aria-hidden="true">
       <div
-        className="h-40 animate-pulse rounded-[2px] border"
+        className="h-40 animate-pulse rounded-[var(--pq-radius-card)] border"
         style={{ borderColor: "var(--pq-ivory-line)", background: "var(--pq-card-veil)" }}
       />
       <div
-        className="h-32 animate-pulse rounded-[2px] border"
+        className="h-32 animate-pulse rounded-[var(--pq-radius-card)] border"
         style={{ borderColor: "var(--pq-ivory-line)", background: "var(--pq-card-veil)" }}
       />
     </div>
@@ -50,7 +50,7 @@ function LoadingState() {
 function LoadFailure({ onRetry }: { onRetry: () => void }) {
   return (
     <div
-      className="rounded-[2px] border p-6 text-center"
+      className="rounded-[var(--pq-radius-card)] border p-6 text-center"
       style={{ borderColor: "var(--pq-ivory-line)", background: "var(--pq-card-veil)" }}
     >
       <p className="font-serif text-pq-mono-sm" style={{ color: "var(--pq-ivory-soft)" }}>
@@ -59,7 +59,7 @@ function LoadFailure({ onRetry }: { onRetry: () => void }) {
       <button
         type="button"
         onClick={onRetry}
-        className="mt-3 rounded-[2px] border px-4 py-2 font-mono text-pq-caption uppercase tracking-[0.16em] transition-colors hover:bg-[var(--pq-card-veil-strong)]"
+        className="mt-3 rounded-[var(--pq-radius-card)] border px-4 py-2 font-mono text-pq-caption uppercase tracking-[0.01em] transition-colors hover:bg-[var(--pq-card-veil-strong)]"
         style={{ borderColor: "var(--pq-ivory-line)", color: "var(--pq-bronze-light)" }}
       >
         다시 시도
@@ -102,7 +102,7 @@ function DetailContent() {
 
           {/* Original body */}
           <section
-            className="mt-6 rounded-[2px] border p-5"
+            className="mt-6 rounded-[var(--pq-radius-card)] border p-5"
             style={{ borderColor: "var(--pq-ivory-line)", background: "var(--pq-card-veil)" }}
           >
             <FieldLabel>문의 내용</FieldLabel>
@@ -122,7 +122,7 @@ function DetailContent() {
           {/* Admin reply or pending */}
           {data.admin_reply && data.admin_reply.trim().length > 0 ? (
             <section
-              className="mt-4 rounded-[2px] border p-5"
+              className="mt-4 rounded-[var(--pq-radius-card)] border p-5"
               style={{ borderColor: "var(--pq-bronze)", background: "var(--pq-card-veil)" }}
             >
               <div className="flex items-center gap-2">
@@ -148,7 +148,7 @@ function DetailContent() {
             </section>
           ) : (
             <section
-              className="mt-4 flex items-center gap-3 rounded-[2px] border p-5"
+              className="mt-4 flex items-center gap-3 rounded-[var(--pq-radius-card)] border p-5"
               style={{ borderColor: "var(--pq-ivory-line)", background: "var(--pq-card-veil)" }}
             >
               <Clock3 className="h-4 w-4 shrink-0" style={{ color: "var(--pq-muted)" }} />

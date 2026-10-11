@@ -160,7 +160,7 @@ export function InstallPrompt() {
         style={{
           background: "#050505",
           border: "1px solid rgba(245, 240, 232, 0.10)",
-          borderRadius: 2,
+          borderRadius: "var(--pq-radius-card)",
           color: "var(--pq-ivory)",
         }}
       >
@@ -171,7 +171,7 @@ export function InstallPrompt() {
               style={{
                 color: "var(--pq-bronze)",
                 fontSize: "var(--pq-text-eyebrow)",
-                letterSpacing: "0.22em",
+                letterSpacing: "0.01em",
                 fontWeight: 500,
               }}
             >

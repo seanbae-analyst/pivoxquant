@@ -171,7 +171,7 @@ function MirrorShell({
       variants={fadeUp}
       initial="hidden"
       animate="visible"
-      className="rounded-[2px] border p-5 sm:p-6"
+      className="rounded-[var(--pq-radius-card)] border p-5 sm:p-6"
       style={{
         borderColor: "var(--pq-ivory-line)",
         background: "var(--pq-card-veil)",
@@ -259,7 +259,7 @@ function LoadingState({ t }: { t: (k: string) => string }) {
         {[0, 1].map((i) => (
           <div
             key={i}
-            className="h-40 animate-pulse rounded-[2px]"
+            className="h-40 animate-pulse rounded-[var(--pq-radius-card)]"
             style={{ background: "var(--pq-ivory-line-faint)" }}
           />
         ))}

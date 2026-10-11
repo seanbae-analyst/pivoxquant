@@ -33,7 +33,7 @@ export function Fleuron({
         justifyContent: "center",
         fontSize: `${size}px`,
         lineHeight: 1,
-        letterSpacing: "0.4em",
+        letterSpacing: "0.01em",
         color: "var(--pq-bronze)",
         opacity: 0.75,
       }}
@@ -44,18 +44,10 @@ export function Fleuron({
 }
 
 /**
- * Wide tracking is for Latin small caps. On Hangul it spreads a word into
- * separate letters ("검 토 했 음"), so a label whose text is Korean gets
- * normal spacing (2026-10-07, labels moved to Korean).
+ * Small bronze label above a section heading. Plain case, no leading rule and
+ * no wide tracking — the spaced small-caps kicker read as template chrome
+ * (2026-10-11 black-gold refresh).
  */
-function hasHangul(node: React.ReactNode): boolean {
-  if (typeof node === "string") return /[\uAC00-\uD7A3]/.test(node);
-  if (typeof node === "number") return false;
-  if (Array.isArray(node)) return node.some(hasHangul);
-  return false;
-}
-
-/** Thin 24px bronze rule + small-caps kicker. Sits above a section heading. */
 export function RuledKicker({
   children,
   className = "",
@@ -71,24 +63,11 @@ export function RuledKicker({
         alignItems: "center",
         gap: 10,
         fontSize: "var(--pq-text-eyebrow)",
-        letterSpacing: hasHangul(children) ? "0.02em" : "0.24em",
-        textTransform: "uppercase",
+        letterSpacing: "0.01em",
         color: "var(--pq-bronze)",
         fontWeight: 500,
       }}
     >
-      <span
-        aria-hidden="true"
-        className="pq-ruled-kicker-hairline"
-        style={{
-          display: "inline-block",
-          width: 24,
-          height: 1,
-          background: "var(--pq-bronze)",
-          opacity: 0.7,
-          transformOrigin: "left center",
-        }}
-      />
       <span>{children}</span>
     </div>
   );
@@ -246,10 +225,10 @@ export function HairlineSoft({ className = "" }: { className?: string }) {
 /**
  * Field label — tighter tracking than a section kicker, sized for
  * in-panel data labels ("Current price", "Market cap", etc.). Replaces
- * the old `text-[10px] tracking-[0.22em] uppercase` pattern that made
+ * the old `text-[10px] tracking-[0.01em] uppercase` pattern that made
  * labels look like "C U R R E N T  P R I C E" in the detail page.
  *
- * Uses OpenType small-caps + 0.12em tracking for editorial scanability.
+ * Plain case, near-zero tracking (2026-10-11 refresh).
  */
 export function FieldLabel({
   children,
@@ -272,8 +251,7 @@ export function FieldLabel({
       style={{
         display: "inline-block",
         fontSize: size,
-        letterSpacing: hasHangul(children) ? "0.02em" : "0.12em",
-        textTransform: "uppercase",
+        letterSpacing: "0.01em",
         color,
         fontWeight: 500,
         lineHeight: 1.3,

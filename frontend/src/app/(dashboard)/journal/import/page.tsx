@@ -224,7 +224,7 @@ function ImportPageInner() {
   }
 
   const tabClass = (active: boolean) =>
-    `px-4 py-2 text-pq-eyebrow uppercase tracking-[0.2em] transition-colors ${
+    `px-4 py-2 text-pq-eyebrow uppercase tracking-[0.01em] transition-colors ${
       active
         ? "bg-[rgba(245,240,232,0.10)] border border-[var(--pq-ivory)] text-[var(--pq-ivory)]"
         : "border border-[rgba(245,240,232,0.15)] text-[var(--pq-ivory-mid)] hover:border-[rgba(245,240,232,0.45)]"
@@ -245,7 +245,7 @@ function ImportPageInner() {
         />
         <label
           htmlFor="import-file"
-          className="pq-ink-btn-ghost cursor-pointer px-4 text-pq-mono-sm uppercase tracking-[0.22em] max-md:h-12 max-md:w-full max-md:justify-center"
+          className="pq-ink-btn-ghost cursor-pointer px-4 text-pq-mono-sm uppercase tracking-[0.01em] max-md:h-12 max-md:w-full max-md:justify-center"
         >
           {t("journal.import.page.fileChoose")}
         </label>
@@ -300,7 +300,7 @@ function ImportPageInner() {
         value={text}
         onChange={(e) => setText(e.target.value)}
         rows={8}
-        className="mt-3 w-full bg-transparent border border-[rgba(245,240,232,0.15)] rounded-[2px] p-3 text-pq-body-sm leading-relaxed outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)] font-mono"
+        className="mt-3 w-full bg-transparent border border-[rgba(245,240,232,0.15)] rounded-[var(--pq-radius-card)] p-3 text-pq-body-sm leading-relaxed outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)] font-mono"
         style={{ resize: "vertical" }}
       />
       {prefill && text === prefill && (
@@ -355,7 +355,7 @@ function ImportPageInner() {
         <Link
           href="/journal"
           // Phone: the app bar's ‹ carries back (top-bar.tsx subScreen).
-          className="mt-3 hidden items-center gap-2 font-mono text-pq-eyebrow uppercase tracking-[0.16em] text-[var(--pq-bronze-light)] underline-offset-4 hover:underline md:inline-flex"
+          className="mt-3 hidden items-center gap-2 font-mono text-pq-eyebrow uppercase tracking-[0.01em] text-[var(--pq-bronze-light)] underline-offset-4 hover:underline md:inline-flex"
         >
           {t("journal.import.page.backToJournal")}
         </Link>
@@ -363,7 +363,7 @@ function ImportPageInner() {
 
       <form
         onSubmit={submit}
-        className="rounded-[2px] md:border md:border-[var(--pq-ivory-line)] md:bg-[var(--pq-card-veil)] md:p-6"
+        className="rounded-[var(--pq-radius-card)] md:border md:border-[var(--pq-ivory-line)] md:bg-[var(--pq-card-veil)] md:p-6"
         aria-label={t("journal.import.page.heading")}
       >
         {/* Consent — opt-in, gates the submit. Shared by every input method. */}
@@ -440,7 +440,7 @@ function ImportPageInner() {
               type="submit"
               disabled={!canSubmit}
               aria-disabled={!canSubmit}
-              className="pq-ink-btn-bronze inline-flex items-center px-5 py-2 text-pq-mono-sm uppercase tracking-[0.22em] disabled:opacity-30 disabled:cursor-not-allowed max-md:h-12 max-md:w-full max-md:justify-center"
+              className="pq-ink-btn-bronze inline-flex items-center px-5 py-2 text-pq-mono-sm uppercase tracking-[0.01em] disabled:opacity-30 disabled:cursor-not-allowed max-md:h-12 max-md:w-full max-md:justify-center"
               data-testid="import-submit"
             >
               {submitting ? t("journal.import.page.submitting") : t("journal.import.page.submit")}
@@ -459,7 +459,7 @@ function ImportPageInner() {
       {result && (
         <section
           ref={resultRef}
-          className="mt-8 scroll-mt-[calc(var(--pq-aux-sticky-top)+1rem)] rounded-[2px] border p-5 sm:p-6"
+          className="mt-8 scroll-mt-[calc(var(--pq-aux-sticky-top)+1rem)] rounded-[var(--pq-radius-card)] border p-5 sm:p-6"
           style={{ borderColor: "var(--pq-ivory-line)", background: "var(--pq-card-veil)" }}
           aria-label={t("journal.import.page.resultKicker")}
         >
@@ -515,7 +515,7 @@ function ImportPageInner() {
       {/* Automation pointer — the webhook token lives in /settings. */}
       <Link
         href="/settings#import-tokens"
-        className="mt-6 inline-flex items-center gap-2 font-mono text-pq-eyebrow uppercase tracking-[0.16em] text-[var(--pq-bronze-light)] underline-offset-4 hover:underline"
+        className="mt-6 inline-flex items-center gap-2 font-mono text-pq-eyebrow uppercase tracking-[0.01em] text-[var(--pq-bronze-light)] underline-offset-4 hover:underline"
       >
         {t("journal.import.page.tokensLink")}
       </Link>

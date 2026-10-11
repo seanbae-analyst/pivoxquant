@@ -19,10 +19,15 @@
 - **Auth** `src/lib/auth.tsx` (AuthContext + Flask 세션 쿠키)
 - **프록시**: `next.config.ts` → `/api/*` → `http://localhost:5050/api/*`
 
-## 디자인 시스템 — v3 락-인 (Vantablack + Bronze + Playfair + KR 컨벤션)
-> 상세: 메모리 `project_design_v3.md`. 옛 Supanova "Warm Gold #E2B96F" 는 폐기.
-- **Base**: Vantablack (#050505) + Bronze accent (`--pq-bronze` 184,149,106)
-- **Heading**: Playfair Display (editorial) / **Body**: Pretendard / **Numbers**: IBM Plex Mono
+## 디자인 시스템 — 블랙·골드 리프레시 (2026-10-11, v3 락-인 대체)
+> CEO "너무 AI 느낌" → "블랙 골드 느낌은 유지". 색은 그대로, AI 템플릿 티(세리프 헤딩·모노 숫자·
+> 자간 벌린 대문자 라벨·2px 각진 모서리·브론즈 글로우)만 걷어냈다.
+- **Base**: Vantablack (#050505) + Bronze accent (`--pq-bronze` 184,149,106) — 유지
+- **글꼴**: Pretendard 하나. `--font-serif`/`--font-display`/`--font-mono` 토큰도 sans 스택을 가리킨다.
+  숫자는 `tabular-nums`. 예외 = 스플래시 워드마크(`.pq-splash-wordmark`, Playfair)·`code/pre/kbd`(mono)·PDF 리포트(`pq-pdf`/`pq-report`/`pq-paper`).
+- **자간**: 라벨·키커에 0.06em 이상 금지 (`tracking-[0.01em]` / `letterSpacing: "0.01em"`). 워드마크만 예외.
+- **모서리**: 카드 `--pq-radius-card` 14px · 버튼 `--pq-radius-cta` 10px. `rounded-[2px]` 같은 각진 값 금지.
+- **장식 금지**: 키커 앞 가는 선(`RuledKicker` 헤어라인 제거) · fleuron(❦) · `01` 0채움 단계 번호.
 - **가격 방향 (KR 컨벤션)**: 상승 = carmine `--up #D18888` / 하락 = indigo `--down #7AA0C8`.
   `lib/format.ts` 의 `pctColor()` / `PRICE_COLOR_HEX` 가 SoT. 평가 토큰
   `--pq-positive`(bronze) / `--pq-negative`(carmine) 은 **시그널 평가 라벨 전용**이며

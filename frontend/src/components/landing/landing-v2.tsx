@@ -358,7 +358,7 @@ function SiteFooter() {
                 className="font-serif uppercase"
                 style={{
                   fontSize: "var(--pq-text-eyebrow)",
-                  letterSpacing: "0.22em",
+                  letterSpacing: "0.01em",
                   color: "var(--pq-bronze)",
                   marginBottom: 14,
                 }}
@@ -524,7 +524,7 @@ function SiteFooter() {
                 className="font-serif uppercase transition-colors"
                 style={{
                   fontSize: "var(--pq-text-eyebrow)",
-                  letterSpacing: "0.12em",
+                  letterSpacing: "0.01em",
                   color: "var(--pq-ivory-faint)",
                 }}
               >

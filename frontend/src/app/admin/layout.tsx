@@ -91,7 +91,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>
-          <span className="text-pq-mono-sm font-bold uppercase tracking-widest text-slate-900">
+          <span className="text-pq-mono-sm font-bold uppercase tracking-[0.01em] text-slate-900">
             Admin
           </span>
           <nav className="flex items-center gap-1">

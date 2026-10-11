@@ -123,7 +123,7 @@ function Row({
             <span
               className="font-serif text-pq-caption uppercase"
               style={{
-                letterSpacing: "0.22em",
+                letterSpacing: "0.01em",
                 color: "var(--pq-ivory-strong)",
               }}
             >
@@ -152,7 +152,7 @@ function Row({
               <span
                 className="ml-2 font-mono uppercase text-pq-eyebrow"
                 style={{
-                  letterSpacing: "0.18em",
+                  letterSpacing: "0.01em",
                   color: "var(--pq-ivory-dim)",
                   borderLeft: "1px solid rgba(184, 149, 106, 0.32)",
                   paddingLeft: "0.5rem",
@@ -182,11 +182,11 @@ function Row({
                 className="ml-2 font-mono uppercase text-pq-eyebrow"
                 aria-label="Stale market data — last-observed value, not live"
                 style={{
-                  letterSpacing: "0.18em",
+                  letterSpacing: "0.01em",
                   padding: "1px 4px",
                   border: "0.5px solid rgba(245, 240, 232, 0.25)",
                   color: "var(--pq-ivory-dim)",
-                  borderRadius: 2,
+                  borderRadius: "var(--pq-radius-card)",
                 }}
               >
                 STALE
@@ -261,7 +261,7 @@ export function MarketTicker() {
           <span
             className="font-serif text-pq-mono-sm uppercase whitespace-nowrap"
             style={{
-              letterSpacing: "0.24em",
+              letterSpacing: "0.01em",
               color: "var(--pq-bronze)",
             }}
           >
@@ -323,7 +323,7 @@ export function MarketTicker() {
         <span
           className="font-serif text-pq-mono-sm uppercase whitespace-nowrap"
           style={{
-            letterSpacing: "0.24em",
+            letterSpacing: "0.01em",
             color: "var(--pq-bronze)",
           }}
         >

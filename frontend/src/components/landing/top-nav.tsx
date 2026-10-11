@@ -280,7 +280,7 @@ export default function TopNav() {
                 style={{
                   color: "rgba(184,149,106,0.80)",
                   fontSize: "var(--pq-text-eyebrow)",
-                  letterSpacing: "0.08em",
+                  letterSpacing: "0.01em",
                 }}
               >
                 · {t("landing.topNav.tagline")}
@@ -508,7 +508,7 @@ export default function TopNav() {
                             style={{
                               color: "var(--pq-bronze)",
                               fontSize: "var(--pq-text-eyebrow)",
-                              letterSpacing: "0.22em",
+                              letterSpacing: "0.01em",
                             }}
                           >
                             {t(`landing.nav.${activeGroup.key}.label`)}

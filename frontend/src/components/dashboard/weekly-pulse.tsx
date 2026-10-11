@@ -130,7 +130,7 @@ function PulseForm({
                 aria-pressed={active}
                 type="button"
                 onClick={() => toggleTopic(t)}
-                className="text-pq-mono-sm px-2.5 py-1 rounded-[2px] border transition-colors"
+                className="text-pq-mono-sm px-2.5 py-1 rounded-[var(--pq-radius-card)] border transition-colors"
                 style={{
                   borderColor: active
                     ? "var(--pq-bronze)"
@@ -201,7 +201,7 @@ function LikertRow({
               onClick={() => onChange(n)}
               aria-label={`${label} — 5점 중 ${n}점`}
               aria-pressed={active}
-              className="flex-1 h-9 rounded-[2px] border font-mono text-pq-body-sm transition-colors"
+              className="flex-1 h-9 rounded-[var(--pq-radius-card)] border font-mono text-pq-body-sm transition-colors"
               style={{
                 borderColor: active
                   ? "var(--pq-bronze)"

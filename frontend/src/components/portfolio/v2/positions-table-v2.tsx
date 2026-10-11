@@ -606,7 +606,7 @@ function PositionRow({
           className="font-mono uppercase"
           style={{
             fontSize: "var(--pq-text-eyebrow)",
-            letterSpacing: "0.18em",
+            letterSpacing: "0.01em",
             color: "var(--pq-ivory-dim)",
             marginTop: 3,
           }}
@@ -736,7 +736,7 @@ function PositionRow({
           style={{
             display: "inline-block",
             fontSize: "var(--pq-text-eyebrow)",
-            letterSpacing: "0.2em",
+            letterSpacing: "0.01em",
             padding: "4px 8px",
             border: "1px solid var(--pq-bronze)",
             borderRadius: "var(--pq-radius-cta, 2px)",

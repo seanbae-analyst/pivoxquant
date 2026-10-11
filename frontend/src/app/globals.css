@@ -83,9 +83,9 @@
      through to JetBrains Mono via --font-mono. Pretendard closes the
      stack so a Hangul character inside a mono run (e.g. a Korean
      company name in a ticker row) is not left to the OS. */
-  --font-mono: "PQ Won Fix", var(--font-mono), "Pretendard Variable", Pretendard, ui-monospace, monospace;
-  --font-serif: var(--font-serif), "Pretendard Variable", Pretendard, Georgia, "Times New Roman", serif;
-  --font-display: var(--font-display), "Pretendard Variable", Pretendard, Georgia, serif;
+  --font-mono: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
 
   /* Report tokens — Artifact / Memo / PDF surfaces */
   --color-report-paper: var(--report-paper);
@@ -179,7 +179,7 @@
   --space-16: 4rem;
 
   /* Radius — subtle */
-  --radius: 0.5rem;
+  --radius: 0.875rem;
 
   /* Chart palette — neutral-first with accent */
   --chart-1: #0f172a;               /* primary line */
@@ -285,16 +285,16 @@
      instead of JetBrains Mono / Source Serif 4 / Playfair Display. */
   /* Korean face appended to each — see the @theme block's note. */
   --pq-font-sans: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
-  --pq-font-serif: var(--font-serif), "Pretendard Variable", Pretendard, Georgia, "Times New Roman", serif;
+  --pq-font-serif: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
   /* "PQ Won Fix" prepended — see @font-face / FINDING-014. */
-  --pq-font-mono: "PQ Won Fix", var(--font-mono), "Pretendard Variable", Pretendard, ui-monospace, monospace;
-  --pq-font-display: var(--font-display), "Pretendard Variable", Pretendard, Georgia, serif;
+  --pq-font-mono: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
+  --pq-font-display: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
 
   /* Type scale (8 steps + 3 fluid) — §3.3 grid: 12/14/15/18/24/32/48.
      eyebrow / mono-sm / body-sm matched to v3 spec (10.5 / 11 / 13) —
      restores the calibrated editorial rhythm (eyebrow whispers below
      caption, body-sm reads as a true small step under body). */
-  --pq-text-eyebrow: 10.5px;
+  --pq-text-eyebrow: 12px;
   --pq-text-mono-sm: 11px;
   --pq-text-caption: 12px;
   --pq-text-body-sm: 13px;
@@ -431,8 +431,8 @@
   --pq-track-tight: -0.02em;
 
   /* CTA / surface radius */
-  --pq-radius-cta: 2px;
-  --pq-radius-card: 4px;
+  --pq-radius-cta: 10px;
+  --pq-radius-card: 14px;
   --pq-radius-pill: 9999px;
 
   /* Semantic tokens — error/warn within bronze family register.
@@ -622,7 +622,7 @@
      or .font-serif. Keeps existing SaaS UI untouched. */
   .report-surface h1, .report-surface h2, .report-surface h3,
   .font-serif, h1.font-serif, h2.font-serif, h3.font-serif {
-    font-family: var(--font-serif), "Source Serif 4", "EB Garamond", "Iowan Old Style", "Apple Garamond", "Pretendard Variable", Pretendard, Georgia, "Times New Roman", serif;
+    font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
     letter-spacing: -0.015em;
     font-weight: 600;
   }
@@ -639,7 +639,8 @@
 
 /* Monospaced numeric — for prices, returns, ratios */
 .numeric {
-  font-family: var(--font-mono), "JetBrains Mono", "Pretendard Variable", Pretendard, ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
   letter-spacing: -0.01em;
@@ -790,7 +791,7 @@
   );
   background-size: 200% 100%;
   animation: shimmer 1.4s infinite linear;
-  border-radius: 2px;
+  border-radius: var(--pq-radius-card);
 }
 
 @keyframes marquee {
@@ -856,7 +857,7 @@
   appearance: none;
   width: 100%;
   height: 4px;
-  border-radius: 2px;
+  border-radius: var(--pq-radius-card);
   background: var(--border);
   outline: none;
 }
@@ -1102,7 +1103,7 @@
 }
 .report-surface .report-meta {
   font-size: 11px;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.01em;
   text-transform: uppercase;
   color: #5a5a5a;
 }
@@ -1290,7 +1291,7 @@
 /* Section deck line — upright serif 1-liner that sits above
    each H2 like the kicker on an IC memo. */
 .pq-deck {
-  font-family: var(--font-serif), "Source Serif 4", Georgia, "Pretendard Variable", Pretendard, serif;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
   font-weight: 400;
   font-size: 15px;
   line-height: 1.5;
@@ -1475,7 +1476,7 @@
      Ivory theme: warm-gray. Ink theme: translucent ivory at 0.08. */
   --pq-hairline: rgba(10, 10, 10, 0.08);
   --pq-hairline-ink: rgba(245, 240, 232, 0.08);
-  --pq-card-bg-ink: rgba(255, 255, 255, 0.02);
+  --pq-card-bg-ink: rgba(255, 255, 255, 0.045);
 }
 
 
@@ -1486,10 +1487,10 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  font-family: var(--font-serif), "Source Serif 4", Georgia, "Pretendard Variable", Pretendard, serif;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
   font-weight: 500;
   letter-spacing: 0.04em;
-  border-radius: 2px;
+  border-radius: var(--pq-radius-card);
   transition: background-color 220ms cubic-bezier(0.16, 1, 0.3, 1),
               color 220ms cubic-bezier(0.16, 1, 0.3, 1),
               border-color 220ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -1517,13 +1518,13 @@
 .pq-ink-card {
   background: var(--pq-ink);
   color: var(--pq-ivory);
-  border-radius: 4px;
+  border-radius: var(--pq-radius-card);
   padding: 32px 40px;
 }
 @media (max-width: 640px) {
   .pq-ink-card {
     padding: 22px 20px;
-    border-radius: 2px;
+    border-radius: var(--pq-radius-card);
   }
 }
 
@@ -1534,7 +1535,7 @@
   gap: 8px;
   font-family: var(--font-sans), "Pretendard Variable", Pretendard, system-ui, sans-serif;
   font-size: 12px;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.01em;
   text-transform: uppercase;
   color: var(--pq-bronze);
   font-weight: 500;
@@ -1548,7 +1549,7 @@
 /* Editorial H1 — Playfair Display, ivory on ink (v3 lock-in; upright,
    decorative italic removed globally per CEO 2026-06-15) */
 .pq-ink-h1 {
-  font-family: var(--font-display), "Playfair Display", "EB Garamond", Georgia, "Pretendard Variable", Pretendard, serif;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
   font-style: normal;
   font-weight: 500;
   font-size: clamp(1.75rem, 3.2vw, 2.25rem);
@@ -1561,7 +1562,7 @@
 .pq-ink-stat {
   background: rgba(255, 255, 255, 0.02);
   border: 0.5px solid rgba(245, 240, 232, 0.08);
-  border-radius: 2px;
+  border-radius: var(--pq-radius-card);
   padding: 18px 22px;
 }
 
@@ -1569,7 +1570,7 @@
 .pq-ink-label {
   color: var(--pq-bronze);
   font-size: 12px;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.01em;
   text-transform: uppercase;
   font-family: var(--font-sans), "Pretendard Variable", Pretendard, system-ui, sans-serif;
   font-weight: 500;
@@ -1578,7 +1579,8 @@
 /* Large tabular mono number on ink */
 .pq-ink-num {
   color: var(--pq-ivory);
-  font-family: var(--font-mono), "JetBrains Mono", "Pretendard Variable", Pretendard, ui-monospace, monospace;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
   font-size: 28px;
@@ -1602,7 +1604,7 @@
 .pq-ink-table th {
   color: var(--pq-bronze);
   font-size: 12px;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.01em;
   text-transform: uppercase;
   font-weight: 500;
   padding: 10px 8px;
@@ -1620,7 +1622,8 @@
   background: rgba(var(--pq-bronze-wash-rgb), 0.04);
 }
 .pq-ink-table td.num {
-  font-family: var(--font-mono), "JetBrains Mono", "Pretendard Variable", Pretendard, monospace;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
   text-align: right;
@@ -1638,7 +1641,7 @@
   padding: 3px 12px;
   border: 1px solid;
   font-size: 9px;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.01em;
   text-transform: uppercase;
   font-family: var(--font-sans), "Pretendard Variable", Pretendard, system-ui, sans-serif;
   border-radius: 0;
@@ -1719,11 +1722,11 @@ button:hover > .pq-ink-pill,
   color: var(--pq-ink);
   font-family: var(--font-sans), "Pretendard Variable", Pretendard, system-ui, sans-serif;
   font-size: 11px;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.01em;
   text-transform: uppercase;
   font-weight: 500;
   border: 0;
-  border-radius: 2px;
+  border-radius: var(--pq-radius-card);
   cursor: pointer;
   transition: background-color 180ms cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -1753,10 +1756,10 @@ button:hover > .pq-ink-pill,
   background: transparent;
   color: var(--pq-ivory);
   border: 0.5px solid rgba(245, 240, 232, 0.2);
-  border-radius: 2px;
+  border-radius: var(--pq-radius-card);
   font-family: var(--font-sans), "Pretendard Variable", Pretendard, system-ui, sans-serif;
   font-size: 11px;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.01em;
   text-transform: uppercase;
   font-weight: 500;
   cursor: pointer;
@@ -1776,7 +1779,7 @@ button:hover > .pq-ink-pill,
 
 /* Ink subheading — upright serif, smaller */
 .pq-ink-h2 {
-  font-family: var(--font-serif), "Source Serif 4", Georgia, "Pretendard Variable", Pretendard, serif;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
   font-weight: 500;
   font-size: 20px;
   line-height: 1.2;
@@ -1797,7 +1800,7 @@ button:hover > .pq-ink-pill,
   color: rgba(245, 240, 232, 0.55);
   font-family: var(--font-sans), "Pretendard Variable", Pretendard, system-ui, sans-serif;
   font-size: 12px;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.01em;
   text-transform: uppercase;
   cursor: pointer;
   transition: color 180ms;
@@ -1822,7 +1825,7 @@ button:hover > .pq-ink-pill,
 .pq-ink-input {
   background: rgba(255, 255, 255, 0.03);
   border: 0.5px solid rgba(245, 240, 232, 0.12);
-  border-radius: 2px;
+  border-radius: var(--pq-radius-card);
   color: var(--pq-ivory);
   padding: 8px 12px;
   font-family: var(--font-sans), "Pretendard Variable", Pretendard, system-ui, sans-serif;
@@ -1897,7 +1900,7 @@ textarea.font-mono::placeholder,
   padding: 56px 24px;
   text-align: center;
   color: rgba(245, 240, 232, 0.55);
-  font-family: var(--font-serif), Georgia, "Pretendard Variable", Pretendard, serif;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1907,7 +1910,7 @@ textarea.font-mono::placeholder,
 .pq-chart-tooltip {
   background: rgba(10, 10, 10, 0.96);
   border: 0.5px solid rgba(245, 240, 232, 0.15);
-  border-radius: 2px;
+  border-radius: var(--pq-radius-card);
   padding: 8px 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
   z-index: 30;
@@ -1927,7 +1930,7 @@ textarea.font-mono::placeholder,
 
 /* /home — Terminal stat number (serif hero; upright per CEO 2026-06-15) */
 .pq-home-stat {
-  font-family: var(--font-serif), "Source Serif 4", "EB Garamond", Georgia, "Pretendard Variable", Pretendard, serif;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
   font-style: normal;
   font-weight: 400;
   font-size: 28px;
@@ -1944,7 +1947,7 @@ textarea.font-mono::placeholder,
 .pq-darkui-panel {
   background: rgba(255, 255, 255, 0.02);
   border: 0.5px solid rgba(245, 240, 232, 0.12);
-  border-radius: 2px;
+  border-radius: var(--pq-radius-card);
   color: rgba(245, 240, 232, 0.75);
 }
 .pq-darkui-panel--elevated {
@@ -1952,12 +1955,12 @@ textarea.font-mono::placeholder,
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   border: 0.5px solid rgba(245, 240, 232, 0.12);
-  border-radius: 2px;
+  border-radius: var(--pq-radius-card);
 }
 .pq-darkui-label {
   color: var(--pq-bronze-light);
   font-size: 9px;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.01em;
   text-transform: uppercase;
 }
 .pq-darkui-muted {
@@ -1983,11 +1986,11 @@ textarea.font-mono::placeholder,
   --pq-space-6: 32px;
   --pq-space-7: 48px;
   --pq-space-8: 64px;
-  --pq-radius: 2px;
+  --pq-radius: 10px;
   /* Legacy radius — used by older Wave 1A/1B components (sp-card etc).
      Kept distinct from --pq-radius-card (4px, Wave 1C card system).
      Do not consolidate without a sweep of consumers. */
-  --pq-radius-lg: 3px;
+  --pq-radius-lg: 14px;
   /* Deprecated motion aliases — migrate to --motion-easing-* over time.
      Values forwarded from main :root motion tokens (motion-spec skill §2-B).
      Kept for backward compat; do NOT delete without sweeping consumers. */
@@ -2036,9 +2039,9 @@ i.italic,
 
 /* Small caps for kickers — more refined than plain uppercase */
 .pq-ink-kicker {
-  font-feature-settings: "smcp" 1, "c2sc" 1;
-  font-variant-caps: all-small-caps;
-  letter-spacing: 0.18em; /* refined from 0.22 */
+  font-feature-settings: normal;
+  font-variant-caps: normal;
+  letter-spacing: 0.01em; /* refined from 0.22 */
 }
 
 /* 3. Bronze primary button — subtle lift + smooth shadow */
@@ -2098,7 +2101,7 @@ i.italic,
     background-color 260ms var(--pq-ease),
     transform 260ms var(--pq-ease);
   border: 0.5px solid rgba(245, 240, 232, 0.08);
-  border-radius: 2px;
+  border-radius: var(--pq-radius-card);
 }
 .pq-ink-card-interactive:hover {
   border-color: rgba(245, 240, 232, 0.16);
@@ -2207,7 +2210,7 @@ i.italic,
   align-items: center;
   gap: 12px;
   color: var(--pq-bronze);
-  font-family: var(--font-serif), "Source Serif 4", Georgia, "Pretendard Variable", Pretendard, serif;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
   font-style: normal;
   font-size: 14px;
   opacity: 0.7;
@@ -2257,7 +2260,7 @@ i.italic,
   height: 26px;
   border-radius: 999px;
   border: 0.5pt solid var(--pq-bronze);
-  font-family: var(--font-serif), "Source Serif 4", Georgia, "Pretendard Variable", Pretendard, serif;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
   font-style: normal;
   font-size: 12px;
   letter-spacing: 0;
@@ -2285,7 +2288,7 @@ i.italic,
   justify-content: space-between;
   gap: 24px;
   padding: 22px 2px;
-  font-family: var(--font-serif), "Source Serif 4", Georgia, "Pretendard Variable", Pretendard, serif;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
   font-size: 17px;
   line-height: 1.35;
   letter-spacing: -0.005em;
@@ -2295,7 +2298,7 @@ i.italic,
 .pq-faq-item > summary::-webkit-details-marker { display: none; }
 .pq-faq-item > summary::after {
   content: "+";
-  font-family: var(--font-serif), Georgia, "Pretendard Variable", Pretendard, serif;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
   font-style: normal;
   font-weight: 300;
   font-size: 22px;
@@ -2313,7 +2316,7 @@ i.italic,
 }
 .pq-faq-item > .pq-faq-body {
   padding: 0 2px 22px;
-  font-family: var(--font-serif), "Source Serif 4", Georgia, "Pretendard Variable", Pretendard, serif;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
   font-size: 15px;
   line-height: 1.65;
   color: rgba(245, 240, 232, 0.68);
@@ -2375,7 +2378,7 @@ i.italic,
 
 /* 15. Caption / footnote style — upright for readability */
 .pq-caption {
-  font-family: var(--font-serif), "Source Serif 4", Georgia, "Pretendard Variable", Pretendard, serif;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
   font-size: 11px;
   color: rgba(245, 240, 232, 0.55);
   letter-spacing: -0.005em;
@@ -2384,7 +2387,8 @@ i.italic,
 
 /* 16. Large display number */
 .pq-num-display {
-  font-family: var(--font-mono), "JetBrains Mono", "Pretendard Variable", Pretendard, ui-monospace, monospace;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
   font-variant-numeric: tabular-nums lining-nums;
   font-feature-settings: "tnum" 1, "lnum" 1;
   font-size: 28px;
@@ -2394,7 +2398,7 @@ i.italic,
 
 /* 17. Editorial drop-cap utility */
 .pq-dropcap::first-letter {
-  font-family: var(--font-serif), "Source Serif 4", Georgia, "Pretendard Variable", Pretendard, serif;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
   font-style: normal;
   font-size: 3.2em;
   line-height: 0.88;
@@ -2439,12 +2443,12 @@ i.italic,
   color: var(--pq-bronze);
   font-family: var(--font-sans), "Pretendard Variable", Pretendard, system-ui, sans-serif;
   font-size: 12px;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.01em;
   text-transform: uppercase;
   font-weight: 500;
   line-height: 1.3;
-  font-feature-settings: "smcp" 1, "c2sc" 1;
-  font-variant-caps: all-small-caps;
+  font-feature-settings: normal;
+  font-variant-caps: normal;
 }
 
 /* Section kicker — above H2. Retains wider tracking but smaller. */
@@ -2452,7 +2456,7 @@ i.italic,
   color: var(--pq-bronze);
   font-family: var(--font-sans), "Pretendard Variable", Pretendard, system-ui, sans-serif;
   font-size: 10px;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.01em;
   text-transform: uppercase;
   font-weight: 500;
   line-height: 1.2;
@@ -2466,7 +2470,7 @@ i.italic,
  * the synthesised italic slant looked off. Upright only here; other
  * editorial italic accents on unrelated pages are untouched. */
 .pq-detail-ticker-display {
-  font-family: var(--font-display), "Playfair Display", "EB Garamond", Georgia, "Pretendard Variable", Pretendard, serif;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
   font-style: normal;
   font-weight: 500;
   font-size: clamp(2.25rem, 5vw, 3.5rem);
@@ -2477,7 +2481,7 @@ i.italic,
 
 /* Editorial H2 section heading (detail route) */
 .pq-detail-h2 {
-  font-family: var(--font-serif), "Source Serif 4", Georgia, "Pretendard Variable", Pretendard, serif;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
   font-weight: 500;
   font-size: clamp(1.125rem, 1.6vw, 1.4rem);
   line-height: 1.2;
@@ -2487,7 +2491,8 @@ i.italic,
 
 /* Hero stat value — mono tabular, tightly tracked */
 .pq-detail-stat-value {
-  font-family: var(--font-mono), "JetBrains Mono", "Pretendard Variable", Pretendard, ui-monospace, monospace;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
   font-variant-numeric: tabular-nums lining-nums;
   font-feature-settings: "tnum" 1, "lnum" 1;
   font-size: clamp(2rem, 4vw, 2.75rem);
@@ -2499,7 +2504,8 @@ i.italic,
 
 /* Mid-size stat value for delta grid */
 .pq-detail-stat-mid {
-  font-family: var(--font-mono), "JetBrains Mono", "Pretendard Variable", Pretendard, ui-monospace, monospace;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
   font-variant-numeric: tabular-nums lining-nums;
   font-feature-settings: "tnum" 1, "lnum" 1;
   font-size: 17px;
@@ -2510,7 +2516,7 @@ i.italic,
 
 /* Editorial body text — upright serif, comfortable for reading prose */
 .pq-detail-body {
-  font-family: var(--font-serif), "Source Serif 4", Georgia, "Pretendard Variable", Pretendard, serif;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
   font-size: 14px;
   line-height: 1.6;
   color: rgba(245, 240, 232, 0.78);
@@ -2519,7 +2525,7 @@ i.italic,
 
 /* Muted caption — under field labels or alongside stats */
 .pq-detail-caption {
-  font-family: var(--font-serif), "Source Serif 4", Georgia, "Pretendard Variable", Pretendard, serif;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
   font-size: 12px;
   line-height: 1.45;
   color: rgba(245, 240, 232, 0.5);
@@ -2556,13 +2562,14 @@ i.italic,
 }
 .pq-detail-stat-row > .pq-detail-stat-row-label {
   color: rgba(245, 240, 232, 0.58);
-  font-family: var(--font-serif), Georgia, "Pretendard Variable", Pretendard, serif;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
   font-size: 13px;
   letter-spacing: -0.005em;
 }
 .pq-detail-stat-row > .pq-detail-stat-row-value {
   color: var(--pq-ivory);
-  font-family: var(--font-mono), "JetBrains Mono", "Pretendard Variable", Pretendard, monospace;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
   font-variant-numeric: tabular-nums lining-nums;
   font-feature-settings: "tnum" 1, "lnum" 1;
   font-size: 14px;
@@ -2583,7 +2590,7 @@ i.italic,
   border-radius: 0;
   font-family: var(--font-sans), "Pretendard Variable", Pretendard, system-ui, sans-serif;
   font-size: 11px;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.01em;
   text-transform: uppercase;
   font-weight: 500;
   line-height: 1.4;
@@ -2606,7 +2613,7 @@ i.italic,
    font-style upright (CEO 2026-05-20: no synthetic italic on serif headings;
    escalated to GLOBAL no-decorative-italic by CEO 2026-06-15). */
 .pq-news-date-header {
-  font-family: var(--font-serif), Georgia, "Pretendard Variable", Pretendard, serif;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
   font-style: normal;
   font-size: 12px;
   color: rgba(245, 240, 232, 0.55);
@@ -2620,7 +2627,7 @@ i.italic,
    font-style upright (CEO 2026-05-20: no synthetic italic on serif headings;
    escalated to GLOBAL no-decorative-italic by CEO 2026-06-15). */
 .pq-detail-empty-note {
-  font-family: var(--font-serif), Georgia, "Pretendard Variable", Pretendard, serif;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
   font-style: normal;
   font-size: 14px;
   line-height: 1.5;
@@ -2707,7 +2714,7 @@ i.italic,
 /* PivoxQuant wordmark seal — embossed bronze on the top strip */
 .pq-emboss-seal {
   display: inline-block;
-  font-family: var(--font-serif), "Source Serif 4", Georgia, "Pretendard Variable", Pretendard, serif;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
   font-style: normal;
   font-size: 24px;
   letter-spacing: -0.01em;
@@ -2890,7 +2897,7 @@ i.italic,
   border-radius: 50%;
   background: var(--pq-bronze-deep);
   color: #2a1f10;
-  font-family: var(--font-serif), Georgia, "Pretendard Variable", Pretendard, serif;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
   font-style: normal;
   font-size: 20px;
   font-weight: 600;
@@ -3049,9 +3056,9 @@ i.italic,
 }
 .pq-flip-dots__count {
   pointer-events: none;
-  font-family: var(--font-serif), "Pretendard Variable", Pretendard, "EB Garamond", Georgia, serif;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
   font-size: 12px;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.01em;
   color: rgba(245, 240, 232, 0.45);
   text-transform: uppercase;
   writing-mode: vertical-rl;
@@ -3072,15 +3079,15 @@ i.italic,
   bottom: 2.2rem;
   transform: translateX(-50%);
   z-index: 55;
-  font-family: var(--font-serif), "Pretendard Variable", Pretendard, "EB Garamond", Georgia, serif;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
   font-style: normal;
   font-size: 12px;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.01em;
   text-transform: uppercase;
   color: rgba(245, 240, 232, 0.55);
   padding: 0.55rem 1rem;
   border: 0.5pt solid rgba(var(--pq-bronze-wash-rgb), 0.35);
-  border-radius: 2px;
+  border-radius: var(--pq-radius-card);
   background: rgba(10, 10, 10, 0.6);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -3432,7 +3439,7 @@ i.italic,
      to an ugly system serif ("개구림"). Insert Pretendard (the brand KO font, same
      family the body + other sections use) right after Playfair so 한글 renders
      clean while Latin still uses Playfair. Per-glyph fallback, no Latin change. */
-  font-family: var(--font-display), "Pretendard Variable", Pretendard, Georgia, "Source Serif 4", serif;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
   font-size: clamp(2.4rem, 5.6vw, 4.5rem);
   font-weight: 600;
   line-height: 1.05;
@@ -3447,7 +3454,7 @@ i.italic,
 .pq-hero-h1-static,
 .pq-hero-h1-glyphs {
   display: block;
-  font-family: var(--font-display), "Pretendard Variable", Pretendard, Georgia, "Source Serif 4", serif;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -3473,7 +3480,7 @@ i.italic,
     ),
     var(--pq-ink);
   border: 1px solid rgba(184, 149, 106, 0.28);
-  border-radius: 2px;
+  border-radius: var(--pq-radius-card);
   box-shadow:
     inset 0 1px 0 rgba(var(--pq-ivory-rgb), 0.04),
     inset 0 -1px 0 rgba(0, 0, 0, 0.5);
@@ -3490,7 +3497,7 @@ i.italic,
   gap: 9px;
   font-family: "Geist", "Pretendard Variable", Pretendard, sans-serif;
   font-size: 12px;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.01em;
   text-transform: uppercase;
   color: var(--pq-bronze);
   font-weight: 600;
@@ -3550,7 +3557,7 @@ i.italic,
 .pq-gate-card-time-tz {
   font-family: "Geist", "Pretendard Variable", Pretendard, sans-serif;
   font-size: 9px;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.01em;
   text-transform: uppercase;
   color: rgba(245, 240, 232, 0.45);
 }
@@ -3567,7 +3574,7 @@ i.italic,
   grid-template-columns: 12px 1fr auto;
   align-items: center;
   gap: 12px;
-  font-family: var(--font-display), Georgia, "Source Serif 4", "Pretendard Variable", Pretendard, serif;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
   font-size: 14px;
   color: rgba(245, 240, 232, 0.78);
 }
@@ -3623,7 +3630,7 @@ i.italic,
   color: rgba(184, 149, 106, 0.45);
 }
 .pq-gate-card-foot-recheck {
-  font-family: var(--font-display), Georgia, "Pretendard Variable", Pretendard, serif;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
   font-style: normal;
   font-size: 12px;
   color: rgba(184, 149, 106, 0.85);
@@ -3658,7 +3665,7 @@ i.italic,
     ),
     var(--pq-ink);
   border: 1px solid rgba(184, 149, 106, 0.28);
-  border-radius: 2px;
+  border-radius: var(--pq-radius-card);
   /* Subtle inner edge highlight for the bezel feel. */
   box-shadow:
     inset 0 1px 0 rgba(var(--pq-ivory-rgb), 0.04),
@@ -3682,7 +3689,7 @@ i.italic,
   border: 1px solid rgba(245, 240, 232, 0.08);
 }
 .pq-friday-card-seal-mark {
-  font-family: var(--font-display), Georgia, "Pretendard Variable", Pretendard, serif;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
   font-style: normal;
   font-size: 22px;
   font-weight: 600;
@@ -3699,7 +3706,7 @@ i.italic,
   gap: 10px;
   font-family: "Geist", "Pretendard Variable", Pretendard, sans-serif;
   font-size: 12px;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.01em;
   text-transform: uppercase;
   color: var(--pq-bronze);
   margin-bottom: 18px;
@@ -3711,7 +3718,7 @@ i.italic,
   background-color: rgba(184, 149, 106, 0.7);
 }
 .pq-friday-card-issue {
-  font-family: var(--font-display), Georgia, "Pretendard Variable", Pretendard, serif;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
   font-size: 22px;
   font-weight: 500;
   color: var(--pq-ivory);
@@ -3737,7 +3744,7 @@ i.italic,
   letter-spacing: 0.04em;
 }
 .pq-friday-card-body {
-  font-family: var(--font-display), Georgia, "Source Serif 4", "Pretendard Variable", Pretendard, serif;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
   font-style: normal;
   font-size: 15px;
   line-height: 1.65;
@@ -3766,7 +3773,7 @@ i.italic,
   font-variant-numeric: tabular-nums;
   font-size: 12px;
   color: rgba(245, 240, 232, 0.45);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.01em;
 }
 .pq-friday-card-time {
   color: rgba(245, 240, 232, 0.65);
@@ -3775,7 +3782,7 @@ i.italic,
   color: rgba(184, 149, 106, 0.55);
 }
 .pq-friday-card-sealed {
-  font-family: var(--font-display), Georgia, "Pretendard Variable", Pretendard, serif;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
   font-style: normal;
   font-size: 11px;
   color: var(--pq-bronze);
@@ -3922,8 +3929,8 @@ i.italic,
   --pq-dash-hero-glow:
     radial-gradient(
       ellipse 60% 50% at 50% 20%,
-      rgba(184, 149, 106, 0.08) 0%,
-      rgba(var(--pq-bronze-wash-rgb), 0.035) 35%,
+      rgba(184, 149, 106, 0.04) 0%,
+      rgba(var(--pq-bronze-wash-rgb), 0.015) 35%,
       transparent 70%
     );
   --pq-dash-reveal-ease: cubic-bezier(0.16, 1, 0.3, 1);
@@ -3977,7 +3984,7 @@ i.italic,
 .pq-dash-focus:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px rgba(var(--pq-bronze-rgb), 0.4);
-  border-radius: 2px;
+  border-radius: var(--pq-radius-card);
 }
 
 /* Cinematic entrance — stagger timing scale. Used by the home
@@ -4072,9 +4079,10 @@ i.italic,
 }
 [cmdk-group-heading] {
   padding: 10px 12px 4px;
-  font-family: var(--font-mono), "Pretendard Variable", Pretendard, monospace;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
   font-size: 9px;
-  letter-spacing: 0.24em;
+  letter-spacing: 0.01em;
   text-transform: uppercase;
   /* a11y: 9px uppercase mono → strict normal-text bracket. 0.35 (2.84:1) → 0.55 (5.64:1) */
   color: rgba(245, 240, 232, 0.55);
@@ -4082,7 +4090,8 @@ i.italic,
 
 /* Ticker link in dashboard tables — bronze accent + bronze-light on hover */
 .pq-ticker-link {
-  font-family: var(--font-mono), "Pretendard Variable", Pretendard, monospace;
+  font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
   font-variant-numeric: tabular-nums;
   text-decoration: none;
   transition: color 180ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -5328,5 +5337,47 @@ html [data-sonner-toaster][data-sonner-theme="dark"] {
   }
   body:has([data-pq-bottom-nav]) .pq-cookie-banner {
     bottom: calc(var(--pq-bottomnav-height) + var(--pq-safe-bottom) + 8px);
+  }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   Black & gold, without the template tells (2026-10-11, CEO "디자인
+   맨 바꾸고 싶은데 … ai 느낌 … 블랙 골드 느낌은 유지하면서").
+   Kept: Vantablack ink, the bronze accent, PIVOXQUANT's own serif.
+   Dropped: serif / display / mono faces for UI text (the font tokens
+   above now resolve to Geist + Pretendard; numbers keep aligned digits),
+   letter-spaced small-caps kickers, 2px corners, the fleuron ornament,
+   half of the page's bronze halo.
+   ══════════════════════════════════════════════════════════ */
+
+/* Only the wordmark keeps the editorial serif and its tracking. */
+.pq-splash-wordmark {
+  font-family: var(--font-display), "Playfair Display", Georgia, "Pretendard Variable", Pretendard, serif;
+}
+
+/* Code-like strings (tokens, URLs, curl) stay monospaced; everything the
+   UI called "mono" for numbers now uses the sans with tabular digits. */
+code, pre, kbd, samp {
+  font-family: "PQ Won Fix", var(--font-mono), "JetBrains Mono", "Pretendard Variable", Pretendard, ui-monospace, monospace;
+}
+.font-mono {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Kicker dot and the fleuron were ornament, not information. */
+.pq-ink-kicker::before {
+  content: none;
+}
+.pq-fleuron {
+  display: none;
+}
+
+/* Buttons that never asked for a corner were square by default — the 2px
+   look this refresh retires. Base layer, so any rounded-* utility or an
+   explicit border-radius still wins. */
+@layer base {
+  button {
+    border-radius: var(--pq-radius-cta);
   }
 }

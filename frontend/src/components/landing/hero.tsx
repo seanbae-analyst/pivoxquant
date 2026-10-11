@@ -98,7 +98,7 @@ export function Hero() {
             <span
               className="font-serif text-[11px] uppercase"
               style={{
-                letterSpacing: "0.22em",
+                letterSpacing: "0.01em",
                 color: "var(--pq-bronze)",
               }}
             >
@@ -138,7 +138,7 @@ export function Hero() {
           </p>
 
           {/* CTAs — plain bronze pill + ghost outline.
-              rounded-[2px] matches the /features pages exactly.
+              rounded-[var(--pq-radius-card)] matches the /features pages exactly.
               Signed-out visitors go to the unified auth entry, signed-in
               users to their mirror — same split as the top nav.
               2026-09-17: the destination was /signup; /login and /signup are
@@ -146,7 +146,7 @@ export function Hero() {
           <div className="flex flex-wrap items-center gap-3">
             <Link
               href={user ? "/mirror" : "/login"}
-              className="group inline-flex items-center gap-2 rounded-[2px] px-6 py-3.5 text-sm font-medium tracking-wide transition-colors"
+              className="group inline-flex items-center gap-2 rounded-[var(--pq-radius-card)] px-6 py-3.5 text-sm font-medium tracking-wide transition-colors"
               style={{
                 backgroundColor: "var(--pq-bronze)",
                 color: "var(--pq-ink)",

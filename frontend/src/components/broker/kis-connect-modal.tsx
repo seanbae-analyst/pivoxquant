@@ -82,13 +82,13 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
       desktopOverlayClassName={MODAL_SHELL_OVERLAY_CLASS}
       desktopBackdropEvent="mousedown"
       desktopScrollLock
-      desktopPanelClassName="my-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto rounded-[2px] border border-[rgba(245,240,232,0.12)] p-5 sm:p-6 sm:max-h-[90vh]"
+      desktopPanelClassName="my-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto rounded-[var(--pq-radius-card)] border border-[rgba(245,240,232,0.12)] p-5 sm:p-6 sm:max-h-[90vh]"
       desktopPanelStyle={{ background: "rgba(10,10,10,0.96)" }}
     >
         {/* Header */}
         <div className="mb-5 flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-1">
+            <div className="text-pq-eyebrow tracking-[0.01em] uppercase text-[var(--pq-bronze)] mb-1">
               Korea Investment &amp; Securities
             </div>
             <h3 className="font-serif text-xl text-[var(--pq-ivory)]">
@@ -98,7 +98,7 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded-[2px] p-1.5 text-[var(--pq-ivory-faint)] hover:text-[var(--pq-ivory)] hover:bg-[var(--pq-ivory-line-faint)] transition-colors"
+            className="rounded-[var(--pq-radius-card)] p-1.5 text-[var(--pq-ivory-faint)] hover:text-[var(--pq-ivory)] hover:bg-[var(--pq-ivory-line-faint)] transition-colors"
             aria-label="Close"
           >
             <X className="h-4 w-4" />
@@ -116,7 +116,7 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
           href="https://apiportal.koreainvestment.com"
           target="_blank"
           rel="noopener noreferrer"
-          className="mb-5 inline-flex items-center gap-1.5 text-pq-mono-sm tracking-[0.15em] uppercase text-[var(--pq-bronze)] hover:opacity-80 transition-opacity"
+          className="mb-5 inline-flex items-center gap-1.5 text-pq-mono-sm tracking-[0.01em] uppercase text-[var(--pq-bronze)] hover:opacity-80 transition-opacity"
         >
           <ExternalLink className="h-3 w-3" />
           KIS OpenAPI portal
@@ -127,7 +127,7 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
           <div>
             <label
               htmlFor="kis-app-key"
-              className="mb-1.5 block text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]"
+              className="mb-1.5 block text-pq-eyebrow tracking-[0.01em] uppercase text-[var(--pq-bronze)]"
             >
               App Key
             </label>
@@ -150,7 +150,7 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
           <div>
             <label
               htmlFor="kis-app-secret"
-              className="mb-1.5 block text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]"
+              className="mb-1.5 block text-pq-eyebrow tracking-[0.01em] uppercase text-[var(--pq-bronze)]"
             >
               App Secret
             </label>
@@ -172,7 +172,7 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
             <div className="col-span-2">
               <label
                 htmlFor="kis-account-no"
-                className="mb-1.5 block text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]"
+                className="mb-1.5 block text-pq-eyebrow tracking-[0.01em] uppercase text-[var(--pq-bronze)]"
               >
                 Account No.
               </label>
@@ -205,7 +205,7 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
             <div>
               <label
                 htmlFor="kis-account-prod"
-                className="mb-1.5 block text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]"
+                className="mb-1.5 block text-pq-eyebrow tracking-[0.01em] uppercase text-[var(--pq-bronze)]"
               >
                 Product
               </label>
@@ -261,7 +261,7 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
 
         {/* Issuance guide */}
         <details className="group mt-6 pt-5 border-t border-[var(--pq-ivory-line)]">
-          <summary className="cursor-pointer list-none text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)] hover:text-[var(--pq-bronze-light,var(--pq-bronze))] flex items-center justify-between">
+          <summary className="cursor-pointer list-none text-pq-eyebrow tracking-[0.01em] uppercase text-[var(--pq-bronze)] hover:text-[var(--pq-bronze-light,var(--pq-bronze))] flex items-center justify-between">
             <span>How to issue KIS API credentials</span>
             <span className="transition-transform group-open:rotate-180" aria-hidden="true">↓</span>
           </summary>

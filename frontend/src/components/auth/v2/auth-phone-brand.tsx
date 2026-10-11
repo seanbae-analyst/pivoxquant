@@ -60,7 +60,7 @@ export function AuthPhoneBrand({ tagline, size = "cover" }: AuthPhoneBrandProps)
           className="font-serif"
           style={{
             fontSize: "var(--pq-text-caption)",
-            letterSpacing: "0.24em",
+            letterSpacing: "0.01em",
             marginRight: "-0.24em",
             color: "rgba(var(--pq-bronze-rgb), 0.80)",
           }}

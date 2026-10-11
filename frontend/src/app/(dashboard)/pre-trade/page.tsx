@@ -363,10 +363,10 @@ function SetupStep(props: {
             onChange={(e) => setRationale(e.target.value)}
             rows={5}
             placeholder="왜 지금 이 종목을 이 방향으로 들어가는가? 한 문단으로 정직하게."
-            className="w-full bg-transparent border border-[rgba(245,240,232,0.15)] rounded-[2px] p-3 text-sm leading-relaxed outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)] font-serif"
+            className="w-full bg-transparent border border-[rgba(245,240,232,0.15)] rounded-[var(--pq-radius-card)] p-3 text-sm leading-relaxed outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)] font-serif"
             style={{ resize: "vertical" }}
           />
-          <div className="mt-1 text-pq-mono-sm text-[var(--pq-ivory-faint)] tracking-[0.06em]">
+          <div className="mt-1 text-pq-mono-sm text-[var(--pq-ivory-faint)] tracking-[0.01em]">
             {rationaleOk
               ? (
                 <span className="text-[var(--pq-bronze)]">
@@ -391,7 +391,7 @@ function SetupStep(props: {
           <p
             aria-live="polite"
             role="status"
-            className="text-pq-mono-sm text-[var(--pq-ivory-faint)] tracking-[0.06em]"
+            className="text-pq-mono-sm text-[var(--pq-ivory-faint)] tracking-[0.01em]"
           >
             {ticker.trim().length === 0 && !rationaleOk
               ? "종목과 이유를 채워야 진행합니다."
@@ -454,7 +454,7 @@ function HeldPicker({ ticker, setTicker }: { ticker: string; setTicker: (s: stri
         {t("preTrade.setup.heldLabel")}
       </div>
       {rows.length === 0 ? (
-        <p className="text-pq-mono-sm text-[var(--pq-ivory-faint)] tracking-[0.06em]">
+        <p className="text-pq-mono-sm text-[var(--pq-ivory-faint)] tracking-[0.01em]">
           {t("preTrade.setup.heldEmpty")}
         </p>
       ) : (
@@ -468,7 +468,7 @@ function HeldPicker({ ticker, setTicker }: { ticker: string; setTicker: (s: stri
                 type="button"
                 onClick={() => setTicker(sym)}
                 aria-pressed={active}
-                className={`px-3 py-1.5 text-pq-mono-sm tracking-[0.06em] transition-colors ${
+                className={`px-3 py-1.5 text-pq-mono-sm tracking-[0.01em] transition-colors ${
                   active
                     ? "bg-[rgba(245,240,232,0.10)] border border-[var(--pq-ivory)] text-[var(--pq-ivory)]"
                     : "border border-[rgba(245,240,232,0.15)] text-[var(--pq-ivory-mid)] hover:border-[rgba(245,240,232,0.45)]"
@@ -487,7 +487,7 @@ function HeldPicker({ ticker, setTicker }: { ticker: string; setTicker: (s: stri
         <p
           role="status"
           aria-live="polite"
-          className="text-pq-mono-sm text-[var(--pq-ivory-faint)] tracking-[0.06em]"
+          className="text-pq-mono-sm text-[var(--pq-ivory-faint)] tracking-[0.01em]"
         >
           {t("preTrade.setup.notHeld")}
         </p>

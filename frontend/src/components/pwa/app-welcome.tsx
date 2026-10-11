@@ -114,8 +114,8 @@ export function AppWelcome() {
             aria-label={`${i + 1} / ${CARDS.length}`}
             data-testid="app-welcome-card"
           >
-            <div className="text-[13px] tracking-[0.2em] text-[var(--pq-bronze)]">
-              {String(i + 1).padStart(2, "0")} · {c.kicker}
+            <div className="text-[13px] tracking-[0.01em] text-[var(--pq-bronze)]">
+              {i + 1} · {c.kicker}
             </div>
             <h1 className="mt-4 font-serif text-[30px] leading-[1.3] [word-break:keep-all]">
               {c.title}

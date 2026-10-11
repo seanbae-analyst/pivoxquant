@@ -105,7 +105,7 @@ function ContactForm() {
       {/* Success banner */}
       {state.kind === "success" && (
         <div
-          className="mb-6 flex items-start gap-3 rounded-[2px] border p-4"
+          className="mb-6 flex items-start gap-3 rounded-[var(--pq-radius-card)] border p-4"
           style={{ borderColor: "var(--pq-bronze)", background: "var(--pq-card-veil)" }}
           role="status"
         >
@@ -131,7 +131,7 @@ function ContactForm() {
       {/* Error banner */}
       {state.kind === "error" && (
         <div
-          className="mb-6 rounded-[2px] border p-4"
+          className="mb-6 rounded-[var(--pq-radius-card)] border p-4"
           style={{ borderColor: "var(--pq-ivory-line)", background: "var(--pq-card-veil)" }}
           role="alert"
         >
@@ -150,7 +150,7 @@ function ContactForm() {
             value={category}
             onChange={(e) => setCategory(e.target.value as SupportCategory)}
             disabled={submitting}
-            className="mt-2 w-full rounded-[2px] border bg-transparent px-3 py-2.5 font-sans text-pq-lead"
+            className="mt-2 w-full rounded-[var(--pq-radius-card)] border bg-transparent px-3 py-2.5 font-sans text-pq-lead"
             style={{
               borderColor: "var(--pq-ivory-line)",
               color: "var(--pq-ivory)",
@@ -183,7 +183,7 @@ function ContactForm() {
             maxLength={SUBJECT_MAX}
             disabled={submitting}
             placeholder="문의 제목을 입력해 주세요"
-            className="mt-2 w-full rounded-[2px] border bg-transparent px-3 py-2.5 font-sans text-pq-lead"
+            className="mt-2 w-full rounded-[var(--pq-radius-card)] border bg-transparent px-3 py-2.5 font-sans text-pq-lead"
             style={{
               borderColor: "var(--pq-ivory-line)",
               color: "var(--pq-ivory)",
@@ -210,7 +210,7 @@ function ContactForm() {
             disabled={submitting}
             rows={8}
             placeholder="문의 내용을 자세히 적어 주세요. 가져오기 문제라면 어떤 파일·알림이었는지 함께 남겨 주시면 빠릅니다."
-            className="mt-2 w-full resize-y rounded-[2px] border bg-transparent px-3 py-2.5 font-sans text-pq-lead"
+            className="mt-2 w-full resize-y rounded-[var(--pq-radius-card)] border bg-transparent px-3 py-2.5 font-sans text-pq-lead"
             style={{
               borderColor: "var(--pq-ivory-line)",
               color: "var(--pq-ivory)",
@@ -233,7 +233,7 @@ function ContactForm() {
         <button
           type="submit"
           disabled={!canSubmit}
-          className="w-full rounded-[2px] border px-5 py-3 font-mono text-pq-caption uppercase tracking-[0.16em] transition-colors disabled:cursor-not-allowed disabled:opacity-40 hover:bg-[var(--pq-card-veil-strong)]"
+          className="w-full rounded-[var(--pq-radius-card)] border px-5 py-3 font-mono text-pq-caption uppercase tracking-[0.01em] transition-colors disabled:cursor-not-allowed disabled:opacity-40 hover:bg-[var(--pq-card-veil-strong)]"
           style={{
             borderColor: "var(--pq-bronze)",
             color: "var(--pq-bronze)",

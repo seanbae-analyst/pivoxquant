@@ -18,10 +18,10 @@ function ErrorFallback({ onRetry }: { onRetry: () => void }) {
   const t = useT();
   return (
     <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-8">
-      <div className="w-14 h-14 rounded-[2px] bg-[rgba(var(--pq-bronze-wash-rgb),0.12)] border border-[rgba(var(--pq-bronze-wash-rgb),0.3)] flex items-center justify-center mb-5">
+      <div className="w-14 h-14 rounded-[var(--pq-radius-card)] bg-[rgba(var(--pq-bronze-wash-rgb),0.12)] border border-[rgba(var(--pq-bronze-wash-rgb),0.3)] flex items-center justify-center mb-5">
         <AlertTriangle className="w-6 h-6 text-[var(--pq-bronze-light)]" />
       </div>
-      <div className="text-pq-kicker tracking-[0.22em] uppercase text-[var(--pq-bronze-light)] mb-2">
+      <div className="text-pq-kicker tracking-[0.01em] uppercase text-[var(--pq-bronze-light)] mb-2">
         Error
       </div>
       <h2 className="text-xl font-bold text-[var(--pq-ivory)] mb-2">
@@ -32,7 +32,7 @@ function ErrorFallback({ onRetry }: { onRetry: () => void }) {
       </p>
       <button
         onClick={onRetry}
-        className="px-5 py-2.5 rounded-[2px] bg-[var(--pq-bronze)] text-[var(--pq-ink)] text-sm font-semibold transition-all duration-200 hover:bg-[var(--pq-bronze-light)] active:scale-[0.97]"
+        className="px-5 py-2.5 rounded-[var(--pq-radius-card)] bg-[var(--pq-bronze)] text-[var(--pq-ink)] text-sm font-semibold transition-all duration-200 hover:bg-[var(--pq-bronze-light)] active:scale-[0.97]"
       >
         {t("errorBoundary.retry")}
       </button>

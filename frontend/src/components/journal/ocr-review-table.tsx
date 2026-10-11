@@ -115,7 +115,7 @@ export function rowPayload(r: ReviewRow) {
 }
 
 const inputCls =
-  "w-full bg-transparent px-2 py-1 font-mono outline-none text-[var(--pq-ivory)] border rounded-[2px] focus:border-[var(--pq-bronze)]";
+  "w-full bg-transparent px-2 py-1 font-mono outline-none text-[var(--pq-ivory)] border rounded-[var(--pq-radius-card)] focus:border-[var(--pq-bronze)]";
 
 export function OcrReviewTable({
   rows,
@@ -156,7 +156,7 @@ export function OcrReviewTable({
         return (
           <div
             key={r.key}
-            className="rounded-[2px] border p-3"
+            className="rounded-[var(--pq-radius-card)] border p-3"
             style={{
               borderColor: r.include && !complete ? "var(--pq-bronze)" : "var(--pq-ivory-line)",
               opacity: r.include ? 1 : 0.45,

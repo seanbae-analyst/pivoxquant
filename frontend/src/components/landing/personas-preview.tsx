@@ -60,7 +60,7 @@ export default function PersonasPreview() {
             style={{
               color: "var(--pq-bronze)",
               fontSize: "var(--pq-text-eyebrow)",
-              letterSpacing: "0.22em",
+              letterSpacing: "0.01em",
             }}
           >
             {t("landing.personas.eyebrow")}
@@ -137,10 +137,10 @@ export default function PersonasPreview() {
                 style={{
                   color: "rgba(184,149,106,0.78)",
                   fontSize: "var(--pq-text-eyebrow)",
-                  letterSpacing: "0.22em",
+                  letterSpacing: "0.01em",
                 }}
               >
-                {String(i + 1).padStart(2, "0")}
+                {i + 1}
               </span>
 
               <h3

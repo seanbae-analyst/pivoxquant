@@ -43,7 +43,7 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
       <span
         className="font-sans text-pq-eyebrow uppercase"
         style={{
-          letterSpacing: "0.12em",
+          letterSpacing: "0.01em",
           color: "var(--pq-bronze)",
           fontWeight: 500,
         }}
@@ -63,7 +63,7 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
 export function BusinessInfo() {
   return (
     <section
-      className="rounded-[2px] border p-5 sm:p-6"
+      className="rounded-[var(--pq-radius-card)] border p-5 sm:p-6"
       style={{
         borderColor: "var(--pq-ivory-line)",
         background: "var(--pq-card-veil)",
@@ -74,7 +74,7 @@ export function BusinessInfo() {
         id="business-info-heading"
         className="font-sans text-pq-eyebrow uppercase"
         style={{
-          letterSpacing: "0.2em",
+          letterSpacing: "0.01em",
           color: "var(--pq-bronze)",
           fontWeight: 500,
         }}

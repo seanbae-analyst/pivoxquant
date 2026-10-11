@@ -186,7 +186,7 @@ export default function OnboardingBrokerPage() {
           </div>
 
           <div className="mb-3 flex items-center justify-between">
-            <span className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+            <span className="text-pq-eyebrow tracking-[0.01em] uppercase text-[var(--pq-bronze)]">
               {t("brokerOnboarding.stepLabel")}
             </span>
             <span className="text-pq-mono-sm tabular-nums text-[var(--pq-ivory-faint)]">
@@ -209,7 +209,7 @@ export default function OnboardingBrokerPage() {
       <main className="flex-1 overflow-y-auto px-4 sm:px-6">
         <div className="mx-auto max-w-3xl py-10">
           <div className="mb-8">
-            <div className="text-pq-eyebrow tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-2">
+            <div className="text-pq-eyebrow tracking-[0.01em] uppercase text-[var(--pq-bronze)] mb-2">
               Step 0 · Holdings
             </div>
             <h1 className="font-serif text-3xl text-[var(--pq-ivory)] sm:text-4xl">
@@ -256,7 +256,7 @@ export default function OnboardingBrokerPage() {
 
           {/* Saved so far — the thing "next" waits on. */}
           <div
-            className="mb-6 rounded-[2px] border border-[var(--pq-ivory-line)] px-4 py-3"
+            className="mb-6 rounded-[var(--pq-radius-card)] border border-[var(--pq-ivory-line)] px-4 py-3"
             data-testid="onboarding-held"
           >
             <div className="text-pq-mono-sm text-[var(--pq-bronze)]">
@@ -269,7 +269,7 @@ export default function OnboardingBrokerPage() {
             </div>
           </div>
 
-          <div className="rounded-[2px] border border-[var(--pq-ivory-line)] p-4 sm:p-6">
+          <div className="rounded-[var(--pq-radius-card)] border border-[var(--pq-ivory-line)] p-4 sm:p-6">
             <HoldingsImportPanel key={panelKey} onDone={() => { void refreshHeld(); setPanelKey((k) => k + 1); }} />
           </div>
 

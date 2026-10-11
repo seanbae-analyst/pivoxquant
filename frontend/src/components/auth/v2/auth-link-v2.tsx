@@ -40,7 +40,7 @@ export function AuthLinkV2({ prompt, action, href }: AuthLinkV2Props) {
         className="pq-auth-link-v2 font-mono"
         style={{
           fontSize: "var(--pq-text-eyebrow)",
-          letterSpacing: "0.20em",
+          letterSpacing: "0.01em",
           textTransform: "uppercase",
           color: "var(--pq-bronze, #B8956A)",
           borderBottom: "1px solid rgba(184,149,106,0.35)",

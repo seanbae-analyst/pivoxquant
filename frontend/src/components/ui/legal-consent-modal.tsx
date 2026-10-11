@@ -70,7 +70,7 @@ function Checkbox({
       id={id}
       aria-checked={checked}
       onClick={() => onChange(!checked)}
-      className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-[2px] border transition-all duration-200 ${
+      className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-[var(--pq-radius-card)] border transition-all duration-200 ${
         checked
           ? "border-[var(--pq-bronze)] bg-[var(--pq-bronze)]"
           : "border-[rgba(245,240,232,0.3)] bg-transparent hover:border-[var(--pq-bronze-light)]"

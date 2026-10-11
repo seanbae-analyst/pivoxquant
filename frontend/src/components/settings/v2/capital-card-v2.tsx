@@ -148,7 +148,7 @@ export function CapitalCardV2({ variant = "card", onSaved }: CapitalCardV2Props 
           ? {
               background: "rgba(255,255,255,0.02)",
               border: "1px solid var(--pq-ivory-line)",
-              borderRadius: 4,
+              borderRadius: "var(--pq-radius-card)",
               padding: 24,
               position: "relative",
               scrollMarginTop: 96,
@@ -252,7 +252,7 @@ export function CapitalCardV2({ variant = "card", onSaved }: CapitalCardV2Props 
             style={{
               display: "block",
               fontSize: "var(--pq-text-eyebrow)",
-              letterSpacing: "0.18em",
+              letterSpacing: "0.01em",
               color: "var(--pq-ivory-dim)",
               marginBottom: 6,
             }}
@@ -280,7 +280,7 @@ export function CapitalCardV2({ variant = "card", onSaved }: CapitalCardV2Props 
             style={{
               display: "block",
               fontSize: "var(--pq-text-eyebrow)",
-              letterSpacing: "0.18em",
+              letterSpacing: "0.01em",
               color: "var(--pq-ivory-dim)",
               marginBottom: 6,
             }}
@@ -315,7 +315,7 @@ export function CapitalCardV2({ variant = "card", onSaved }: CapitalCardV2Props 
             color: "var(--pq-ink, #050505)",
             fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.02em",
-            borderRadius: 2,
+            borderRadius: "var(--pq-radius-card)",
             border: "none",
             cursor: saving ? "wait" : "pointer",
             opacity: saving ? 0.6 : 1,

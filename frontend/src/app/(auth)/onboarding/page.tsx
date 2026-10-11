@@ -279,7 +279,7 @@ function MultiOptionCard({
       {/* Checkbox */}
       <div
         className={`
-          flex h-5 w-5 shrink-0 items-center justify-center rounded-[2px] border-2 transition-all duration-200
+          flex h-5 w-5 shrink-0 items-center justify-center rounded-[var(--pq-radius-card)] border-2 transition-all duration-200
           ${
             selected
               ? "border-[var(--pq-bronze-light)] bg-[var(--pq-bronze-light)]"
@@ -463,7 +463,7 @@ function LegalStep({
           >
             <div
               className={`
-                mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-[2px] border-2 transition-all duration-200
+                mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-[var(--pq-radius-card)] border-2 transition-all duration-200
                 ${
                   checked
                     ? "border-[var(--pq-bronze-light)] bg-[var(--pq-bronze-light)]"

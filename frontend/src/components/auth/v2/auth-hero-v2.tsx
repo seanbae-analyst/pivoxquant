@@ -56,7 +56,7 @@ export function AuthHeroV2({
         className="font-mono uppercase"
         style={{
           fontSize: "var(--pq-text-eyebrow)",
-          letterSpacing: "0.24em",
+          letterSpacing: "0.01em",
           color: "var(--pq-bronze, #B8956A)",
           marginBottom: 28,
           textTransform: "uppercase",
@@ -100,7 +100,7 @@ export function AuthHeroV2({
           className="font-mono uppercase"
           style={{
             fontSize: "var(--pq-text-eyebrow)",
-            letterSpacing: "0.22em",
+            letterSpacing: "0.01em",
             color: "var(--pq-ivory-dim)",
             paddingTop: 24,
             borderTop: "0.5px solid var(--pq-ivory-line)",

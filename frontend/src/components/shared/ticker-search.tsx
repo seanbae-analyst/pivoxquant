@@ -167,7 +167,7 @@ export function TickerSearch({
             aria-label="Searching"
             style={{
               fontSize: "var(--pq-text-eyebrow)",
-              letterSpacing: "0.14em",
+              letterSpacing: "0.01em",
               color: "var(--pq-ivory-faint)",
             }}
           >
@@ -265,7 +265,7 @@ export function TickerSearch({
                 className="font-mono uppercase"
                 style={{
                   fontSize: "var(--pq-text-eyebrow)",
-                  letterSpacing: "0.12em",
+                  letterSpacing: "0.01em",
                   color: "var(--pq-bronze)",
                   whiteSpace: "nowrap",
                 }}

@@ -135,7 +135,7 @@ export function ObservationNoteCard({
               </span>
               <span
                 className="font-mono uppercase"
-                style={{ letterSpacing: "0.12em", color: "var(--pq-bronze)" }}
+                style={{ letterSpacing: "0.01em", color: "var(--pq-bronze)" }}
               >
                 {normalizeTicker(t.ticker)}
               </span>
@@ -149,7 +149,7 @@ export function ObservationNoteCard({
           {note.tags.map((tag) => (
             <li
               key={tag}
-              className="rounded-[2px] border border-[rgba(245,240,232,0.15)] px-2 py-0.5 font-mono"
+              className="rounded-[var(--pq-radius-card)] border border-[rgba(245,240,232,0.15)] px-2 py-0.5 font-mono"
               style={{
                 fontSize: "var(--pq-text-eyebrow)",
                 color: "var(--pq-ivory-dim)",

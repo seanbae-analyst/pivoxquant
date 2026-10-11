@@ -393,7 +393,7 @@ export function TradeModalV2({
               style={{
                 fontSize: "var(--pq-text-eyebrow)",
                 color: "var(--pq-ivory-dim)",
-                letterSpacing: "0.16em",
+                letterSpacing: "0.01em",
               }}
             >
               {normalizeTicker(position.symbol)}
@@ -520,7 +520,7 @@ export function TradeModalV2({
                     className="font-mono"
                     style={{
                       fontSize: "var(--pq-text-eyebrow)",
-                      letterSpacing: "0.06em",
+                      letterSpacing: "0.01em",
                       color: noteOk ? "var(--pq-bronze)" : "var(--pq-ivory-faint)",
                       marginTop: 2,
                     }}

@@ -76,9 +76,9 @@ const buttonShellBase: React.CSSProperties = {
   justifyContent: "center",
   gap: 14,
   padding: "14px 20px",
-  borderRadius: 2,
+  borderRadius: "var(--pq-radius-card)",
   fontSize: "var(--pq-text-eyebrow)",
-  letterSpacing: "0.22em",
+  letterSpacing: "0.01em",
   textTransform: "uppercase",
   textDecoration: "none",
   transition:
@@ -88,7 +88,7 @@ const buttonShellBase: React.CSSProperties = {
 const noteBase: React.CSSProperties = {
   marginTop: 6,
   fontSize: "var(--pq-text-eyebrow)",
-  letterSpacing: "0.18em",
+  letterSpacing: "0.01em",
   textAlign: "center",
   textTransform: "uppercase",
   lineHeight: 1.6,
@@ -248,12 +248,12 @@ export function OAuthButtonsV2({
             className="pq-auth-wake-retry font-mono uppercase"
             style={{
               padding: "8px 18px",
-              borderRadius: 2,
+              borderRadius: "var(--pq-radius-card)",
               border: "1px solid rgba(184,149,106,0.45)",
               background: "transparent",
               color: "var(--pq-bronze, #B8956A)",
               fontSize: "var(--pq-text-eyebrow)",
-              letterSpacing: "0.22em",
+              letterSpacing: "0.01em",
               cursor: "pointer",
             }}
           >

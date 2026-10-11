@@ -438,7 +438,7 @@ export function EquityCurveBlock({
                 justifyContent: "center",
                 color: "var(--pq-ivory-dim)",
                 fontSize: "var(--pq-text-body)",
-                borderRadius: 4,
+                borderRadius: "var(--pq-radius-card)",
               }}
             >
               <span className="font-serif">기록을 불러오는 중…</span>
@@ -483,7 +483,7 @@ export function EquityCurveBlock({
                 padding: "32px 24px",
                 textAlign: "center",
                 border: "1px dashed var(--pq-ivory-line)",
-                borderRadius: 4,
+                borderRadius: "var(--pq-radius-card)",
               }}
             >
               <span

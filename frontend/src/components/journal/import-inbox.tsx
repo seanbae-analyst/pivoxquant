@@ -208,7 +208,7 @@ function TickerResolver({
           placeholder={t("journal.import.tickerPlaceholder")}
           autoComplete="off"
           aria-label={t("journal.import.tickerPlaceholder")}
-          className="w-full bg-transparent border border-[rgba(245,240,232,0.15)] rounded-[2px] px-3 py-2 text-pq-body-sm outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)] font-mono"
+          className="w-full bg-transparent border border-[rgba(245,240,232,0.15)] rounded-[var(--pq-radius-card)] px-3 py-2 text-pq-body-sm outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)] font-mono"
         />
         {loading && (
           <span
@@ -460,7 +460,7 @@ export function PendingTradeRow({
 
       {needsConfirm && (
         <div
-          className="mt-3 rounded-[2px] border p-3"
+          className="mt-3 rounded-[var(--pq-radius-card)] border p-3"
           style={{ borderColor: "var(--pq-bronze)" }}
           data-testid="import-needs-confirm"
         >
@@ -515,11 +515,11 @@ export function PendingTradeRow({
           rows={2}
           maxLength={THESIS_MAX}
           placeholder={t("journal.import.thesisPlaceholder")}
-          className="mt-2 w-full bg-transparent border border-[rgba(245,240,232,0.15)] rounded-[2px] p-3 text-pq-body-sm leading-relaxed outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)] font-serif"
+          className="mt-2 w-full bg-transparent border border-[rgba(245,240,232,0.15)] rounded-[var(--pq-radius-card)] p-3 text-pq-body-sm leading-relaxed outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)] font-serif"
           style={{ resize: "vertical" }}
         />
         <div
-          className="mt-1 font-mono tracking-[0.06em]"
+          className="mt-1 font-mono tracking-[0.01em]"
           style={{ fontSize: "var(--pq-text-mono-sm)", color: "var(--pq-ivory-faint)" }}
         >
           {t("journal.import.thesisCount").replace("{n}", String(thesis.trim().length))}
@@ -623,7 +623,7 @@ export function ImportInbox() {
       variants={fadeUp}
       initial="hidden"
       animate="visible"
-      className="mb-8 rounded-[2px] border p-5 sm:p-6"
+      className="mb-8 rounded-[var(--pq-radius-card)] border p-5 sm:p-6"
       style={{
         borderColor: "var(--pq-ivory-line)",
         background: "var(--pq-card-veil)",

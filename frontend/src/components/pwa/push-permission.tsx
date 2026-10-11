@@ -99,7 +99,7 @@ export function PushPermission() {
       className="pointer-events-auto fixed right-4 top-20 z-50 w-[340px] max-w-[calc(100vw-2rem)] md:right-6"
     >
       <div
-        className="relative overflow-hidden rounded-[2px] border p-5 shadow-2xl backdrop-blur-md"
+        className="relative overflow-hidden rounded-[var(--pq-radius-card)] border p-5 shadow-2xl backdrop-blur-md"
         style={{
           background: "rgba(10, 10, 10, 0.96)",
           borderColor: "rgba(var(--pq-bronze-wash-rgb), 0.42)",
@@ -109,7 +109,7 @@ export function PushPermission() {
         <div className="mb-3 flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">
             <div
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[2px] border"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--pq-radius-card)] border"
               style={{
                 borderColor: "rgba(var(--pq-bronze-wash-rgb), 0.5)",
                 color: "var(--pq-bronze)",
@@ -119,7 +119,7 @@ export function PushPermission() {
             </div>
             <div>
               <div
-                className="mb-1 text-pq-eyebrow font-medium uppercase tracking-[0.24em]"
+                className="mb-1 text-pq-eyebrow font-medium uppercase tracking-[0.01em]"
                 style={{ color: "var(--pq-bronze)" }}
               >
                 Observation alerts

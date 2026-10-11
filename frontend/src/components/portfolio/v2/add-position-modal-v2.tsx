@@ -455,7 +455,7 @@ export function AddPositionModalV2({
                 className="font-mono"
                 style={{
                   fontSize: "var(--pq-text-eyebrow)",
-                  letterSpacing: "0.06em",
+                  letterSpacing: "0.01em",
                   color: memoOk ? "var(--pq-bronze)" : "var(--pq-ivory-faint)",
                   marginTop: 2,
                 }}

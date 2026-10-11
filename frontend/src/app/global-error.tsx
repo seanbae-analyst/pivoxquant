@@ -62,7 +62,7 @@ export default function GlobalError({
           <div
             style={{
               fontSize: "10px",
-              letterSpacing: "0.22em",
+              letterSpacing: "0.01em",
               textTransform: "uppercase",
               color: "#B8956A",
               marginBottom: "16px",
@@ -142,7 +142,7 @@ export default function GlobalError({
               background: "transparent",
               color: "#B8956A",
               fontSize: "11px",
-              letterSpacing: "0.18em",
+              letterSpacing: "0.01em",
               textTransform: "uppercase",
               fontWeight: 500,
               cursor: "pointer",

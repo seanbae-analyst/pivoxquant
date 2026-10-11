@@ -17,7 +17,8 @@
  *   - Not investment advice language preserved in both locales.
  *   - No solicitation language used.
  *
- * v3 tone: hairline-ruled rows, Playfair UPRIGHT question, serif body.
+ * Hairline-ruled rows. The "+" marker comes from `.pq-faq-item > summary::after`
+ * in globals.css — rendering a second one here showed two (fixed 2026-10-11).
  * Rendered client-side to access locale hook.
  */
 
@@ -56,13 +57,6 @@ function FaqRow({ item }: { item: FaqItem }) {
           }}
         >
           {item.q}
-        </span>
-        <span
-          aria-hidden="true"
-          className="mt-1 shrink-0 text-lg leading-none transition-transform duration-200 group-open:rotate-45"
-          style={{ color: "var(--pq-bronze)" }}
-        >
-          +
         </span>
       </summary>
       <p
@@ -123,7 +117,7 @@ export function FaqSection() {
         id="faq-heading"
         className="font-sans text-pq-eyebrow uppercase"
         style={{
-          letterSpacing: "0.2em",
+          letterSpacing: "0.01em",
           color: "var(--pq-bronze)",
           fontWeight: 500,
         }}

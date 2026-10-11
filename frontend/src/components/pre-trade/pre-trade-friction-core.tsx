@@ -582,7 +582,7 @@ export function QuestionsStep(props: {
           <p
             role="status"
             aria-live="polite"
-            className="mt-4 ml-[34px] pl-5 text-pq-mono-sm text-[var(--pq-bronze)] tracking-[0.06em] md:hidden"
+            className="mt-4 ml-[34px] pl-5 text-pq-mono-sm text-[var(--pq-bronze)] tracking-[0.01em] md:hidden"
             data-testid="questions-swipe-hint"
           >
             검토했음을 눌러야 다음 질문으로 넘어갑니다.
@@ -631,7 +631,7 @@ export function QuestionsStep(props: {
         <p
           aria-live="polite"
           role="status"
-          className={`text-pq-mono-sm text-[var(--pq-ivory-faint)] text-right tracking-[0.06em] ${
+          className={`text-pq-mono-sm text-[var(--pq-ivory-faint)] text-right tracking-[0.01em] ${
             pagedOnPhone && !onReview ? "hidden md:block" : ""
           }`}
         >
@@ -698,10 +698,10 @@ function QuestionItem(props: {
     >
       <div className="flex items-baseline gap-3">
         <span
-          className="font-mono text-pq-eyebrow uppercase tracking-[0.22em] text-[var(--pq-bronze)] mt-0.5"
+          className="font-mono text-pq-eyebrow uppercase tracking-[0.01em] text-[var(--pq-bronze)] mt-0.5"
           style={{ minWidth: 18 }}
         >
-          {String(q.n).padStart(2, "0")}
+          {q.n}
         </span>
         <div className="flex-1 space-y-1">
           {/* 2026-10-07 (CEO "영문 라벨도 한글로"): only the Korean line
@@ -843,8 +843,8 @@ function ReviewScreen({
                 data-testid={`review-jump-${q.n}`}
               >
                 <span className="block font-serif text-pq-body-sm leading-snug text-[var(--pq-ivory-mid)]">
-                  <span className="mr-2 font-mono text-pq-eyebrow tracking-[0.22em] text-[var(--pq-bronze)]">
-                    {String(q.n).padStart(2, "0")}
+                  <span className="mr-2 font-mono text-pq-eyebrow tracking-[0.01em] text-[var(--pq-bronze)]">
+                    {q.n}
                   </span>
                   {q.ko}
                 </span>
@@ -930,7 +930,7 @@ export function CooldownStep({
         />
       )}
 
-      <div className="rounded-[2px] border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-6 md:p-8 space-y-6">
+      <div className="rounded-[var(--pq-radius-card)] border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-6 md:p-8 space-y-6">
         {/* Trade summary */}
         <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
           <span className="font-mono text-pq-mono-sm text-[var(--pq-bronze)]">
@@ -976,7 +976,7 @@ export function CooldownStep({
 
         {/* Auto-extend reason */}
         {reflection.auto_extended_reason && (
-          <div className="flex items-start gap-2 rounded-[2px] border border-[rgba(184,149,106,0.3)] bg-[rgba(184,149,106,0.05)] p-3">
+          <div className="flex items-start gap-2 rounded-[var(--pq-radius-card)] border border-[rgba(184,149,106,0.3)] bg-[rgba(184,149,106,0.05)] p-3">
             <AlertCircle className="h-3.5 w-3.5 mt-0.5 text-[var(--pq-bronze)] shrink-0" />
             <p className="text-pq-caption leading-relaxed text-[rgba(245,240,232,0.75)]">
               <span className="font-mono text-pq-eyebrow text-[var(--pq-bronze)] mr-2">
@@ -1050,7 +1050,7 @@ export function TerminalStep({
           title={proceeded ? "기록 완료" : "취소"}
         />
       )}
-      <div className="rounded-[2px] border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-6 md:p-8 space-y-4">
+      <div className="rounded-[var(--pq-radius-card)] border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-6 md:p-8 space-y-4">
         {/* 2026-09-19: this screen — the product's single most important
             confirmation moment — rendered entirely in English under the ko
             locale, while the cancelled branch beside it was already Korean.
@@ -1145,11 +1145,11 @@ export function SectionLabel({ n, title }: { n: number; title: string }) {
         className="font-mono uppercase"
         style={{
           fontSize: "var(--pq-text-eyebrow)",
-          letterSpacing: "0.22em",
+          letterSpacing: "0.01em",
           color: "var(--pq-bronze)",
         }}
       >
-        {String(n).padStart(2, "0")}
+        {n}
       </span>
       <h2
         className="font-display"

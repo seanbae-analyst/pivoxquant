@@ -41,7 +41,7 @@ function InquiryRow({ item }: { item: SupportInquiryListItem }) {
   return (
     <Link
       href={`/support/inbox/${item.id}`}
-      className="flex items-center gap-3 rounded-[2px] border p-4 transition-colors hover:bg-[var(--pq-card-veil-strong)]"
+      className="flex items-center gap-3 rounded-[var(--pq-radius-card)] border p-4 transition-colors hover:bg-[var(--pq-card-veil-strong)]"
       style={{ borderColor: "var(--pq-ivory-line)", background: "var(--pq-card-veil)" }}
     >
       <div className="min-w-0 flex-1">
@@ -70,7 +70,7 @@ function LoadingState() {
       {[0, 1, 2].map((i) => (
         <div
           key={i}
-          className="h-24 animate-pulse rounded-[2px] border"
+          className="h-24 animate-pulse rounded-[var(--pq-radius-card)] border"
           style={{ borderColor: "var(--pq-ivory-line)", background: "var(--pq-card-veil)" }}
         />
       ))}
@@ -81,7 +81,7 @@ function LoadingState() {
 function LoadFailure({ onRetry }: { onRetry: () => void }) {
   return (
     <div
-      className="rounded-[2px] border p-6 text-center"
+      className="rounded-[var(--pq-radius-card)] border p-6 text-center"
       style={{ borderColor: "var(--pq-ivory-line)", background: "var(--pq-card-veil)" }}
     >
       <p className="font-serif text-pq-mono-sm" style={{ color: "var(--pq-ivory-soft)" }}>
@@ -90,7 +90,7 @@ function LoadFailure({ onRetry }: { onRetry: () => void }) {
       <button
         type="button"
         onClick={onRetry}
-        className="mt-3 rounded-[2px] border px-4 py-2 font-mono text-pq-caption uppercase tracking-[0.16em] transition-colors hover:bg-[var(--pq-card-veil-strong)]"
+        className="mt-3 rounded-[var(--pq-radius-card)] border px-4 py-2 font-mono text-pq-caption uppercase tracking-[0.01em] transition-colors hover:bg-[var(--pq-card-veil-strong)]"
         style={{ borderColor: "var(--pq-ivory-line)", color: "var(--pq-bronze-light)" }}
       >
         다시 시도
@@ -102,7 +102,7 @@ function LoadFailure({ onRetry }: { onRetry: () => void }) {
 function EmptyState() {
   return (
     <div
-      className="rounded-[2px] border px-6 py-12 text-center"
+      className="rounded-[var(--pq-radius-card)] border px-6 py-12 text-center"
       style={{ borderColor: "var(--pq-ivory-line)", background: "var(--pq-card-veil)" }}
     >
       <Inbox className="mx-auto h-7 w-7" style={{ color: "var(--pq-bronze-light)" }} aria-hidden="true" />
@@ -119,7 +119,7 @@ function EmptyState() {
       <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
                 <Link
           href="/support/contact"
-          className="inline-flex items-center gap-2 rounded-[2px] border px-5 py-2.5 font-mono text-pq-caption uppercase tracking-[0.16em] transition-colors hover:bg-[var(--pq-card-veil-strong)]"
+          className="inline-flex items-center gap-2 rounded-[var(--pq-radius-card)] border px-5 py-2.5 font-mono text-pq-caption uppercase tracking-[0.01em] transition-colors hover:bg-[var(--pq-card-veil-strong)]"
           style={{ borderColor: "var(--pq-ivory-line)", color: "var(--pq-ivory-soft)" }}
         >
           1:1 문의하기

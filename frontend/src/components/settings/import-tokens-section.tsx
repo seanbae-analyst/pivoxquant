@@ -104,7 +104,7 @@ export function errorKey(err: unknown): string {
 const cardStyle: React.CSSProperties = {
   background: "rgba(255,255,255,0.02)",
   border: "1px solid var(--pq-ivory-line)",
-  borderRadius: 4,
+  borderRadius: "var(--pq-radius-card)",
   padding: 24,
 };
 
@@ -113,7 +113,7 @@ const monoBox: React.CSSProperties = {
   color: "var(--pq-ivory)",
   background: "rgba(0,0,0,0.35)",
   border: "1px solid var(--pq-ivory-line)",
-  borderRadius: 2,
+  borderRadius: "var(--pq-radius-card)",
   padding: "10px 12px",
   wordBreak: "break-all",
   whiteSpace: "pre-wrap",
@@ -169,7 +169,7 @@ function ImportTokensGuide({ defaultOpen }: { defaultOpen: boolean }) {
   return (
     <details
       open={defaultOpen}
-      className="mt-4 rounded-[2px] border p-4"
+      className="mt-4 rounded-[var(--pq-radius-card)] border p-4"
       style={{ borderColor: "var(--pq-ivory-line)", background: "rgba(0,0,0,0.2)" }}
       data-testid="import-tokens-guide"
     >
@@ -342,7 +342,7 @@ export function ImportTokensSection() {
         {/* ── 2. One-time reveal ── */}
         {issued && (
           <div
-            className="mt-5 rounded-[2px] border p-4"
+            className="mt-5 rounded-[var(--pq-radius-card)] border p-4"
             style={{ borderColor: "var(--pq-bronze)", background: "rgba(0,0,0,0.25)" }}
             role="region"
             aria-label={t("settingsV2.importTokens.revealKicker")}
@@ -497,7 +497,7 @@ export function ImportTokensSection() {
               disabled={limitReached}
               onChange={(e) => setName(e.target.value)}
               placeholder={t("settingsV2.importTokens.namePlaceholder")}
-              className="mt-2 w-full max-w-md bg-transparent border border-[rgba(245,240,232,0.15)] rounded-[2px] px-3 py-2 text-pq-body-sm outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)] font-serif disabled:opacity-40"
+              className="mt-2 w-full max-w-md bg-transparent border border-[rgba(245,240,232,0.15)] rounded-[var(--pq-radius-card)] px-3 py-2 text-pq-body-sm outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)] font-serif disabled:opacity-40"
             />
             <Caption className="mt-1">{t("settingsV2.importTokens.nameHint")}</Caption>
           </div>

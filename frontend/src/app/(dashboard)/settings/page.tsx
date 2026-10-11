@@ -495,7 +495,7 @@ export default function SettingsPageV2() {
                 flexWrap: "wrap",
                 padding: "16px 20px",
                 border: "1px solid var(--pq-border)",
-                borderRadius: 2,
+                borderRadius: "var(--pq-radius-card)",
               }}
             >
               <div style={{ minWidth: 0, flex: "1 1 240px" }}>
@@ -532,7 +532,7 @@ export default function SettingsPageV2() {
               {retakeLeft === 0 ? (
                 <span
                   aria-disabled="true"
-                  className="inline-flex min-h-[44px] cursor-not-allowed items-center rounded-[2px] border border-[var(--pq-border)] px-4 text-pq-mono-sm text-[var(--pq-ivory-mid)] opacity-50"
+                  className="inline-flex min-h-[44px] cursor-not-allowed items-center rounded-[var(--pq-radius-card)] border border-[var(--pq-border)] px-4 text-pq-mono-sm text-[var(--pq-ivory-mid)] opacity-50"
                   data-testid="retake-cta-disabled"
                 >
                   {t("settingsV2.retake.cta")}
@@ -540,7 +540,7 @@ export default function SettingsPageV2() {
               ) : (
                 <Link
                   href="/onboarding?retake=1"
-                  className="inline-flex min-h-[44px] items-center rounded-[2px] border border-[var(--pq-bronze)] px-4 text-pq-mono-sm text-[var(--pq-bronze-light)] transition-colors hover:bg-[var(--pq-bronze)]/10"
+                  className="inline-flex min-h-[44px] items-center rounded-[var(--pq-radius-card)] border border-[var(--pq-bronze)] px-4 text-pq-mono-sm text-[var(--pq-bronze-light)] transition-colors hover:bg-[var(--pq-bronze)]/10"
                 >
                   {t("settingsV2.retake.cta")}
                 </Link>
@@ -609,7 +609,7 @@ export default function SettingsPageV2() {
                 style={{
                   background: "rgba(255,255,255,0.02)",
                   border: "1px solid var(--pq-ivory-line)",
-                  borderRadius: 4,
+                  borderRadius: "var(--pq-radius-card)",
                   padding: 24,
                   position: "relative",
                 }}
@@ -720,7 +720,7 @@ export default function SettingsPageV2() {
                 style={{
                   background: "rgba(255,255,255,0.02)",
                   border: "1px solid var(--pq-ivory-line)",
-                  borderRadius: 4,
+                  borderRadius: "var(--pq-radius-card)",
                   padding: 24,
                   position: "relative",
                   scrollMarginTop: 96,

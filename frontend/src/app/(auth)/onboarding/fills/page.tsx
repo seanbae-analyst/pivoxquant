@@ -166,7 +166,7 @@ export default function OnboardingFillsPage() {
 
           {/* Broker — optional; it picks the iPhone route and adds one sourced hint. */}
           <section className="mt-6" aria-labelledby="fills-broker-label">
-            <div id="fills-broker-label" className="text-[13px] tracking-[0.16em] text-[var(--pq-bronze)]">
+            <div id="fills-broker-label" className="text-[13px] tracking-[0.01em] text-[var(--pq-bronze)]">
               {t("fillsOnboarding.brokerLabel")}
             </div>
             <p className="mt-1 text-[13px] leading-relaxed text-[var(--pq-ivory-faint)] [word-break:keep-all]">
@@ -179,7 +179,7 @@ export default function OnboardingFillsPage() {
                   type="button"
                   aria-pressed={broker === b}
                   onClick={() => pickBroker(b)}
-                  className="min-h-[44px] rounded-[2px] border px-3 text-[14px]"
+                  className="min-h-[44px] rounded-[var(--pq-radius-card)] border px-3 text-[14px]"
                   style={{
                     borderColor: broker === b ? "var(--pq-bronze)" : "var(--pq-ivory-line)",
                     color: broker === b ? "var(--pq-ivory)" : "var(--pq-ivory-dim)",
@@ -211,7 +211,7 @@ export default function OnboardingFillsPage() {
                   role="radio"
                   aria-checked={iosRoute === r}
                   onClick={() => setIosRoute(r)}
-                  className="min-h-[44px] rounded-[2px] border px-2 text-[14px] [word-break:keep-all]"
+                  className="min-h-[44px] rounded-[var(--pq-radius-card)] border px-2 text-[14px] [word-break:keep-all]"
                   style={{
                     borderColor: iosRoute === r ? "var(--pq-bronze)" : "var(--pq-ivory-line)",
                     color: iosRoute === r ? "var(--pq-ivory)" : "var(--pq-ivory-dim)",
@@ -229,8 +229,8 @@ export default function OnboardingFillsPage() {
           </p>
 
           {/* 1 — the key. */}
-          <section className="mt-6 rounded-[2px] border border-[var(--pq-ivory-line)] p-4">
-            <div className="text-[13px] tracking-[0.16em] text-[var(--pq-bronze)]">{t("fillsOnboarding.keyKicker")}</div>
+          <section className="mt-6 rounded-[var(--pq-radius-card)] border border-[var(--pq-ivory-line)] p-4">
+            <div className="text-[13px] tracking-[0.01em] text-[var(--pq-bronze)]">{t("fillsOnboarding.keyKicker")}</div>
 
             {issued ? (
               <div data-testid="fills-issued">
@@ -245,7 +245,7 @@ export default function OnboardingFillsPage() {
               // Until the key list arrives, `tokens` is [] — rendering the
               // issue form here flashes it at a user who already has a key.
               <div
-                className="pq-skeleton-dark mt-3 h-[88px] w-full rounded-[2px]"
+                className="pq-skeleton-dark mt-3 h-[88px] w-full rounded-[var(--pq-radius-card)]"
                 role="status"
                 aria-busy="true"
                 data-testid="fills-token-loading"
@@ -288,7 +288,7 @@ export default function OnboardingFillsPage() {
 
           {/* 2 — the phone side. */}
           <section className="mt-6" data-testid={`fills-steps-${phone}`} data-route={route}>
-            <div className="text-[13px] tracking-[0.16em] text-[var(--pq-bronze)]">
+            <div className="text-[13px] tracking-[0.01em] text-[var(--pq-bronze)]">
               {t(kickerKey(route))}
             </div>
             {route === "ios-app" && (

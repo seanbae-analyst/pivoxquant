@@ -80,7 +80,7 @@ export function MirrorLead({
   return (
     <>
       <div
-        className="text-[10.5px] uppercase tracking-[0.25em]"
+        className="text-[10.5px] uppercase tracking-[0.01em]"
         style={{ color: "var(--pq-bronze)" }}
       >
         오늘의 거울
