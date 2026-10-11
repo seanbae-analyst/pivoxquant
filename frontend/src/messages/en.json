@@ -678,7 +678,7 @@
       },
       "editHoldings": {
         "q": "How do I correct or re-sync my holdings?",
-        "a": "On Portfolio, tap a holding to add a purchase, record a sale, edit the average cost or memo, or write an observation note. If your holdings changed a lot, go to Portfolio → '종목 추가' (Add position) → 'Upload a holdings capture' and upload your broker app's holdings screen again. Holdings you already have are overwritten with the captured values, and each row can be switched to 'Add' or 'Skip'. The capture is read in your browser and never sent to the server; it takes effect as soon as you check and save it."
+        "a": "On Portfolio, tap a holding to add a purchase, record a sale, edit the average cost or memo, or write an observation note. If your holdings changed a lot, go to Portfolio → '종목 추가' (Add position) → 'Upload a holdings capture' and upload your broker app's holdings screen again. Holdings you already have are overwritten with the captured values, and each row can be switched to 'Add' or 'Skip'. Holdings on your record that are missing from the new capture are listed under the table as 'Not in this capture': mark one 'Closed' if you already sold it — it leaves your holdings without counting as a sale, and past trades and notes stay — or leave it on 'Keep' if the capture was just cut short. The capture is read in your browser and never sent to the server; it takes effect as soon as you check and save it."
       },
       "howToLogin": {
         "q": "How do I sign in?",
