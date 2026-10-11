@@ -9,6 +9,8 @@ import en from "@/messages/en.json";
 // holdings capture — and described deletion differently from /support).
 //   - broker linking + import paths → landing.faq.a5
 //   - account deletion              → support.faq.deleteAccount.a
+//   - phone fill automation         → support.faq.autoFill.a     (2026-10-11)
+//   - editing / re-syncing holdings → support.faq.editHoldings.a (2026-10-11)
 
 export const metadata = {
   title: "Docs",
@@ -46,6 +48,14 @@ const SECTIONS = [
       {
         q: "Where do my entries go?",
         a: "Journal keeps your pre-trade entries — including whether you went ahead or stopped — and the notes you write, in one timeline, under the behaviour mirrors computed from your trades. The trades and holdings themselves live on Portfolio.",
+      },
+      {
+        q: en.support.faq.autoFill.q,
+        a: en.support.faq.autoFill.a,
+      },
+      {
+        q: en.support.faq.editHoldings.q,
+        a: en.support.faq.editHoldings.a,
       },
     ],
   },

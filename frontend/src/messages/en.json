@@ -145,7 +145,7 @@
       "q6": "What does it cost?",
       "a6": "Everything is free during the closed beta. Paid plans are not active, and you will be told in advance if that changes.",
       "q7": "Do I have to type in every trade by hand?",
-      "a7": "Not the numbers. There are four paths. ① Download your trade history from your broker app as CSV/Excel/PDF (up to 2MB) and upload it — column names are matched automatically (scanned PDFs without text excluded). ② Upload a capture of a major broker's fill-history screen and the text is read in your browser and laid out as fill rows. The image is never sent to the server — only the rows it read. Cells it is not sure of stay blank for you to fill in. ③ Copy a fill notification and paste it; ticker, quantity, price and time are read from it. On Android you can send it straight from the share sheet. ④ Issue an import token in Settings and let your own automation forward fill notifications as they arrive: on Android an app like MacroDroid forwards the notification, on iPhone a Shortcuts automation can forward the broker's fill SMS — only with brokers that still send fills by text message. On every path the fill waits in your inbox until you write one line on why and approve it, and only then is it recorded. The original file is discarded after parsing; next to each fill only one line of the source text is kept, with account numbers masked."
+      "a7": "Not the numbers. There are four paths. ① Download your trade history from your broker app as CSV/Excel/PDF (up to 2MB) and upload it — column names are matched automatically (scanned PDFs without text excluded). ② Upload a capture of a major broker's fill-history screen and the text is read in your browser and laid out as fill rows. The image is never sent to the server — only the rows it read. Cells it is not sure of stay blank for you to fill in. ③ Copy a fill notification and paste it; ticker, quantity, price and time are read from it. On Android you can send it straight from the share sheet. ④ Create a connection key (import token) in Settings and your phone forwards fill notifications as they arrive. On Android an app like MacroDroid forwards your broker app's push or KakaoTalk message. On iPhone a Shortcuts 'Message' automation forwards fill text messages (SMS) on any iOS, and for brokers that notify by app push, such as Toss Securities, a Shortcuts 'Notification' automation does it on iOS 27 or later (the app-notification route is a trial). When a fill arrives you get an 'A fill just arrived' push that opens that fill's reason box. On every path the fill waits in your inbox until you write one line on why and approve it, and only then is it recorded. The original file is discarded after parsing; next to each fill only one line of the source text is kept, with account numbers masked."
     },
     "nav": {
       "docs": {
@@ -644,6 +644,7 @@
     "faqHeading": "Frequently Asked Questions",
     "categories": {
       "service": "Service",
+      "record": "Record & Import",
       "account": "Account & Login",
       "tech": "Technical & Usage"
     },
@@ -659,6 +660,14 @@
       "pricing": {
         "q": "How are the plans structured?",
         "a": "Everything is free during the closed beta. Paid plans are not active, and you will be told in advance if that changes."
+      },
+      "autoFill": {
+        "q": "Can fills be recorded automatically?",
+        "a": "Your phone can forward your broker's fill notifications to PivoxQuant. Create a connection key under Settings → Import tokens and the phone setup steps appear; when you first sign up, picking your phone and broker shows only the steps that fit. On Android, the MacroDroid app forwards your broker app's push or KakaoTalk message as is. On iPhone, a Shortcuts 'Message' automation forwards fill text messages (SMS) on any iOS; for brokers that notify by app push, such as Toss Securities, a Shortcuts 'Notification' automation does it on iOS 27 or later (that route is a trial and may not read every broker's wording). Forwarded fills land on the pending list at the top of the Journal page and an 'A fill just arrived' push is sent. A fill is recorded only after you write one line on why and approve it. No brokerage login or API key is ever collected."
+      },
+      "editHoldings": {
+        "q": "How do I correct or re-sync my holdings?",
+        "a": "On Portfolio, tap a holding to add a purchase, record a sale, edit the average cost or memo, or write an observation note. If your holdings changed a lot, go to Portfolio → '종목 추가' (Add position) → 'Upload a holdings capture' and upload your broker app's holdings screen again. Holdings you already have are overwritten with the captured values, and each row can be switched to 'Add' or 'Skip'. The capture is read in your browser and never sent to the server; it takes effect as soon as you check and save it."
       },
       "howToLogin": {
         "q": "How do I sign in?",
