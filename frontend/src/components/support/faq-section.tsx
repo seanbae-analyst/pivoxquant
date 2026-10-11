@@ -94,6 +94,13 @@ export function FaqSection() {
       ],
     },
     {
+      category: t("support.categories.record"),
+      items: [
+        { q: t("support.faq.autoFill.q"), a: t("support.faq.autoFill.a") },
+        { q: t("support.faq.editHoldings.q"), a: t("support.faq.editHoldings.a") },
+      ],
+    },
+    {
       category: t("support.categories.account"),
       items: [
         { q: t("support.faq.howToLogin.q"), a: t("support.faq.howToLogin.a") },

@@ -68,6 +68,46 @@ describe("onboarding · phone fill automation", () => {
     expect(screen.getByText("settingsV2.importTokens.android1")).toBeTruthy();
   });
 
+  it("on an iPhone, picking Toss opens the iOS 27 app-notification route; SMS is one tap away", () => {
+    setUA("Mozilla/5.0 (iPhone; CPU iPhone OS 27_0 like Mac OS X)");
+    render(<OnboardingFillsPage />);
+    // No broker yet → SMS, as before.
+    expect(screen.getByTestId("fills-steps-ios").getAttribute("data-route")).toBe("ios-sms");
+    expect(screen.getByText("fillsOnboarding.status.iosSms")).toBeTruthy();
+    expect(screen.queryByTestId("fills-broker-hint")).toBeNull();
+
+    fireEvent.click(screen.getByTestId("fills-broker-toss"));
+    expect(screen.getByTestId("fills-broker-toss").getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByTestId("fills-broker-hint").textContent).toBe("fillsOnboarding.hint.toss");
+    expect(screen.getByTestId("fills-steps-ios").getAttribute("data-route")).toBe("ios-app");
+    expect(screen.getByTestId("fills-ios-route-app").getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByText("fillsOnboarding.status.iosApp")).toBeTruthy();
+    expect(screen.getByTestId("fills-ios-app-caveat")).toBeTruthy();
+    expect(screen.getByText("settingsV2.importTokens.iosApp2")).toBeTruthy();
+    expect(screen.queryByText("settingsV2.importTokens.ios2")).toBeNull();
+
+    fireEvent.click(screen.getByTestId("fills-ios-route-sms"));
+    expect(screen.getByTestId("fills-steps-ios").getAttribute("data-route")).toBe("ios-sms");
+    expect(screen.getByText("settingsV2.importTokens.ios2")).toBeTruthy();
+    expect(screen.queryByTestId("fills-ios-app-caveat")).toBeNull();
+  });
+
+  it("a broker that sends SMS keeps the iPhone on SMS; Android has no iPhone route switch", () => {
+    setUA("Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X)");
+    render(<OnboardingFillsPage />);
+    fireEvent.click(screen.getByTestId("fills-broker-kb"));
+    expect(screen.getByTestId("fills-steps-ios").getAttribute("data-route")).toBe("ios-sms");
+    expect(screen.getByTestId("fills-broker-hint").textContent).toBe("fillsOnboarding.hint.kb");
+
+    fireEvent.click(screen.getByTestId("fills-broker-mirae"));
+    expect(screen.getByTestId("fills-broker-hint").textContent).toBe("fillsOnboarding.hint.check");
+
+    fireEvent.click(screen.getByTestId("fills-phone-android"));
+    expect(screen.queryByTestId("fills-ios-route-app")).toBeNull();
+    expect(screen.getByTestId("fills-steps-android").getAttribute("data-route")).toBe("android");
+    expect(screen.getByText("fillsOnboarding.status.android")).toBeTruthy();
+  });
+
   it("issues the token only after consent, then shows it once with the copy fields", async () => {
     setUA("Mozilla/5.0 (Linux; Android 15)");
     render(<OnboardingFillsPage />);

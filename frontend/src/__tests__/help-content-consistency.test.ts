@@ -53,6 +53,27 @@ describe("help content consistency", () => {
     expect(docs).not.toMatch(/alongside the trades you recorded/);
   });
 
+  it("fill automation and holdings answers are shared, and state the iPhone split (2026-10-11)", () => {
+    const docs = read("app", "docs", "page.tsx");
+    expect(docs).toContain("en.support.faq.autoFill.a");
+    expect(docs).toContain("en.support.faq.editHoldings.a");
+    const faqSrc = read("components", "support", "faq-section.tsx");
+    expect(faqSrc).toContain("support.faq.autoFill.a");
+    expect(faqSrc).toContain("support.faq.editHoldings.a");
+    // iPhone: SMS on any iOS, an app's push only from iOS 27 — never the old
+    // "iPhone can only forward SMS" claim.
+    for (const a of [supportKo.faq.autoFill.a, ko.landing.faq.a7]) {
+      expect(a).toContain("iOS 27");
+      expect(a).toContain("문자");
+    }
+    for (const a of [supportEn.faq.autoFill.a, en.landing.faq.a7]) {
+      expect(a).toContain("iOS 27");
+      expect(a).not.toMatch(/only with brokers that still send fills by text message/);
+    }
+    // Approval wording stays scoped to imported fills — not "every path".
+    expect(supportEn.faq.autoFill.a).not.toMatch(/every path/i);
+  });
+
   it("deletion answer states the 30-day grace window in both locales", () => {
     expect(supportKo.faq.deleteAccount.a).toContain("30일");
     expect(supportEn.faq.deleteAccount.a).toContain("30-day");
