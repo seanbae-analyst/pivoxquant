@@ -243,7 +243,7 @@ export default function AuthEntryPage() {
               className="pq-auth-card-eyebrow font-mono uppercase"
               style={{
                 fontSize: "var(--pq-text-eyebrow)",
-                letterSpacing: "0.24em",
+                letterSpacing: "0.01em",
                 color: "var(--pq-bronze, #B8956A)",
                 textTransform: "uppercase",
               }}
@@ -466,7 +466,7 @@ export default function AuthEntryPage() {
           :global(.pq-auth-card-eyebrow) {
             font-family: var(--pq-font-sans) !important;
             font-size: var(--pq-text-button) !important;
-            letter-spacing: 0.2em !important;
+            letter-spacing: 0.01em !important;
           }
           :global(.pq-auth-card-heading) {
             font-family: var(--pq-font-serif) !important;

@@ -38,7 +38,7 @@ export function OfflineBanner() {
     <div
       role="status"
       aria-live="polite"
-      className="mb-4 flex items-center gap-2 rounded-[2px] border border-[var(--pq-ivory-line)] bg-[var(--pq-card-veil)] px-3 py-2 text-[13px] leading-snug text-[var(--pq-ivory-mid)]"
+      className="mb-4 flex items-center gap-2 rounded-[var(--pq-radius-card)] border border-[var(--pq-ivory-line)] bg-[var(--pq-card-veil)] px-3 py-2 text-[13px] leading-snug text-[var(--pq-ivory-mid)]"
       data-testid="offline-banner"
     >
       <WifiOff className="h-4 w-4 shrink-0 text-[var(--pq-bronze)]" strokeWidth={1.5} aria-hidden />

@@ -100,7 +100,7 @@ export function DeleteAccountModal({ onClose }: { onClose: () => void }) {
     background: "var(--pq-ink, #050505)",
     border: "1px solid rgba(245,240,232,0.12)",
     padding: 24,
-    borderRadius: 2,
+    borderRadius: "var(--pq-radius-card)",
   };
 
   // ── Success panels ─────────────────────────────────────────────────────
@@ -217,7 +217,7 @@ export function DeleteAccountModal({ onClose }: { onClose: () => void }) {
               border: "none",
               color: "var(--pq-ivory-faint)",
               fontSize: "var(--pq-text-eyebrow)",
-              letterSpacing: "0.16em",
+              letterSpacing: "0.01em",
               cursor: busy ? "not-allowed" : "pointer",
             }}
           >
@@ -252,7 +252,7 @@ export function DeleteAccountModal({ onClose }: { onClose: () => void }) {
                 marginBottom: 12,
                 background: "rgba(255,255,255,0.03)",
                 border: "1px solid rgba(245,240,232,0.18)",
-                borderRadius: 2,
+                borderRadius: "var(--pq-radius-card)",
                 color: "var(--pq-ivory)",
                 outline: "none",
               }}
@@ -268,9 +268,9 @@ export function DeleteAccountModal({ onClose }: { onClose: () => void }) {
                 background: armed ? ERROR_COLOR : "transparent",
                 color: armed ? "var(--pq-ink, #050505)" : "rgba(245,240,232,0.4)",
                 border: `1px solid ${ERROR_COLOR}`,
-                borderRadius: 2,
+                borderRadius: "var(--pq-radius-card)",
                 fontSize: "var(--pq-text-eyebrow)",
-                letterSpacing: "0.18em",
+                letterSpacing: "0.01em",
                 cursor: busy || !armed ? "not-allowed" : "pointer",
                 opacity: busy ? 0.6 : 1,
               }}

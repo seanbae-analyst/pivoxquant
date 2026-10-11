@@ -100,7 +100,7 @@ const consentRowStyle: React.CSSProperties = {
   cursor: "pointer",
   padding: "14px 4px",
   margin: "-14px -4px",
-  borderRadius: 4,
+  borderRadius: "var(--pq-radius-card)",
   transition: "box-shadow 200ms cubic-bezier(0.16,1,0.3,1)",
 };
 
@@ -114,7 +114,7 @@ const pulseRowStyle = (active: boolean): React.CSSProperties =>
 
 const requiredTagStyle: React.CSSProperties = {
   fontSize: "var(--pq-text-eyebrow)",
-  letterSpacing: "0.18em",
+  letterSpacing: "0.01em",
   textTransform: "uppercase",
   color: "var(--pq-bronze, #B8956A)",
   marginRight: 6,
@@ -198,7 +198,7 @@ function CheckboxV2({
         width: 16,
         alignItems: "center",
         justifyContent: "center",
-        borderRadius: 2,
+        borderRadius: "var(--pq-radius-card)",
         border: checked
           ? "1px solid var(--pq-bronze, #B8956A)"
           : "1px solid rgba(245,240,232,0.20)",
@@ -274,7 +274,7 @@ export function ConsentStackV2({
           flexDirection: "column",
           gap: 14,
           padding: 20,
-          borderRadius: 2,
+          borderRadius: "var(--pq-radius-card)",
           border: "0.5px solid var(--pq-ivory-line)",
           background: "var(--pq-ivory-line-ghost)",
         }}

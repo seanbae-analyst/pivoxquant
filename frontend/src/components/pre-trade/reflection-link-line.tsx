@@ -125,7 +125,7 @@ export function ReflectionLinkLine({ link }: { link: ReflectionLinkState }) {
   return (
     <label
       data-testid="reflection-link-line"
-      className="flex cursor-pointer items-start gap-3 rounded-[2px] border px-4 py-3"
+      className="flex cursor-pointer items-start gap-3 rounded-[var(--pq-radius-card)] border px-4 py-3"
       style={{
         borderColor: "var(--pq-ivory-line)",
         background: "var(--pq-card-veil)",

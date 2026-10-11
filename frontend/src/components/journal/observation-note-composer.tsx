@@ -239,7 +239,7 @@ export function ObservationNoteComposer({
     <form
       onSubmit={handleSubmit}
       aria-label="관찰 노트 작성"
-      className={`rounded-[2px] border border-[var(--pq-ivory-line)] ${
+      className={`rounded-[var(--pq-radius-card)] border border-[var(--pq-ivory-line)] ${
         compact ? "p-4" : "p-5 sm:p-6"
       }`}
     >
@@ -256,12 +256,12 @@ export function ObservationNoteComposer({
         placeholder={OBS_NOTE_PLACEHOLDER}
         aria-label="관찰 노트 본문"
         rows={compact ? 3 : 5}
-        className="mt-3 w-full resize-y rounded-[2px] border border-[var(--pq-ivory-line)] bg-transparent p-3 font-serif text-pq-body-sm leading-relaxed text-[var(--pq-ivory)] outline-none focus:border-[var(--pq-bronze)]"
+        className="mt-3 w-full resize-y rounded-[var(--pq-radius-card)] border border-[var(--pq-ivory-line)] bg-transparent p-3 font-serif text-pq-body-sm leading-relaxed text-[var(--pq-ivory)] outline-none focus:border-[var(--pq-bronze)]"
       />
 
       <div className="mt-1 flex items-baseline justify-between gap-3">
         <span
-          className="font-mono tracking-[0.06em]"
+          className="font-mono tracking-[0.01em]"
           style={{
             fontSize: "var(--pq-text-eyebrow)",
             color: overLimit ? "var(--pq-negative)" : "var(--pq-ivory-faint)",
@@ -295,7 +295,7 @@ export function ObservationNoteComposer({
                   type="button"
                   onClick={() => removeTicker(t.ticker)}
                   aria-label={`${t.ticker} 빼기`}
-                  className="inline-flex items-center gap-2 rounded-[2px] border border-[rgba(var(--pq-bronze-rgb),0.35)] px-2 py-1 text-[var(--pq-bronze)]"
+                  className="inline-flex items-center gap-2 rounded-[var(--pq-radius-card)] border border-[rgba(var(--pq-bronze-rgb),0.35)] px-2 py-1 text-[var(--pq-bronze)]"
                   style={{ fontSize: "var(--pq-text-eyebrow)" }}
                 >
                   <span className="font-mono">
@@ -316,7 +316,7 @@ export function ObservationNoteComposer({
               ariaLabel="종목 검색"
               placeholder="종목명 또는 티커"
               showPickedName={false}
-              inputClassName="w-full rounded-[2px] border border-[var(--pq-ivory-line)] bg-transparent px-3 py-2 font-mono text-pq-body-sm text-[var(--pq-ivory)] outline-none focus:border-[var(--pq-bronze)]"
+              inputClassName="w-full rounded-[var(--pq-radius-card)] border border-[var(--pq-ivory-line)] bg-transparent px-3 py-2 font-mono text-pq-body-sm text-[var(--pq-ivory)] outline-none focus:border-[var(--pq-bronze)]"
             />
           </div>
         )}
@@ -335,7 +335,7 @@ export function ObservationNoteComposer({
                   type="button"
                   onClick={() => setTags((prev) => prev.filter((x) => x !== tag))}
                   aria-label={`${tag} 태그 빼기`}
-                  className="inline-flex items-center gap-2 rounded-[2px] border border-[var(--pq-ivory-line)] px-2 py-1 text-[var(--pq-ivory-dim)]"
+                  className="inline-flex items-center gap-2 rounded-[var(--pq-radius-card)] border border-[var(--pq-ivory-line)] px-2 py-1 text-[var(--pq-ivory-dim)]"
                   style={{ fontSize: "var(--pq-text-eyebrow)" }}
                 >
                   <span className="font-mono">{tag}</span>
@@ -353,7 +353,7 @@ export function ObservationNoteComposer({
           aria-label="태그 입력"
           placeholder="Enter 또는 쉼표로 추가"
           autoComplete="off"
-          className="mt-2 w-full rounded-[2px] border border-[var(--pq-ivory-line)] bg-transparent px-3 py-2 font-mono text-pq-body-sm text-[var(--pq-ivory)] outline-none focus:border-[var(--pq-bronze)]"
+          className="mt-2 w-full rounded-[var(--pq-radius-card)] border border-[var(--pq-ivory-line)] bg-transparent px-3 py-2 font-mono text-pq-body-sm text-[var(--pq-ivory)] outline-none focus:border-[var(--pq-bronze)]"
         />
       </div>
 

@@ -177,7 +177,7 @@ function StatusChip({ kind }: { kind: StatusKind }) {
         alignItems: "center",
         gap: 6,
         padding: "2px 8px",
-        borderRadius: 2,
+        borderRadius: "var(--pq-radius-card)",
         border: "0.5px solid var(--pq-ivory-line)",
         background: "var(--pq-ivory-line-faint)",
         color: dimmed ? "var(--pq-ivory-faint)" : "rgba(245,240,232,0.82)",
@@ -264,7 +264,7 @@ function JournalEntry({ r }: { r: PreTradeReflection }) {
 
   return (
     <article
-      className="rounded-[2px] border p-4 sm:p-5 transition-colors"
+      className="rounded-[var(--pq-radius-card)] border p-4 sm:p-5 transition-colors"
       style={{
         borderColor: "var(--pq-ivory-line)",
         background: "var(--pq-card-veil)",
@@ -278,7 +278,7 @@ function JournalEntry({ r }: { r: PreTradeReflection }) {
             {name}
           </EditorialHead>
           {showTickerSub && (
-            <span className="font-mono text-pq-caption uppercase tracking-[0.14em] text-[var(--pq-ivory-faint)]">
+            <span className="font-mono text-pq-caption uppercase tracking-[0.01em] text-[var(--pq-ivory-faint)]">
               {bareTicker}
             </span>
           )}
@@ -392,7 +392,7 @@ function LoadingState() {
       {[0, 1, 2].map((i) => (
         <div
           key={i}
-          className="h-32 animate-pulse rounded-[2px] border"
+          className="h-32 animate-pulse rounded-[var(--pq-radius-card)] border"
           style={{
             borderColor: "var(--pq-ivory-line)",
             background: "var(--pq-card-veil)",
@@ -407,7 +407,7 @@ function LoadFailure({ onRetry }: { onRetry: () => void }) {
   const t = useT();
   return (
     <div
-      className="rounded-[2px] border p-6 text-center"
+      className="rounded-[var(--pq-radius-card)] border p-6 text-center"
       style={{
         borderColor: "var(--pq-ivory-line)",
         background: "var(--pq-card-veil)",
@@ -419,7 +419,7 @@ function LoadFailure({ onRetry }: { onRetry: () => void }) {
       <button
         type="button"
         onClick={onRetry}
-        className="mt-3 rounded-[2px] border px-4 py-2 font-mono text-pq-caption text-[var(--pq-bronze-light)] transition-colors hover:bg-[var(--pq-card-veil-strong)]"
+        className="mt-3 rounded-[var(--pq-radius-card)] border px-4 py-2 font-mono text-pq-caption text-[var(--pq-bronze-light)] transition-colors hover:bg-[var(--pq-card-veil-strong)]"
         style={{ borderColor: "var(--pq-ivory-line)" }}
       >
         {t("journal.page.retry")}
@@ -447,7 +447,7 @@ function FeedRetryStrip({
   return (
     <div
       role="status"
-      className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[2px] border px-4 py-3"
+      className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[var(--pq-radius-card)] border px-4 py-3"
       style={{
         borderColor: "var(--pq-ivory-line)",
         background: "var(--pq-card-veil)",
@@ -459,7 +459,7 @@ function FeedRetryStrip({
       <button
         type="button"
         onClick={onRetry}
-        className="rounded-[2px] border px-4 py-1.5 font-mono text-pq-caption text-[var(--pq-bronze-light)] transition-colors hover:bg-[var(--pq-card-veil-strong)]"
+        className="rounded-[var(--pq-radius-card)] border px-4 py-1.5 font-mono text-pq-caption text-[var(--pq-bronze-light)] transition-colors hover:bg-[var(--pq-card-veil-strong)]"
         style={{ borderColor: "var(--pq-ivory-line)" }}
       >
         {t("journal.page.retry")}
@@ -472,7 +472,7 @@ function EmptyState() {
   const t = useT();
   return (
     <div
-      className="rounded-[2px] border px-6 py-12 text-center"
+      className="rounded-[var(--pq-radius-card)] border px-6 py-12 text-center"
       style={{
         borderColor: "var(--pq-ivory-line)",
         background: "var(--pq-card-veil)",
@@ -497,7 +497,7 @@ function EmptyState() {
       </Caption>
       <Link
         href="/portfolio"
-        className="mt-6 inline-flex items-center gap-2 rounded-[2px] border px-5 py-2.5 font-mono text-pq-caption text-[var(--pq-bronze-light)] transition-colors hover:bg-[var(--pq-card-veil-strong)]"
+        className="mt-6 inline-flex items-center gap-2 rounded-[var(--pq-radius-card)] border px-5 py-2.5 font-mono text-pq-caption text-[var(--pq-bronze-light)] transition-colors hover:bg-[var(--pq-card-veil-strong)]"
         style={{ borderColor: "var(--pq-ivory-line)" }}
       >
         <Briefcase className="h-3.5 w-3.5" aria-hidden="true" />
@@ -511,7 +511,7 @@ function EmptyState() {
 function FilterEmptyState({ filter }: { filter: TimelineFilter }) {
   return (
     <div
-      className="rounded-[2px] border px-6 py-10 text-center"
+      className="rounded-[var(--pq-radius-card)] border px-6 py-10 text-center"
       style={{
         borderColor: "var(--pq-ivory-line)",
         background: "var(--pq-card-veil)",
@@ -557,7 +557,7 @@ function FilterChips({
             type="button"
             onClick={() => onChange(v)}
             aria-pressed={active}
-            className="rounded-[2px] border px-3 py-1.5 font-mono text-pq-caption transition-colors"
+            className="rounded-[var(--pq-radius-card)] border px-3 py-1.5 font-mono text-pq-caption transition-colors"
             style={{
               borderColor: active
                 ? "var(--pq-bronze)"
@@ -590,7 +590,7 @@ function CaptureLinks({ className }: { className: string }) {
     <div className={`flex flex-wrap items-center gap-x-5 gap-y-3 ${className}`}>
       <Link
         href="/journal/import?tab=image"
-        className="inline-flex min-h-[44px] items-center rounded-[2px] border border-[var(--pq-bronze)] px-4 font-mono text-pq-eyebrow text-[var(--pq-bronze-light)] transition-colors hover:bg-[var(--pq-bronze)]/10"
+        className="inline-flex min-h-[44px] items-center rounded-[var(--pq-radius-card)] border border-[var(--pq-bronze)] px-4 font-mono text-pq-eyebrow text-[var(--pq-bronze-light)] transition-colors hover:bg-[var(--pq-bronze)]/10"
       >
         {t("journal.import.captureLink")}
       </Link>
@@ -821,7 +821,7 @@ function JournalContent() {
                   ) : (
                     <div
                       key={entry.id}
-                      className="rounded-[2px] border px-4 sm:px-5"
+                      className="rounded-[var(--pq-radius-card)] border px-4 sm:px-5"
                       style={{
                         borderColor: "var(--pq-ivory-line)",
                         background: "var(--pq-card-veil)",

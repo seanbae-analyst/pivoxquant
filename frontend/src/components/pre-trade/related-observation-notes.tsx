@@ -73,7 +73,7 @@ export function RelatedObservationNotes({
     <section
       aria-label="이 종목에 대한 내 관찰 노트"
       data-testid="related-observation-notes"
-      className="rounded-[2px] border px-4 py-3"
+      className="rounded-[var(--pq-radius-card)] border px-4 py-3"
       style={{
         borderColor: "var(--pq-ivory-line)",
         background: "var(--pq-card-veil)",

@@ -94,7 +94,7 @@ export function AiReadOffer<R>({
         onClick={run}
         disabled={!consent || busy}
         aria-disabled={!consent || busy}
-        className="pq-ink-btn-ghost mt-3 px-4 text-pq-mono-sm uppercase tracking-[0.22em] disabled:opacity-30 disabled:cursor-not-allowed"
+        className="pq-ink-btn-ghost mt-3 px-4 text-pq-mono-sm uppercase tracking-[0.01em] disabled:opacity-30 disabled:cursor-not-allowed"
         data-testid="ai-read-run"
       >
         {busy ? t("aiRead.reading") : t("aiRead.button")}

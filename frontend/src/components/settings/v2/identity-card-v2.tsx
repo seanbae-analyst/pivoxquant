@@ -58,7 +58,7 @@ export function SettingsIdentityCardV2({
       style={{
         background: "rgba(255,255,255,0.02)",
         border: "1px solid var(--pq-ivory-line)",
-        borderRadius: 4,
+        borderRadius: "var(--pq-radius-card)",
         padding: 24,
         position: "relative",
       }}
@@ -183,7 +183,7 @@ export function SettingsIdentityCardV2({
                     ? "var(--pq-bronze)"
                     : "rgba(245,240,232,0.55)",
                   background: "transparent",
-                  borderRadius: 2,
+                  borderRadius: "var(--pq-radius-card)",
                   padding: "4px 10px",
                   cursor: "pointer",
                 }}

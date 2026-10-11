@@ -33,7 +33,7 @@ export function AuthWakeNotice() {
         <button
           type="button"
           onClick={retryAuth}
-          className="min-h-[44px] rounded-[2px] border px-4"
+          className="min-h-[44px] rounded-[var(--pq-radius-card)] border px-4"
           style={{
             borderColor: "rgba(var(--pq-bronze-rgb), 0.45)",
             color: "var(--pq-bronze)",

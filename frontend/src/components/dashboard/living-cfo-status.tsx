@@ -234,7 +234,7 @@ function LayerDot({
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center gap-1.5 text-pq-caption px-1 py-0.5 rounded-[2px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(184,149,106,0.4)]"
+      className="flex items-center gap-1.5 text-pq-caption px-1 py-0.5 rounded-[var(--pq-radius-card)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(184,149,106,0.4)]"
       style={{ color, background: "transparent" }}
       title={layer.summary}
       aria-label={`${layer.id}단계 ${layer.name} — ${READINESS_LABEL[layer.state]}`}
@@ -304,7 +304,7 @@ function StatusModal({
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 8, opacity: 0 }}
         transition={{ duration: PQ_DUR_FAST, ease: PQ_EASE }}
-        className="w-full max-w-lg bg-[var(--pq-ink)] border border-[rgba(245,240,232,0.12)] rounded-[2px] p-6"
+        className="w-full max-w-lg bg-[var(--pq-ink)] border border-[rgba(245,240,232,0.12)] rounded-[var(--pq-radius-card)] p-6"
       >
         <div className="flex items-start justify-between mb-4">
           <div>
@@ -340,7 +340,7 @@ function StatusModal({
               <li
                 key={l.id}
                 ref={focused ? focusedRowRef : null}
-                className="flex items-start gap-3 p-3 rounded-[2px] border transition-colors"
+                className="flex items-start gap-3 p-3 rounded-[var(--pq-radius-card)] border transition-colors"
                 style={{
                   borderColor: focused
                     ? "rgba(184,149,106,0.42)"

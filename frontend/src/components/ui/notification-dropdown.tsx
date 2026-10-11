@@ -154,7 +154,7 @@ export function NotificationDropdown() {
         <div>
           <div
             className="text-pq-eyebrow uppercase"
-            style={{ letterSpacing: "0.2em", color: "var(--pq-muted)" }}
+            style={{ letterSpacing: "0.01em", color: "var(--pq-muted)" }}
           >
             {t("topbar.notifications")}
           </div>
@@ -263,7 +263,7 @@ export function NotificationDropdown() {
                   )}
                   <p
                     className="mt-1 text-pq-mono-sm uppercase tabular-nums"
-                    style={{ letterSpacing: "0.12em", color: "var(--pq-muted)" }}
+                    style={{ letterSpacing: "0.01em", color: "var(--pq-muted)" }}
                   >
                     {relativeTime(n.created_at, locale, { verbose: true })}
                   </p>

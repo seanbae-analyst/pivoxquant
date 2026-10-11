@@ -121,7 +121,7 @@ export function ProfileDropdown() {
               style={{
                 border: "0.5px solid var(--pq-bronze)",
                 color: "var(--pq-bronze)",
-                letterSpacing: "0.2em",
+                letterSpacing: "0.01em",
                 textTransform: "uppercase",
               }}
             >
@@ -319,7 +319,7 @@ function ShortcutsModal({ onClose }: { onClose: () => void }) {
         >
           <div
             className="text-pq-eyebrow uppercase"
-            style={{ letterSpacing: "0.2em", color: "var(--pq-muted)" }}
+            style={{ letterSpacing: "0.01em", color: "var(--pq-muted)" }}
           >
             {t("profileMenu.shortcutsKicker")}
           </div>
@@ -352,7 +352,7 @@ function ShortcutsModal({ onClose }: { onClose: () => void }) {
             type="button"
             onClick={onClose}
             className="text-xs uppercase underline underline-offset-4"
-            style={{ letterSpacing: "0.18em", color: "var(--pq-bronze)" }}
+            style={{ letterSpacing: "0.01em", color: "var(--pq-bronze)" }}
           >
             {t("profileMenu.close")}
           </button>

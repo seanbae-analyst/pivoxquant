@@ -146,7 +146,7 @@ export default function ThreeSteps() {
                   style={{
                     color: "var(--pq-bronze)",
                     fontSize: "var(--pq-text-caption)",
-                    letterSpacing: "0.22em",
+                    letterSpacing: "0.01em",
                   }}
                 >
                   {s.numeral}

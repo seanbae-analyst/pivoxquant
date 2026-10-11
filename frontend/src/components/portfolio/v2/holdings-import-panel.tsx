@@ -262,7 +262,7 @@ export function closePayload(absent: HoldingsHeld[], closeIds: number[]): number
 }
 
 const inputCls =
-  "w-full bg-transparent px-2 py-1 font-mono outline-none text-[var(--pq-ivory)] border rounded-[2px] focus:border-[var(--pq-bronze)]";
+  "w-full bg-transparent px-2 py-1 font-mono outline-none text-[var(--pq-ivory)] border rounded-[var(--pq-radius-card)] focus:border-[var(--pq-bronze)]";
 const small = { fontSize: "var(--pq-text-mono-sm)" } as const;
 
 function fmtQty(n: number) {
@@ -695,7 +695,7 @@ function AbsentHoldings({ absent, closeIds, onChange }: {
           return (
             <div
               key={h.id}
-              className="rounded-[2px] border p-3"
+              className="rounded-[var(--pq-radius-card)] border p-3"
               style={{ borderColor: closing ? "var(--pq-bronze)" : "var(--pq-ivory-line)" }}
               data-testid="holdings-absent-row"
             >
@@ -747,7 +747,7 @@ function CaptureGuide() {
   const summary = { ...small, color: "var(--pq-ivory-mid)", cursor: "pointer" };
   return (
     <div className="mt-2 space-y-2" data-testid="holdings-capture-guide">
-      <details className="rounded-[2px] border px-3 py-2" style={box}>
+      <details className="rounded-[var(--pq-radius-card)] border px-3 py-2" style={box}>
         <summary className="font-mono" style={summary}>{k("tossToggle")}</summary>
         <p className="mt-2 font-serif" style={{ ...text, margin: 0, color: "var(--pq-ivory)" }}>{k("toss")}</p>
         <figure className="mt-2" style={{ margin: 0 }}>
@@ -773,7 +773,7 @@ function CaptureGuide() {
         </figure>
         <p className="mt-2 font-serif" style={{ ...text, margin: 0 }}>{k("tossAlt")}</p>
       </details>
-      <details className="rounded-[2px] border px-3 py-2" style={box}>
+      <details className="rounded-[var(--pq-radius-card)] border px-3 py-2" style={box}>
         <summary className="font-mono" style={summary}>{k("foreignToggle")}</summary>
         <p className="mt-2 font-serif" style={{ ...text, margin: 0 }}>{t("dashboard.portfolio.holdingsImport.guideForeign")}</p>
       </details>
@@ -830,7 +830,7 @@ function HoldingReviewRow({
 
   return (
     <div
-      className="rounded-[2px] border p-3"
+      className="rounded-[var(--pq-radius-card)] border p-3"
       style={{ borderColor: !skip && issues.length ? "var(--pq-bronze)" : "var(--pq-ivory-line)", opacity: skip ? 0.5 : 1 }}
       data-testid="holdings-review-row"
     >

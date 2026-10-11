@@ -189,7 +189,7 @@ export function DataStaleBanner() {
         />
         <div className="flex-1 min-w-0">
           <p
-            className="font-mono uppercase tracking-[0.22em]"
+            className="font-mono uppercase tracking-[0.01em]"
             style={{
               fontSize: "var(--pq-text-caption)",
               color: "rgba(234, 179, 8, 0.85)",
@@ -212,7 +212,7 @@ export function DataStaleBanner() {
           onClick={handleDismiss}
           aria-label="알림 닫기"
           data-testid="data-stale-banner-dismiss"
-          className="shrink-0 rounded-sm border px-2 py-1 font-mono uppercase tracking-[0.18em] transition-colors hover:bg-white/5"
+          className="shrink-0 rounded-sm border px-2 py-1 font-mono uppercase tracking-[0.01em] transition-colors hover:bg-white/5"
           style={{
             fontSize: "var(--pq-text-eyebrow)",
             borderColor: "rgba(234, 179, 8, 0.35)",

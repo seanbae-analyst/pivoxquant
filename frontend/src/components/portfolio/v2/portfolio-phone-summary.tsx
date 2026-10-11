@@ -196,12 +196,12 @@ export function PortfolioPhoneSummary(props: PortfolioPhoneSummaryProps) {
           </div>
           <div aria-hidden className="mt-2 flex justify-between text-pq-caption text-[var(--pq-ivory-dim)]">
             <span className="inline-flex items-center gap-1.5">
-              <span className="block h-2 w-2 rounded-[2px]" style={{ background: "var(--pq-bronze)" }} />
+              <span className="block h-2 w-2 rounded-[var(--pq-radius-card)]" style={{ background: "var(--pq-bronze)" }} />
               국내 {domestic}%
             </span>
             <span className="inline-flex items-center gap-1.5">
               해외 {100 - domestic}%
-              <span className="block h-2 w-2 rounded-[2px]" style={{ background: "var(--pq-bronze-deep)" }} />
+              <span className="block h-2 w-2 rounded-[var(--pq-radius-card)]" style={{ background: "var(--pq-bronze-deep)" }} />
             </span>
           </div>
         </div>

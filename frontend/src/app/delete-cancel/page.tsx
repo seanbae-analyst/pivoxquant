@@ -38,7 +38,7 @@ const CARD_STYLE: React.CSSProperties = {
   maxWidth: 460,
   background: "rgba(255,255,255,0.02)",
   border: "1px solid var(--pq-ivory-line, rgba(245,240,232,0.12))",
-  borderRadius: 4,
+  borderRadius: "var(--pq-radius-card)",
   padding: 32,
 };
 
@@ -76,7 +76,7 @@ function DeleteCancelInner() {
       className="font-mono uppercase"
       style={{
         fontSize: "var(--pq-text-eyebrow)",
-        letterSpacing: "0.22em",
+        letterSpacing: "0.01em",
         color: "var(--pq-bronze)",
         marginBottom: 16,
       }}
@@ -148,7 +148,7 @@ function DeleteCancelInner() {
             className="font-mono uppercase"
             style={{
               fontSize: "var(--pq-text-eyebrow)",
-              letterSpacing: "0.18em",
+              letterSpacing: "0.01em",
               color: "var(--pq-bronze)",
               textDecoration: "none",
               borderBottom: "1px solid rgba(184,149,106,0.4)",

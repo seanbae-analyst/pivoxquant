@@ -197,7 +197,7 @@ function RecordCardBody() {
 
   return (
     <section
-      className="mx-3 mt-6 rounded-[2px] border px-4 pt-4 pb-4"
+      className="mx-3 mt-6 rounded-[var(--pq-radius-card)] border px-4 pt-4 pb-4"
       style={{
         borderColor: "var(--pq-ivory-line)",
         background: "var(--pq-card-veil)",
@@ -210,7 +210,7 @@ function RecordCardBody() {
           className="font-serif uppercase"
           style={{
             fontSize: "var(--pq-text-eyebrow)",
-            letterSpacing: "0.22em",
+            letterSpacing: "0.01em",
             color: "rgba(184, 149, 106, 0.78)",
           }}
         >
@@ -220,7 +220,7 @@ function RecordCardBody() {
           className="font-mono uppercase"
           style={{
             fontSize: "var(--pq-text-kicker)",
-            letterSpacing: "0.18em",
+            letterSpacing: "0.01em",
             color: "var(--pq-ivory-dim)",
           }}
         >
@@ -258,7 +258,7 @@ function RecordCardBody() {
                 className="font-sans uppercase"
                 style={{
                   fontSize: "var(--pq-text-kicker)",
-                  letterSpacing: "0.14em",
+                  letterSpacing: "0.01em",
                   color: "var(--pq-ivory-dim)",
                 }}
               >
@@ -319,7 +319,7 @@ function RecordCardBody() {
                 className="font-sans uppercase"
                 style={{
                   fontSize: "var(--pq-text-kicker)",
-                  letterSpacing: "0.14em",
+                  letterSpacing: "0.01em",
                   color: "var(--pq-ivory-dim)",
                   margin: 0,
                 }}
@@ -374,7 +374,7 @@ function CountCell({ label, value }: { label: string; value: number }) {
         className="font-sans uppercase"
         style={{
           fontSize: "var(--pq-text-kicker)",
-          letterSpacing: "0.14em",
+          letterSpacing: "0.01em",
           color: "rgba(184, 149, 106, 0.78)",
         }}
       >

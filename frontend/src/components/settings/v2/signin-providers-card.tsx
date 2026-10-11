@@ -47,7 +47,7 @@ const PILL_LINKED: React.CSSProperties = {
   fontSize: "var(--pq-text-eyebrow)",
   border: "1px solid rgba(184,149,106,0.15)",
   color: "var(--pq-bronze)",
-  borderRadius: 2,
+  borderRadius: "var(--pq-radius-card)",
   marginLeft: 6,
 };
 const PILL_DIM: React.CSSProperties = {
@@ -150,7 +150,7 @@ export function SignInProvidersCard({
       style={{
         background: "rgba(255,255,255,0.02)",
         border: "1px solid var(--pq-ivory-line)",
-        borderRadius: 4,
+        borderRadius: "var(--pq-radius-card)",
         padding: 24,
         position: "relative",
       }}

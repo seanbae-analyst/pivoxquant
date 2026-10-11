@@ -171,7 +171,7 @@ function BottomTab({
           className="font-serif uppercase"
           style={{
             fontSize: "var(--pq-text-eyebrow)",
-            letterSpacing: "0.14em",
+            letterSpacing: "0.01em",
             color: active ? "var(--pq-ivory)" : "rgba(245, 240, 232, 0.55)",
           }}
         >

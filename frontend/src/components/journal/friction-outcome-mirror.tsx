@@ -149,7 +149,7 @@ export function FrictionOutcomeMirror() {
         variants={fadeUp}
         initial="hidden"
         animate="visible"
-        className="rounded-[2px] border p-5 sm:p-6"
+        className="rounded-[var(--pq-radius-card)] border p-5 sm:p-6"
         style={{
           borderColor: "var(--pq-ivory-line)",
           background: "var(--pq-card-veil)",
@@ -174,7 +174,7 @@ export function FrictionOutcomeMirror() {
       variants={fadeUp}
       initial="hidden"
       animate="visible"
-      className="rounded-[2px] border p-5 sm:p-6"
+      className="rounded-[var(--pq-radius-card)] border p-5 sm:p-6"
       style={{
         borderColor: "var(--pq-ivory-line)",
         background: "var(--pq-card-veil)",

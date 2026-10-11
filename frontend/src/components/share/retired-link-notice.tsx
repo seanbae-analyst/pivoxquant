@@ -31,7 +31,7 @@ export function RetiredLinkNotice() {
           className="font-mono uppercase"
           style={{
             fontSize: "var(--pq-text-eyebrow)",
-            letterSpacing: "0.22em",
+            letterSpacing: "0.01em",
             color: "var(--pq-bronze)",
           }}
         >
@@ -69,7 +69,7 @@ export function RetiredLinkNotice() {
           className="mt-2 font-mono uppercase"
           style={{
             fontSize: "var(--pq-text-eyebrow)",
-            letterSpacing: "0.18em",
+            letterSpacing: "0.01em",
             color: "var(--pq-bronze)",
           }}
         >

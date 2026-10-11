@@ -302,7 +302,7 @@ export default function OAuthFinalizePage() {
             className="font-mono"
             style={{
               fontSize: "var(--pq-text-micro)",
-              letterSpacing: "0.18em",
+              letterSpacing: "0.01em",
               textTransform: "uppercase",
               color: "var(--pq-bronze, #B8956A)",
             }}
@@ -397,9 +397,9 @@ export default function OAuthFinalizePage() {
                 : "rgba(245,240,232,0.40)",
               fontFamily: "var(--pq-font-mono, 'JetBrains Mono', monospace)",
               fontSize: "var(--pq-text-eyebrow)",
-              letterSpacing: "0.18em",
+              letterSpacing: "0.01em",
               textTransform: "uppercase",
-              borderRadius: 2,
+              borderRadius: "var(--pq-radius-card)",
               cursor: canSubmit ? "pointer" : "not-allowed",
               pointerEvents: canSubmit ? "auto" : "none",
               transition: "background-color 200ms cubic-bezier(0.16,1,0.3,1)",

@@ -34,7 +34,7 @@ function PrimaryCta({
   return (
     <Link
       href={href}
-      className="flex items-center justify-between gap-3 rounded-[2px] border px-5 py-4 transition-colors hover:bg-[var(--pq-card-veil-strong)]"
+      className="flex items-center justify-between gap-3 rounded-[var(--pq-radius-card)] border px-5 py-4 transition-colors hover:bg-[var(--pq-card-veil-strong)]"
       style={{
         borderColor: "var(--pq-bronze)",
         background: "var(--pq-card-veil)",
@@ -66,7 +66,7 @@ function SecondaryCta({
   return (
     <Link
       href={href}
-      className="flex items-center justify-between gap-3 rounded-[2px] border px-5 py-4 transition-colors hover:bg-[var(--pq-card-veil-strong)]"
+      className="flex items-center justify-between gap-3 rounded-[var(--pq-radius-card)] border px-5 py-4 transition-colors hover:bg-[var(--pq-card-veil-strong)]"
       style={{
         borderColor: "var(--pq-ivory-line)",
         background: "var(--pq-card-veil)",
@@ -114,7 +114,7 @@ export default function SupportPage() {
             id="support-channels-heading"
             className="font-sans text-pq-eyebrow uppercase"
             style={{
-              letterSpacing: "0.2em",
+              letterSpacing: "0.01em",
               color: "var(--pq-bronze)",
               fontWeight: 500,
               marginBottom: 12,
@@ -134,7 +134,7 @@ export default function SupportPage() {
             </div>
           ) : (
             <div
-              className="rounded-[2px] border p-5"
+              className="rounded-[var(--pq-radius-card)] border p-5"
               style={{
                 borderColor: "var(--pq-ivory-line)",
                 background: "var(--pq-card-veil)",
@@ -149,7 +149,7 @@ export default function SupportPage() {
               </p>
               <Link
                 href="/login"
-                className="mt-4 inline-flex items-center gap-2 rounded-[2px] border px-5 py-2.5 font-mono text-pq-caption uppercase tracking-[0.16em] transition-colors hover:bg-[var(--pq-card-veil-strong)]"
+                className="mt-4 inline-flex items-center gap-2 rounded-[var(--pq-radius-card)] border px-5 py-2.5 font-mono text-pq-caption uppercase tracking-[0.01em] transition-colors hover:bg-[var(--pq-card-veil-strong)]"
                 style={{ borderColor: "var(--pq-bronze)", color: "var(--pq-bronze)" }}
               >
                 로그인

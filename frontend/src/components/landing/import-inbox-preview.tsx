@@ -94,7 +94,7 @@ const PARSED: readonly ParsedRow[] = [
 const FIELD_LABEL_STYLE = {
   color: "var(--pq-ivory-faint)",
   fontSize: "var(--pq-text-eyebrow)",
-  letterSpacing: "0.18em",
+  letterSpacing: "0.01em",
 } as const;
 
 const FIELD_VALUE_STYLE = {
@@ -169,7 +169,7 @@ export default function ImportInboxPreview() {
                     style={{
                       color: "var(--pq-bronze)",
                       fontSize: "var(--pq-text-caption)",
-                      letterSpacing: "0.22em",
+                      letterSpacing: "0.01em",
                     }}
                   >
                     {["I", "II", "III", "IV"][i]}
@@ -268,7 +268,7 @@ export default function ImportInboxPreview() {
                   style={{
                     color: "var(--pq-bronze)",
                     fontSize: "var(--pq-text-eyebrow)",
-                    letterSpacing: "0.22em",
+                    letterSpacing: "0.01em",
                   }}
                 >
                   {t("landing.inbox.parsedLabel")}

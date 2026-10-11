@@ -73,7 +73,7 @@ export function DisclaimerBanner({
   return (
     <div
       className={cn(
-        "rounded-[3px] transition-colors duration-300",
+        "rounded-[var(--pq-radius-card)] transition-colors duration-300",
         isDark
           ? "border border-[rgba(245,240,232,0.12)] border-t-[var(--pq-bronze-light)] border-t-[1.5px] bg-[rgba(255,255,255,0.02)]"
           : "rounded-xl border border-slate-200 border-t-slate-400 border-t-[1.5px] bg-slate-50",

@@ -22,7 +22,7 @@ import { revealRouteContent } from "@/components/layout/phone-route-frame";
 
 const CARD_ROWS = [0, 1, 2] as const;
 /** Square-ish corners like the cards; no shimmer under reduced motion. */
-const BAR = "rounded-[2px] motion-reduce:animate-none!";
+const BAR = "rounded-[var(--pq-radius-card)] motion-reduce:animate-none!";
 
 export function RouteSkeleton() {
   // Cleanup runs in the commit that removes the skeleton, before paint.
@@ -48,7 +48,7 @@ export function RouteSkeleton() {
       {CARD_ROWS.map((i) => (
         <div
           key={i}
-          className="space-y-3 rounded-[2px] border border-[var(--pq-ivory-line)] bg-[var(--pq-card-veil)] p-5"
+          className="space-y-3 rounded-[var(--pq-radius-card)] border border-[var(--pq-ivory-line)] bg-[var(--pq-card-veil)] p-5"
         >
           <Skeleton className={`h-3 w-24 ${BAR}`} />
           <Skeleton className={`${i === 0 ? "h-16" : "h-10"} w-full ${BAR}`} />

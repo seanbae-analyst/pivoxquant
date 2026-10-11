@@ -85,7 +85,7 @@ export function WeeklyPulsePrompt() {
   return (
     <div
       role="status"
-      className="flex items-center justify-between gap-3 rounded-[2px] border px-4 py-3"
+      className="flex items-center justify-between gap-3 rounded-[var(--pq-radius-card)] border px-4 py-3"
       style={{
         borderColor: "var(--pq-ivory-line)",
         background: "var(--pq-card-veil)",

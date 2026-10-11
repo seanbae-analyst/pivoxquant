@@ -43,7 +43,7 @@ const CSV_BUTTON_STYLE: React.CSSProperties = {
   background: "transparent",
   color: "var(--pq-ivory, #f5f0e8)",
   fontSize: "var(--pq-text-eyebrow)",
-  borderRadius: 2,
+  borderRadius: "var(--pq-radius-card)",
   border: "1px solid var(--pq-bronze)",
   cursor: "pointer",
 };
@@ -285,7 +285,7 @@ export function PrivacyCardV2({
           style={{
             background: "rgba(255,255,255,0.02)",
             border: "1px solid var(--pq-ivory-line)",
-            borderRadius: 4,
+            borderRadius: "var(--pq-radius-card)",
             padding: 24,
             position: "relative",
           }}
@@ -360,7 +360,7 @@ export function PrivacyCardV2({
                     fontSize: "var(--pq-text-eyebrow)",
                     border: "1px solid rgba(184,149,106,0.15)",
                     color: "var(--pq-bronze)",
-                    borderRadius: 2,
+                    borderRadius: "var(--pq-radius-card)",
                   }}
                 >
                   항상 켜짐
@@ -381,7 +381,7 @@ export function PrivacyCardV2({
           style={{
             background: "rgba(255,255,255,0.02)",
             border: "1px solid var(--pq-ivory-line)",
-            borderRadius: 4,
+            borderRadius: "var(--pq-radius-card)",
             padding: 24,
             position: "relative",
           }}
@@ -470,7 +470,7 @@ export function PrivacyCardV2({
               background: "var(--pq-bronze)",
               color: "var(--pq-ink, #050505)",
               fontSize: "var(--pq-text-eyebrow)",
-              borderRadius: 2,
+              borderRadius: "var(--pq-radius-card)",
               border: "none",
               cursor: "pointer",
               marginTop: 12,
@@ -625,7 +625,7 @@ export function PrivacyCardV2({
         style={{
           background: "rgba(255,255,255,0.02)",
           border: `1px solid ${ERROR_BORDER}`,
-          borderRadius: 4,
+          borderRadius: "var(--pq-radius-card)",
           padding: 24,
           position: "relative",
         }}
@@ -700,7 +700,7 @@ export function PrivacyCardV2({
                 color: "var(--pq-bronze)",
                 border: "1px solid var(--pq-bronze)",
                 fontSize: "var(--pq-text-eyebrow)",
-                borderRadius: 2,
+                borderRadius: "var(--pq-radius-card)",
                 cursor: signingOut ? "not-allowed" : "pointer",
                 opacity: signingOut ? 0.5 : 1,
               }}

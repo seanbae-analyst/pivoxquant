@@ -35,7 +35,7 @@ export function FxAttribution({ style }: { style?: React.CSSProperties }) {
       data-testid="fx-attribution"
       style={{
         fontSize: "var(--pq-text-eyebrow)",
-        letterSpacing: "0.14em",
+        letterSpacing: "0.01em",
         color: "var(--pq-ivory-dim)",
         margin: 0,
         ...style,

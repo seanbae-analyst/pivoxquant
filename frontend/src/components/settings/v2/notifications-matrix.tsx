@@ -376,7 +376,7 @@ export function NotificationsMatrix({
       style={{
         background: "rgba(255,255,255,0.02)",
         border: "1px solid var(--pq-ivory-line)",
-        borderRadius: 4,
+        borderRadius: "var(--pq-radius-card)",
         padding: 0,
         overflowX: "auto",
       }}

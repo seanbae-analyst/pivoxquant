@@ -45,7 +45,7 @@ export default function Error({
         />
 
         <div
-          className="text-pq-mono-sm tracking-[0.22em] uppercase mb-4"
+          className="text-pq-mono-sm tracking-[0.01em] uppercase mb-4"
           style={{ color: "var(--pq-bronze)" }}
         >
           Something interrupted the observation

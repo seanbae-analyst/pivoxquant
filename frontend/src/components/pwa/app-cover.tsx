@@ -48,7 +48,7 @@ export function AppCover({ hint }: { hint?: string }) {
           style={{
             bottom: "clamp(28px, 5vh, 56px)",
             fontSize: "var(--pq-text-eyebrow)",
-            letterSpacing: "0.24em",
+            letterSpacing: "0.01em",
             color: "rgba(var(--pq-bronze-rgb), 0.80)",
           }}
         >

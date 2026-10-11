@@ -17,10 +17,10 @@ export function AiContentBadge({ className = "" }: { className?: string }) {
       className={`inline-flex items-center font-mono uppercase ${className}`}
       style={{
         fontSize: "var(--pq-text-mono-sm)",
-        letterSpacing: "0.16em",
+        letterSpacing: "0.01em",
         padding: "1px 6px",
         border: "1px solid var(--pq-bronze)",
-        borderRadius: 2,
+        borderRadius: "var(--pq-radius-card)",
         color: "var(--pq-bronze)",
       }}
       data-testid="ai-content-badge"

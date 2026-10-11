@@ -28,7 +28,7 @@ export function OneThingNudge({ data }: { data: MirrorHomeResponse }) {
   return (
     <section className="pl-3" style={{ borderLeft: "2px solid var(--pq-bronze)" }}>
       <div
-        className="text-[10.5px] uppercase tracking-[0.2em]"
+        className="text-[10.5px] uppercase tracking-[0.01em]"
         style={{ color: "var(--pq-bronze)" }}
       >
         한 가지만

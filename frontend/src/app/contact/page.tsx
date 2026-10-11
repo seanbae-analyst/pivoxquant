@@ -75,7 +75,7 @@ export default function ContactPage() {
           </p>
           <Link
             href="/docs"
-            className="inline-flex items-center gap-2 text-pq-caption uppercase tracking-[0.22em] text-[var(--pq-bronze)] hover:text-[var(--pq-ivory)]"
+            className="inline-flex items-center gap-2 text-pq-caption uppercase tracking-[0.01em] text-[var(--pq-bronze)] hover:text-[var(--pq-ivory)]"
           >
             <FileText className="h-3.5 w-3.5" />
             Read the docs
@@ -90,14 +90,14 @@ export default function ContactPage() {
           <div className="flex items-center justify-center gap-4 mt-4 flex-wrap">
             <Link
               href="/terms"
-              className="text-pq-mono-sm uppercase tracking-[0.22em] text-[var(--pq-bronze)] hover:text-[var(--pq-ivory)]"
+              className="text-pq-mono-sm uppercase tracking-[0.01em] text-[var(--pq-bronze)] hover:text-[var(--pq-ivory)]"
             >
               Terms
             </Link>
             <span className="text-[rgba(245,240,232,0.3)]">·</span>
             <Link
               href="/privacy"
-              className="text-pq-mono-sm uppercase tracking-[0.22em] text-[var(--pq-bronze)] hover:text-[var(--pq-ivory)]"
+              className="text-pq-mono-sm uppercase tracking-[0.01em] text-[var(--pq-bronze)] hover:text-[var(--pq-ivory)]"
             >
               Privacy
             </Link>
