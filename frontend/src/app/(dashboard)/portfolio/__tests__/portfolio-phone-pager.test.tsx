@@ -166,7 +166,7 @@ describe("/portfolio phone pager — vendor gate OFF (shipped default)", () => {
     const summary = screen.getByTestId("portfolio-phone-summary");
     expect(summary).toHaveTextContent("보유 2종목 · 취득가 기준");
     // 10 × 100 USD and 20 × 60,000 KRW, side by side — never added up.
-    expect(screen.getByTestId("portfolio-phone-summary-amount").textContent).toBe("USD 1,000 · KRW 1,200,000");
+    expect(screen.getByTestId("portfolio-phone-summary-amount").textContent).toBe("120만원 · $1,000");
 
     expect(screen.getByTestId("portfolio-cost-basis-note")).toBeInTheDocument();
     expect(screen.getByTestId("positions-cost-basis-note")).toBeInTheDocument();
@@ -214,7 +214,7 @@ describe("/portfolio phone pager — vendor gate ON", () => {
   it("shows the native NAV split and puts the curve on the 현황 page", async () => {
     await renderPage();
     expect(screen.getByTestId("portfolio-phone-summary")).toHaveTextContent("보유 2종목 · 평가액");
-    expect(screen.getByTestId("portfolio-phone-summary-amount").textContent).toBe("USD 1,500 · KRW 1,400,000");
+    expect(screen.getByTestId("portfolio-phone-summary-amount").textContent).toBe("140만원 · $1,500");
     const overview = screen.getByTestId("phone-page-overview");
     expect(within(overview).getByTestId("equity-curve-stub")).toBeInTheDocument();
     expect(within(overview).getByText("자산 흐름")).toBeInTheDocument();

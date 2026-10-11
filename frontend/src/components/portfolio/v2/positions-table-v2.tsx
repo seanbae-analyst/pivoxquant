@@ -19,7 +19,7 @@ import { useIsPhone } from "@/lib/use-phone";
 import { Sheet } from "@/components/ui/sheet";
 import { Caption, EditorialHead } from "@/components/ui/editorial";
 import { ChevronRight } from "lucide-react";
-import { fmtMoneyPlain, fmtPctSignedMinus, pctColor, priceDir, displayTicker, normalizeTicker } from "@/lib/format";
+import { fmtMoneyKo, fmtMoneyPlain, fmtPctSignedMinus, pctColor, priceDir, displayTicker, normalizeTicker } from "@/lib/format";
 import type { Position, TradeAction } from "@/components/portfolio/types";
 
 type SortKey =
@@ -831,6 +831,10 @@ function PhoneHoldings({
     );
   }
 
+  // Each row's weight bar is drawn against the largest holding, so the list
+  // reads as one bar chart; the printed % beside it is the true share.
+  const maxWeight = rows.reduce((m, r) => (Number.isFinite(r.weight) && r.weight > m ? r.weight : m), 0);
+
   return (
     <section aria-label="보유 종목" data-testid="positions-phone">
       <div className="flex items-baseline justify-between pb-2 text-pq-caption text-[var(--pq-ivory-dim)]">
@@ -847,6 +851,7 @@ function PhoneHoldings({
             key={r.raw.id}
             row={r}
             first={i === 0}
+            barRatio={maxWeight > 0 && Number.isFinite(r.weight) ? r.weight / maxWeight : 0}
             onAction={onAction}
             onObservationNote={onObservationNote}
             marketDataDisplay={marketDataDisplay}
@@ -900,12 +905,15 @@ function PctWithGlyph({ pct }: { pct: number }) {
 function PositionCard({
   row,
   first,
+  barRatio = 0,
   onAction,
   onObservationNote,
   marketDataDisplay = true,
 }: {
   row: DerivedPosition;
   first: boolean;
+  /** This row's weight ÷ the largest row's weight (0–1) — the bar length. */
+  barRatio?: number;
   onAction?: (action: TradeAction, position: Position) => void;
   onObservationNote?: (position: Position) => void;
   marketDataDisplay?: boolean;
@@ -927,35 +935,35 @@ function PositionCard({
     fn();
   };
 
+  // 2026-10-11 (CEO "너무 숫자만"): name and share on top, shares · average
+  // and the amount under them in the body face (not the terminal mono), and a
+  // thin bronze bar for the weight — the list reads as one bar chart. Bar per
+  // the dataviz mark spec: 4px, square at the baseline, 4px round data-end,
+  // on a hairline track; a single hue, so no categorical palette is needed.
+  const barPct = Math.max(0, Math.min(1, barRatio)) * 100;
   const summary = (
-    <>
-      <Monogram title={title} />
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-pq-lead font-medium text-[var(--pq-ivory)]">
-          {title}
-        </span>
-        <span className="mt-0.5 block truncate font-mono text-pq-caption tabular-nums text-[var(--pq-ivory-dim)]">
-          {fmtShares(p.shares)}주 · 평균 {fmtMoney(p.avgCost, cur)}
+    <span className="min-w-0 flex-1">
+      <span className="flex items-baseline justify-between gap-3">
+        <span className="truncate text-pq-lead font-medium text-[var(--pq-ivory)]">{title}</span>
+        <span className="shrink-0 text-pq-body font-medium tabular-nums text-[var(--pq-ivory)]">
+          {marketDataDisplay ? fmtMoneyKo(row.mv, cur, { compact: true }) : weightText}
         </span>
       </span>
-      <span className="shrink-0 text-right font-mono tabular-nums">
-        {marketDataDisplay ? (
-          <>
-            <span className="block text-pq-body text-[var(--pq-ivory)]">{fmtMoney(row.mv, cur)}</span>
-            <span className="mt-0.5 block text-pq-caption">
-              <PctWithGlyph pct={row.plPct} />
-            </span>
-          </>
-        ) : (
-          <>
-            <span className="block text-pq-body text-[var(--pq-ivory)]">{weightText}</span>
-            <span className="mt-0.5 block text-pq-caption text-[var(--pq-ivory-dim)]">
-              {fmtMoney(costAmount, cur)}
-            </span>
-          </>
-        )}
+      <span className="mt-0.5 flex items-baseline justify-between gap-3 text-pq-caption text-[var(--pq-ivory-dim)]">
+        <span className="truncate">
+          {fmtShares(p.shares)}주 · 평균 {fmtMoneyKo(p.avgCost, cur)}
+        </span>
+        <span className="shrink-0 tabular-nums">
+          {marketDataDisplay ? <PctWithGlyph pct={row.plPct} /> : fmtMoneyKo(costAmount, cur, { compact: true })}
+        </span>
       </span>
-    </>
+      <span aria-hidden className="mt-2 block h-1 w-full bg-[var(--pq-ivory-line)]" data-testid="position-card-bar">
+        <span
+          className="block h-full rounded-r-[4px]"
+          style={{ width: `${barPct}%`, background: "var(--pq-bronze)" }}
+        />
+      </span>
+    </span>
   );
 
   return (
@@ -964,7 +972,7 @@ function PositionCard({
       {!first && (
         <span
           aria-hidden
-          className="pointer-events-none absolute right-0 top-0 left-[64px] h-px bg-[var(--pq-ivory-line)]"
+          className="pointer-events-none absolute right-0 top-0 left-4 h-px bg-[var(--pq-ivory-line)]"
         />
       )}
       {hasActions ? (
@@ -975,7 +983,7 @@ function PositionCard({
           aria-expanded={sheetOpen}
           aria-label={`${title} — 기록 동작 열기`}
           data-testid="position-card-open"
-          className="flex min-h-[64px] w-full items-center gap-3 py-3 pl-4 pr-2 text-left transition-colors active:bg-[var(--pq-ivory-line-faint)] [-webkit-tap-highlight-color:transparent]"
+          className="flex min-h-[64px] w-full items-center gap-3 py-3.5 pl-4 pr-2 text-left transition-colors active:bg-[var(--pq-ivory-line-faint)] [-webkit-tap-highlight-color:transparent]"
         >
           {summary}
           <ChevronRight aria-hidden className="h-4 w-4 shrink-0 text-[var(--pq-ivory-dim)]" />
@@ -1009,17 +1017,17 @@ function PositionCard({
             data-testid="position-sheet-figures"
           >
             <SheetFigure label="수량" value={`${fmtShares(p.shares)}주`} />
-            <SheetFigure label="평균가" value={fmtMoney(p.avgCost, cur)} />
+            <SheetFigure label="평균가" value={fmtMoneyKo(p.avgCost, cur)} />
             {marketDataDisplay ? (
               <>
-                <SheetFigure label="현재가" value={fmtMoney(p.current, cur)} />
-                <SheetFigure label="평가액" value={fmtMoney(row.mv, cur)} />
+                <SheetFigure label="현재가" value={fmtMoneyKo(p.current, cur)} />
+                <SheetFigure label="평가액" value={fmtMoneyKo(row.mv, cur)} />
                 <SheetFigure label="손익률" value={<PctWithGlyph pct={row.plPct} />} />
                 <SheetFigure label={weightLabel(true)} value={weightText} />
               </>
             ) : (
               <>
-                <SheetFigure label="취득금액" value={fmtMoney(costAmount, cur)} />
+                <SheetFigure label="취득금액" value={fmtMoneyKo(costAmount, cur)} />
                 <SheetFigure label={weightLabel(false)} value={weightText} />
               </>
             )}
@@ -1047,7 +1055,7 @@ function SheetFigure({ label, value }: { label: string; value: React.ReactNode }
   return (
     <div className="min-w-0">
       <dt className="text-pq-caption text-[var(--pq-ivory-dim)]">{label}</dt>
-      <dd className="mt-0.5 truncate font-mono text-pq-body tabular-nums text-[var(--pq-ivory)]">
+      <dd className="mt-0.5 truncate text-pq-body font-medium tabular-nums text-[var(--pq-ivory)]">
         {value}
       </dd>
     </div>

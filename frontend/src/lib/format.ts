@@ -510,6 +510,46 @@ export function fmtMoneyPlain(
 }
 
 /**
+ * Money the way a Korean finance app prints it (2026-10-11, phone /portfolio).
+ *   fmtMoneyKo(72000, "KRW")                     →  "72,000원"
+ *   fmtMoneyKo(26_650_000, "KRW", {compact})     →  "2,665만원"
+ *   fmtMoneyKo(123_450_000, "KRW", {compact})    →  "1억 2,345만원"
+ *   fmtMoneyKo(8_500, "KRW", {compact})          →  "8,500원"   (under 1만 stays whole)
+ *   fmtMoneyKo(205, "USD")                       →  "$205"
+ *   fmtMoneyKo(176.2, "USD")                     →  "$176.20"  (cents only when there are cents)
+ *   fmtMoneyKo(34_830.4, "USD", {compact})       →  "$34,830"
+ *   fmtMoneyKo(-1200, "KRW")                     →  "−1,200원"  (U+2212)
+ *   fmtMoneyKo(null, "KRW")                      →  "—"
+ *
+ * `compact` rounds KRW to 만 — a summary figure, never a ledger cell; the
+ * exact won stays on the detail sheet (non-compact).
+ */
+export function fmtMoneyKo(
+  v: number | null | undefined,
+  currency: "USD" | "KRW",
+  opts: { compact?: boolean } = {},
+): string {
+  if (v == null || !Number.isFinite(v)) return "—";
+  const abs = Math.abs(v);
+  const sign = v < 0 ? "−" : "";
+  if (currency === "KRW") {
+    if (opts.compact && abs >= 1e4) {
+      const man = Math.round(abs / 1e4);
+      const eok = Math.floor(man / 1e4);
+      const rest = man % 1e4;
+      if (eok > 0) {
+        return `${sign}${eok.toLocaleString("ko-KR")}억${rest ? ` ${rest.toLocaleString("ko-KR")}만` : ""}원`;
+      }
+      return `${sign}${man.toLocaleString("ko-KR")}만원`;
+    }
+    return `${sign}${Math.round(abs).toLocaleString("ko-KR")}원`;
+  }
+  const cents = Math.round(abs * 100) % 100 !== 0;
+  const dp = !opts.compact && cents ? 2 : 0;
+  return `${sign}$${abs.toLocaleString("en-US", { minimumFractionDigits: dp, maximumFractionDigits: dp })}`;
+}
+
+/**
  * Like fmtMoneyPlain but with an EXPLICIT +/- sign for non-zero values.
  *   fmtMoneyPlainSigned(1234, "USD", 2)  →  "+USD 1,234.00"
  *   fmtMoneyPlainSigned(-1234, "USD", 2) →  "−USD 1,234.00" (U+2212)

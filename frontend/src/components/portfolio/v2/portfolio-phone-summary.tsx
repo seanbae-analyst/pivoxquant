@@ -23,12 +23,21 @@
  * USD and KRW are never added together: each currency keeps its own figure,
  * each on its own line. A slot with nothing true to print is dropped, never
  * shown as "USD 0".
+ *
+ * 2026-10-11 (CEO "너무 숫자만 … 있어보이게"): the figures are set the way a
+ * Korean finance app sets a balance — won first, 만/억 units ("2,665만원",
+ * "$34,830"), proportional sans digits instead of the terminal mono. Under
+ * them, when the book holds both currencies and an FX rate is known, one
+ * meter shows the 국내(KRW) / 해외(USD) split — bronze fill on the
+ * bronze-deep track (dataviz meter form; ΔE 22 normal / 21.7 protan, track
+ * below 3:1 so both shares are printed beside it). The split converts only to
+ * compare shares; the two amounts above are still never summed.
  */
 
 import * as React from "react";
 import { Plus } from "lucide-react";
 import { useReducedMotion } from "motion/react";
-import { fmtMoneyPlain } from "@/lib/format";
+import { fmtMoneyKo } from "@/lib/format";
 import { PQ_DUR_FAST, PQ_EASE } from "@/lib/motion";
 
 interface PortfolioPhoneSummaryProps {
@@ -42,6 +51,8 @@ interface PortfolioPhoneSummaryProps {
   /** Single display-currency NAV (FX-converted server-side). Gate ON only. */
   nav?: number;
   navCurrency?: "USD" | "KRW";
+  /** USD→KRW, for the 국내/해외 split only. Absent → no split is drawn. */
+  fxRate?: number | null;
   onAddPosition: () => void;
   /** The current page is scrolled — fold the title into one line. */
   collapsed?: boolean;
@@ -52,7 +63,7 @@ const positive = (v: number | undefined): v is number =>
 
 const EASE_CSS = `cubic-bezier(${PQ_EASE.join(", ")})`;
 
-/** ["USD X", "KRW Y"] — one figure per currency, or null when none is real. */
+/** ["2,665만원", "$34,830"] — one figure per currency (won first), or null when none is real. */
 export function summaryAmounts({
   marketDataDisplay,
   costUsd,
@@ -68,17 +79,42 @@ export function summaryAmounts({
   const usd = marketDataDisplay ? navUsd : costUsd;
   const krw = marketDataDisplay ? navKrw : costKrw;
   const parts: string[] = [];
-  if (positive(usd)) parts.push(fmtMoneyPlain(usd, "USD", 0));
-  if (positive(krw)) parts.push(fmtMoneyPlain(krw, "KRW", 0));
+  if (positive(krw)) parts.push(fmtMoneyKo(krw, "KRW", { compact: true }));
+  if (positive(usd)) parts.push(fmtMoneyKo(usd, "USD", { compact: true }));
   if (parts.length > 0) return parts;
-  if (marketDataDisplay && positive(nav)) return [fmtMoneyPlain(nav, navCurrency, 0)];
+  if (marketDataDisplay && positive(nav)) return [fmtMoneyKo(nav, navCurrency, { compact: true })];
   return null;
+}
+
+/**
+ * 국내(KRW) share of the book in percent — or null unless both currencies
+ * hold something and the FX rate is real (a one-currency book is 100/0 and
+ * needs no meter; a missing rate is never guessed).
+ */
+export function domesticShare({
+  marketDataDisplay,
+  costUsd,
+  costKrw,
+  navUsd,
+  navKrw,
+  fxRate,
+}: Pick<
+  PortfolioPhoneSummaryProps,
+  "marketDataDisplay" | "costUsd" | "costKrw" | "navUsd" | "navKrw" | "fxRate"
+>): number | null {
+  const usd = marketDataDisplay ? navUsd : costUsd;
+  const krw = marketDataDisplay ? navKrw : costKrw;
+  if (!positive(usd) || !positive(krw) || !positive(fxRate ?? undefined)) return null;
+  const krwInUsd = krw / (fxRate as number);
+  return (krwInUsd / (krwInUsd + usd)) * 100;
 }
 
 export function PortfolioPhoneSummary(props: PortfolioPhoneSummaryProps) {
   const { marketDataDisplay, positionCount, loading, onAddPosition, collapsed = false } = props;
   const reduce = useReducedMotion();
   const amounts = loading ? null : summaryAmounts(props);
+  const share = loading ? null : domesticShare(props);
+  const domestic = share == null ? 0 : Math.round(share);
   const empty = !loading && positionCount === 0;
   const basis = marketDataDisplay ? "평가액" : "취득가 기준";
   const fold = reduce
@@ -123,7 +159,7 @@ export function PortfolioPhoneSummary(props: PortfolioPhoneSummaryProps) {
         </div>
       ) : amounts ? (
         <div
-          className="pq-pf-summary-amount font-mono tabular-nums text-[var(--pq-ivory)]"
+          className="pq-pf-summary-amount font-semibold text-[var(--pq-ivory)]"
           style={{ transition: fold }}
           data-testid="portfolio-phone-summary-amount"
         >
@@ -139,12 +175,44 @@ export function PortfolioPhoneSummary(props: PortfolioPhoneSummaryProps) {
         </div>
       ) : null}
 
+      {/* 국내 / 해외 — one ratio, so a meter, not a pie. Labels carry both
+          shares in text tokens; the swatches carry identity. */}
+      {share != null && !collapsed ? (
+        <div
+          className="mt-4"
+          role="img"
+          aria-label={`국내 ${domestic}% · 해외 ${100 - domestic}%`}
+          data-testid="portfolio-phone-split"
+        >
+          <div aria-hidden className="flex h-1.5 w-full gap-[2px]">
+            <span
+              className="block h-full rounded-l-[4px]"
+              style={{ width: `${share}%`, background: "var(--pq-bronze)" }}
+            />
+            <span
+              className="block h-full flex-1 rounded-r-[4px]"
+              style={{ background: "var(--pq-bronze-deep)" }}
+            />
+          </div>
+          <div aria-hidden className="mt-2 flex justify-between text-pq-caption text-[var(--pq-ivory-dim)]">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="block h-2 w-2 rounded-[2px]" style={{ background: "var(--pq-bronze)" }} />
+              국내 {domestic}%
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              해외 {100 - domestic}%
+              <span className="block h-2 w-2 rounded-[2px]" style={{ background: "var(--pq-bronze-deep)" }} />
+            </span>
+          </div>
+        </div>
+      ) : null}
+
       <style jsx>{`
         .pq-pf-summary-amount {
           margin-top: 6px;
-          font-size: var(--pq-text-avatar);
-          line-height: 1.2;
-          letter-spacing: -0.01em;
+          font-size: 34px;
+          line-height: 1.18;
+          letter-spacing: -0.02em;
         }
         .pq-pf-summary-amount :global(.pq-pf-summary-figure) {
           display: block;
@@ -155,9 +223,9 @@ export function PortfolioPhoneSummary(props: PortfolioPhoneSummaryProps) {
         }
         .pq-pf-summary[data-collapsed="true"] .pq-pf-summary-amount {
           margin-top: 2px;
-          font-size: var(--pq-text-mono-md);
+          font-size: 17px;
           line-height: 1.35;
-          letter-spacing: 0;
+          letter-spacing: -0.01em;
         }
         .pq-pf-summary[data-collapsed="true"] .pq-pf-summary-amount :global(.pq-pf-summary-figure) {
           display: inline;
