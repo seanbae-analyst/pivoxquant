@@ -11,11 +11,14 @@ through two endpoints (``routes/holdings_import.py``):
                ``needs_confirm``, anything unproven is ``needs_ticker``. One
                addition: a US symbol must also be in the US master
                (``us_stock_registry``), because commit checks it too — preview
-               never offers a ticker that commit would refuse.
+               never offers a ticker that commit would refuse. It also returns
+               every holding the user has now (``held``) so the client can
+               list the ones the capture does not show.
 
 ``commit``   — writes the reviewed rows in one transaction. Every row is
                validated first; any bad row is a 400 naming the row and field
-               and nothing is written.
+               and nothing is written. ``close`` (optional) names holdings to
+               take off because the new capture no longer shows them.
 
 Decisions (and why):
 
@@ -62,6 +65,21 @@ Decisions (and why):
 * **Race.** A concurrent insert of the same ticker (unique user+ticker) rolls
   the whole batch back → 409 ``POSITION_RACE``. Retrying the merge silently
   would apply a mode the user chose while the position did not exist yet.
+* **Resync — holdings the capture no longer shows** (2026-10-11). The client
+  lists held positions with no row in the capture; each stays unless the user
+  marks it 정리됨, because a capture cut short by scrolling looks exactly like
+  a sold holding. ``close`` carries position ids, not tickers: a delisted or
+  legacy-format ticker is exactly what a user wants to take off and it would
+  fail the master check. A closed holding ends like a full 매도 on POST
+  /trades — the Position row is deleted — but the lots close with one
+  ``holding_adjust`` 매도 (all shares, previous average, pnl 0), not an
+  observed 매도. The holding's thesis is the user's own record and would go
+  with the row, so it is kept as an observation note (source ``portfolio``)
+  in the same transaction. Closes apply before the rows, so the free-plan
+  slot a closed holding frees can take a new one from the same capture. An
+  id whose ticker also has a row (any mode) is a 400
+  ``IMPORT_CLOSE_CONFLICT``: the capture shows it, so it is not gone. An id
+  that is not a current holding of this user is skipped ``NOT_HELD``.
 """
 from __future__ import annotations
 
@@ -233,6 +251,17 @@ def preview(user_id: int, rows) -> list[dict]:
     return out
 
 
+def held_positions(user_id: int) -> list[dict]:
+    """Every holding the user has now (shares > 0), for the resync list."""
+    from models import Position
+    held = Position.query.filter(Position.user_id == user_id, Position.shares > 0) \
+        .order_by(Position.ticker).all()
+    return [{"id": p.id, "ticker": p.ticker,
+             "name": _seed_name(p.ticker, is_korean_ticker(p.ticker)),
+             "shares": p.shares, "avg_cost": p.avg_cost, "currency": ticker_currency(p.ticker),
+             "has_note": bool((p.thesis or "").strip())} for p in held]
+
+
 # ── commit ───────────────────────────────────────────────────────────
 
 @dataclass
@@ -299,6 +328,22 @@ def validate_commit_rows(rows) -> list[CommitRow]:
     return out
 
 
+def validate_close_ids(raw) -> list[int]:
+    """``close``: absent or a list of distinct position ids."""
+    if raw is None:
+        return []
+    if not isinstance(raw, list) or len(raw) > MAX_ROWS:
+        raise HoldingsError(f"close must be a list of at most {MAX_ROWS} position ids.",
+                            f"close 는 포지션 id 를 {MAX_ROWS}개 이하로 담은 배열이어야 합니다.", field="close")
+    out: list[int] = []
+    for v in raw:
+        if isinstance(v, bool) or not isinstance(v, int) or v <= 0 or v in out:
+            raise HoldingsError("close entries must be distinct position ids.",
+                                "close 의 각 항목은 서로 다른 포지션 id 여야 합니다.", field="close")
+        out.append(v)
+    return out
+
+
 class RaceError(Exception):
     pass
 
@@ -316,9 +361,29 @@ def _seed_name(ticker: str, is_kr: bool) -> str:
         return ticker
 
 
-def commit(user, rows: list[CommitRow], fx_rate_fn) -> tuple[dict, list[str]]:
-    """Apply validated rows in one transaction. Returns ``(result, written
-    tickers)``. Raises ``RaceError`` after rollback on a concurrent insert."""
+def _close_holding(user_id: int, p) -> dict:
+    """Take one holding off (module doc, Resync). Adds, does not commit."""
+    from extensions import db
+    from services.observation_notes.service import create_note
+    from services.position_writes import add_holding_adjust
+
+    is_kr = is_korean_ticker(p.ticker)
+    currency = ticker_currency(p.ticker)
+    add_holding_adjust(user_id, p.ticker, p.shares, p.avg_cost, currency, _seed_name(p.ticker, is_kr))
+    thesis = (p.thesis or "").strip()
+    if thesis:
+        create_note(user_id, thesis, tickers=[p.ticker], source="portfolio", commit=False)
+    item = {"ticker": p.ticker, "currency": currency, "prev_shares": p.shares,
+            "prev_avg_cost": p.avg_cost, "note_kept": bool(thesis)}
+    db.session.delete(p)
+    return item
+
+
+def commit(user, rows: list[CommitRow], fx_rate_fn,
+           close_ids: list[int] = ()) -> tuple[dict, list[str]]:
+    """Apply validated rows (and ``close_ids``) in one transaction. Returns
+    ``(result, written tickers)``. Raises ``RaceError`` after rollback on a
+    concurrent insert, ``HoldingsError`` (nothing written) on a close conflict."""
     from sqlalchemy.exc import IntegrityError
 
     from extensions import db
@@ -328,12 +393,35 @@ def commit(user, rows: list[CommitRow], fx_rate_fn) -> tuple[dict, list[str]]:
         is_capped_tier, lock_user_row, merge_buy_into,
     )
 
-    result = {"created": [], "replaced": [], "added": [], "skipped": []}
+    result = {"created": [], "replaced": [], "added": [], "skipped": [], "closed": []}
     written: list[str] = []
     try:
         lock_user_row(user.id)
         capped = is_capped_tier(user)
         active = active_position_count(user.id) if capped else 0
+
+        if close_ids:
+            found = {p.id: p for p in Position.query.filter(
+                Position.user_id == user.id, Position.id.in_(close_ids))}
+            row_tickers = {r.ticker for r in rows}
+            closing = []
+            for pid in close_ids:
+                p = found.get(pid)
+                if p is None or not (p.shares and p.shares > 0):
+                    result["skipped"].append({"ticker": p.ticker if p else None, "position_id": pid,
+                                              "reason": "NOT_HELD"})
+                elif p.ticker in row_tickers:
+                    raise HoldingsError(
+                        f"{p.ticker} is in the capture rows, so it cannot also be closed.",
+                        f"{p.ticker} 는 캡처에 있는 종목이라 정리할 수 없습니다.",
+                        code="IMPORT_CLOSE_CONFLICT", field="close")
+                else:
+                    closing.append(p)
+            for p in closing:
+                result["closed"].append(_close_holding(user.id, p))
+                if capped:
+                    active -= 1
+
         live = [r for r in rows if r.mode != "skip"]
         held = {}
         if live:

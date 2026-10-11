@@ -34,6 +34,7 @@
 - **trade_history 안 씀**: 수동 포지션 생성·수정(POST/PUT/PATCH)도 쓰지 않는다 — 체결이 아니라 보유 기록이다.
 - **무료 한도**: create_position 과 같은 유저 행 잠금 아래에서 새 종목을 요청 순서대로 한도까지, 나머지는 `skipped: TIER_LIMIT`(배치 실패 아님). 기존 종목 replace/add 는 한도와 무관.
 - 동시 insert 경합 → 전체 롤백 409 `POSITION_RACE`. 응답 `{created, replaced, added, skipped}`, `legal_scrub_response`, 레이트리밋은 포지션 쓰기와 같음.
+- **다시 맞추기 (2026-10-11)**: preview 가 지금 보유(`held`, 수량 > 0)도 돌려주고, 화면은 캡처의 어느 행에도 없는 종목을 표 아래 "이번 캡처에 없는 종목"으로 보여준다. 기본은 **유지** — 스크롤로 잘린 캡처와 판 종목은 화면만 봐서는 구별이 안 된다. 유저가 "정리됨"으로 바꾼 것만 `close`(포지션 id)로 간다. 서버는 POST /trades 전량 매도처럼 포지션 행을 지우되, 체결 매도가 아니라 `holding_adjust` 매도 1행(전량, 직전 평균단가, 손익 0)으로 로트를 닫고, 그 종목의 thesis 는 관찰 메모(source `portfolio`)로 옮긴다 — 같은 트랜잭션. 정리가 행보다 먼저 적용돼 무료 한도 자리가 같은 배치의 새 종목에 돌아간다. 캡처 행(모드 무관)에 있는 종목을 `close` 하면 400 `IMPORT_CLOSE_CONFLICT`, 이미 보유가 아닌 id 는 `skipped: NOT_HELD`. 응답에 `closed` 추가. 지난 거래 기록·멈춤 기록은 건드리지 않는다.
 
 ## 4. 정확도 (2026-09-27, 프로덕션 `ocr.ts` 경로 덤프 · `holdings-eval.test.ts`)
 측정 단위는 종목 행의 칸. 종목은 서버 기준(코드는 마스터에 있을 때, 이름은 정확 일치만 — 퍼지는 판별불가로 셈).

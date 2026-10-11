@@ -26,9 +26,11 @@ import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
 import {
   HoldingsImportPanel, rowIssues, commitPayload, mergeIdenticalReads, applyPreview, currencyPatch, pickedTicker, type HoldingRow,
+  absentHoldings, closePayload,
 } from "@/components/portfolio/v2/holdings-import-panel";
 import type { OcrWord } from "@/lib/fill-ocr/parse";
-import type { HoldingsPreviewRow } from "@/lib/types";
+import type { HoldingsHeld, HoldingsPreviewRow } from "@/lib/types";
+import { toast } from "sonner";
 
 const apiFetchMock = vi.mocked(apiFetch);
 const FIX = path.resolve(__dirname, "../../../../../../tests/fixtures/screenshot_import");
@@ -51,8 +53,9 @@ const TICKERS: Record<string, [string, string]> = {
   한국전력: ["015760.KS", "한국전력"],
 };
 
-/** Resolve exact names; the first resolved row already exists (10 @ 60,000). */
-function mockPreview() {
+/** Resolve exact names; the first resolved row already exists (10 @ 60,000).
+ * `held` = the holdings on record the preview returns (resync list). */
+function mockPreview(held: HoldingsHeld[] = []) {
   apiFetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
     if (url !== API.holdingsImport.preview) return { created: [], replaced: [], added: [], skipped: [] } as never;
     const body = JSON.parse(String(init?.body)) as { rows: { name: string | null }[] };
@@ -66,6 +69,7 @@ function mockPreview() {
           existing: hit && hit[1] === "삼성전자" ? { id: 1, shares: 10, avg_cost: 60000, currency: "KRW" } : null,
         };
       }),
+      held,
     } as never;
   });
 }
@@ -189,6 +193,49 @@ describe("HoldingsImportPanel", () => {
     expect(screen.queryAllByTestId("holdings-review-row")).toHaveLength(0);
     expect(apiFetchMock).not.toHaveBeenCalled();
   });
+
+  it("lists holdings the capture does not show; each stays unless marked 정리됨, then goes as close", async () => {
+    const SAMSUNG: HoldingsHeld = { id: 1, ticker: "005930.KS", name: "삼성전자", shares: 10, avg_cost: 60000, currency: "KRW", has_note: false };
+    const KAKAO: HoldingsHeld = { id: 9, ticker: "035720.KS", name: "카카오", shares: 3, avg_cost: 50000, currency: "KRW", has_note: true };
+    mockPreview([SAMSUNG, KAKAO]);
+    const byName = { "hold.png": dump("holdings/ocr/t01_dark_cards.png.json") };
+    render(<HoldingsImportPanel onDone={vi.fn()} onCancel={vi.fn()} openSession={fakeSession(byName) as never} />);
+    await pickAndRead(["hold.png"], byName);
+
+    // 삼성전자 is on the capture → not listed. 카카오 is not → listed, kept by default.
+    const absent = screen.getAllByTestId("holdings-absent-row");
+    expect(absent).toHaveLength(1);
+    expect(absent[0].textContent).toContain("카카오 · 035720.KS");
+    const mode = screen.getByTestId("holdings-absent-mode") as HTMLSelectElement;
+    expect(mode.value).toBe("keep");
+    expect(screen.queryByTestId("holdings-absent-close-note")).toBeNull();
+
+    const rows = screen.getAllByTestId("holdings-review-row");
+    const unresolved = rows.findIndex((r) => r.querySelector("[data-testid=holdings-ticker]") === null);
+    fireEvent.change(screen.getAllByTestId("holdings-mode")[unresolved], { target: { value: "skip" } });
+    fireEvent.click(screen.getByTestId("holdings-consent"));
+    const send = screen.getByTestId("holdings-send") as HTMLButtonElement;
+    expect(send.disabled).toBe(false);
+    expect(send.textContent).toBe("dashboard.portfolio.holdingsImport.save");
+
+    // Marked 정리됨: says what happens (and that its note is kept); the save says so too.
+    fireEvent.change(mode, { target: { value: "close" } });
+    const note = screen.getByTestId("holdings-absent-close-note").textContent ?? "";
+    expect(note).toContain("absent.closeNote");
+    expect(note).toContain("absent.noteKept");
+    expect(send.textContent).toBe("dashboard.portfolio.holdingsImport.saveWithClose");
+
+    apiFetchMock.mockResolvedValueOnce({
+      created: [], replaced: [], added: [], skipped: [],
+      closed: [{ ticker: "035720.KS", currency: "KRW", prev_shares: 3, prev_avg_cost: 50000, note_kept: true }],
+    } as never);
+    await act(async () => { fireEvent.click(send); });
+    const commit = apiFetchMock.mock.calls.find(([u]) => u === API.holdingsImport.commit)!;
+    const body = JSON.parse(String(commit[1]!.body));
+    expect(Object.keys(body).sort()).toEqual(["close", "consent", "rows"]);
+    expect(body.close).toEqual([9]);
+    expect(vi.mocked(toast.success).mock.calls[0][0]).toContain("dashboard.portfolio.holdingsImport.doneClosed");
+  });
 });
 
 describe("row rules", () => {
@@ -197,6 +244,16 @@ describe("row rules", () => {
     shares: "10", avgCost: "70000", currency: "KRW", screenCurrency: "KRW", ticker: "005930.KS",
     tickerName: "삼성전자", tickerCurrency: "KRW", status: "resolved", confirmed: false, existing: null, mode: "add",
   };
+  it("a holding is absent only when no row (of any mode) has its ticker; close keeps only absent ids", () => {
+    const h = (id: number, ticker: string): HoldingsHeld => ({ id, ticker, name: ticker, shares: 1, avg_cost: 1000, currency: "KRW", has_note: false });
+    const held = [h(1, "005930.KS"), h(2, "000660.KS"), h(3, "035720.KS")];
+    const rows = [base, { ...base, key: "s", ticker: "000660.KS", mode: "skip" as const }];
+    const absent = absentHoldings(held, rows);
+    expect(absent.map((a) => a.id)).toEqual([3]);
+    // A row later resolved to a marked holding's ticker takes it off the close list.
+    expect(closePayload(absent, [1, 3])).toEqual([3]);
+    expect(closePayload(absentHoldings(held, [...rows, { ...base, key: "k3", ticker: "035720.KS" }]), [3])).toEqual([]);
+  });
   it("blank or invalid cells block the row", () => {
     expect(rowIssues(base, [base])).toEqual([]);
     expect(rowIssues({ ...base, avgCost: "" }, [base])).toContain("avgCost");

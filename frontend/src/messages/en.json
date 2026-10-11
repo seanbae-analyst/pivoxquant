@@ -300,7 +300,18 @@
         "foreignInKrw": "This overseas stock is shown in won, so its dollar average cost is not on screen. Switch the app to $ and capture again, or type it in.",
         "back": "Back",
         "save": "Save {n} positions",
+        "saveWithClose": "Save {n} positions · close {k}",
         "doneSummary": "Added {created} · replaced {replaced} · merged {added} · skipped {skipped}",
+        "doneClosed": "closed {n}",
+        "absent": {
+          "title": "Not in this capture: {n}",
+          "desc": "These are on your record but were not found in this capture. If you already sold one, mark it 'Closed'. If the capture was just cut short, leave it on 'Keep'.",
+          "keep": "Keep",
+          "close": "Closed",
+          "modeLabel": "What to do with this holding",
+          "closeNote": "It leaves your holdings. It is not counted as a sale, and past trade records stay as they are.",
+          "noteKept": "The note you wrote on this holding is kept as an observation note in your journal."
+        },
         "tierLimit": "{n} not saved because of the free plan position limit: {tickers}",
         "consentLabel": "I agree to storing ticker · shares · average cost as a record of my holdings. The capture itself never leaves this device, and saved records can be exported or deleted from Settings at any time.",
         "step1": "Which screen",

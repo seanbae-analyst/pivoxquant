@@ -61,8 +61,12 @@ def create_note(
     tickers=None,
     tags=None,
     source=None,
+    commit=True,
 ) -> dict:
     """Insert one note. Returns the ``to_dict()`` payload.
+
+    ``commit=False`` only flushes, so a caller can land the note in its own
+    transaction (the holdings capture keeps a closed holding's thesis).
 
     Raises ``ValueError`` when:
 
@@ -89,7 +93,10 @@ def create_note(
         created_at=_utc_now(),
     )
     db.session.add(row)
-    db.session.commit()
+    if commit:
+        db.session.commit()
+    else:
+        db.session.flush()
     return row.to_dict()
 
 
