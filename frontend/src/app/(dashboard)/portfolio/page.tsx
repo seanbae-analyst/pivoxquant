@@ -559,6 +559,7 @@ export default function PortfolioPageV2() {
                 navKrw={navKrwFinal}
                 nav={totalNav}
                 navCurrency={displayCurrency}
+                fxRate={fxRate}
                 onAddPosition={() => setAddOpen(true)}
                 collapsed={collapsed}
               />

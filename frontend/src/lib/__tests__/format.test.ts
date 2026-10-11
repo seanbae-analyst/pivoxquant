@@ -12,6 +12,7 @@ import {
   fmtUsdPlain,
   fmtPctSignedMinus,
   fmtMoneyPlain,
+  fmtMoneyKo,
   fmtMoneyPlainSigned,
 } from "@/lib/format";
 
@@ -300,5 +301,29 @@ describe("fmtKrwAbbrev trimTrailing opt (Wave 4-B)", () => {
     expect(fmtKrwAbbrev(34_500_000, { dpMan: 1, trimTrailing: true })).toBe(
       "KRW 3,450만",
     );
+  });
+});
+
+describe("fmtMoneyKo (phone /portfolio, 2026-10-11)", () => {
+  it("KRW whole won by default, 만/억 when compact", () => {
+    expect(fmtMoneyKo(72_000, "KRW")).toBe("72,000원");
+    expect(fmtMoneyKo(14_400_000, "KRW")).toBe("14,400,000원");
+    expect(fmtMoneyKo(26_650_000, "KRW", { compact: true })).toBe("2,665만원");
+    expect(fmtMoneyKo(123_450_000, "KRW", { compact: true })).toBe("1억 2,345만원");
+    expect(fmtMoneyKo(200_000_000, "KRW", { compact: true })).toBe("2억원");
+    expect(fmtMoneyKo(99_996_000, "KRW", { compact: true })).toBe("1억원");
+    expect(fmtMoneyKo(8_500, "KRW", { compact: true })).toBe("8,500원");
+  });
+  it("USD with cents only when there are cents; compact drops them", () => {
+    expect(fmtMoneyKo(205, "USD")).toBe("$205");
+    expect(fmtMoneyKo(176.2, "USD")).toBe("$176.20");
+    expect(fmtMoneyKo(10_250, "USD")).toBe("$10,250");
+    expect(fmtMoneyKo(34_830.4, "USD", { compact: true })).toBe("$34,830");
+  });
+  it("signs with U+2212 and dashes non-finite", () => {
+    expect(fmtMoneyKo(-1_200, "KRW")).toBe("\u22121,200원");
+    expect(fmtMoneyKo(-3.5, "USD")).toBe("\u2212$3.50");
+    expect(fmtMoneyKo(null, "KRW")).toBe("—");
+    expect(fmtMoneyKo(Number.NaN, "USD")).toBe("—");
   });
 });

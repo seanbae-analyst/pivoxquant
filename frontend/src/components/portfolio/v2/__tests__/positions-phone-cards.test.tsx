@@ -65,9 +65,14 @@ describe("PositionsTableV2 on a phone", () => {
     expect(screen.getByTestId("positions-cost-basis-note")).toBeInTheDocument();
     // Each row: weight + its own cost (10 × 100), never a market value.
     const row = screen.getAllByTestId("position-card")[0];
-    expect(row.textContent).toContain("USD 1,000.00");
-    expect(row.textContent).not.toContain("USD 1,200.00"); // 10 × the vendor quote 120
+    expect(row.textContent).toContain("$1,000");
+    expect(row.textContent).not.toContain("$1,200"); // 10 × the vendor quote 120
     expect(row.textContent).not.toMatch(/[▲▼]/);
+    // 2026-10-11: each row draws its weight as a bar, the largest row full length.
+    const bars = screen.getAllByTestId("position-card-bar");
+    expect(bars).toHaveLength(2);
+    const widths = bars.map((b) => (b.firstElementChild as HTMLElement).style.width);
+    expect(widths).toContain("100%");
   });
 
   it("shows no basis label when vendor quotes are on, and the P/L % carries a glyph", () => {
@@ -75,7 +80,7 @@ describe("PositionsTableV2 on a phone", () => {
     render(<PositionsTableV2 positions={POS} totalNav={1200} fxRate={1380} marketDataDisplay />);
     expect(screen.queryByTestId("position-card-weight-basis")).toBeNull();
     const row = screen.getAllByTestId("position-card")[0];
-    expect(row.textContent).toContain("USD 1,200.00");
+    expect(row.textContent).toContain("$1,200");
     expect(row.textContent).toContain("▲ +20.00%");
   });
 
@@ -85,7 +90,7 @@ describe("PositionsTableV2 on a phone", () => {
     await userEvent.click(screen.getByTestId("position-card-open"));
     const figures = screen.getByTestId("position-sheet-figures");
     expect(figures.textContent).toContain("취득금액");
-    expect(figures.textContent).toContain("USD 1,000.00");
+    expect(figures.textContent).toContain("$1,000");
     expect(figures.textContent).not.toContain("현재가");
     expect(figures.textContent).not.toContain("평가액");
   });
@@ -96,7 +101,7 @@ describe("PositionsTableV2 on a phone", () => {
     await userEvent.click(screen.getByTestId("position-card-open"));
     const figures = screen.getByTestId("position-sheet-figures");
     expect(figures.textContent).toContain("현재가");
-    expect(figures.textContent).toContain("USD 120.00");
+    expect(figures.textContent).toContain("$120");
     expect(figures.textContent).toContain("평가액");
   });
 
