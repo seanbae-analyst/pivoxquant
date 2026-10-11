@@ -13,6 +13,12 @@
  * Existing positions default to "replace" (덮어쓰기): the screen is the
  * broker's own current state, so merging it into an older record would
  * double-count. Rows are never sent until every non-skipped cell is filled.
+ *
+ * Resync (2026-10-11): holdings on record that no row of the capture shows
+ * are listed under the table. Each stays ("유지") unless the user marks it
+ * "정리됨" — a capture cut short by scrolling looks just like a sold holding.
+ * Marked ones go as `close` (position ids); the server closes them with a
+ * holding adjustment, not a recorded sale (services/imports/holdings_import.py).
  */
 
 import * as React from "react";
@@ -33,6 +39,7 @@ import { AiContentBadge } from "@/components/ui/ai-content-badge";
 import type {
   HoldingsCommitResponse,
   HoldingsExisting,
+  HoldingsHeld,
   HoldingsPreviewRow,
 } from "@/lib/types";
 
@@ -243,6 +250,17 @@ export function commitPayload(rows: HoldingRow[]) {
     }));
 }
 
+/** Holdings on record that no row of the capture shows (any mode — a skipped
+ * row is still on the screen). Same exact-ticker match as the server's. */
+export function absentHoldings(held: HoldingsHeld[], rows: HoldingRow[]): HoldingsHeld[] {
+  return held.filter((h) => !rows.some((r) => r.ticker === h.ticker));
+}
+
+/** Ids to close: marked by the user and still absent from the capture. */
+export function closePayload(absent: HoldingsHeld[], closeIds: number[]): number[] {
+  return absent.filter((h) => closeIds.includes(h.id)).map((h) => h.id);
+}
+
 const inputCls =
   "w-full bg-transparent px-2 py-1 font-mono outline-none text-[var(--pq-ivory)] border rounded-[2px] focus:border-[var(--pq-bronze)]";
 const small = { fontSize: "var(--pq-text-mono-sm)" } as const;
@@ -274,6 +292,9 @@ export function HoldingsImportPanel({
   const [aiTexts, setAiTexts] = React.useState<{ index: number; fileName: string; text: string }[]>([]);
   // Rule-read rows kept while AI rows are shown, so the user can go back.
   const [ruleRows, setRuleRows] = React.useState<HoldingRow[] | null>(null);
+  // Resync: holdings on record (from preview) and the ones marked 정리됨.
+  const [held, setHeld] = React.useState<HoldingsHeld[]>([]);
+  const [closeIds, setCloseIds] = React.useState<number[]>([]);
   const runId = React.useRef(0);
 
   const oversized = files.some((f) => f.size > MAX_IMAGE_BYTES);
@@ -281,14 +302,23 @@ export function HoldingsImportPanel({
   const active = rows.filter((r) => r.mode !== "skip");
   const allReady = rows.every((r) => rowIssues(r, rows).length === 0);
   const canSend = consent && !sending && active.length > 0 && allReady;
+  const absent = absentHoldings(held, rows);
+  const close = closePayload(absent, closeIds);
 
-  async function preview(reqRows: { name: string | null; code: string | null; currency: string | null }[]) {
-    const res = await apiFetch<{ rows: HoldingsPreviewRow[] }>(API.holdingsImport.preview, {
+  async function previewFull(reqRows: { name: string | null; code: string | null; currency: string | null }[]) {
+    const res = await apiFetch<{ rows: HoldingsPreviewRow[]; held?: HoldingsHeld[] }>(API.holdingsImport.preview, {
       method: "POST",
       body: JSON.stringify({ rows: reqRows }),
       timeoutMs: 30_000,
     });
-    return Array.isArray(res?.rows) ? res.rows : [];
+    return {
+      rows: Array.isArray(res?.rows) ? res.rows : [],
+      held: Array.isArray(res?.held) ? res.held : [],
+    };
+  }
+
+  async function preview(reqRows: { name: string | null; code: string | null; currency: string | null }[]) {
+    return (await previewFull(reqRows)).rows;
   }
 
   async function read() {
@@ -299,6 +329,8 @@ export function HoldingsImportPanel({
     setRows([]);
     setAiTexts([]);
     setRuleRows(null);
+    setHeld([]);
+    setCloseIds([]);
     setProgress(t("journal.import.image.loadingOcr"));
     let session;
     try {
@@ -353,10 +385,11 @@ export function HoldingsImportPanel({
     if (next.length === 0) return next;
     setProgress(t("dashboard.portfolio.holdingsImport.resolving"));
     try {
-      const p = await preview(next.map((r) => ({
+      const { rows: p, held: h } = await previewFull(next.map((r) => ({
         name: r.readName || null, code: r.readCode || null, currency: r.currency || null,
       })));
       next = dropIdenticalTickerDuplicates(next.map((r, i) => applyPreview(r, p.find((x) => x.index === i))));
+      setHeld(h);
     } catch (err) {
       setError(err instanceof Error && err.message ? err.message : t("dashboard.portfolio.holdingsImport.previewFailed"));
     }
@@ -403,7 +436,7 @@ export function HoldingsImportPanel({
     try {
       const result = await apiFetch<HoldingsCommitResponse>(API.holdingsImport.commit, {
         method: "POST",
-        body: JSON.stringify({ consent: true, rows: commitPayload(rows) }),
+        body: JSON.stringify({ consent: true, rows: commitPayload(rows), ...(close.length > 0 ? { close } : {}) }),
         timeoutMs: 60_000,
       });
       if (!result || !Array.isArray(result.created)) {
@@ -412,12 +445,15 @@ export function HoldingsImportPanel({
       }
       const skippedByUser = rows.filter((r) => r.mode === "skip").length;
       const tier = result.skipped.filter((s) => s.reason === "TIER_LIMIT");
+      const closed = result.closed?.length ?? 0;
       const summary = t("dashboard.portfolio.holdingsImport.doneSummary")
         .replace("{created}", String(result.created.length))
         .replace("{replaced}", String(result.replaced.length))
         .replace("{added}", String(result.added.length))
         .replace("{skipped}", String(skippedByUser + result.skipped.filter((s) => s.reason !== "TIER_LIMIT").length));
-      toast.success(summary);
+      toast.success(closed > 0
+        ? `${summary} · ${t("dashboard.portfolio.holdingsImport.doneClosed").replace("{n}", String(closed))}`
+        : summary);
       if (tier.length > 0) {
         toast.warning(t("dashboard.portfolio.holdingsImport.tierLimit")
           .replace("{n}", String(tier.length))
@@ -468,6 +504,8 @@ export function HoldingsImportPanel({
             setNotes([]);
             setAiTexts([]);
             setRuleRows(null);
+            setHeld([]);
+            setCloseIds([]);
           }}
           className="sr-only"
           data-testid="holdings-image-input"
@@ -561,6 +599,14 @@ export function HoldingsImportPanel({
             ))}
           </div>
 
+          {absent.length > 0 && (
+            <AbsentHoldings
+              absent={absent}
+              closeIds={closeIds}
+              onChange={(id, closeIt) => setCloseIds((ids) => (closeIt ? [...ids.filter((x) => x !== id), id] : ids.filter((x) => x !== id)))}
+            />
+          )}
+
           <label className="mt-5 flex items-start gap-2 cursor-pointer">
             <input
               type="checkbox"
@@ -603,7 +649,11 @@ export function HoldingsImportPanel({
           >
             {sending
               ? t("journal.import.page.submitting")
-              : t("dashboard.portfolio.holdingsImport.save").replace("{n}", String(active.length))}
+              : close.length > 0
+                ? t("dashboard.portfolio.holdingsImport.saveWithClose")
+                  .replace("{n}", String(active.length))
+                  .replace("{k}", String(close.length))
+                : t("dashboard.portfolio.holdingsImport.save").replace("{n}", String(active.length))}
           </button>
         )}
       </div>
@@ -619,6 +669,67 @@ function StepHead({ n, label }: { n: number; label: string }) {
       style={{ ...small, color: "var(--pq-bronze)" }}
     >
       {n} · {label}
+    </div>
+  );
+}
+
+/** Resync: holdings on record that the capture does not show. Each stays
+ * ("유지") unless the user marks it "정리됨". */
+function AbsentHoldings({ absent, closeIds, onChange }: {
+  absent: HoldingsHeld[];
+  closeIds: number[];
+  onChange: (id: number, close: boolean) => void;
+}) {
+  const t = useT();
+  const k = (s: string) => t(`dashboard.portfolio.holdingsImport.absent.${s}`);
+  const text = { fontSize: "var(--pq-text-body-sm)", lineHeight: 1.5, color: "var(--pq-ivory-mid)", wordBreak: "keep-all" as const };
+  return (
+    <div className="mt-5" data-testid="holdings-absent">
+      <div className="font-mono tracking-[0.02em]" style={{ ...small, color: "var(--pq-bronze)" }}>
+        {k("title").replace("{n}", String(absent.length))}
+      </div>
+      <p className="mt-1 font-serif" style={{ ...text, margin: 0 }}>{k("desc")}</p>
+      <div className="mt-3 space-y-3">
+        {absent.map((h) => {
+          const closing = closeIds.includes(h.id);
+          return (
+            <div
+              key={h.id}
+              className="rounded-[2px] border p-3"
+              style={{ borderColor: closing ? "var(--pq-bronze)" : "var(--pq-ivory-line)" }}
+              data-testid="holdings-absent-row"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="font-mono [overflow-wrap:anywhere]" style={{ ...small, color: "var(--pq-ivory)" }}>
+                  {h.name && h.name !== h.ticker ? `${h.name} · ` : ""}{h.ticker}
+                </span>
+                <select
+                  value={closing ? "close" : "keep"}
+                  onChange={(e) => onChange(h.id, e.target.value === "close")}
+                  aria-label={k("modeLabel")}
+                  className={`${inputCls} bg-black`}
+                  style={{ borderColor: "rgba(245,240,232,0.15)", width: "auto" }}
+                  data-testid="holdings-absent-mode"
+                >
+                  <option value="keep">{k("keep")}</option>
+                  <option value="close">{k("close")}</option>
+                </select>
+              </div>
+              <div className="mt-1 font-mono" style={{ ...small, color: "var(--pq-ivory-mid)" }}>
+                {t("dashboard.portfolio.holdingsImport.current")
+                  .replace("{shares}", fmtQty(h.shares))
+                  .replace("{avg}", fmtQty(h.avg_cost))
+                  .replace("{currency}", h.currency)}
+              </div>
+              {closing && (
+                <div className="mt-1 font-mono" style={{ ...small, color: "var(--pq-bronze)", wordBreak: "keep-all" }} data-testid="holdings-absent-close-note">
+                  {k("closeNote")}{h.has_note ? ` ${k("noteKept")}` : ""}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

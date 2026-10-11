@@ -961,4 +961,26 @@ export interface HoldingsCommitResponse {
   replaced: HoldingsCommitItem[];
   added: HoldingsCommitItem[];
   skipped: { ticker: string; reason: "USER_SKIP" | "TIER_LIMIT" | string }[];
+  /** 2026-10-11: holdings taken off because the capture no longer shows them. */
+  closed?: HoldingsClosedItem[];
+}
+
+/** A current holding (shares > 0), returned by the holdings preview. */
+export interface HoldingsHeld {
+  id: number;
+  ticker: string;
+  name: string;
+  shares: number;
+  avg_cost: number;
+  currency: string;
+  /** The holding carries a thesis note (kept as an observation note on close). */
+  has_note: boolean;
+}
+
+export interface HoldingsClosedItem {
+  ticker: string;
+  currency: string;
+  prev_shares: number;
+  prev_avg_cost: number;
+  note_kept: boolean;
 }

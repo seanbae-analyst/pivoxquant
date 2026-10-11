@@ -69,7 +69,7 @@ def preview():
         rows = hi.preview(current_user.id, data.get("rows"))
     except hi.HoldingsError as exc:
         return _err(exc)
-    return jsonify({"rows": rows})
+    return jsonify({"rows": rows, "held": hi.held_positions(current_user.id)})
 
 
 @holdings_import_bp.route("/commit", methods=["POST"])
@@ -88,10 +88,13 @@ def commit():
         )
     try:
         rows = hi.validate_commit_rows(data.get("rows"))
+        close_ids = hi.validate_close_ids(data.get("close"))
     except hi.HoldingsError as exc:
         return _err(exc)
     try:
-        result, written = hi.commit(current_user, rows, fx_service.get_rate)
+        result, written = hi.commit(current_user, rows, fx_service.get_rate, close_ids)
+    except hi.HoldingsError as exc:
+        return _err(exc)
     except hi.RaceError:
         logger.info("holdings import race user=%s", current_user.id)
         return api_error(en="Another change to these positions happened at the same time; please retry.",

@@ -315,6 +315,100 @@ class TestCommit:
         assert _positions(app, auth_user["id"]) == {}
 
 
+class TestResync:
+    """2026-10-11: holdings the new capture no longer shows (module doc, Resync)."""
+
+    def _commit_close(self, client, close, *rows):
+        return client.post(f"{BASE}/commit", json={"consent": True, "rows": list(rows) or [_c()],
+                                                   "close": close})
+
+    def test_preview_lists_held_only_own_and_positive(self, client, auth_user, app, add_position, make_user):
+        from extensions import db
+        from models import Position
+        other = make_user(email="other@test.com")
+        add_position(other["id"], "000660.KS", 9, 100000, buy_fx=0.0)
+        pid = add_position(auth_user["id"], "005930.KS", 7, 60000, buy_fx=0.0)
+        zero = add_position(auth_user["id"], "AAPL", 0, 150.0)
+        with app.app_context():
+            db.session.get(Position, pid).thesis = "배당"
+            db.session.commit()
+        held = _preview(client, {"code": "005930"}).get_json()["held"]
+        assert held == [{"id": pid, "ticker": "005930.KS", "name": "삼성전자", "shares": 7,
+                         "avg_cost": 60000, "currency": "KRW", "has_note": True}]
+        assert zero not in [h["id"] for h in held]
+
+    def test_close_deletes_holding_with_adjust_not_a_fill(self, client, auth_user, app, add_position):
+        from models import TradeHistory
+        gone = add_position(auth_user["id"], "AAPL", 4, 150.0)
+        add_position(auth_user["id"], "005930.KS", 10, 60000, buy_fx=0.0)
+        r = self._commit_close(client, [gone], _c(mode="replace", shares=12, avg_cost=65000))
+        assert r.status_code == 200, r.get_json()
+        body = r.get_json()
+        assert body["closed"] == [{"ticker": "AAPL", "currency": "USD", "prev_shares": 4,
+                                   "prev_avg_cost": 150.0, "note_kept": False}]
+        assert [x["ticker"] for x in body["replaced"]] == ["005930.KS"]
+        assert set(_positions(app, auth_user["id"])) == {"005930.KS"}
+        with app.app_context():
+            rows = TradeHistory.query.filter_by(user_id=auth_user["id"], ticker="AAPL").all()
+            assert [(t.action, t.shares, t.price_per_share, t.pnl, t.source) for t in rows] == [
+                ("SELL", 4, 150.0, 0.0, "holding_adjust")]  # // legal-ok — trade action data value
+
+    def test_close_keeps_thesis_as_observation_note(self, client, auth_user, app, add_position):
+        from extensions import db
+        from models import Position
+        from services.observation_notes.service import list_notes
+        gone = add_position(auth_user["id"], "AAPL", 4, 150.0)
+        with app.app_context():
+            db.session.get(Position, gone).thesis = "서비스 매출 성장"
+            db.session.commit()
+        body = self._commit_close(client, [gone]).get_json()
+        assert body["closed"][0]["note_kept"] is True
+        with app.app_context():
+            notes = list_notes(auth_user["id"])["notes"]
+            assert [(n["body"], [t["ticker"] for t in n["tickers"]], n["source"]) for n in notes] == [
+                ("서비스 매출 성장", ["AAPL"], "portfolio")]
+
+    @pytest.mark.parametrize("mode", ["replace", "add", "skip"])
+    def test_close_conflicts_with_a_row_of_any_mode(self, client, auth_user, app, add_position, mode):
+        from models import TradeHistory
+        pid = add_position(auth_user["id"], "005930.KS", 10, 60000, buy_fx=0.0)
+        rows = [_c(mode=mode)] + ([_c(ticker="000660.KS", shares=1, avg_cost=150000)] if mode == "skip" else [])
+        r = self._commit_close(client, [pid], *rows)
+        assert r.status_code == 400 and r.get_json()["code"] == "IMPORT_CLOSE_CONFLICT"
+        assert _positions(app, auth_user["id"])["005930.KS"].shares == 10
+        assert set(_positions(app, auth_user["id"])) == {"005930.KS"}  # nothing else written
+        with app.app_context():
+            assert TradeHistory.query.filter_by(user_id=auth_user["id"]).count() == 0
+
+    def test_not_held_ids_are_skipped_and_others_untouched(self, client, auth_user, app, add_position, make_user):
+        other = make_user(email="other@test.com")
+        theirs = add_position(other["id"], "AAPL", 5, 150.0)
+        zero = add_position(auth_user["id"], "MSFT", 0, 400.0)
+        body = self._commit_close(client, [theirs, zero, 999999]).get_json()
+        assert body["closed"] == []
+        assert body["skipped"] == [
+            {"ticker": None, "position_id": theirs, "reason": "NOT_HELD"},
+            {"ticker": "MSFT", "position_id": zero, "reason": "NOT_HELD"},
+            {"ticker": None, "position_id": 999999, "reason": "NOT_HELD"}]
+        assert _positions(app, other["id"])["AAPL"].shares == 5
+
+    @pytest.mark.parametrize("close", ["1", {"id": 1}, [True], [0], [-3], ["7"], [1.5], [4, 4],
+                                       list(range(1, 202))])
+    def test_bad_close_400(self, client, auth_user, app, add_position, close):
+        add_position(auth_user["id"], "AAPL", 4, 150.0)
+        r = self._commit_close(client, close)
+        assert r.status_code == 400 and r.get_json()["field"] == "close"
+        assert _positions(app, auth_user["id"])["AAPL"].shares == 4
+
+    def test_close_frees_a_free_plan_slot_in_the_same_batch(self, client, auth_user, app, add_position):
+        add_position(auth_user["id"], "MSFT", 1, 400.0)
+        add_position(auth_user["id"], "AAPL", 1, 150.0)
+        gone = add_position(auth_user["id"], "GOOG", 1, 150.0)
+        body = self._commit_close(client, [gone], _c()).get_json()
+        assert [x["ticker"] for x in body["created"]] == ["005930.KS"] and body["skipped"] == []
+        assert set(_positions(app, auth_user["id"])) == {"MSFT", "AAPL", "005930.KS"}
+
+
 class TestPostgres:
     def test_user_lock_query_has_no_join_on_postgres(self, app):
         from sqlalchemy.dialects import postgresql
