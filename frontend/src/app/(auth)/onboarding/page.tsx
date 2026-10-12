@@ -149,7 +149,7 @@ function ProgressBar({ current, total, category }: { current: number; total: num
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span
-            className="text-xs font-semibold uppercase tracking-wider"
+            className="text-xs font-semibold uppercase tracking-[0.01em]"
             style={{ color: "rgba(var(--pq-ivory-rgb), 0.55)" }}
           >
             {locale === "ko" ? (catMeta?.label_kr || catMeta?.label || category) : (catMeta?.label ?? category)}
@@ -416,7 +416,7 @@ function LegalStep({
         <div className="flex items-center gap-2 mb-1">
           <span className="text-lg">{"\u{1F6E1}\u{FE0F}"}</span>
           <span
-            className="text-xs font-semibold uppercase tracking-wider"
+            className="text-xs font-semibold uppercase tracking-[0.01em]"
             style={{ color: "var(--pq-bronze)", letterSpacing: "var(--pq-track-eyebrow)" }}
           >
             Legal & Compliance
@@ -524,7 +524,7 @@ function ResultScreen({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2, duration: PQ_DUR_SLOW, ease: PQ_EASE }}
-        className="text-sm font-semibold uppercase tracking-wider"
+        className="text-sm font-semibold uppercase tracking-[0.01em]"
         style={{
           color: "var(--pq-bronze)",
           letterSpacing: "var(--pq-track-eyebrow)",
@@ -1353,7 +1353,7 @@ function QuestionScreen({
               style={{ backgroundColor: catMeta.color }}
             />
             <span
-              className="text-xs font-semibold uppercase tracking-wider"
+              className="text-xs font-semibold uppercase tracking-[0.01em]"
               style={{
                 color: "var(--pq-bronze)",
                 letterSpacing: "var(--pq-track-eyebrow)",

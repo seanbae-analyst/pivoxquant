@@ -426,8 +426,8 @@
   );
 
   /* Tracking */
-  --pq-track-eyebrow: 0.22em;
-  --pq-track-wordmark: 0.16em;
+  --pq-track-eyebrow: 0.01em;
+  --pq-track-wordmark: 0;
   --pq-track-tight: -0.02em;
 
   /* CTA / surface radius */
@@ -612,11 +612,21 @@
        are now redundant rather than load-bearing. */
     word-break: keep-all;
     overflow-wrap: break-word;
+
+    /* No lone 어절 on the last line (2026-10-12 mobile wrap audit: 14 such
+       lines at 360-390px — "…비춰 / 봅니다.", "…적어 / 두세요.", "…어떻게 /
+       하나요?"). `pretty` lets the browser pull a word down from the line
+       above. Inherited, so it reaches every text block; an element with
+       `white-space: nowrap` still wins because it declares its own wrap mode.
+       Chrome 117+ / Safari 26+; older engines ignore it and wrap as before. */
+    text-wrap: pretty;
   }
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-sans), "Pretendard Variable", system-ui, sans-serif;
     letter-spacing: -0.01em;
     font-weight: 600;
+    /* Headings split into even lines instead of a full line + one word. */
+    text-wrap: balance;
   }
   /* Opt-in Serif for Artifact/Memo surfaces only — apply via .report-surface
      or .font-serif. Keeps existing SaaS UI untouched. */

@@ -361,6 +361,7 @@ export function PrivacyCardV2({
                     border: "1px solid rgba(184,149,106,0.15)",
                     color: "var(--pq-bronze)",
                     borderRadius: "var(--pq-radius-card)",
+                    whiteSpace: "nowrap",
                   }}
                 >
                   항상 켜짐
@@ -747,6 +748,8 @@ export function PrivacyCardV2({
                 background: "transparent",
                 border: "none",
                 borderBottomStyle: "solid",
+                // Underline link: the base button radius bends the rule.
+                borderRadius: 0,
                 cursor: "pointer",
               }}
             >
