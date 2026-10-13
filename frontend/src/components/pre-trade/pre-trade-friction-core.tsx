@@ -552,7 +552,13 @@ export function QuestionsStep(props: {
 
   return (
     <section className="space-y-6">
-      {!bare && <SectionLabel n={2} title="질문 7개" />}
+      {/* Phone (paged): the progress row below is the heading — "2 질문 7개"
+          above "질문 2 / 7" said the same thing twice (2026-10-13). */}
+      {!bare && (
+        <div className={pagedOnPhone ? "hidden md:block" : undefined}>
+          <SectionLabel n={2} title="질문 7개" />
+        </div>
+      )}
       {pagedOnPhone && <PhoneProgress cur={cur} acks={acks} ackCount={ackCount} />}
       <div
         ref={screenRef}
@@ -567,6 +573,7 @@ export function QuestionsStep(props: {
               q={q}
               hint={hints?.[q.n]}
               hiddenOnPhone={pagedOnPhone && i !== cur}
+              paged={pagedOnPhone}
               acked={!!acks[q.n]}
               answer={answers[q.n] ?? ""}
               setAcks={setAcks}
@@ -585,7 +592,7 @@ export function QuestionsStep(props: {
             className="mt-4 ml-[34px] pl-5 text-pq-mono-sm text-[var(--pq-bronze)] tracking-[0.01em] md:hidden"
             data-testid="questions-swipe-hint"
           >
-            검토했음을 눌러야 다음 질문으로 넘어갑니다.
+            아래 ‘검토했음 · 다음’을 눌러야 다음 질문으로 넘어갑니다.
           </p>
         )}
       </div>
@@ -683,12 +690,16 @@ function QuestionItem(props: {
   q: (typeof QUESTIONS)[number];
   hint: string | undefined;
   hiddenOnPhone: boolean;
+  /** Phone pager: "질문 n / 7" above already numbers the question and the
+   *  action bar's "검토했음 · 다음" ticks it, so the number and the checkbox
+   *  are md+ only (2026-10-13 — the same tick sat on screen twice). */
+  paged?: boolean;
   acked: boolean;
   answer: string;
   setAcks: (f: (prev: Record<number, boolean>) => Record<number, boolean>) => void;
   setAnswers: (f: (prev: Record<number, string>) => Record<number, string>) => void;
 }) {
-  const { q, hint, hiddenOnPhone, acked, answer, setAcks, setAnswers } = props;
+  const { q, hint, hiddenOnPhone, paged = false, acked, answer, setAcks, setAnswers } = props;
   return (
     <li
       className={`border-l-2 border-[var(--pq-ivory-line)] pl-5 hover:border-[var(--pq-bronze)] transition-colors ${
@@ -698,7 +709,9 @@ function QuestionItem(props: {
     >
       <div className="flex items-baseline gap-3">
         <span
-          className="font-mono text-pq-eyebrow uppercase tracking-[0.01em] text-[var(--pq-bronze)] mt-0.5"
+          className={`font-mono text-pq-eyebrow uppercase tracking-[0.01em] text-[var(--pq-bronze)] mt-0.5 ${
+            paged ? "max-md:hidden" : ""
+          }`}
           style={{ minWidth: 18 }}
         >
           {q.n}
@@ -724,7 +737,7 @@ function QuestionItem(props: {
           )}
         </div>
       </div>
-      <div className="mt-3 ml-[34px] flex flex-col gap-2">
+      <div className={`mt-3 ml-[34px] flex flex-col gap-2 ${paged ? "max-md:ml-0" : ""}`}>
         <input
           value={answer}
           onChange={(e) =>
@@ -734,7 +747,11 @@ function QuestionItem(props: {
           aria-label={`질문 ${q.n} 답: ${q.ko}`}
           className="w-full bg-transparent border-b border-[rgba(245,240,232,0.1)] py-1.5 text-pq-body-sm font-serif outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)]"
         />
-        <label className="inline-flex items-center gap-2 cursor-pointer text-pq-mono-sm text-[var(--pq-ivory-dim)] hover:text-[var(--pq-bronze)]">
+        <label
+          className={`inline-flex items-center gap-2 cursor-pointer text-pq-mono-sm text-[var(--pq-ivory-dim)] hover:text-[var(--pq-bronze)] ${
+            paged ? "max-md:hidden" : ""
+          }`}
+        >
           <input
             type="checkbox"
             checked={acked}
@@ -777,13 +794,10 @@ function PhoneProgress({
 }) {
   return (
     <div className="md:hidden" data-testid="questions-progress">
-      <div className="flex items-center justify-between text-[13px] text-[var(--pq-ivory-dim)]">
-        <span>
-          {cur === REVIEW_IDX ? "마지막 확인" : `질문 ${cur + 1} / ${QUESTIONS.length}`}
-        </span>
-        <span>
-          검토 {ackCount} / {QUESTIONS.length}
-        </span>
+      {/* "검토 k / 7" used to sit on the right; the bronze segments below
+          already count the ticked questions (2026-10-13). */}
+      <div className="text-[13px] text-[var(--pq-ivory-dim)]">
+        {cur === REVIEW_IDX ? "마지막 확인" : `질문 ${cur + 1} / ${QUESTIONS.length}`}
       </div>
       <div
         className="mt-2 flex gap-1"

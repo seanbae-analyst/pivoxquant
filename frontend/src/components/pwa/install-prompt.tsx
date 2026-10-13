@@ -167,7 +167,7 @@ export function InstallPrompt() {
         <div className="mb-3 flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div
-              className="mb-2 inline-flex items-center gap-2.5 font-mono uppercase"
+              className="mb-2 font-sans"
               style={{
                 color: "var(--pq-bronze)",
                 fontSize: "var(--pq-text-eyebrow)",
@@ -175,12 +175,9 @@ export function InstallPrompt() {
                 fontWeight: 500,
               }}
             >
-              <span
-                aria-hidden="true"
-                className="inline-block h-px w-6"
-                style={{ backgroundColor: "rgba(184,149,106,0.7)" }}
-              />
-              <span>Install · 0.0KB</span>
+              {/* Was a ruled "INSTALL · 0.0KB" kicker — a made-up size that
+                  read as template filler (2026-10-13). */}
+              앱으로 설치
             </div>
             <h3
               id="pq-install-title"

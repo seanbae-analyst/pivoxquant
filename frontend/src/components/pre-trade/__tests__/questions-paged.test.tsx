@@ -113,7 +113,8 @@ describe("QuestionsStep · pagedOnPhone · buttons", () => {
     expect(hiddenOnPhone(screen.getByTestId("question-1"))).toBe(true);
     expect(hiddenOnPhone(screen.getByTestId("question-2"))).toBe(false);
     expect(box(1).checked).toBe(true);
-    expect(progress()).toContain("검토 1 / 7");
+    // The tick count lives in the bar only — no second "검토 k / 7" text.
+    expect(progress()).not.toContain("검토");
     expect(screen.getByTestId("progress-seg-1").dataset.state).toBe("acked");
     expect(screen.getByTestId("progress-seg-2").dataset.state).toBe("current");
   });
