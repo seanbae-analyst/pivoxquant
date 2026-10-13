@@ -10,19 +10,17 @@
  *   sell  → "Trim position"  (and "Close" if qty == position.shares)
  *   edit  → "Adjust observation"
  *
- * Two modes for buy/sell (2026-05-22, CEO decision) — mirrors
- * <AddPositionModalV2 />'s holding/new split. A toggle at the top of the form:
- *   - "이미 체결됨 · 기록만" (RECORD, default): the trade already happened —
- *     the user is journaling a past fill (like an asset sync). The 7-question
- *     reflection is inappropriate (the decision is done), so this mode SKIPS
- *     the friction and calls commitTrade() directly on submit. Thesis (note)
- *     is OPTIONAL — empty is allowed.
- *   - "신규 검토 · 7문항" (REVIEW): the original flow — "should I buy/sell
- *     right now?". Submitting hands off to <PreTradeFrictionModal /> (buy=ENTRY
- *     / sell=EXIT) — the 7-question reflection. The real POST fires only on its
- *     onProceed; Cancel writes nothing. Thesis REQUIRED at ≥MIN_RATIONALE_CHARS.
- * `edit` (avg-cost/memo adjustment) is NOT a buy/sell event and has NO mode —
- * it commits directly via PATCH without friction (unchanged).
+ * buy/sell are record-only (2026-10-13, CEO): the trade already happened —
+ * the user is journaling a past fill. No questions; submit calls
+ * commitTrade() directly. Thesis (note) is OPTIONAL — empty is allowed.
+ * The 7-question pause lives only on /pre-trade (before buying), which never
+ * writes to the ledger; on buy a quiet <PreTradeFirstLink /> points there.
+ * A recorded buy can still be linked to a recent pause on this ticker via
+ * <ReflectionLinkLine /> (services/pre_trade/link.py). The former in-modal
+ * reflection mode wrote the trade the moment the user finished thinking —
+ * before any real fill — so the ledger could disagree with the broker.
+ * `edit` (avg-cost/memo adjustment) is NOT a buy/sell event — it commits
+ * directly via PATCH (unchanged).
  *
  * Backend contract (verified 2026-04-27):
  *   - Add/Trim: POST PORTFOLIO_TRADES = `/api/portfolio/trades` with
@@ -39,13 +37,12 @@ import { displayTicker, isKrTicker, normalizeTicker } from "@/lib/format";
 import { Sheet, SheetFooter, type SheetHandle } from "@/components/ui/sheet";
 import { currentLocationPath, loginHref } from "@/lib/login-redirect";
 import type { Position, TradeAction } from "@/components/portfolio/types";
-import { PreTradeFrictionModal } from "@/components/pre-trade/pre-trade-friction-modal";
-import { MIN_RATIONALE_CHARS } from "@/components/pre-trade/pre-trade-friction-core";
 import {
   ReflectionLinkLine,
   reflectionLinkBody,
   useReflectionLink,
 } from "@/components/pre-trade/reflection-link-line";
+import { PreTradeFirstLink } from "@/components/portfolio/v2/pre-trade-first-link";
 
 interface TradeModalV2Props {
   open: boolean;
@@ -54,10 +51,6 @@ interface TradeModalV2Props {
   position: Position | null;
   onSuccess?: () => void;
 }
-
-/** Trade mode (buy/sell only) — recording an already-filled trade vs.
- *  reflecting on a fresh decision. Mirrors AddPositionModalV2's EntryMode. */
-type TradeMode = "record" | "review";
 
 interface CopyEntry {
   eyebrow: string;
@@ -68,22 +61,23 @@ interface CopyEntry {
   helper: string;
 }
 
+/** buy/sell read as journaling a done trade; edit adjusts a record. */
 const COPY: Record<TradeAction, CopyEntry> = {
   buy: {
     eyebrow: "기록 · 추가",
-    headline: "이 종목을",
-    accentWord: "추가합니다.",
-    cta: "기록 저장 →",
+    headline: "이미 체결한",
+    accentWord: "추가를 기록합니다.",
+    cta: "기록하기",
     toast: "거래를 기록했습니다 · 정보 기록용입니다.",
-    helper: "추가로 산 내역을 내 장부에 기록합니다.",
+    helper: "이미 체결한 추가 매수를 책에 기록합니다. 질문 없이 바로 저장.",
   },
   sell: {
     eyebrow: "기록 · 정리",
-    headline: "이 종목을",
-    accentWord: "정리합니다.",
-    cta: "기록 저장 →",
+    headline: "이미 체결한",
+    accentWord: "정리를 기록합니다.",
+    cta: "기록하기",
     toast: "거래를 기록했습니다 · 정보 기록용입니다.",
-    helper: "일부 또는 전량 정리를 내 장부에 기록합니다.",
+    helper: "이미 체결한 매도를 책에 기록합니다. 질문 없이 바로 저장.",
   },
   edit: {
     eyebrow: "기록 · 수정",
@@ -94,37 +88,6 @@ const COPY: Record<TradeAction, CopyEntry> = {
     helper: "이 종목의 평균가나 메모를 수정합니다.",
   },
 };
-
-/** Mode-specific copy for buy/sell. RECORD reads as journaling a done trade;
- *  REVIEW reads as the original "reflect before deciding" flow. `edit` ignores
- *  this and uses COPY.edit directly. */
-function modeCopy(action: TradeAction, mode: TradeMode): CopyEntry {
-  const base = COPY[action];
-  const isBuy = action === "buy";
-  if (mode === "record") {
-    return {
-      ...base,
-      eyebrow: isBuy ? "기록 · 추가" : "기록 · 정리",
-      headline: "이미 체결한",
-      accentWord: isBuy ? "추가를 기록합니다." : "정리를 기록합니다.",
-      cta: "기록하기",
-      helper: isBuy
-        ? "이미 체결한 추가 매수를 책에 기록합니다. 질문 없이 바로 저장."
-        : "이미 체결한 매도를 책에 기록합니다. 질문 없이 바로 저장.",
-    };
-  }
-  // review
-  return {
-    ...base,
-    eyebrow: isBuy ? "검토 · 추가" : "검토 · 정리",
-    headline: "이 종목",
-    accentWord: isBuy ? "추가를 검토합니다." : "정리를 검토합니다.",
-    cta: "다음 · 7문항 →",
-    helper: isBuy
-      ? "지금 추가 매수할지 검토합니다. 7개 질문을 거친 뒤 기록됩니다."
-      : "지금 매도할지 검토합니다. 7개 질문을 거친 뒤 기록됩니다.",
-  };
-}
 
 export function TradeModalV2({
   open,
@@ -141,9 +104,6 @@ export function TradeModalV2({
     else onClose();
   }, [onClose]);
 
-  // buy/sell carry a mode (record/review); edit has none. RECORD is default.
-  const [mode, setMode] = React.useState<TradeMode>("record");
-
   const [shares, setShares] = React.useState("");
   const [price, setPrice] = React.useState("");
   const [date, setDate] = React.useState(() =>
@@ -152,31 +112,14 @@ export function TradeModalV2({
   const [avgCost, setAvgCost] = React.useState("");
   const [note, setNote] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
-  // Inline Pre-Trade Friction — only for buy (ENTRY) / sell (EXIT) in REVIEW
-  // mode. Edit commits directly; RECORD mode skips friction.
-  const [frictionOpen, setFrictionOpen] = React.useState(false);
-  // 2026-09-29 — record-mode buy: offer to link a recent pause on this ticker.
-  const reflectionLink = useReflectionLink(action === "buy" && mode === "record" ? position?.symbol : null);
+  // 2026-09-29 — buy: offer to link a recent pause on this ticker.
+  const reflectionLink = useReflectionLink(action === "buy" ? position?.symbol : null);
 
-  // Mode-aware copy for buy/sell; edit always uses its static entry.
-  const copy = action === "edit" ? COPY.edit : modeCopy(action, mode);
+  const copy = COPY[action];
 
-  // Thesis is required only for buy/sell in REVIEW mode (the reflection needs
-  // ≥MIN_RATIONALE_CHARS). edit and RECORD mode treat the note as an optional memo.
-  const requiresThesis = action !== "edit" && mode === "review";
-  const noteOk = !requiresThesis || note.trim().length >= MIN_RATIONALE_CHARS;
-  const noteRemaining = Math.max(0, MIN_RATIONALE_CHARS - note.trim().length);
-
-  // Reset form whenever position/action changes or close
+  // Reset the form whenever the modal opens or position/action changes.
   React.useEffect(() => {
-    if (!open) {
-      setMode("record");
-      setFrictionOpen(false);
-      return;
-    }
-    // Mode resets to default whenever the modal opens or action changes.
-    setMode("record");
-    setFrictionOpen(false);
+    if (!open) return;
     if (action === "edit") {
       setShares("");
       setPrice("");
@@ -192,15 +135,13 @@ export function TradeModalV2({
   }, [open, action, position]);
 
   // Escape / backdrop / back are owned by <Sheet /> (desktop and phone).
-  // While the friction modal is open it is the topmost sheet and takes them.
 
   if (!position) return null;
 
-  // Validate the form. For edit → commit immediately. For buy/sell → open
-  // the reflection (real write happens on its onProceed).
+  // Validate the form, then commit (edit → PATCH, buy/sell → POST trade).
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!position || submitting || frictionOpen) return;
+    if (!position || submitting) return;
 
     if (action === "edit") {
       const parsedCost = Number(avgCost);
@@ -231,8 +172,7 @@ export function TradeModalV2({
       return;
     }
 
-    // buy / sell — validate then either record directly (RECORD) or hand to
-    // the reflection (REVIEW). Quantity/price/over-trim guards apply to BOTH.
+    // buy / sell — quantity/price/over-trim guards, then record the fill.
     const parsedQty = Number(shares);
     const parsedPrice = Number(price);
     if (!Number.isFinite(parsedQty) || parsedQty <= 0) {
@@ -248,25 +188,11 @@ export function TradeModalV2({
       return;
     }
 
-    if (mode === "review") {
-      // REVIEW: thesis required ≥MIN_RATIONALE_CHARS; hand off to the 7-question
-      // reflection. Nothing is written until the modal calls onProceed.
-      if (!noteOk) {
-        toast.error(`근거는 ${MIN_RATIONALE_CHARS}자 이상 적어주세요 (현재 ${note.trim().length}자).`);
-        return;
-      }
-      setFrictionOpen(true);
-      return;
-    }
-
-    // RECORD: the trade already happened — skip the reflection and write it.
     void commitTrade();
   }
 
-  // Commit the real buy/sell trade. Two callers:
-  //   - RECORD mode: directly from handleSubmit (no friction).
-  //   - REVIEW mode: from the friction modal's onProceed.
-  async function commitTrade(reviewReflectionId?: number) {
+  // Commit the buy/sell trade the user already filled at their broker.
+  async function commitTrade() {
     if (!position) return;
     const parsedQty = Number(shares);
     const parsedPrice = Number(price);
@@ -281,19 +207,14 @@ export function TradeModalV2({
           price: parsedPrice,
           date,
           note: note.trim(),
-          // Review buy → the pause it just made; record buy → the link line's
-          // choice (id, or an explicit decline when the shown pause was unchecked).
-          ...(reviewReflectionId != null
-            ? { reflection_id: reviewReflectionId }
-            : reflectionLinkBody(reflectionLink)),
+          // Buy → the link line's choice (id, or an explicit decline when the
+          // shown pause was unchecked); `{}` when no pause was offered.
+          ...reflectionLinkBody(reflectionLink),
         }),
       });
       toast.success(copy.toast);
       onSuccess?.();
-      // RECORD mode owns its own close (no friction modal to do it).
-      if (mode === "record") {
-        close();
-      }
+      close();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         if (typeof window !== "undefined") window.location.href = loginHref(currentLocationPath());
@@ -301,21 +222,13 @@ export function TradeModalV2({
       }
       const message =
         err instanceof Error ? err.message : "기록하지 못했습니다.";
-      if (mode === "record") {
-        // No friction modal to surface the error — toast here.
-        toast.error(message);
-        return;
-      }
-      // REVIEW: re-throw so the friction modal surfaces it (reflection already
-      // stamped; the journal write is what failed).
-      throw new Error(message);
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <>
     <Sheet
       ref={sheetRef}
       open={open}
@@ -402,25 +315,8 @@ export function TradeModalV2({
           </p>
         </div>
 
-        {/* Mode toggle — buy/sell only. edit has no mode concept. */}
-        {action !== "edit" && (
-          <div
-            role="radiogroup"
-            aria-label="기록 방식"
-            style={{ display: "flex", gap: 8, marginBottom: 28 }}
-          >
-            <ModeToggleButton
-              active={mode === "record"}
-              label="이미 체결됨 · 기록만"
-              onClick={() => setMode("record")}
-            />
-            <ModeToggleButton
-              active={mode === "review"}
-              label="신규 검토 · 7문항"
-              onClick={() => setMode("review")}
-            />
-          </div>
-        )}
+        {/* Not bought yet → the pause lives on /pre-trade (never writes here). */}
+        {action === "buy" && <PreTradeFirstLink style={{ marginBottom: 28 }} />}
 
         <form
           onSubmit={handleSubmit}
@@ -506,41 +402,15 @@ export function TradeModalV2({
                   style={{ ...fieldInputStyle, colorScheme: "dark" }}
                 />
               </FormField>
-              {mode === "review" ? (
-                <FormField label={`근거 · 한 문단 (${MIN_RATIONALE_CHARS}자 이상)`}>
-                  <textarea
-                    required
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    rows={3}
-                    placeholder="왜 지금 이 결정을 하는가? 한 문단으로 정직하게."
-                    style={{ ...fieldInputStyle, resize: "vertical", minHeight: 56 }}
-                  />
-                  <span
-                    className="font-mono"
-                    style={{
-                      fontSize: "var(--pq-text-eyebrow)",
-                      letterSpacing: "0.01em",
-                      color: noteOk ? "var(--pq-bronze)" : "var(--pq-ivory-faint)",
-                      marginTop: 2,
-                    }}
-                  >
-                    {noteOk
-                      ? `✓ ${note.trim().length}자`
-                      : `${noteRemaining}자 더 (${note.trim().length}/${MIN_RATIONALE_CHARS})`}
-                  </span>
-                </FormField>
-              ) : (
-                <FormField label="메모 · 언제·왜 거래했나 (선택)">
-                  <textarea
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    rows={3}
-                    placeholder="언제, 왜 체결했는지 한 줄로 — 비워도 됩니다."
-                    style={{ ...fieldInputStyle, resize: "vertical", minHeight: 56 }}
-                  />
-                </FormField>
-              )}
+              <FormField label="메모 · 언제·왜 거래했나 (선택)">
+                <textarea
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  rows={3}
+                  placeholder="언제, 왜 체결했는지 한 줄로 — 비워도 됩니다."
+                  style={{ ...fieldInputStyle, resize: "vertical", minHeight: 56 }}
+                />
+              </FormField>
               <ReflectionLinkLine link={reflectionLink} />
             </>
           )}
@@ -612,26 +482,6 @@ export function TradeModalV2({
           </SheetFooter>
         </form>
     </Sheet>
-
-      {/* Inline Pre-Trade Friction — buy=ENTRY, sell=EXIT. Real POST on
-          onProceed; Cancel writes nothing. (edit never opens this.) */}
-      <PreTradeFrictionModal
-        open={frictionOpen}
-        side={action === "buy" ? "ENTRY" : "EXIT"}
-        ticker={position.symbol}
-        tickerName={position.name}
-        shares={shares}
-        rationale={note}
-        onProceed={async (reflectionId) => {
-          // A buy after the seven questions is linked to the pause it just made.
-          await commitTrade(action === "buy" ? reflectionId : undefined);
-          setFrictionOpen(false);
-          close();
-        }}
-        onCancel={() => setFrictionOpen(false)}
-        onClose={() => setFrictionOpen(false)}
-      />
-    </>
   );
 }
 
@@ -650,40 +500,6 @@ const fieldInputStyle: React.CSSProperties = {
   color: "var(--pq-ivory)",
   letterSpacing: "0.01em",
 };
-
-function ModeToggleButton({
-  active,
-  label,
-  onClick,
-}: {
-  active: boolean;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="radio"
-      aria-checked={active}
-      onClick={onClick}
-      className="font-mono"
-      style={{
-        flex: 1,
-        padding: "9px 12px",
-        background: active ? "rgba(184,149,106,0.12)" : "transparent",
-        color: active ? "var(--pq-bronze)" : "rgba(245,240,232,0.55)",
-        border: `1px solid ${active ? "var(--pq-bronze)" : "rgba(245,240,232,0.12)"}`,
-        borderRadius: "var(--pq-radius-cta, 2px)",
-        fontSize: "var(--pq-text-eyebrow)",
-        letterSpacing: "0.02em",
-        cursor: "pointer",
-        transition: "all 160ms",
-      }}
-    >
-      {label}
-    </button>
-  );
-}
 
 function FormField({
   label,

@@ -10,10 +10,12 @@
  * "정보 제공용 UX 입니다. 거래 권유가 아닙니다."
  *
  * The reflection cycle (questions / cooldown / proceed / cancel / terminal)
- * lives in `@/components/pre-trade/pre-trade-friction-core` and is SHARED
- * with <PreTradeFrictionModal /> (inline at the moment of action in Portfolio
- * v2 Add/Trim). This page owns ONLY the Setup step — the modal prefills it.
- * Single source of truth; no duplicated step logic.
+ * lives in `@/components/pre-trade/pre-trade-friction-core`; this page owns
+ * the Setup step. 2026-10-13 (CEO): this route is the ONLY entry to the
+ * seven questions — before buying, never writing to the ledger. The
+ * portfolio add/trade modals are record-only (after the fill) and point here
+ * with one line; the in-modal reflection mode was removed because it wrote
+ * the trade before any real fill.
  *
  * Flow (route):
  *   1. Setup — ticker / side / shares / rationale (≥ MIN_RATIONALE_CHARS = 10 chars)
@@ -244,7 +246,6 @@ export default function PreTradePage() {
 
         {cycle.phase === "terminal" && cycle.reflection && (
           <TerminalStep
-            commit={cycle.commit}
             reflection={cycle.reflection}
             onReset={reset}
           />
@@ -262,7 +263,7 @@ export default function PreTradePage() {
   );
 }
 
-/* ─── Step 1 — Setup (route-only; modal prefills instead) ─────────────────── */
+/* ─── Step 1 — Setup ──────────────────────────────────────────────────────── */
 
 function SetupStep(props: {
   ticker: string; setTicker: (s: string) => void;

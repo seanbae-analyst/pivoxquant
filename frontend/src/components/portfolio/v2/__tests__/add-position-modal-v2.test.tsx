@@ -2,8 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-// Mock the network layer + toast. apiFetch is shared by the Add modal
-// (POST /positions) and the friction core (POST /pre-trade/*).
+// Mock the network layer + toast. apiFetch is the Add modal's POST /positions.
 vi.mock("@/lib/api", () => {
   class ApiError extends Error {
     status: number;
@@ -19,10 +18,19 @@ vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
 
+// No linkable pauses here (the pause link has its own file,
+// add-position-review-link.test.tsx). Keeps the linkable lookup off the
+// stubbed global fetch the autocomplete cases count.
+vi.mock("@/lib/hooks", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/hooks")>()),
+  useLinkableReflections: () => ({ reflections: [], isLoading: false, error: undefined }),
+}));
+
 import { apiFetch } from "@/lib/api";
 import { toast } from "sonner";
 import { PORTFOLIO_POSITIONS } from "@/lib/endpoints";
 import { AddPositionModalV2 } from "@/components/portfolio/v2/add-position-modal-v2";
+import { PRE_TRADE_FIRST_COPY } from "@/components/portfolio/v2/pre-trade-first-link";
 
 const mockedFetch = vi.mocked(apiFetch);
 
@@ -32,23 +40,20 @@ async function fillCoreFields(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByPlaceholderText("0.00"), "150");
 }
 
-describe("AddPositionModalV2 — mode split (FIX 1/2)", () => {
+describe("AddPositionModalV2 — record-only (2026-10-13)", () => {
   beforeEach(() => {
     mockedFetch.mockReset();
     vi.mocked(toast.error).mockReset();
     vi.mocked(toast.success).mockReset();
   });
 
-  it("HOLDING mode (default): POSTs directly with purchase_date and no friction", async () => {
+  it("POSTs directly with purchase_date and no friction", async () => {
     const user = userEvent.setup();
     mockedFetch.mockResolvedValue({});
     const onSuccess = vi.fn();
     const onClose = vi.fn();
 
     render(<AddPositionModalV2 open onClose={onClose} onSuccess={onSuccess} />);
-
-    // Default mode is HOLDING — record button, optional memo.
-    expect(screen.getByText("이미 보유 중 · 기록만")).toBeTruthy();
 
     await fillCoreFields(user);
     // Backdate the purchase date.
@@ -78,31 +83,23 @@ describe("AddPositionModalV2 — mode split (FIX 1/2)", () => {
     await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
 
-  it("NEW_ENTRY mode: requires thesis and opens the 7-question reflection (no direct POST)", async () => {
-    const user = userEvent.setup();
-    mockedFetch.mockResolvedValue({});
-
+  it("has no mode toggle and points to /pre-trade with one link", () => {
     render(<AddPositionModalV2 open onClose={vi.fn()} onSuccess={vi.fn()} />);
 
-    await user.click(screen.getByRole("radio", { name: "신규 진입 검토 · 7문항" }));
-    await fillCoreFields(user);
+    expect(screen.queryByRole("radiogroup")).toBeNull();
+    expect(screen.queryByRole("radio")).toBeNull();
+    const link = screen.getByRole("link", { name: PRE_TRADE_FIRST_COPY });
+    expect(link.getAttribute("href")).toBe("/pre-trade");
+    // The holdings-capture entry is still offered.
+    expect(screen.getByTestId("open-holdings-import")).toBeTruthy();
+  });
 
-    // Thesis ≥50 chars required in NEW mode (this string is well over 50).
-    fireEvent.change(
-      screen.getByPlaceholderText("왜 지금 이 종목에 들어가는가? 한 문단으로 정직하게."),
-      {
-        target: {
-          value:
-            "강한 펀더멘털과 모멘텀이 동시에 확인되어 장기 보유 관점에서 진입한다. 밸류에이션도 합리적이며 리스크 대비 보상이 충분하다고 판단한다.",
-        },
-      },
-    );
+  it("holdingOnly (onboarding): no /pre-trade link and no capture entry", () => {
+    render(<AddPositionModalV2 open holdingOnly onClose={vi.fn()} onSuccess={vi.fn()} />);
 
-    await user.click(screen.getByRole("button", { name: /다음 · 7문항/ }));
-
-    // Friction modal opens — no position POST yet.
-    await waitFor(() => expect(screen.getByText("먼저, 질문 일곱 개.")).toBeTruthy());
-    expect(mockedFetch).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("pre-trade-first-link")).toBeNull();
+    expect(screen.queryByTestId("open-holdings-import")).toBeNull();
+    expect(screen.queryByRole("radio")).toBeNull();
   });
 
   it("constrains the purchase date to today (max attr) and defaults to today", () => {

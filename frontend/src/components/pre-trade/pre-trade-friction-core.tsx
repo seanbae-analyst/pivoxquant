@@ -4,16 +4,18 @@
  * Pre-Trade Friction — reusable core (Feature 6).
  *
  * Single source of truth for the self-imposed cooldown + 7-question
- * reflection cycle. Consumed by:
- *   - /pre-trade route page (direct entry: full Setup → questions → cooldown)
- *   - <PreTradeFrictionModal /> (inline at the moment of action — Portfolio v2
- *     Add (ENTRY) / Trim·Close (EXIT) — ticker/shares/rationale prefilled,
- *     Setup skipped)
+ * reflection cycle. Consumed by the /pre-trade route page only (full Setup →
+ * questions → cooldown). 2026-10-13 (CEO): the inline portfolio modal that
+ * also mounted this cycle was removed — the pause happens before buying and
+ * never writes to the ledger; the fill is recorded afterwards on Portfolio
+ * (record-only) and can be linked back to the pause there
+ * (components/pre-trade/reflection-link-line.tsx). The modal-only host hooks
+ * (`onProceeded` commit → "recorded"/"failed" finish copy, `onCancelled`,
+ * `bare`, `resetLabel`) went with it.
  *
  * Compliance posture (routes/pre_trade.py): "정보 제공용 UX 입니다. 거래
- * 권유가 아닙니다." We DO NOT place trades. `/proceed` only stamps "user
- * finished thinking" on a row; the caller's `onProceed()` then commits the
- * actual journal record (add / trim / close). Cooldown is the point — friction.
+ * 권유가 아닙니다." We DO NOT place trades and write nothing to the ledger.
+ * `/proceed` only stamps "user finished thinking" on a row.
  *
  * v3 tone: Vantablack + Bronze + Playfair UPRIGHT (no italic headings — in
  * lock-step with the detail-page redesign). POSITIVE / NEGATIVE / NEUTRAL
@@ -76,7 +78,7 @@ export const MIN_RATIONALE_CHARS = 10;
 
 // The seven reflective questions live in a single SoT shared with the landing
 // teaser — see `@/data/pre-trade-questions`. Re-exported here under the
-// historical name so existing imports (modal, route page) stay unchanged.
+// historical name so existing imports stay unchanged.
 export const QUESTIONS = PRE_TRADE_QUESTIONS;
 
 export interface Reflection {
@@ -112,7 +114,7 @@ export type Phase = "setup" | "questions" | "cooldown" | "terminal";
 /* ─── Shared cycle hook ──────────────────────────────────────────────────
  * Owns the server lifecycle: POST /start (after questions) → poll /status
  * (cooldown) → /proceed | /cancel. Setup-step state (ticker/side/shares/
- * rationale) is owned by the caller so a host that prefills can skip Setup.
+ * rationale) is owned by the caller.
  */
 
 export interface PreTradeCycleArgs {
@@ -125,19 +127,9 @@ export interface PreTradeCycleArgs {
   /** Question acknowledgements + optional one-line answers. */
   acks: Record<number, boolean>;
   answers: Record<number, string>;
-  /**
-   * Called once /proceed succeeds. The host commits the real journal record
-   * here (e.g. POST /api/portfolio/positions). Errors thrown here surface a
-   * toast but DO NOT roll back the reflection (it is already stamped).
-   */
-  onProceeded?: (reflectionId: number) => Promise<void> | void;
-  /** Called once /cancel succeeds (host clears its UI). */
-  onCancelled?: () => void;
 }
 
 export interface PreTradeCycle {
-  /** What happened to the host's record commit after proceed (drives finish copy). */
-  commit: "none" | "recorded" | "failed";
   phase: Phase;
   reflection: Reflection | null;
   submitting: boolean;
@@ -158,8 +150,6 @@ export function usePreTradeCycle(args: PreTradeCycleArgs): PreTradeCycle {
     sharesText,
     rationale,
     answers,
-    onProceeded,
-    onCancelled,
   } = args;
 
   // 2026-09-19: the four failure toasts below were hardcoded English — the
@@ -172,7 +162,6 @@ export function usePreTradeCycle(args: PreTradeCycleArgs): PreTradeCycle {
   const [phase, setPhase] = useState<Phase>("setup");
   const [reflection, setReflection] = useState<Reflection | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [commit, setCommit] = useState<"none" | "recorded" | "failed">("none");
 
   /* ── Proceed against a *specific* reflection ──
    * Shared by the user-driven `proceed()` and the auto-proceed path in
@@ -189,26 +178,6 @@ export function usePreTradeCycle(args: PreTradeCycleArgs): PreTradeCycle {
           },
         );
         setReflection(r.reflection);
-        // Commit the host's real journal record AFTER the reflection is
-        // stamped, and BEFORE the finish screen, so its copy can say what
-        // actually happened. 2026-09-10: the screen always said "recorded the
-        // entry to your book", including on /pre-trade (no host commit at all)
-        // and after a failed commit.
-        if (onProceeded) {
-          try {
-            await onProceeded(target.id);
-            setCommit("recorded");
-          } catch (commitErr) {
-            const cmsg =
-              commitErr instanceof Error && commitErr.message
-                ? commitErr.message
-                : t("preTrade.errors.recordFailed");
-            toast.error(cmsg);
-            setCommit("failed");
-          }
-        } else {
-          setCommit("none");
-        }
         setPhase("terminal");
       } catch (err) {
         const fallback = t("preTrade.errors.proceedFailed");
@@ -216,7 +185,7 @@ export function usePreTradeCycle(args: PreTradeCycleArgs): PreTradeCycle {
         toast.error(msg || fallback);
       }
     },
-    [onProceeded, t],
+    [t],
   );
 
   /* ── POST /start ── */
@@ -347,7 +316,6 @@ export function usePreTradeCycle(args: PreTradeCycleArgs): PreTradeCycle {
       setReflection(r.reflection);
       setPhase("terminal");
       toast.success(t("preTrade.errors.cancelled"));
-      onCancelled?.();
     } catch (err) {
       const fallback = t("preTrade.errors.cancelFailed");
       const msg = err instanceof ApiError ? err.message : fallback;
@@ -355,7 +323,7 @@ export function usePreTradeCycle(args: PreTradeCycleArgs): PreTradeCycle {
     } finally {
       setSubmitting(false);
     }
-  }, [reflection, onCancelled, submitting, t]);
+  }, [reflection, submitting, t]);
 
   const reset = useCallback(() => {
     setPhase("setup");
@@ -364,7 +332,6 @@ export function usePreTradeCycle(args: PreTradeCycleArgs): PreTradeCycle {
   }, []);
 
   return {
-    commit,
     phase,
     reflection,
     submitting,
@@ -483,20 +450,18 @@ export function QuestionsStep(props: {
   /** Optional Back affordance (route page: → setup). Hidden when omitted. */
   onBack?: () => void;
   onStart: () => void;
-  /** When true, render without the leading numbered SectionLabel (modal). */
-  bare?: boolean;
   /**
    * Phone only (2026-10-07, CEO "너무 웹사이트야"; 2026-10-09 swipe): one
    * question per screen, sliding horizontally, with a segmented progress
    * bar, a last review screen and a sticky action bar ("검토했음 · 다음" →
    * "진입 시계 시작"). At md and up the list renders as before. The route
-   * page opts in; the modals keep the list.
+   * page opts in.
    */
   pagedOnPhone?: boolean;
   /**
    * Controlled pager position (optional). The /pre-trade route keeps it so
    * the system back gesture can step back through the questions; without
-   * it the pager keeps its own position, as the modals do.
+   * it the pager keeps its own position.
    */
   nav?: QuestionsNav;
   onNavChange?: (nav: QuestionsNav) => void;
@@ -510,7 +475,6 @@ export function QuestionsStep(props: {
     submitting,
     onBack,
     onStart,
-    bare,
     pagedOnPhone = false,
   } = props;
   const screenRef = useRef<HTMLDivElement>(null);
@@ -530,8 +494,8 @@ export function QuestionsStep(props: {
 
   // Persona-aware hint lines (record-as-spine §7, 2026-06-10). Resolved
   // client-side from the usePersona() localStorage cache — no fetch from
-  // the deposition flow (would break the host modals' strict apiFetch
-  // call-count tests), no SSR/hydration mismatch (first paint is always
+  // the deposition flow (would break strict apiFetch call-count tests),
+  // no SSR/hydration mismatch (first paint is always
   // the neutral copy). Cold cache / offline-mock → null → questions
   // render exactly as before.
   //
@@ -552,7 +516,7 @@ export function QuestionsStep(props: {
 
   return (
     <section className="space-y-6">
-      {!bare && <SectionLabel n={2} title="질문 7개" />}
+      <SectionLabel n={2} title="질문 7개" />
       {pagedOnPhone && <PhoneProgress cur={cur} acks={acks} ackCount={ackCount} />}
       <div
         ref={screenRef}
@@ -898,13 +862,11 @@ export function CooldownStep({
   submitting,
   onProceed,
   onCancel,
-  bare,
 }: {
   reflection: Reflection;
   submitting: boolean;
   onProceed: () => void;
   onCancel: () => void;
-  bare?: boolean;
 }) {
   const t = useT();
   const isReady =
@@ -923,12 +885,10 @@ export function CooldownStep({
 
   return (
     <section className="space-y-6">
-      {!bare && (
-        <SectionLabel
-          n={3}
-          title={isReady ? "결정의 시간" : "진입 시계"}
-        />
-      )}
+      <SectionLabel
+        n={3}
+        title={isReady ? "결정의 시간" : "진입 시계"}
+      />
 
       <div className="rounded-[var(--pq-radius-card)] border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-6 md:p-8 space-y-6">
         {/* Trade summary */}
@@ -1026,17 +986,9 @@ export function CooldownStep({
 export function TerminalStep({
   reflection,
   onReset,
-  resetLabel,
-  bare,
-  commit = "none",
 }: {
   reflection: Reflection;
-  /** Outcome of the host's record commit; "none" when the host has no commit. */
-  commit?: "none" | "recorded" | "failed";
   onReset: () => void;
-  /** Override the reset CTA label (modal: "닫기"; page: "새로 시작"). */
-  resetLabel?: string;
-  bare?: boolean;
 }) {
   const t = useT();
   const proceeded = reflection.status === "proceeded";
@@ -1044,12 +996,10 @@ export function TerminalStep({
     t(`preTrade.done.${k}`, params);
   return (
     <section className="space-y-6">
-      {!bare && (
-        <SectionLabel
-          n={4}
-          title={proceeded ? "기록 완료" : "취소"}
-        />
-      )}
+      <SectionLabel
+        n={4}
+        title={proceeded ? "기록 완료" : "취소"}
+      />
       <div className="rounded-[var(--pq-radius-card)] border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-6 md:p-8 space-y-4">
         {/* 2026-09-19: this screen — the product's single most important
             confirmation moment — rendered entirely in English under the ko
@@ -1080,13 +1030,7 @@ export function TerminalStep({
         </div>
         <p className="font-serif text-pq-body leading-relaxed text-[var(--pq-ivory-mid)]">
           {proceeded
-            ? `${
-                commit === "recorded"
-                  ? d("recorded")
-                  : commit === "failed"
-                    ? d("recordFailed")
-                    : d("stampedOnly")
-              } ${d("noOrderTail")}`
+            ? `${d("stampedOnly")} ${d("noOrderTail")}`
             : d("cancelledBody")}
         </p>
         <div className="border-t border-[var(--pq-ivory-line-soft)] pt-3 flex flex-wrap gap-x-6 gap-y-1 text-pq-caption font-mono text-[var(--pq-ivory-dim)]">
@@ -1112,7 +1056,7 @@ export function TerminalStep({
           className="inline-flex items-center gap-2 px-5 py-2 text-pq-mono-sm text-[var(--pq-ivory-mid)] border border-[rgba(245,240,232,0.15)] hover:border-[var(--pq-bronze)] hover:text-[var(--pq-bronze)]"
         >
           <RotateCcw className="h-3.5 w-3.5" />
-          {resetLabel ?? "새로 시작"}
+          새로 시작
         </button>
       </div>
     </section>

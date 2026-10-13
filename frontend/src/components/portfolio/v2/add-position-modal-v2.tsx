@@ -8,26 +8,28 @@
  *   - Form fields with mono labels + hairline-bottom inputs
  *   - "Save observation" CTA (legal-safe vocabulary)
  *
- * Two modes (2026-05-22, CEO decision) — a toggle at the top of the form:
- *   - "이미 보유 중 · 기록만" (HOLDING, default): most users are journaling a
- *     position they ALREADY own. The 7-question Deposition is inappropriate
- *     and friction-abandonment was dropping data. This mode SKIPS the
- *     reflection and calls commitPosition() directly on submit. Thesis (memo)
- *     is OPTIONAL — empty is allowed.
- *   - "신규 진입 검토 · 7문항" (NEW_ENTRY): the original flow. Submitting hands
- *     off to <PreTradeFrictionModal /> (ENTRY) — 7-question reflection. The
- *     real POST fires only on its onProceed. Thesis REQUIRED at
- *     ≥MIN_RATIONALE_CHARS (matches the reflection's constant) and prefills
- *     it. The
- *     backend cooldown is now 0, so the friction core auto-proceeds after the
- *     7 questions (no 2-minute countdown).
+ * Record-only (2026-10-13, CEO): this modal records a position the user
+ * already holds — after the fill. No questions; submit calls commitPosition()
+ * directly. Thesis (memo) is OPTIONAL — empty is allowed. The 7-question
+ * pause lives only on /pre-trade (before buying), which never writes to the
+ * ledger; a quiet <PreTradeFirstLink /> points there. The former in-modal
+ * reflection mode wrote the position the moment the user finished thinking —
+ * before any real fill — so the ledger could disagree with the broker.
+ *
+ * Pause link (2026-10-13): when a recent unlinked pause exists for the typed
+ * ticker, <ReflectionLinkLine /> offers to link it (default ON) and the POST
+ * carries `reflection_id` — the backend then writes a recorded buy linked to
+ * that pause instead of a holding seed. Not offered when `holdingOnly`, and
+ * not offered when the purchase date is earlier than the pause's day (both
+ * local calendar days): a holding bought before the pause cannot be its
+ * outcome.
  *
  * Backend contract (updated 2026-05-22 against routes/portfolio.py
  * ::create_position_alias):
  *   POST PORTFOLIO_POSITIONS = `/api/portfolio/positions`
  *   payload: {symbol, quantity, price, note, purchase_date?}
  *   `purchase_date` ("YYYY-MM-DD", optional) sets the position open date
- *   (opened_at); omitted → today. This is the core HOLDING-mode use case:
+ *   (opened_at); omitted → today. This is the core use case:
  *   backdating a position you already own. side / sector / currency still
  *   have no Position-model column and are intentionally not sent.
  *
@@ -42,10 +44,14 @@ import { PORTFOLIO_POSITIONS } from "@/lib/endpoints";
 import { apiFetch, ApiError } from "@/lib/api";
 import { Sheet, SheetFooter, type SheetHandle } from "@/components/ui/sheet";
 import { isKrTicker } from "@/lib/format";
-import { PreTradeFrictionModal } from "@/components/pre-trade/pre-trade-friction-modal";
-import { MIN_RATIONALE_CHARS } from "@/components/pre-trade/pre-trade-friction-core";
 import { TickerSearch } from "@/components/shared/ticker-search";
 import { HoldingsImportPanel } from "@/components/portfolio/v2/holdings-import-panel";
+import { PreTradeFirstLink } from "@/components/portfolio/v2/pre-trade-first-link";
+import {
+  ReflectionLinkLine,
+  useReflectionLink,
+} from "@/components/pre-trade/reflection-link-line";
+import { parseUtcSafe } from "@/lib/relative-time";
 import { useT } from "@/lib/locale";
 import { currentLocationPath, loginHref } from "@/lib/login-redirect";
 
@@ -55,17 +61,18 @@ interface AddPositionModalV2Props {
   onSuccess?: () => void;
   /** Open straight on the holdings-capture import (/portfolio?import=holdings). */
   startWithImport?: boolean;
-  /** Onboarding: record an existing holding only — no 7-question mode toggle
-   *  and no capture entry (the onboarding page shows the capture itself). */
+  /** Onboarding: no capture entry (the onboarding page shows the capture
+   *  itself), no /pre-trade pointer and no pause link. */
   holdingOnly?: boolean;
 }
 
-/** Entry mode — journaling an existing holding vs. reflecting on a new entry. */
-type EntryMode = "holding" | "new";
+/** Typing settles before the linkable-pause lookup (one fetch per ticker,
+ *  not per keystroke). Matches <TickerSearch />'s search debounce. */
+const LINK_LOOKUP_DEBOUNCE_MS = 300;
 
-/** Local-date "YYYY-MM-DD" (no UTC shift — matches the date input value). */
-function todayStr(): string {
-  const d = new Date();
+/** Local calendar day "YYYY-MM-DD" of `d` (default now) — no UTC shift, so
+ *  it matches a date input's value and compares as a string. */
+function localDayStr(d: Date = new Date()): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
@@ -95,39 +102,28 @@ export function AddPositionModalV2({
   // form inside the same dialog shell.
   const [importing, setImporting] = React.useState(false);
 
-  const [mode, setMode] = React.useState<EntryMode>("holding");
   const [symbol, setSymbol] = React.useState("");
   const [shares, setShares] = React.useState("");
   const [avgCost, setAvgCost] = React.useState("");
-  const [purchaseDate, setPurchaseDate] = React.useState(todayStr());
+  const [purchaseDate, setPurchaseDate] = React.useState(localDayStr());
   const [memo, setMemo] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
-  // Inline Pre-Trade Friction (ENTRY) — opened after the form validates in
-  // NEW_ENTRY mode; the real POST fires only on its onProceed.
-  const [frictionOpen, setFrictionOpen] = React.useState(false);
 
   // Symbol autocomplete lives in <TickerSearch /> (components/shared) since
   // 2026-09-22 — debounce, AbortController and the `picked` flag are all
   // owned there, and it unmounts with this modal so nothing needs resetting.
 
-  const today = todayStr();
-  // Thesis is required only in NEW_ENTRY mode (the reflection needs
-  // ≥MIN_RATIONALE_CHARS).
-  // In HOLDING mode it's an optional memo — empty allowed.
-  const memoOk = memo.trim().length >= MIN_RATIONALE_CHARS;
-  const memoRemaining = Math.max(0, MIN_RATIONALE_CHARS - memo.trim().length);
+  const today = localDayStr();
 
   // Reset on close
   React.useEffect(() => {
     if (!open) {
-      setMode("holding");
       setSymbol("");
       setShares("");
       setAvgCost("");
-      setPurchaseDate(todayStr());
+      setPurchaseDate(localDayStr());
       setMemo("");
       setSubmitting(false);
-      setFrictionOpen(false);
       setImporting(false);
     }
   }, [open]);
@@ -135,16 +131,36 @@ export function AddPositionModalV2({
     if (open && startWithImport) setImporting(true);
   }, [open, startWithImport]);
 
-  // Escape / backdrop / back are owned by <Sheet />. While the friction
-  // modal is open it is the topmost sheet, so it takes Escape and back.
+  // Escape / backdrop / back are owned by <Sheet />.
 
   const sym = symbol.trim().toUpperCase();
   const sharesN = Number(shares);
   const costN = Number(avgCost);
 
+  // Linkable pause for this ticker — looked up once typing settles.
+  const [linkTicker, setLinkTicker] = React.useState("");
+  React.useEffect(() => {
+    const id = setTimeout(
+      () => setLinkTicker(holdingOnly ? "" : sym),
+      LINK_LOOKUP_DEBOUNCE_MS,
+    );
+    return () => clearTimeout(id);
+  }, [sym, holdingOnly]);
+  const reflectionLink = useReflectionLink(linkTicker || null);
+  // Guard: a holding bought before the pause cannot be its outcome. An empty
+  // purchase date means today (backend default); an unreadable pause date is
+  // never offered.
+  const pauseAt = parseUtcSafe(reflectionLink.candidate?.cooldown_started_at ?? null);
+  const pauseDay = Number.isNaN(pauseAt) ? "" : localDayStr(new Date(pauseAt));
+  const linkOffered =
+    reflectionLink.candidate != null &&
+    linkTicker === sym &&
+    pauseDay !== "" &&
+    (purchaseDate || today) >= pauseDay;
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (submitting || frictionOpen) return;
+    if (submitting) return;
 
     if (!sym) {
       toast.error("종목 코드를 입력하세요.");
@@ -163,32 +179,14 @@ export function AddPositionModalV2({
       return;
     }
 
-    if (mode === "new") {
-      // NEW_ENTRY: thesis required ≥MIN_RATIONALE_CHARS; hand off to the 7-question
-      // reflection. Nothing is written until the modal calls onProceed.
-      if (!memoOk) {
-        toast.error(`근거는 ${MIN_RATIONALE_CHARS}자 이상 적어주세요 (현재 ${memo.trim().length}자).`);
-        return;
-      }
-      setFrictionOpen(true);
-      return;
-    }
-
-    // HOLDING: skip the reflection — record the existing position directly.
     void commitPosition();
   }
 
-  // Commit the real position. Two callers:
-  //   - HOLDING mode: directly from handleSubmit (no friction).
-  //   - NEW_ENTRY mode: from the friction modal's onProceed.
-  // Backend `routes/portfolio.py::create_position_alias` reads
-  // {symbol, quantity, price, note, purchase_date?}. `purchase_date`
+  // Commit the position. Backend `routes/portfolio.py::create_position_alias`
+  // reads {symbol, quantity, price, note, purchase_date?, reflection_id?}. `purchase_date`
   // ("YYYY-MM-DD") sets opened_at; omitted → today. side / sector /
   // currency still have no Position-model column.
-  // `reflection_id` (NEW_ENTRY only, 2026-09-29): the pause the friction modal
-  // just stamped. The backend then writes a recorded buy linked to it instead
-  // of a holding seed, so the pause's outcome counts this purchase.
-  async function commitPosition(reflectionId?: number) {
+  async function commitPosition() {
     setSubmitting(true);
     try {
       const body: Record<string, unknown> = {
@@ -198,17 +196,18 @@ export function AddPositionModalV2({
         note: memo.trim(),
       };
       if (purchaseDate) body.purchase_date = purchaseDate;
-      if (reflectionId != null) body.reflection_id = reflectionId;
+      // Checked link → the pause this buy came from. Unchecked / not offered
+      // → nothing (the positions route takes no explicit decline).
+      if (linkOffered && reflectionLink.reflectionId != null) {
+        body.reflection_id = reflectionLink.reflectionId;
+      }
       await apiFetch(PORTFOLIO_POSITIONS, {
         method: "POST",
         body: JSON.stringify(body),
       });
       toast.success("종목을 기록했습니다 · 정보 기록용입니다.");
       onSuccess?.();
-      // HOLDING mode owns its own close (no friction modal to do it).
-      if (mode === "holding") {
-        close();
-      }
+      close();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         if (typeof window !== "undefined") window.location.href = loginHref(currentLocationPath());
@@ -216,21 +215,13 @@ export function AddPositionModalV2({
       }
       const message =
         err instanceof Error ? err.message : "기록하지 못했습니다.";
-      if (mode === "holding") {
-        // No friction modal to surface the error — toast here.
-        toast.error(message);
-        return;
-      }
-      // NEW_ENTRY: re-throw so the friction modal surfaces it (the reflection
-      // is already stamped; the journal write is what failed).
-      throw new Error(message);
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <>
     <Sheet
       ref={sheetRef}
       open={open}
@@ -280,7 +271,7 @@ export function AddPositionModalV2({
           </>
         ) : (
         <>
-        {/* Hero block — copy keys off mode */}
+        {/* Hero block */}
         <div style={{ marginBottom: 24 }}>
           <div
             className="font-mono"
@@ -291,7 +282,7 @@ export function AddPositionModalV2({
               marginBottom: 14,
             }}
           >
-            {mode === "holding" ? "기록 · 보유 중인 종목" : "기록 · 신규 진입"}
+            기록 · 보유 중인 종목
           </div>
           <h2
             id={headlineId}
@@ -305,17 +296,8 @@ export function AddPositionModalV2({
               margin: "0 0 12px 0",
             }}
           >
-            {mode === "holding" ? (
-              <>
-                지금 들고 있는{" "}
-                <span style={{ color: "var(--pq-bronze)" }}>종목을 기록합니다.</span>
-              </>
-            ) : (
-              <>
-                새로 들어가는{" "}
-                <span style={{ color: "var(--pq-bronze)" }}>종목을 기록합니다.</span>
-              </>
-            )}
+            지금 들고 있는{" "}
+            <span style={{ color: "var(--pq-bronze)" }}>종목을 기록합니다.</span>
           </h2>
           <p
             className="font-serif"
@@ -326,34 +308,15 @@ export function AddPositionModalV2({
               margin: 0,
             }}
           >
-            {mode === "holding"
-              ? "이미 보유한 종목을 책에 기록합니다. 질문 없이 바로 저장 — 매수일은 과거로 자유롭게 적어도 됩니다."
-              : "내 장부에만 저장되고 증권사로 전송되지 않습니다. 7개 질문을 거친 뒤 기록됩니다."}
+            이미 보유한 종목을 책에 기록합니다. 질문 없이 바로 저장 — 매수일은 과거로 자유롭게 적어도 됩니다.
           </p>
         </div>
 
-        {/* Mode toggle */}
-        {!holdingOnly && (
-        <div
-          role="radiogroup"
-          aria-label="기록 방식"
-          style={{ display: "flex", gap: 8, marginBottom: 28 }}
-        >
-          <ModeToggleButton
-            active={mode === "holding"}
-            label="이미 보유 중 · 기록만"
-            onClick={() => setMode("holding")}
-          />
-          <ModeToggleButton
-            active={mode === "new"}
-            label="신규 진입 검토 · 7문항"
-            onClick={() => setMode("new")}
-          />
-        </div>
-        )}
+        {/* Not bought yet → the pause lives on /pre-trade (never writes here). */}
+        {!holdingOnly && <PreTradeFirstLink style={{ marginBottom: 20 }} />}
 
         {/* Secondary entry: many positions at once from a holdings capture. */}
-        {mode === "holding" && !holdingOnly && (
+        {!holdingOnly && (
           <button
             type="button"
             onClick={() => setImporting(true)}
@@ -363,7 +326,7 @@ export function AddPositionModalV2({
               display: "block",
               width: "100%",
               textAlign: "left",
-              margin: "-12px 0 24px",
+              margin: "0 0 24px",
               padding: "10px 12px",
               background: "transparent",
               border: "1px dashed rgba(184,149,106,0.45)",
@@ -426,9 +389,9 @@ export function AddPositionModalV2({
             </FormField>
           </div>
 
-          {/* Purchase date — when you opened the position. HOLDING mode's core
-              use is backdating; NEW_ENTRY defaults to today. max=today blocks
-              future dates client-side (also re-checked in handleSubmit). */}
+          {/* Purchase date — when you opened the position. The core use is
+              backdating; defaults to today. max=today blocks future dates
+              client-side (also re-checked in handleSubmit). */}
           <FormField label="매수일">
             <input
               type="date"
@@ -439,43 +402,18 @@ export function AddPositionModalV2({
             />
           </FormField>
 
-          {/* Thesis — required ≥MIN_RATIONALE_CHARS in NEW_ENTRY (prefills the
-              reflection); optional memo in HOLDING mode. */}
-          {mode === "new" ? (
-            <FormField label={`근거 · 한 문단 (${MIN_RATIONALE_CHARS}자 이상)`}>
-              <textarea
-                required
-                value={memo}
-                onChange={(e) => setMemo(e.target.value)}
-                rows={3}
-                placeholder="왜 지금 이 종목에 들어가는가? 한 문단으로 정직하게."
-                style={{ ...fieldInputStyle, resize: "vertical", minHeight: 56 }}
-              />
-              <span
-                className="font-mono"
-                style={{
-                  fontSize: "var(--pq-text-eyebrow)",
-                  letterSpacing: "0.01em",
-                  color: memoOk ? "var(--pq-bronze)" : "var(--pq-ivory-faint)",
-                  marginTop: 2,
-                }}
-              >
-                {memoOk
-                  ? `✓ ${memo.trim().length}자`
-                  : `${memoRemaining}자 더 (${memo.trim().length}/${MIN_RATIONALE_CHARS})`}
-              </span>
-            </FormField>
-          ) : (
-            <FormField label="메모 · 언제·왜 샀나 (선택)">
-              <textarea
-                value={memo}
-                onChange={(e) => setMemo(e.target.value)}
-                rows={3}
-                placeholder="언제, 왜 들어갔는지 한 줄로 — 비워도 됩니다."
-                style={{ ...fieldInputStyle, resize: "vertical", minHeight: 56 }}
-              />
-            </FormField>
-          )}
+          {/* Memo — optional. */}
+          <FormField label="메모 · 언제·왜 샀나 (선택)">
+            <textarea
+              value={memo}
+              onChange={(e) => setMemo(e.target.value)}
+              rows={3}
+              placeholder="언제, 왜 들어갔는지 한 줄로 — 비워도 됩니다."
+              style={{ ...fieldInputStyle, resize: "vertical", minHeight: 56 }}
+            />
+          </FormField>
+
+          {linkOffered && <ReflectionLinkLine link={reflectionLink} />}
 
           {/* Footer */}
           <SheetFooter
@@ -538,11 +476,7 @@ export function AddPositionModalV2({
                   cursor: submitting ? "not-allowed" : "pointer",
                 }}
               >
-                {submitting
-                  ? "저장 중…"
-                  : mode === "holding"
-                    ? "기록하기"
-                    : "다음 · 7문항 →"}
+                {submitting ? "저장 중…" : "기록하기"}
               </button>
             </div>
           </SheetFooter>
@@ -550,27 +484,6 @@ export function AddPositionModalV2({
         </>
         )}
     </Sheet>
-
-      {/* Inline Pre-Trade Friction (ENTRY). The real POST fires on onProceed.
-          On cancel, nothing is written and we return to this form. */}
-      <PreTradeFrictionModal
-        open={frictionOpen}
-        side="ENTRY"
-        ticker={sym}
-        shares={shares}
-        rationale={memo}
-        onProceed={async (reflectionId) => {
-          // A new entry after the seven questions is a buy made now — link it
-          // to the pause it just made.
-          await commitPosition(reflectionId);
-          // Position committed — close both modals.
-          setFrictionOpen(false);
-          close();
-        }}
-        onCancel={() => setFrictionOpen(false)}
-        onClose={() => setFrictionOpen(false)}
-      />
-    </>
   );
 }
 
@@ -586,40 +499,6 @@ const fieldInputStyle: React.CSSProperties = {
   fontSize: "var(--pq-text-h6)",
   letterSpacing: "0.01em",
 };
-
-function ModeToggleButton({
-  active,
-  label,
-  onClick,
-}: {
-  active: boolean;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="radio"
-      aria-checked={active}
-      onClick={onClick}
-      className="font-mono"
-      style={{
-        flex: 1,
-        padding: "9px 12px",
-        background: active ? "rgba(184,149,106,0.12)" : "transparent",
-        color: active ? "var(--pq-bronze)" : "rgba(245,240,232,0.55)",
-        border: `1px solid ${active ? "var(--pq-bronze)" : "rgba(245,240,232,0.12)"}`,
-        borderRadius: "var(--pq-radius-cta, 2px)",
-        fontSize: "var(--pq-text-eyebrow)",
-        letterSpacing: "0.02em",
-        cursor: "pointer",
-        transition: "all 160ms",
-      }}
-    >
-      {label}
-    </button>
-  );
-}
 
 function FormField({
   label,
