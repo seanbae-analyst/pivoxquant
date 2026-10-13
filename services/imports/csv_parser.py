@@ -241,6 +241,15 @@ def _norm(h) -> str:
     return _NORMALISE.sub("", str(h or "").strip().lower())
 
 
+def _rank(h: str) -> tuple[int, int, int]:
+    """Exact-match preference: never an ORDER column when another matches
+    (a 주문체결 export has 주문수량 10 / 체결수량 4 — the fill is 4; its
+    주문구분 is often 지정가/시장가, not the side), a 체결 column first, then
+    the longer header. 2026-10-13: 주문수량 and 체결수량 tied on length and
+    the first column won, so a partial fill was stored with the order size."""
+    return (0 if h.startswith("주문") else 1, 1 if h.startswith("체결") else 0, len(h))
+
+
 def map_headers(headers: list) -> tuple[dict[str, int], dict[str, str], list[str]]:
     """Return (field→column index, field→raw header, unmapped raw headers)."""
     normed = [_norm(h) for h in headers]
@@ -248,15 +257,15 @@ def map_headers(headers: list) -> tuple[dict[str, int], dict[str, str], list[str
     raw: dict[str, str] = {}
     used: set[int] = set()
 
-    # Pass 1: exact matches — the LONGEST matching header wins, so a file
-    # laid out as ``구분(현금/신용), …, 매매구분`` maps side to 매매구분 and
-    # ``체결수량`` beats ``수량`` regardless of column order.
+    # Pass 1: exact matches — ranked by :func:`_rank`, so a file laid out as
+    # ``구분(현금/신용), …, 매매구분`` maps side to 매매구분, ``체결수량`` beats
+    # ``수량`` and ``주문수량`` regardless of column order.
     for fld, syns in HEADER_SYNONYMS.items():
         best = None
         for i, h in enumerate(normed):
             if i in used or not h:
                 continue
-            if h in syns and (best is None or len(h) > len(normed[best])):
+            if h in syns and (best is None or _rank(h) > _rank(normed[best])):
                 best = i
         if best is not None:
             idx[fld] = best
@@ -283,6 +292,39 @@ def map_headers(headers: list) -> tuple[dict[str, int], dict[str, str], list[str
     unmapped = [str(h).strip() for i, h in enumerate(headers)
                 if i not in used and str(h or "").strip()]
     return idx, raw, unmapped
+
+
+# A currency named in the header ("단가(원)", "단가(USD)", "거래금액(달러)").
+# _norm strips the brackets, so the hint is read from the raw header.
+_HDR_USD = re.compile(r"usd|달러|\$|외화", re.IGNORECASE)
+_HDR_KRW = re.compile(r"\(원\)|원화|krw|₩|\[원\]", re.IGNORECASE)
+
+
+def _currency_hint(header) -> str | None:
+    h = str(header or "")
+    if _HDR_USD.search(h):
+        return "USD"
+    if _HDR_KRW.search(h):
+        return "KRW"
+    return None
+
+
+def currency_columns(headers: list) -> dict[str, dict[str, int]]:
+    """field → {currency → column} for price/amount columns that name their
+    currency. A US row in a file with 단가(원) and 단가(USD) took whichever
+    came first — "TSLA 2주 @ 497,000 USD" (2026-10-13 bug hunt)."""
+    out: dict[str, dict[str, int]] = {"price": {}, "amount": {}}
+    for i, h in enumerate(headers):
+        hint = _currency_hint(h)
+        if not hint:
+            continue
+        n = _norm(re.sub(r"usd|krw|달러|원화|외화|₩|\$|\(원\)|\[원\]", "", str(h or ""), flags=re.IGNORECASE))
+        for fld in ("price", "amount"):
+            syns = HEADER_SYNONYMS[fld]
+            if n in syns or any(len(sy) >= 2 and sy in n for sy in syns):
+                out[fld].setdefault(hint, i)
+                break
+    return out
 
 
 def _find_header_row(grid: list[list]) -> int | None:
@@ -324,17 +366,25 @@ def _parse_grid(grid: list[list]) -> ParseResult:
     result.unmapped_headers = unmapped
     result.broker_guess = guess_broker(headers)
 
+    cur_cols = currency_columns(headers)
+    cur_cols["order_price"] = _norm(raw_map.get("price", "")).startswith("주문")
     body = grid[hdr_i + 1: hdr_i + 1 + MAX_ROWS]
     for offset, row in enumerate(body):
         row_no = hdr_i + 2 + offset  # 1-based line number for the user
         if not any(str(c or "").strip() for c in row):
             continue
-        trade = _row_to_trade(row, idx)
+        trade = _row_to_trade(row, idx, cur_cols)
         trade.raw_snippet = mask_sensitive(" | ".join(str(c) for c in row if str(c or "").strip()))
         trade.extra["row"] = row_no
         if trade.skip_reason:
             result.skipped.append({"row": row_no, "reason": trade.skip_reason})
         result.rows.append(trade)
+    # Rows past the cap used to vanish with no skip reason (2026-10-13).
+    if any(any(str(c or "").strip() for c in r) for r in grid[hdr_i + 1 + MAX_ROWS:]):
+        result.skipped.append({
+            "row": hdr_i + 2 + MAX_ROWS,
+            "reason": f"{MAX_ROWS}행까지만 읽었습니다 — 나머지는 기간을 나눠 다시 올려 주세요",
+        })
     return result
 
 
@@ -345,7 +395,12 @@ def _cell(row: list, idx: dict[str, int], fld: str):
     return row[i]
 
 
-def _row_to_trade(row: list, idx: dict[str, int]) -> RawTrade:
+# A currency itself in the security column is an FX row ("외화매수 · USD").
+_CURRENCY_NAME = re.compile(r"^(?:USD|JPY|EUR|CNY|HKD|미국\s*달러|달러|엔화?|유로|위안화?)$", re.IGNORECASE)
+
+
+def _row_to_trade(row: list, idx: dict[str, int], cur_cols: dict | None = None) -> RawTrade:
+    cur_cols = cur_cols or {}
     t = RawTrade()
     side_raw = _cell(row, idx, "side")
     side = side_from_text(side_raw)
@@ -360,6 +415,9 @@ def _row_to_trade(row: list, idx: dict[str, int]) -> RawTrade:
     if not t.name and not t.code:
         t.skip_reason = "종목명·종목코드 없음"
         return t
+    if _CURRENCY_NAME.match(t.name or "") or _CURRENCY_NAME.match(t.code or ""):
+        t.skip_reason = f"환전 항목: {t.name or t.code}"
+        return t
 
     # Some brokers sign sells (매도, -10): take the magnitude, then range-check.
     shares = parse_number(_cell(row, idx, "shares"))
@@ -369,17 +427,56 @@ def _row_to_trade(row: list, idx: dict[str, int]) -> RawTrade:
         return t
     t.shares = shares
 
-    price = parse_number(_cell(row, idx, "price"))
+    # The row's own currency, when the file states it — it picks between
+    # 단가(원) / 단가(USD) columns below.
+    cur = str(_cell(row, idx, "currency") or "").strip().upper()
+    if cur in ("₩", "원", "WON"):
+        cur = "KRW"
+    elif cur in ("$", "달러"):
+        cur = "USD"
+    if cur not in ("KRW", "USD"):
+        cur = ""
+
+    def col(fld: str) -> int | None:
+        by_cur = cur_cols.get(fld) or {}
+        if cur and cur in by_cur:
+            return by_cur[cur]
+        return idx.get(fld)
+
+    def hint(i: int | None) -> str | None:
+        for c, j in (cur_cols.get("price") or {}).items():
+            if j == i:
+                return c
+        for c, j in (cur_cols.get("amount") or {}).items():
+            if j == i:
+                return c
+        return None
+
+    price_i, amount_i = col("price"), col("amount")
+    price = parse_number(row[price_i]) if price_i is not None and price_i < len(row) else None
     price = abs(price) if price is not None else None
+    amount = parse_number(row[amount_i]) if amount_i is not None and amount_i < len(row) else None
+    used_i = price_i
+    # Only an ORDER price column (주문단가) and a fill amount: the amount over
+    # the filled shares is the fill price (주문단가 71,000 · 체결 4주 284,800원
+    # → 71,200, 2026-10-13).
+    if price and amount and t.shares and cur_cols.get("order_price"):
+        price, used_i = abs(amount) / t.shares, amount_i
     if not price:
-        amount = parse_number(_cell(row, idx, "amount"))
         if amount and t.shares:
-            price = abs(amount) / t.shares
+            price, used_i = abs(amount) / t.shares, amount_i
             t.confidence -= 0.1
     if not amount_ok(price):
         t.skip_reason = "단가·금액 없음" if not price else "단가 범위 초과"
         return t
     t.price = price
+    # A price read from a column that names its currency fixes the row's
+    # currency when the file has no 통화 column; disagreeing with a stated
+    # 통화 is surfaced instead of storing won as dollars.
+    col_cur = hint(used_i)
+    if col_cur and cur and col_cur != cur:
+        t.skip_reason = f"통화 불일치 — 통화 {cur}, 단가 열 {col_cur}"
+        return t
 
     dt = parse_datetime(_cell(row, idx, "date"), _cell(row, idx, "time"))
     if dt is None:
@@ -390,16 +487,13 @@ def _row_to_trade(row: list, idx: dict[str, int]) -> RawTrade:
         t.confidence = min(t.confidence, 0.6)
     t.traded_at = dt
 
-    cur = str(_cell(row, idx, "currency") or "").strip().upper()
-    if cur in ("KRW", "USD"):
+    if cur:
         t.currency = cur
-    elif cur in ("₩", "원", "WON"):
-        t.currency = "KRW"
-    elif cur in ("$", "달러"):
-        t.currency = "USD"
+    elif col_cur:
+        t.currency = col_cur
     t.confidence = round(max(0.0, min(1.0, t.confidence)), 2)
     return t
 
 
-__all__ = ["ParseResult", "parse_table", "map_headers", "guess_broker",
+__all__ = ["ParseResult", "parse_table", "map_headers", "currency_columns", "guess_broker",
            "HEADER_SYNONYMS", "BROKER_SIGNATURES"]
