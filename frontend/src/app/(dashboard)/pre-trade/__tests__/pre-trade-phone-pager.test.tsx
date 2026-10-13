@@ -150,7 +150,10 @@ describe("/pre-trade · phone pager", () => {
     expect(answerInput(1).value).toBe("-8%면 접는다");
     expect(box(1).checked).toBe(true);
     expect(box(2).checked).toBe(true);
-    expect(screen.getByTestId("questions-progress").textContent).toContain("검토 2 / 7");
+    // Tick count = the progress bar (the "검토 k / 7" text was dropped).
+    expect(
+      screen.getByTestId("questions-progress").querySelector('[role="progressbar"]')?.getAttribute("aria-valuenow"),
+    ).toBe("2");
   });
 
   it("the phone flow sends the same /start payload as the md+ list", async () => {
