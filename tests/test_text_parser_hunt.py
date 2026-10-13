@@ -57,6 +57,8 @@ def test_account_number_is_not_the_krx_code():
         ("삼성전자 10주 매도 체결 · 정산금액 701,000원", 70100.0),
         ("삼성전자 10주 매수 체결 71,200원 수수료 107원", 71200.0),
         ("삼성전자 10주 매수 체결 수수료 107원 71,200원", 71200.0),
+        ("삼성전자 10주 구매 완료 · 총 720,000원", 72000.0),
+        ("삼성전자 10주 구매 완료 · 1주 72,000원 (총 720,000원)", 72000.0),
     ],
 )
 def test_total_or_fee_is_not_the_per_share_price(line, price):
@@ -155,3 +157,21 @@ def test_resolver_keeps_names_ending_in_i_ga_and_drops_a_glued_particle(app, nam
 
     with app.app_context():
         assert resolve_ticker("", name)[0] == ticker
+
+
+# ── no regressions from the fixes above ────────────────────────────
+
+def test_ticker_ending_in_no_is_not_an_id_label():
+    t = one("CNO 5주 매수 체결 $30.10")
+    assert (t.code, t.shares, t.price, t.currency) == ("CNO", 5.0, 30.10, "USD")
+
+
+def test_name_ending_in_yak_keeps_its_price():
+    t = one("삼성제약 15,000원 3주 매수 체결")
+    assert (t.name, t.shares, t.price) == ("삼성제약", 3.0, 15000.0)
+
+
+@pytest.mark.parametrize("label", ["No. 123456", "No:123456", "주문번호 123456"])
+def test_labelled_order_numbers_are_dropped(label):
+    t = one(f"삼성전자 10주 매수 체결 71,200원 {label}")
+    assert t.code in ("", None) and t.name == "삼성전자"

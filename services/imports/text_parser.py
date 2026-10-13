@@ -81,7 +81,8 @@ _CODE_KR = re.compile(r"(?<![\d\-*])(?P<code>\d{6})(?:\.(?:KS|KQ))?(?![\d\-*])")
 # Labelled ID numbers are never the security: "주문번호 123456" was read as KRX
 # code 123456 and beat the Hangul name (2026-10-13). Dropped before parsing.
 _ID_FIELD = re.compile(
-    r"(?:원?주문\s*번호|체결\s*번호|계좌\s*번호|계좌|No\.?)\s*[:#.]?\s*[\dXx*][\dXx*\-]*",
+    # "No." / "No:" only — a bare "NO 5" is the tail of a ticker ("CNO 5주")
+    r"(?:원?주문\s*번호|체결\s*번호|계좌\s*번호|계좌|\bNo\.|\bNo(?=\s*[:#]))\s*[:#.]?\s*[\dXx*][\dXx*\-]*",
     re.IGNORECASE,
 )
 
@@ -96,13 +97,14 @@ _USD_MARK = re.compile(r"\$|달러|\bUSD\b")
 # A won amount ("71,200원", "₩71,200") — not just any 원 ("하나원큐", "회원").
 _KRW_MARK = re.compile(r"₩|\d\s*원|\bKRW\b")
 _AMOUNT_LABELLED = re.compile(
-    rf"(?:체결금액|거래금액|매매금액|정산금액|결제금액|총\s*금액|총액|금액|total)\s*:?\s*\$?(?P<p>{_NUM})",
+    rf"(?:체결금액|거래금액|매매금액|정산금액|결제금액|총\s*금액|총액|(?<![가-힣])총|금액|total)\s*:?\s*\$?(?P<p>{_NUM})",
     re.IGNORECASE,
 )
 # Won amounts that are never the per-share price: a labelled total, a fee or
 # tax, an FX rate, or the "(약 262,000원)" won equivalent of a dollar fill.
 _WON_NOT_PRICE = re.compile(
-    rf"(?:체결금액|거래금액|매매금액|정산금액|결제금액|총\s*금액|총액|합계|금액|수수료|제세금|세금|환율|원화\s*환산|원화|약)"
+    # 약 only as a word ("약 262,000원"), not the end of a name ("삼성제약 15,000원")
+    rf"(?:체결금액|거래금액|매매금액|정산금액|결제금액|총\s*금액|총액|(?<![가-힣])총|합계|금액|수수료|제세금|세금|환율|원화\s*환산|원화|(?<![가-힣])약)"
     rf"\s*:?\s*₩?\s*{_NUM}\s*원"
     rf"|\(\s*약\s*₩?\s*{_NUM}\s*원\s*\)"
 )
