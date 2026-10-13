@@ -16,7 +16,7 @@ from flask_login import current_user
 
 from extensions import db
 from models import PushSubscription
-from services.push_service import send_push_to_user  # noqa: F401 — re-export
+from services.push_service import push_endpoint_ok, send_push_to_user  # noqa: F401 — re-export
 from .decorators import api_auth
 from security import general_rate_limit
 
@@ -30,12 +30,19 @@ push_bp = Blueprint("push", __name__, url_prefix="/api/push")
 @general_rate_limit
 def subscribe():
     """Save a push subscription for the current user."""
-    data = request.get_json(force=True)
-    sub = data.get("subscription")
-    if not sub or not sub.get("endpoint"):
+    data = request.get_json(force=True, silent=True)
+    sub = data.get("subscription") if isinstance(data, dict) else None
+    # A non-dict subscription used to raise before the try block → 500.
+    if not isinstance(sub, dict) or not sub.get("endpoint"):
         return jsonify({"error": "Invalid subscription"}), 400
+    if not push_endpoint_ok(sub["endpoint"]):
+        return jsonify({
+            "error": "Unsupported push endpoint",
+            "error_kr": "지원하지 않는 푸시 주소입니다.",
+            "code": "PUSH_ENDPOINT_INVALID",
+        }), 400
 
-    keys = sub.get("keys", {})
+    keys = sub.get("keys") if isinstance(sub.get("keys"), dict) else {}
     endpoint = sub["endpoint"]
 
     # Upsert: replace if same endpoint exists.
