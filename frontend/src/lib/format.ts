@@ -518,7 +518,9 @@ export function fmtMoneyPlain(
  *   fmtMoneyKo(205, "USD")                       →  "$205"
  *   fmtMoneyKo(176.2, "USD")                     →  "$176.20"  (cents only when there are cents)
  *   fmtMoneyKo(34_830.4, "USD", {compact})       →  "$34,830"
+ *   fmtMoneyKo(4.6, "USD", {compact})            →  "$4.60"    (under $100 keeps cents)
  *   fmtMoneyKo(-1200, "KRW")                     →  "−1,200원"  (U+2212)
+ *   fmtMoneyKo(-0.4, "KRW")                      →  "0원"       (no sign on a zero)
  *   fmtMoneyKo(null, "KRW")                      →  "—"
  *
  * `compact` rounds KRW to 만 — a summary figure, never a ledger cell; the
@@ -542,11 +544,16 @@ export function fmtMoneyKo(
       }
       return `${sign}${man.toLocaleString("ko-KR")}만원`;
     }
-    return `${sign}${Math.round(abs).toLocaleString("ko-KR")}원`;
+    const won = Math.round(abs);
+    // The sign follows the printed figure: -0.4 is "0원", not "−0원".
+    return `${won === 0 ? "" : sign}${won.toLocaleString("ko-KR")}원`;
   }
   const cents = Math.round(abs * 100) % 100 !== 0;
-  const dp = !opts.compact && cents ? 2 : 0;
-  return `${sign}$${abs.toLocaleString("en-US", { minimumFractionDigits: dp, maximumFractionDigits: dp })}`;
+  // compact drops cents on summary-sized figures only — under $100 they are
+  // the value ($4.60 was "$5", $0.30 was "$0"; 2026-10-13 bug hunt).
+  const dp = cents && (!opts.compact || abs < 100) ? 2 : 0;
+  const zero = Math.round(abs * 10 ** dp) === 0;
+  return `${zero ? "" : sign}$${abs.toLocaleString("en-US", { minimumFractionDigits: dp, maximumFractionDigits: dp })}`;
 }
 
 /**

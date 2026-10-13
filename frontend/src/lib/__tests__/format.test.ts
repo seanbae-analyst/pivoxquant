@@ -326,4 +326,16 @@ describe("fmtMoneyKo (phone /portfolio, 2026-10-11)", () => {
     expect(fmtMoneyKo(null, "KRW")).toBe("—");
     expect(fmtMoneyKo(Number.NaN, "USD")).toBe("—");
   });
+  // 2026-10-13 bug hunt
+  it("never prints a signed zero", () => {
+    expect(fmtMoneyKo(-0.4, "KRW")).toBe("0원");
+    expect(fmtMoneyKo(-0.004, "USD")).toBe("$0");
+    expect(fmtMoneyKo(-0.3, "USD", { compact: true })).toBe("\u2212$0.30");
+    expect(fmtMoneyKo(-0.001, "USD", { compact: true })).toBe("$0");
+  });
+  it("compact keeps cents under $100 so a small figure is not rounded away", () => {
+    expect(fmtMoneyKo(4.6, "USD", { compact: true })).toBe("$4.60");
+    expect(fmtMoneyKo(0.3, "USD", { compact: true })).toBe("$0.30");
+    expect(fmtMoneyKo(176.2, "USD", { compact: true })).toBe("$176");
+  });
 });
