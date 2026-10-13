@@ -205,7 +205,8 @@ describe("HoldingsImportPanel", () => {
     // 삼성전자 is on the capture → not listed. 카카오 is not → listed, kept by default.
     const absent = screen.getAllByTestId("holdings-absent-row");
     expect(absent).toHaveLength(1);
-    expect(absent[0].textContent).toContain("카카오 · 035720.KS");
+    expect(absent[0].textContent).toContain("카카오 · 035720");
+    expect(absent[0].textContent).not.toContain(".KS");
     const mode = screen.getByTestId("holdings-absent-mode") as HTMLSelectElement;
     expect(mode.value).toBe("keep");
     expect(screen.queryByTestId("holdings-absent-close-note")).toBeNull();
@@ -253,6 +254,16 @@ describe("row rules", () => {
     // A row later resolved to a marked holding's ticker takes it off the close list.
     expect(closePayload(absent, [1, 3])).toEqual([3]);
     expect(closePayload(absentHoldings(held, [...rows, { ...base, key: "k3", ticker: "035720.KS" }]), [3])).toEqual([]);
+  });
+  it("an unresolved row that reads like a holding keeps it off the absent list", () => {
+    const kakao: HoldingsHeld = { id: 9, ticker: "035720.KS", name: "카카오", shares: 3, avg_cost: 50000, currency: "KRW", has_note: false };
+    const lg: HoldingsHeld = { id: 7, ticker: "034220.KS", name: "LG디스플레이", shares: 1, avg_cost: 10000, currency: "KRW", has_note: false };
+    const unresolvedByName = { ...base, key: "u1", ticker: "", tickerName: "", status: "needs_ticker" as const, readName: "카 카오", mode: "skip" as const };
+    const unresolvedByCode = { ...base, key: "u2", ticker: "", tickerName: "", status: "needs_ticker" as const, readName: "", readCode: "034220" };
+    expect(absentHoldings([kakao, lg], [base, unresolvedByName]).map((a) => a.id)).toEqual([7]);
+    expect(absentHoldings([kakao, lg], [base, unresolvedByCode]).map((a) => a.id)).toEqual([9]);
+    // A resolved row never shields another holding by name.
+    expect(absentHoldings([kakao], [{ ...base, readName: "카카오" }]).map((a) => a.id)).toEqual([9]);
   });
   it("blank or invalid cells block the row", () => {
     expect(rowIssues(base, [base])).toEqual([]);

@@ -6,8 +6,9 @@
  *   1. DROP identity lines — 계좌 · 위탁 · 고객 · …님 (account / customer headers)
  *   2. DROP lines nothing downstream needs — 예수금 · 주문가능 · 출금가능
  *   3. DROP any line holding something shaped like an account number (8+
- *      digits joined by hyphens, or 8+ in a row; OCR look-alikes O/o/l/I/|
- *      count as digits) or an account-type tag like [종합_주식]
+ *      digits joined by hyphens or the dashes OCR swaps in, or 8+ in a row;
+ *      OCR look-alikes O/o/l/I/| count as digits), a phone number, or an
+ *      account-type tag like [종합_주식]
  * Rule 3 drops the whole line, not just the digits: in real apps the holder's
  * name sits on the account line ("124-4567-8900-XX[종합_주식] 김미래"), and
  * masking only the number leaked it on 3 of 8 App Store screenshots.
@@ -25,11 +26,18 @@ const DROP_IDENTITY = /계좌|위탁|고객|님/;
 const DROP_UNNEEDED = /예수금|주문가능|출금가능/;
 const ACCOUNT_TAG = /\[[^\]]*(종합|위탁|주식|CMA|ISA|연금|비대면|저축)[^\]]*\]/;
 const D = "[0-9OolI|]";
-const ACCOUNT = new RegExp(`${D}{2,}(?:\\s?[-–]\\s?${D}{2,}){1,3}|${D}{8,}`, "g");
+// Every dash OCR hands back for a hyphen — en/em dash, minus (U+2212),
+// non-breaking hyphen (U+2011), _ — not just "-" and "–" (2026-10-13:
+// "123—45—678901" left the device). Not "~": that joins a date range
+// ("2026-10-01~2026-10-13"), and the line would be dropped as an account.
+const SEP = "[-–—−‑_]";
+const ACCOUNT = new RegExp(`${D}{2,}(?:\\s?${SEP}\\s?${D}{2,}){1,3}|${D}{8,}`, "g");
+// A phone number spaced or dotted instead of hyphenated ("010 1234 5678").
+const PHONE = /(?<!\d)01[016789][\s.]\d{3,4}[\s.]\d{4}(?!\d)/;
 const digitsOf = (s: string) => s.replace(/[Oo]/g, "0").replace(/[lI|]/g, "1").replace(/\D/g, "");
 // A date is not an account number — fills need it (the server's
 // mask_sensitive keeps ISO / compact dates the same way).
-const DATE = /^(19|20)\d{2}[-–]?(0[1-9]|1[0-2])[-–]?(0[1-9]|[12]\d|3[01])$/;
+const DATE = /^(19|20)\d{2}[-–—−‑_]?(0[1-9]|1[0-2])[-–—−‑_]?(0[1-9]|[12]\d|3[01])$/;
 const accountLike = (m: string) => digitsOf(m).length >= 8 && !m.includes(",") && !DATE.test(m.replace(/\s/g, ""));
 
 export type DropReason = "identity" | "unneeded" | "account";
@@ -40,6 +48,7 @@ export function dropReason(line: string): DropReason | null {
   if (DROP_IDENTITY.test(squashed)) return "identity";
   if (DROP_UNNEEDED.test(squashed)) return "unneeded";
   if (ACCOUNT_TAG.test(squashed)) return "account";
+  if (PHONE.test(line)) return "account";
   return (line.match(ACCOUNT) ?? []).some(accountLike) ? "account" : null;
 }
 

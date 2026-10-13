@@ -815,7 +815,7 @@ function ReviewScreen({
               <button
                 type="button"
                 onClick={() => onJump(i)}
-                className="w-full border-l-2 border-[var(--pq-ivory-line)] py-1.5 pl-4 text-left"
+                className="w-full rounded-none border-l-2 border-[var(--pq-ivory-line)] py-1.5 pl-4 text-left"
                 data-testid={`review-jump-${q.n}`}
               >
                 <span className="block font-serif text-pq-body-sm leading-snug text-[var(--pq-ivory-mid)]">

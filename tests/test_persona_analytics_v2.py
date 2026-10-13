@@ -255,6 +255,43 @@ class TestClassifyPersonaMulti:
         assert r["present"]["turnover"] == 1
         assert r["present"]["ticker_diversity"] == 1
 
+    def test_sector_unmeasured_when_no_traded_ticker_has_a_sector(self, app, auth_user):
+        """2026-10-13: twelve US trades (no sector source) read as a measured
+        0 — "all in one sector" — on the radar."""
+        from services.profile import classify_persona_multi
+        specs = []
+        for i, tk in enumerate(["AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META"] * 2):
+            specs.append({"ticker": tk, "action": "BUY", "shares": 1, "price": 100, "days_ago": 1 + i})
+        _add_trades(app, auth_user["id"], specs)
+        with app.app_context():
+            r = classify_persona_multi(auth_user["id"])
+        assert r["present"]["sector_diversity"] == 0
+
+    def test_holding_period_unmeasured_when_sells_close_only_seed_lots(self, app, auth_user):
+        """2026-10-13: sells of registered (seed) lots left nothing to measure,
+        yet holding_period read 0 days with present=1."""
+        from extensions import db
+        from models import TradeHistory
+        from services.profile import classify_persona_multi
+
+        now = _utc_now()
+        with app.app_context():
+            for i in range(10):
+                tk = f"T{i}"
+                db.session.add(TradeHistory(
+                    user_id=auth_user["id"], ticker=tk, action="BUY", shares=10.0,  # // legal-ok — stored enum value
+                    price_per_share=100.0, total_value=1000.0, pnl=0.0,
+                    traded_at=now - timedelta(days=100), source="holding_seed",
+                ))
+                db.session.add(TradeHistory(
+                    user_id=auth_user["id"], ticker=tk, action="SELL", shares=10.0,  # // legal-ok — stored enum value
+                    price_per_share=110.0, total_value=1100.0, pnl=100.0,
+                    traded_at=now - timedelta(days=1 + i),
+                ))
+            db.session.commit()
+            r = classify_persona_multi(auth_user["id"])
+        assert r["present"]["holding_period"] == 0
+
     def test_confidence_increases_with_evidence(self, app, auth_user):
         from services.profile import classify_persona_multi
         # Phase 1 — minimal data

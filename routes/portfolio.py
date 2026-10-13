@@ -685,16 +685,22 @@ def create_position_alias():
 
     # 2026-09-29: registered shares get a holding-seed trade_history row so
     # the FIFO mirrors have a lot for them (services/position_writes).
-    # traded_at is the registration time even when purchase_date is given —
-    # the seed is excluded from hold-time statistics either way.
-    # With a reflection link the row is a recorded buy instead (see above).
+    # A seed's traded_at is the registration time even when purchase_date is
+    # given — the seed is excluded from hold-time statistics either way.
+    # With a reflection link the row is a recorded buy dated purchase_date.
     from services.position_writes import add_holding_seed, add_recorded_buy
 
     def _seed():
         currency = "KRW" if is_kr else "USD"
         if reflection_id is not None:
+            # A linked row is a real 매수, read by the FIFO / hold-time mirrors
+            # and friction_outcome, so it carries the date the user entered —
+            # as POST /trades does. 2026-10-13: a backdated add (the modal
+            # offers the link for any date on/after the pause day) was stamped
+            # today while Position.added_at said otherwise.
             add_recorded_buy(current_user.id, symbol, quantity, price, currency,
-                             resolved_name or symbol, reflection_id=reflection_id)
+                             resolved_name or symbol, reflection_id=reflection_id,
+                             traded_at=opened_dt)
             return
         add_holding_seed(current_user.id, symbol, quantity, price,
                          currency, resolved_name or symbol)

@@ -16,10 +16,26 @@ class TestPushSubscribeSmoke:
                         json={"subscription": {"keys": {}}})
         assert r.status_code == 400
 
+    def test_subscribe_rejects_a_non_push_endpoint(self, client, auth_user):
+        """2026-10-13: any URL was stored and later POSTed to by the server."""
+        for bad in ("http://fcm.googleapis.com/fcm/send/x", "https://169.254.169.254/latest",
+                    "https://evil.example/fcm.googleapis.com", "https://fcm.googleapis.com.evil.example/x",
+                    "file:///etc/passwd", 123):
+            r = client.post("/api/push/subscribe", json={"subscription": {"endpoint": bad, "keys": {}}})
+            assert r.status_code == 400, bad
+        # Edge (WNS) and Safari (Apple) endpoints are accepted.
+        for good in ("https://wns2-pn1p.notify.windows.com/w/?token=abc", "https://web.push.apple.com/QGx"):
+            r = client.post("/api/push/subscribe", json={"subscription": {"endpoint": good, "keys": {}}})
+            assert r.status_code == 200, good
+
+    def test_subscribe_non_dict_subscription_is_400(self, client, auth_user):
+        r = client.post("/api/push/subscribe", json={"subscription": "x"})
+        assert r.status_code == 400
+
     def test_subscribe_happy_path(self, client, auth_user):
         r = client.post("/api/push/subscribe", json={
             "subscription": {
-                "endpoint": "https://example.test/endpoint/abc",
+                "endpoint": "https://fcm.googleapis.com/fcm/send/abc",
                 "keys": {"p256dh": "p256_x", "auth": "auth_y"},
             }
         })
@@ -36,7 +52,7 @@ class TestPushUnsubscribeSmoke:
         # Subscribe first.
         client.post("/api/push/subscribe", json={
             "subscription": {
-                "endpoint": "https://example.test/e1",
+                "endpoint": "https://updates.push.services.mozilla.com/wpush/v2/e1",
                 "keys": {"p256dh": "x", "auth": "y"},
             }
         })
