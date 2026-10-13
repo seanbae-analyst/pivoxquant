@@ -127,6 +127,11 @@ function ProviderRow({
             border: "none",
             borderBottomStyle: "solid",
             cursor: "pointer",
+            // "Kakao 연결" wrapped to two lines at 360-375px (2026-10-12).
+            whiteSpace: "nowrap",
+            flexShrink: 0,
+            // Underline link: the base button radius bends the rule.
+            borderRadius: 0,
           }}
         >
           {name} 연결

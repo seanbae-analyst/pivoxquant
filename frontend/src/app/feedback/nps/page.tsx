@@ -113,7 +113,7 @@ function NpsPageInner(): React.ReactElement {
     <main className="min-h-screen bg-background px-6 py-12 text-foreground">
       <div className="mx-auto max-w-xl">
         <header className="mb-8">
-          <p className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
+          <p className="font-mono text-xs uppercase tracking-[0.01em] text-muted-foreground">
             Feedback
           </p>
           <h1 className="mt-2 font-serif text-3xl md:text-4xl">

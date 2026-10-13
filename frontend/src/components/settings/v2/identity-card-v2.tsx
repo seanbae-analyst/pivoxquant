@@ -103,7 +103,21 @@ export function SettingsIdentityCardV2({
             {t("settingsV2.identity.nameHelp")}
           </div>
         </div>
-        <span className="font-mono" style={ROW_VALUE_STYLE}>{displayName || "—"}</span>
+        {/* One line: "데모 투자자" broke into "데모 / 투자자" at 360px
+            (2026-10-12). A long name ends in "…" instead. */}
+        <span
+          className="font-mono"
+          style={{
+            ...ROW_VALUE_STYLE,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            maxWidth: "50%",
+            flexShrink: 0,
+          }}
+        >
+          {displayName || "—"}
+        </span>
       </div>
 
       {/* Email */}
@@ -131,7 +145,11 @@ export function SettingsIdentityCardV2({
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
-            maxWidth: 240,
+            // The address keeps its width and the help text beside it wraps;
+            // a fixed 240px cap let the help text squeeze a short address
+            // into "demo@pivoxquant.c…" in English at 360-390px (2026-10-12).
+            maxWidth: "65%",
+            flexShrink: 0,
           }}
           title={email ?? undefined}
         >

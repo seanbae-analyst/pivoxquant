@@ -23,8 +23,11 @@ export function CookieConsent() {
   // storage and defaults above are untouched. Phone: an ink card that floats
   // ABOVE the bottom nav (globals.css "Cookie banner" lifts it when a nav is
   // on screen) with 48px buttons in one row; desktop: the full-width strip.
+  // Labels stay on one line ("Essential / only" wrapped at 375px in English,
+  // 2026-10-12): each button sizes to its label and shares the spare width;
+  // below ~340px the row wraps instead of squeezing a label.
   const btn =
-    "min-h-[48px] flex-1 px-3 text-sm font-medium transition-colors md:min-h-0 md:flex-none md:px-4 md:py-2";
+    "min-h-[48px] flex-auto whitespace-nowrap px-3 text-sm font-medium transition-colors md:min-h-0 md:flex-none md:px-4 md:py-2";
   return (
     <div
       role="dialog"
@@ -48,7 +51,7 @@ export function CookieConsent() {
           {t("cookieConsent.privacyPolicy")}
         </a>
       </p>
-      <div className="flex gap-2 md:flex-nowrap">
+      <div className="flex flex-wrap gap-2 md:flex-nowrap">
         <button
           type="button"
           onClick={() => choose("rejected")}
