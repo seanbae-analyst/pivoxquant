@@ -124,10 +124,12 @@ def add_recorded_buy(user_id: int, ticker: str, shares: float, price: float,
                      reflection_id: int, traded_at=None):
     """Add (not commit) a recorded 매수 row (``source`` NULL) linked to a pause.
 
-    2026-09-29: POST /positions in review mode ("신규 진입 검토 · 7문항") is a
-    real buy made right after the pause — not a registration of shares already
-    held — so it gets an ordinary 매수 row carrying ``reflection_id`` instead of
-    a holding seed (services/pre_trade/link.py validates the id first).
+    2026-09-29: a POST /positions carrying a pause link (AddPositionModalV2
+    with a recent /pre-trade pause kept linked — the in-modal 7문항 mode before
+    2026-10-13) is a real buy made after the pause — not a registration of
+    shares already held — so it gets an ordinary 매수 row carrying
+    ``reflection_id`` instead of a holding seed (services/pre_trade/link.py
+    validates the id first).
     ``traded_at`` defaults to now. Returns the row or ``None``."""
     row = _add_registration_row(
         "BUY", None,  # // legal-ok — trade action data value, not user copy

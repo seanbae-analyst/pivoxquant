@@ -586,10 +586,11 @@ def create_position_alias():
     :func:`_parse_purchase_date`. On a merge into an existing position the
     original ``added_at`` is preserved (earliest open date wins).
 
-    ``reflection_id`` (optional, 2026-09-29): sent by the review-mode entry
-    ("신규 진입 검토 · 7문항") with the pause it just stamped. Validated by
-    ``services/pre_trade/link.py``; the trade row is then an ordinary buy
-    linked to that pause instead of a holding seed.
+    ``reflection_id`` (optional, 2026-09-29): sent by AddPositionModalV2 when
+    the user keeps the link to a recent /pre-trade pause on this ticker
+    (2026-10-13 — before that, by the in-modal 7문항 mode, now removed).
+    Validated by ``services/pre_trade/link.py``; the trade row is then an
+    ordinary buy linked to that pause instead of a holding seed.
     """
     d = request.get_json() or {}
     raw_symbol = (d.get("symbol") or d.get("ticker") or "").strip().upper()
@@ -657,10 +658,12 @@ def create_position_alias():
             code="TIER_LIMIT", status=403,
         )
 
-    # 2026-09-29 — review-mode entry ("신규 진입 검토 · 7문항"): the modal sends
-    # the pause it just stamped. With a valid link this is a real buy made now,
-    # so it is written as an ordinary 매수 row linked to the pause (not a
-    # holding seed). Holding-mode registrations send nothing and keep seeding.
+    # 2026-09-29 — a buy linked to a pause: AddPositionModalV2 sends the id of
+    # a recent /pre-trade pause on this ticker when the user keeps the link
+    # (2026-10-13; the in-modal 7문항 mode that used to send it is gone). With
+    # a valid link this is a real buy made after the pause, so it is written as
+    # an ordinary 매수 row linked to the pause (not a holding seed).
+    # Registrations without a link send nothing and keep seeding.
     from services.pre_trade.link import ReflectionLinkError, resolve_reflection_link
     try:
         reflection_id = resolve_reflection_link(
@@ -894,8 +897,8 @@ def create_trade_alias():
     traded_at_dt = _parse_purchase_date(d.get("date"))
 
     # 2026-09-29: this endpoint records a fill that already happened at the
-    # user's broker. TradeModalV2 sends the same body from both its RECORD
-    # ("이미 체결됨 · 기록만") and REVIEW (7문항) modes, and the app never
+    # user's broker. TradeModalV2 only records fills (2026-10-13: its 7문항
+    # mode was removed — the pause lives on /pre-trade), and the app never
     # places orders — so every call is a recorded fill. It follows the import
     # ledger (services/imports/ledger.py): seed capital
     # (User.available_capital*) is neither a gate nor a counter here. It used
