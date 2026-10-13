@@ -404,8 +404,6 @@
       "proceededHeadAccent": "기록이 남았습니다.",
       "cancelledHead": "여기서 멈추었습니다.",
       "cancelledHeadAccent": "데스크는 기다립니다.",
-      "recorded": "기록을 남기고, 보유 내역에도 반영했습니다.",
-      "recordFailed": "기록은 남겨지만 보유 내역에 반영하지 못했습니다 — 포트폴리오에서 직접 추가해 주세요.",
       "stampedOnly": "기록을 남겼습니다.",
       "noOrderTail": "PivoxQuant는 주문을 내지 않습니다 — 주문은 이용 중인 증권사에서 직접 넣으세요.",
       "cancelledBody": "취소되었습니다. 기록되지 않았습니다. 다음 결정 때 다시 7개 질문을 거치세요.",
@@ -419,7 +417,6 @@
       "wasCancelled": "그때 취소를 눌렀습니다"
     },
     "errors": {
-      "recordFailed": "기록을 남기지 못했습니다.",
       "proceedFailed": "진행하지 못했습니다.",
       "cooldownFailed": "기록을 시작하지 못했습니다.",
       "cancelFailed": "취소하지 못했습니다.",

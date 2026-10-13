@@ -183,7 +183,7 @@ class TestTradeLink:
         assert r.get_json()["code"] == "REFLECTION_LINK_BUY_ONLY"
 
 
-# ── POST /api/portfolio/positions (신규 진입 검토) ─────────────────────
+# ── POST /api/portfolio/positions (멈춤 연결 매수) ─────────────────────
 
 POSITIONS = "/api/portfolio/positions"
 

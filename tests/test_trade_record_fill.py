@@ -1,7 +1,8 @@
 """POST /api/portfolio/trades records an executed fill — ledger parity.
 
-2026-09-29: TradeModalV2 ("이미 체결됨 · 기록만" and the 7문항 review mode
-post the same body) writes through this endpoint. It used to gate a 매수 on
+2026-09-29: TradeModalV2 (record-only since 2026-10-13; before that its
+"이미 체결됨 · 기록만" and 7문항 review modes posted the same body) writes
+through this endpoint. It used to gate a 매수 on
 seed capital (every new user has 0 → 400 with no code), debit/credit the seed
 on each fill, and drop the note. The import ledger
 (services/imports/ledger.py) never touches seed capital and keeps the
