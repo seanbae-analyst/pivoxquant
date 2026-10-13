@@ -77,12 +77,14 @@ _US_QTY_CODE = re.compile(
 _US_CODE_QTY = re.compile(
     rf"\b(?P<code>[A-Z]{{1,6}}(?:[.\-][A-Z]{{1,2}})?)\s+(?P<n>{_NUM})\s*(?:주|shares?)\b"
 )
-_CODE_KR = re.compile(r"(?<![\d\-*])(?P<code>\d{6})(?:\.(?:KS|KQ))?(?![\d\-*])")
+# Not inside a dashed number — any dash a phone hands back, not just "-"
+# ("123—45—678901" gave code 678901, 2026-10-13).
+_CODE_KR = re.compile(r"(?<![\d\-\u2013\u2014\u2212\u2011_*])(?P<code>\d{6})(?:\.(?:KS|KQ))?(?![\d\-\u2013\u2014\u2212\u2011_*])")
 # Labelled ID numbers are never the security: "주문번호 123456" was read as KRX
 # code 123456 and beat the Hangul name (2026-10-13). Dropped before parsing.
 _ID_FIELD = re.compile(
     # "No." / "No:" only — a bare "NO 5" is the tail of a ticker ("CNO 5주")
-    r"(?:원?주문\s*번호|체결\s*번호|계좌\s*번호|계좌|\bNo\.|\bNo(?=\s*[:#]))\s*[:#.]?\s*[\dXx*][\dXx*\-]*",
+    r"(?:원?주문\s*번호|체결\s*번호|계좌\s*번호|계좌|\bNo\.|\bNo(?=\s*[:#]))\s*[:#.]?\s*[\dXx*][\dXx*\-\u2013\u2014\u2212\u2011_]*",
     re.IGNORECASE,
 )
 

@@ -175,3 +175,30 @@ def test_name_ending_in_yak_keeps_its_price():
 def test_labelled_order_numbers_are_dropped(label):
     t = one(f"삼성전자 10주 매수 체결 71,200원 {label}")
     assert t.code in ("", None) and t.name == "삼성전자"
+
+
+# ── any dash a phone hands back, and spaced phone numbers ───────────
+
+@pytest.mark.parametrize("dash", ["—", "−", "‑", "–", "_"])
+def test_dashed_account_number_is_not_the_krx_code(dash):
+    acct = dash.join(["123", "45", "678901"])
+    t = one(f"{acct} 삼성전자 10주 매수 체결 71,200원")
+    assert t.code in ("", None) and t.name == "삼성전자"
+    assert "678901" not in t.raw_snippet
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["123—45—678901", "123−45−678901", "123_45_678901", "010 1234 5678", "010.1234.5678"],
+)
+def test_stored_snippet_masks_account_and_phone_numbers(text):
+    from services.imports import mask_sensitive
+
+    assert mask_sensitive(f"계좌 {text} 김미래") == "계좌 *** 김미래"
+
+
+@pytest.mark.parametrize("text", ["2026-10-01 매수", "2026—10—01 매수", "20261001 매수", "71,200원 10주"])
+def test_stored_snippet_keeps_dates_and_amounts(text):
+    from services.imports import mask_sensitive
+
+    assert mask_sensitive(text) == text
