@@ -288,3 +288,17 @@ def test_gap_outside_bucket_is_measured_to_the_nearest_edge(
     assert [g["key"] for g in data["gap"]] == ["turnover"]
     assert data["gap"][0]["direction"] == "up"
     assert data["gap"][0]["delta"] == pytest.approx(0.9 - hi, abs=1e-3)
+
+
+def test_drift_needs_two_snapshots(client, auth_user, monkeypatch):
+    """2026-10-13: one snapshot came back as drift "유지 관찰"."""
+    snap = {"persona": "growth", "computed_at": "2026-10-01T00:00:00",
+            "features": {"turnover": 0.4}}
+    monkeypatch.setattr("routes.mirror_home.get_history", lambda *a, **k: [snap])
+    assert client.get("/api/mirror-home").get_json()["drift"] == {
+        "available": False, "descriptor": None,
+    }
+    later = {**snap, "computed_at": "2026-10-10T00:00:00", "features": {"turnover": 0.9}}
+    monkeypatch.setattr("routes.mirror_home.get_history", lambda *a, **k: [snap, later])
+    drift = client.get("/api/mirror-home").get_json()["drift"]
+    assert drift["available"] is True and drift["descriptor"]
