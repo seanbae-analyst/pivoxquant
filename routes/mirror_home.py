@@ -8,6 +8,7 @@ render the "오늘의 거울" hero without four separate round-trips:
   2. Observed persona over 30d (9-dim feature vector)         — persona_classifier_v2
   3. The gap: top dimensions where 관찰 diverges from 선언     — computed here
   4. Drift descriptor (유지 / 이동 중 / 영역 이동 관찰)        — persona_history
+  5. 내 규칙: the declared lines in plain words + own-record counts — my_rules
 
 Legal posture (mirrors services/artifacts/living_mirror_service.py):
   • NEVER surfaces a persona name — neither an 8-code (value / speculator …)
@@ -28,12 +29,14 @@ exactly like the Living Mirror artifact's stage 1.
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
 
 from flask import Blueprint, jsonify
 from flask_login import current_user
 
 from extensions import db
-from models import InvestmentProfile, Position
+from models import InvestmentProfile, Position, TradeHistory
+from models.import_batch import STATUS_PENDING, PendingTrade
 
 from services.profile import (
     classify_persona_multi,
@@ -41,6 +44,7 @@ from services.profile import (
     compute_persona_response,
     get_history,
 )
+from services.profile.my_rules import compute_my_rules
 from services.profile.persona_analytics import _norm_log
 from services.profile.questionnaire import declared_ranges
 from services.profile.persona_classifier_v2 import (
@@ -176,6 +180,29 @@ def _gap(
     return out
 
 
+def _my_rules(user_id: int, open_positions: int) -> dict | None:
+    """The 내 규칙 block (services/profile/my_rules.py). ``None`` when it
+    cannot be built — the client then hides the card; the home never 500s
+    on it."""
+    try:
+        profile = InvestmentProfile.query.filter_by(user_id=user_id).first()
+        answers = profile.onboarding_answers() if profile is not None else {}
+        confirmed_at = profile.rules_confirmed_at if profile is not None else None
+        trades = TradeHistory.query.filter_by(user_id=user_id).all()
+        pending = [
+            ts for (ts,) in db.session.query(PendingTrade.traded_at)
+            .filter(PendingTrade.user_id == user_id, PendingTrade.status == STATUS_PENDING)
+            .all()
+        ]
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        return compute_my_rules(
+            answers, trades, open_positions, now, pending, confirmed_at=confirmed_at,
+        )
+    except Exception:  # pragma: no cover — defensive; a bad row must not 500 the home
+        logger.debug("mirror-home: my rules unavailable", exc_info=True)
+        return None
+
+
 @mirror_home_bp.route("", methods=["GET"])
 @api_auth
 @legal_scrub_response
@@ -285,6 +312,10 @@ def get_mirror_home():
         },
         "gap": gap,
         "drift": drift,
+        # 2026-10-14 — 내 규칙. Shown in every stage: a line and this month's
+        # count mean something from the first recorded fill, long before the
+        # 5-trade gate the radar needs.
+        "rules": _my_rules(user_id, n_open),
         "radar": {
             "keys": list(FEATURE_KEYS),
             "labels": [FEATURE_LABELS.get(k, k) for k in FEATURE_KEYS],

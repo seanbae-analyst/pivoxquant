@@ -19,6 +19,7 @@ the trade, never a direction word in the push text.
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
 from typing import Iterable
 
 log = logging.getLogger(__name__)
@@ -55,6 +56,55 @@ def _label(r: dict) -> str:
     return " ".join(x for x in (name, qty) if x) or "새 체결"
 
 
+def rule_note(user_id: int, now: datetime | None = None) -> str:
+    """One more sentence for the push when this month's fills are past the
+    line the user adopted (내 규칙 — services/profile/my_rules.py), else
+    ``""``. Only after the user adopted their onboarding answers as their
+    lines (``InvestmentProfile.rules_confirmed_at``) — before that "정해 둔
+    선" would name a line they never set. A count against their own number,
+    never a judgement and never a direction word. Never raises.
+
+    2026-10-14: the pause used to depend on the user remembering to open
+    「멈춤」 before buying. The fill notification already reaches them at the
+    one moment that matters; when it is also the 6th fill against a line of
+    5, saying so is the most useful thing the push can carry.
+    """
+    try:
+        from extensions import db
+        from models import InvestmentProfile, TradeHistory
+        from models.import_batch import STATUS_PENDING, PendingTrade
+        from services.profile.my_rules import (
+            frequency_ceiling,
+            kst_month_start_utc,
+            month_fill_count,
+        )
+        profile = InvestmentProfile.query.filter_by(user_id=user_id).first()
+        if profile is None or profile.rules_confirmed_at is None:
+            return ""
+        ceiling = frequency_ceiling(profile.onboarding_answers())
+        if ceiling is None:
+            return ""
+        now = now or datetime.now(timezone.utc).replace(tzinfo=None)
+        start = kst_month_start_utc(now)
+        trades = TradeHistory.query.filter(
+            TradeHistory.user_id == user_id, TradeHistory.traded_at >= start,
+        ).all()
+        pending = [
+            ts for (ts,) in db.session.query(PendingTrade.traded_at).filter(
+                PendingTrade.user_id == user_id,
+                PendingTrade.status == STATUS_PENDING,
+                PendingTrade.traded_at >= start,
+            ).all()
+        ]
+        n = month_fill_count(trades, pending, now)
+        if n <= ceiling:
+            return ""
+        return f"이번 달 들어온 거래가 {n}번이에요 — 정해 둔 선은 {ceiling}번."
+    except Exception:
+        log.warning("fill_memo rule note failed user_id=%s", user_id, exc_info=True)
+        return ""
+
+
 def notify_fill_memo(user_id: int, rows: Iterable[dict]) -> bool:
     """Push once for the waiting fills of one webhook call. Never raises."""
     waiting = _waiting(rows)
@@ -72,9 +122,12 @@ def notify_fill_memo(user_id: int, rows: Iterable[dict]) -> bool:
         if not u.notification_channel_enabled(EVENT_ID, "push"):
             return False
         if len(waiting) == 1:
-            body = f"{_label(waiting[0])} 체결이 들어왔습니다. 잊기 전에 이유를 한 줄 남겨 두세요."
+            arrived = f"{_label(waiting[0])} 체결이 들어왔습니다."
+            ask = "잊기 전에 이유를 한 줄 남겨 두세요."
         else:
-            body = f"체결 {len(waiting)}건이 들어왔습니다. 잊기 전에 이유를 한 줄씩 남겨 두세요."
+            arrived = f"체결 {len(waiting)}건이 들어왔습니다."
+            ask = "잊기 전에 이유를 한 줄씩 남겨 두세요."
+        body = " ".join(x for x in (arrived, rule_note(user_id), ask) if x)
         from services.push_service import send_push_to_user
         # transactional: the user set this up themselves (token + automation);
         # it is a record of their own fill, not marketing (정통망법 §50).

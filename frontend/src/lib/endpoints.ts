@@ -105,6 +105,11 @@ export const API = {
     onboardingDraft: "/api/profile/onboarding/draft",
     update: "/api/profile",
     questionnaire: "/api/profile/questionnaire",
+    // 내 규칙 (2026-10-14) — the user adopts their onboarding answers as their
+    // own lines (routes/profile.py::confirm_rules). POST, no body, idempotent.
+    // Until then /mirror shows the lines without 선 안/밖 and the fill push
+    // adds no line. Re-answering a rule question clears it.
+    rulesConfirm: "/api/profile/rules/confirm",
     capital: "/api/profile/capital",
     // PIPA §35 self-service data export (routes/profile.py::export_profile).
     //   - `export`     → full personal-data record as JSON (instant download).

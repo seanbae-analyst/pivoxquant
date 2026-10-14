@@ -793,6 +793,80 @@ export interface MirrorGapDimension {
 }
 
 
+/* ── 내 규칙 (2026-10-14) — services/profile/my_rules.py ──────────────────
+ * The user's own onboarding answers as plain lines, and where their own
+ * record sits against each. Thresholds are the user's buckets, never ours.
+ * Each line is crossed in ONE direction only (more trades, sooner sells,
+ * fewer names); doing less is never 선 밖. The lines are the user's rules
+ * only after they adopt them (`confirmed`, POST /api/profile/rules/confirm);
+ * before that the client shows them as "what you said", without a status.
+ * `status` is a fact against their own number — no score, grade or streak. */
+export type MyRuleStatus = "within" | "outside" | "no_data" | "no_line" | "not_counted";
+
+export interface MyRuleMonth {
+  /** KST calendar month, "YYYY-MM". */
+  month: string;
+  count: number;
+  /** count > ceiling (false when there is no ceiling). */
+  over: boolean;
+  /** The current, still-running month. */
+  partial: boolean;
+}
+
+export interface MyRuleItem {
+  id: "frequency" | "holding" | "positions" | "drawdown";
+  /** Short rule name, e.g. "매매 횟수". */
+  title: string;
+  /** The line in the user's own terms, e.g. "한 달에 매수·매도 5번 이하". */
+  line: string;
+  /** False for the −10% answer — no prices, so it is shown but never counted. */
+  measurable: boolean;
+  status: MyRuleStatus;
+  /** The observed fact, ready to print, e.g. "이번 달 6번 · 선 5번". */
+  observed: string;
+  /* frequency */
+  ceiling?: number | null;
+  this_month?: number;
+  /** Fills this month still waiting in the import inbox (included in this_month). */
+  waiting?: number;
+  months?: MyRuleMonth[];
+  months_over?: number;
+  months_shown?: number;
+  /* holding */
+  window_days?: number;
+  sells?: number;
+  /** Sells held fewer days than `min_days`. */
+  sooner?: number;
+  min_days?: number | null;
+  /* positions */
+  open_positions?: number;
+  min_positions?: number | null;
+}
+
+export interface MyRules {
+  /** False when the five onboarding questions were never answered (pre-V3 / skipped). */
+  available: boolean;
+  source: "onboarding";
+  /** True once the user adopted the answers as their lines. */
+  confirmed: boolean;
+  /** Naive-UTC ISO timestamp of that, or null. */
+  confirmed_at: string | null;
+  /** KST date of that ("YYYY-MM-DD"), or null. */
+  confirmed_on: string | null;
+  items: MyRuleItem[];
+  /** Lines with something to count right now. */
+  counted: number;
+  /** Of those, how many the record sits outside of. */
+  outside: number;
+}
+
+/** POST /api/profile/rules/confirm */
+export interface ConfirmMyRulesResponse {
+  ok: boolean;
+  rules_confirmed_at: string;
+}
+
+
 export interface MirrorHomeResponse {
   ok: boolean;
   stage: MirrorStage;
@@ -809,6 +883,8 @@ export interface MirrorHomeResponse {
   observed: { trade_count: number };
   gap: MirrorGapDimension[];
   drift: { available: boolean; descriptor: string | null };
+  /** 내 규칙 (2026-10-14). null = could not be built; absent = older backend. Both → no card. */
+  rules?: MyRules | null;
   radar: {
     keys: string[];
     labels: string[];

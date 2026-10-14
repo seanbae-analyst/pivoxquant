@@ -20,6 +20,9 @@
  * the ready state is MirrorPhoneCards — the same blocks as swipeable story
  * cards. Skeleton / error / empty states and the desktop column are as before.
  *
+ * 2026-10-14: 「내 규칙」 (MyRulesPanel) sits under the headline — the
+ * onboarding answers as the user's own lines, counted from their own record.
+ *
  * Legal: 3 disclosed buckets only, POSITIVE/NEGATIVE/NEUTRAL framing, no
  * advice, no score on the radar. No italic (CEO 2026-06-15).
  */
@@ -32,6 +35,7 @@ import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { EditorialHead, FootSignature } from "@/components/ui/editorial";
 import { MirrorHeadline } from "@/components/mirror/mirror-headline";
 import { MirrorRadarPanel } from "@/components/mirror/mirror-radar-panel";
+import { MyRulesPanel } from "@/components/mirror/my-rules-panel";
 import { MirrorPhoneCards } from "@/components/mirror/mirror-phone-cards";
 import { OneThingNudge } from "@/components/mirror/one-thing-nudge";
 import { PullToRefresh } from "@/components/layout/pull-to-refresh";
@@ -137,6 +141,9 @@ export default function MirrorPage() {
             <ErrorBoundary>
               <div className="space-y-8">
                 <MirrorHeadline data={data} />
+
+                {/* 2026-10-14 — the same gap in the user's own numbers. */}
+                <MyRulesPanel data={data} />
 
                 <MirrorRadarPanel data={data} />
 

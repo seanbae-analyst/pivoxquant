@@ -99,6 +99,11 @@ def _apply_questionnaire_v3(profile, answers: dict, result: dict) -> None:
     consents already live in their own table.
     """
     stored = {k: v for k, v in answers.items() if k != "legal_confirmations"}
+    # 내 규칙 (2026-10-14): a changed rule answer is a new line, and a new line
+    # is adopted again explicitly — never carried over silently.
+    from services.profile.my_rules import rule_answers_changed
+    if rule_answers_changed(profile.onboarding_answers(), stored):
+        profile.rules_confirmed_at = None
     profile.questionnaire_version = 3
     profile.onboarding_answers_json = json.dumps(stored, ensure_ascii=False)
     profile.declared_vector_json = json.dumps(result.get("declared_vector") or {})
@@ -449,6 +454,57 @@ def update_locale():
             code="LOCALE_UPDATE_FAILED", status=500,
         )
     return jsonify({"locale": current_user.locale, "ok": True})
+
+
+# ── 내 규칙 — adopt the onboarding answers as my own lines ───────────────
+
+@profile_bp.route("/rules/confirm", methods=["POST"])
+@api_auth
+@general_rate_limit
+@legal_scrub_response
+def confirm_rules():
+    """The user adopts their onboarding answers as their own lines (내 규칙).
+
+    2026-10-14. The onboarding questions asked how the user *usually* trades —
+    a self-description. ``services/profile/my_rules.py`` shows those answers as
+    lines; this is the one explicit act that makes them the user's rules: from
+    here /mirror shows 선 안/밖 and the fill push may name a month past the
+    line (services/fill_memo.py). Idempotent — a second call keeps the first
+    timestamp. Re-answering a rule question clears it (``_apply_questionnaire_v3``).
+    No body.
+    """
+    from services.profile.my_rules import RULE_ANSWER_IDS
+
+    profile = InvestmentProfile.query.filter_by(user_id=current_user.id).first()
+    if profile is None:
+        return api_error(
+            en="No profile found. Complete onboarding first.",
+            kr="프로필이 없습니다. 먼저 온보딩을 완료해 주세요.",
+            code="PROFILE_NOT_FOUND", status=404,
+        )
+    answers = profile.onboarding_answers()
+    if not any(k in answers for k in RULE_ANSWER_IDS):
+        return api_error(
+            en="Answer the five onboarding questions first.",
+            kr="온보딩 다섯 문항에 먼저 답해 주세요.",
+            code="RULES_NOT_AVAILABLE", status=409,
+        )
+    if profile.rules_confirmed_at is None:
+        profile.rules_confirmed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            logger.exception("profile.confirm_rules commit failed (user_id=%s)", current_user.id)
+            return api_error(
+                en="Failed to save. Please try again.",
+                kr="저장하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+                code="RULES_CONFIRM_FAILED", status=500,
+            )
+    return jsonify({
+        "ok": True,
+        "rules_confirmed_at": profile.rules_confirmed_at.isoformat(),
+    })
 
 
 # ── Seed Capital (분석용 시드머니) ────────────────────────────────────────
