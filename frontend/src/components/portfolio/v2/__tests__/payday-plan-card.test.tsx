@@ -178,6 +178,64 @@ describe("PaydayPlanCard", () => {
     expect(screen.getByLabelText("투자")).toHaveValue("1,000,000");
   });
 
+  it("under 덜/더 the actual amount can be typed; it stays local and is set against the plan", async () => {
+    vi.setSystemTime(new Date("2026-10-26T03:00:00Z")); // new cycle 10/25 – 11/25
+    trades = [{ date: "2026-10-02", side: "Bought", total: 900_000, currency: "KRW", source: null }];
+    seed(PLAN_OCT);
+    renderCard();
+    const review = await screen.findByTestId("payday-review");
+    const group = (part: string) => within(review).getByRole("group", { name: `${part} 돌아보기` });
+    // No amount box until the answer is 덜 or 더.
+    expect(screen.queryByLabelText("생활비 실제로 쓴 돈")).toBeNull();
+    fireEvent.click(within(group("생활비")).getByRole("button", { name: "더" }));
+    fireEvent.change(screen.getByLabelText("생활비 실제로 쓴 돈"), { target: { value: "1820000" } });
+    fireEvent.click(within(group("저축")).getByRole("button", { name: "덜" }));
+    fireEvent.change(screen.getByLabelText("저축 실제로 모은 돈"), { target: { value: "300,000" } });
+    fireEvent.click(within(group("기타")).getByRole("button", { name: "계획대로" }));
+    fireEvent.click(screen.getByRole("button", { name: "돌아보기 저장" }));
+
+    await waitFor(() =>
+      expect(loadStore(7).cycles[0]).toMatchObject({
+        review: { living: "more", saving: "less", other: "as_planned" },
+        actual: { living: 1_820_000, saving: 300_000 },
+      }),
+    );
+    // A new cycle opens on last cycle's result: actual bar, what was set, the gap.
+    const result = await screen.findByTestId("payday-last-result");
+    expect(within(result).getByTestId("payday-pva-living")).toHaveTextContent("182만원");
+    expect(within(result).getByTestId("payday-pva-living")).toHaveTextContent("정한 150만원 · 32만원 더");
+    expect(within(result).getByTestId("payday-pva-saving")).toHaveTextContent("정한 50만원 · 20만원 덜");
+    expect(within(result).getByTestId("payday-pva-other")).toHaveTextContent("정한 대로");
+    // 투자 comes from the fills, and "less" is never pointed out for it.
+    await waitFor(() => expect(within(result).getByTestId("payday-pva-invest")).toHaveTextContent("90만원"));
+    expect(within(result).getByTestId("payday-pva-invest")).not.toHaveTextContent("덜");
+    expect(within(result).getByTestId("payday-pva-invest")).not.toHaveTextContent("몫보다 많음");
+    // The typed amounts went nowhere.
+    for (const c of calls) {
+      expect(c.method).toBe("GET");
+      for (const typed of ["1820000", "1,820,000", "300000", "300,000"]) expect(c.url).not.toContain(typed);
+    }
+    // And the result carries no verdict words.
+    const text = result.textContent ?? "";
+    for (const word of ["과소비", "줄이세요", "추천", "조언", "권장", "적정", "목표", "지키", "%"]) {
+      expect(text).not.toContain(word);
+    }
+  });
+
+  it("a typed amount sets the answer itself; 계획대로 drops the amount", async () => {
+    vi.setSystemTime(new Date("2026-10-26T03:00:00Z"));
+    seed(PLAN_OCT);
+    renderCard();
+    const review = await screen.findByTestId("payday-review");
+    const living = within(review).getByRole("group", { name: "생활비 돌아보기" });
+    fireEvent.click(within(living).getByRole("button", { name: "더" }));
+    // 1,400,000 is under the 1,500,000 set — the answer follows the number.
+    fireEvent.change(screen.getByLabelText("생활비 실제로 쓴 돈"), { target: { value: "1400000" } });
+    expect(within(living).getByRole("button", { name: "덜" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(within(living).getByRole("button", { name: "계획대로" }));
+    expect(screen.queryByLabelText("생활비 실제로 쓴 돈")).toBeNull();
+  });
+
   it("'이 기기에서 지우기' removes everything stored for this user", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
     seed(PLAN_OCT);

@@ -22,6 +22,7 @@ import {
   parseAmount,
   parseStore,
   previousCycle,
+  reviewFor,
   saveStore,
   storageKey,
   unassigned,
@@ -67,6 +68,12 @@ describe("plan arithmetic", () => {
     expect(unassigned({ income: null, parts: plan("2026-10-25").parts })).toBeNull();
     expect(unassigned({ income: 3_500_000, parts: plan("2026-10-25").parts })).toBe(500_000);
     expect(unassigned({ income: 2_000_000, parts: plan("2026-10-25").parts })).toBe(-1_000_000);
+  });
+
+  it("a typed actual says more / less / as planned against what was set", () => {
+    expect(reviewFor(1_500_000, 1_820_000)).toBe("more");
+    expect(reviewFor(1_500_000, 1_200_000)).toBe("less");
+    expect(reviewFor(1_500_000, 1_500_000)).toBe("as_planned");
   });
 
   it("amounts are digits only", () => {
@@ -154,6 +161,24 @@ describe("storage (this browser, one key per user)", () => {
     expect(s.cycles[0].income).toBeNull();
     expect(s.cycles[0].parts).toEqual({ living: null, saving: null, invest: 100, other: null });
     expect(s.cycles[0].review).toEqual({});
+    expect(s.cycles[0].actual).toBeUndefined();
+  });
+
+  it("keeps typed actuals for the self-reviewed parts only, and only real amounts", () => {
+    const s = parseStore(
+      JSON.stringify({
+        v: 1,
+        payday: 25,
+        cycles: [
+          {
+            start: "2026-09-25",
+            parts: { living: 1_500_000, saving: 500_000, invest: 1_000_000 },
+            actual: { living: 1_820_000, saving: -5, other: "x", invest: 9 },
+          },
+        ],
+      }),
+    );
+    expect(s.cycles[0].actual).toEqual({ living: 1_820_000 });
   });
 
   it("upsert replaces the same cycle and keeps only the newest cycles", () => {
