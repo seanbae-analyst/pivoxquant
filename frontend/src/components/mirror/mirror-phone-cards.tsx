@@ -9,6 +9,8 @@
  * of those becomes its own card, in the same order the page already tells it:
  *
  *   1. 오늘의 거울  — the one sentence (leadSentence), nothing else
+ *   1b. 내 규칙    — MyRulesPanel (2026-10-14); dropped when the backend sent
+ *                    no `rules` block (older backend / could not be built)
  *   2. 선언 vs 관찰 — the radar block, identical to desktop (MirrorRadarPanel)
  *   3. 간극        — every gap row the backend sent + the drift descriptor.
  *                    Dropped when there is neither: an empty card would only
@@ -34,6 +36,7 @@ import {
   gapMagnitude,
 } from "@/components/mirror/mirror-headline";
 import { MirrorRadarPanel } from "@/components/mirror/mirror-radar-panel";
+import { MyRulesPanel } from "@/components/mirror/my-rules-panel";
 import { OneThingNudge } from "@/components/mirror/one-thing-nudge";
 
 const DIM = "rgba(var(--pq-ivory-rgb), 0.55)";
@@ -53,10 +56,12 @@ function StoryCard({ wide = false, children }: { wide?: boolean; children: React
   );
 }
 
-function SwipeHint() {
+function SwipeHint({ rulesNext = false }: { rulesNext?: boolean }) {
   return (
     <p className="pt-8 text-[12px]" style={{ color: DIM }} aria-hidden>
-      옆으로 넘기면 선언과 관찰을 나란히 볼 수 있어요 →
+      {rulesNext
+        ? "옆으로 넘기면 내 규칙과 선언·관찰을 차례로 볼 수 있어요 →"
+        : "옆으로 넘기면 선언과 관찰을 나란히 볼 수 있어요 →"}
     </p>
   );
 }
@@ -131,21 +136,24 @@ function cardSpecs(data: MirrorHomeResponse): CardSpec[] {
           <div className="my-auto pt-8">
             <MirrorLead data={data} className="mt-4 text-[1.7rem] leading-[1.45]" />
           </div>
-          <SwipeHint />
+          <SwipeHint rulesNext={Boolean(data.rules)} />
         </>
       ),
     },
-    {
-      id: "radar",
-      label: "선언 vs 관찰",
-      wide: true,
-      body: (
-        <div className="my-auto">
-          <MirrorRadarPanel data={data} bordered={false} />
-        </div>
-      ),
-    },
   ];
+  if (data.rules) {
+    cards.push({ id: "rules", label: "내 규칙", body: <MyRulesPanel data={data} bordered={false} /> });
+  }
+  cards.push({
+    id: "radar",
+    label: "선언 vs 관찰",
+    wide: true,
+    body: (
+      <div className="my-auto">
+        <MirrorRadarPanel data={data} bordered={false} />
+      </div>
+    ),
+  });
   if (hasGapCard(data)) {
     cards.push({ id: "gap", label: "간극", body: <GapCard data={data} /> });
   }

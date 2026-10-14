@@ -83,3 +83,67 @@ def test_several_fills_one_push(webhook_client, token):  # noqa: F811
     assert send.call_count == 1
     if len(waiting) > 1:
         assert f"{len(waiting)}건" in send.call_args.kwargs["body"]
+
+
+# ── 내 규칙 line in the push (2026-10-14) ────────────────────────────────
+
+def _declare_rare(client, auth_user, app):
+    """Onboard with declared_frequency="rare" (≤ 2 fills / month)."""
+    from tests.test_mirror_home import _LEGAL
+    from extensions import db
+    from models import Position
+    with app.app_context():
+        db.session.add(Position(user_id=auth_user["id"], ticker="ONBOARD", shares=0.0,
+                                avg_cost=1.0, buy_fx_rate=1.0))
+        db.session.commit()
+    r = client.post("/api/profile/onboarding", json={"answers": {
+        "declared_holding": "months", "declared_frequency": "rare",
+        "declared_positions": "focused", "declared_drawdown_response": "hold",
+        "record_habit": "sometimes", "legal_confirmations": list(_LEGAL),
+    }})
+    assert r.status_code == 200, r.get_json()
+
+
+def _record_fills(app, user_id, n):
+    from datetime import datetime, timezone
+    from extensions import db
+    from models import TradeHistory
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    with app.app_context():
+        for _ in range(n):
+            db.session.add(TradeHistory(
+                user_id=user_id, ticker="005930.KS", action="BUY", shares=1.0,
+                price_per_share=70000.0, total_value=70000.0, currency="KRW", traded_at=now,
+            ))
+        db.session.commit()
+
+
+def test_push_names_the_month_count_past_the_users_own_line(
+    webhook_client, token, client, auth_user, app,  # noqa: F811
+):
+    _declare_rare(client, auth_user, app)
+    _record_fills(app, auth_user["id"], 2)          # 2 recorded + this fill = 3 > 2
+    with patch("services.push_service.send_push_to_user") as send:
+        r = _post(webhook_client, token)
+    assert r.status_code == 201
+    body = send.call_args.kwargs["body"]
+    assert "이번 달 들어온 거래가 3번이에요 — 정해 둔 선은 2번." in body
+    assert body.index("체결이 들어왔습니다") < body.index("이번 달") < body.index("이유")
+    for word in ("매수", "매도", "BUY", "SELL", "추천", "조언", "위반"):
+        assert word not in body
+
+
+def test_push_says_nothing_extra_within_the_line(
+    webhook_client, token, client, auth_user, app,  # noqa: F811
+):
+    _declare_rare(client, auth_user, app)
+    _record_fills(app, auth_user["id"], 1)          # 1 + this fill = 2 = line
+    with patch("services.push_service.send_push_to_user") as send:
+        _post(webhook_client, token)
+    assert "이번 달" not in send.call_args.kwargs["body"]
+
+
+def test_push_without_declared_answers_is_unchanged(webhook_client, token):  # noqa: F811
+    with patch("services.push_service.send_push_to_user") as send:
+        _post(webhook_client, token)
+    assert "이번 달" not in send.call_args.kwargs["body"]

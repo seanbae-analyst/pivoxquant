@@ -793,6 +793,67 @@ export interface MirrorGapDimension {
 }
 
 
+/* ── 내 규칙 (2026-10-14) — services/profile/my_rules.py ──────────────────
+ * The user's own onboarding answers as plain lines, and where their own
+ * record sits against each. Thresholds are the user's buckets, never ours.
+ * `status` is a fact against their own number — no score, grade or streak. */
+export type MyRuleStatus = "within" | "outside" | "no_data" | "no_line" | "not_counted";
+
+export interface MyRuleMonth {
+  /** KST calendar month, "YYYY-MM". */
+  month: string;
+  count: number;
+  /** count > ceiling (false when there is no ceiling). */
+  over: boolean;
+  /** The current, still-running month. */
+  partial: boolean;
+}
+
+export interface MyRuleItem {
+  id: "frequency" | "holding" | "positions" | "drawdown";
+  /** Short rule name, e.g. "매매 횟수". */
+  title: string;
+  /** The line in the user's own terms, e.g. "한 달에 매수·매도 5번 이하". */
+  line: string;
+  /** False for the −10% answer — no prices, so it is shown but never counted. */
+  measurable: boolean;
+  status: MyRuleStatus;
+  /** The observed fact, ready to print, e.g. "이번 달 6번 · 선 5번". */
+  observed: string;
+  /* frequency */
+  ceiling?: number | null;
+  this_month?: number;
+  /** Fills this month still waiting in the import inbox (included in this_month). */
+  waiting?: number;
+  months?: MyRuleMonth[];
+  months_over?: number;
+  months_shown?: number;
+  /* holding */
+  window_days?: number;
+  sells?: number;
+  within?: number;
+  shorter?: number;
+  longer?: number;
+  lo_days?: number;
+  hi_days?: number | null;
+  /* positions */
+  side?: "under" | "over" | null;
+  open_positions?: number;
+  lo?: number;
+  hi?: number | null;
+}
+
+export interface MyRules {
+  /** False when the five onboarding questions were never answered (pre-V3 / skipped). */
+  available: boolean;
+  source: "onboarding";
+  items: MyRuleItem[];
+  /** Lines with something to count right now. */
+  counted: number;
+  /** Of those, how many the record sits outside of. */
+  outside: number;
+}
+
 export interface MirrorHomeResponse {
   ok: boolean;
   stage: MirrorStage;
@@ -809,6 +870,8 @@ export interface MirrorHomeResponse {
   observed: { trade_count: number };
   gap: MirrorGapDimension[];
   drift: { available: boolean; descriptor: string | null };
+  /** 내 규칙 (2026-10-14). null = could not be built; absent = older backend. Both → no card. */
+  rules?: MyRules | null;
   radar: {
     keys: string[];
     labels: string[];

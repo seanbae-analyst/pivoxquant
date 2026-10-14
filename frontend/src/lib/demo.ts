@@ -57,6 +57,43 @@ const DEMO_MIRROR_HOME: MirrorHomeResponse = {
     { key: "hold_variance", label: "보유기간 편차", direction: "down", delta: -0.15, declared: 0.45, observed: 0.3 },
   ],
   drift: { available: true, descriptor: "영역 이동 관찰" },
+  // 내 규칙 (2026-10-14) — same shape services/profile/my_rules.py returns.
+  rules: {
+    available: true,
+    source: "onboarding",
+    counted: 3,
+    outside: 2,
+    items: [
+      {
+        id: "frequency", title: "매매 횟수", line: "한 달에 매수·매도 5번 이하",
+        measurable: true, status: "outside", observed: "이번 달 6번 · 선 5번",
+        ceiling: 5, this_month: 6, waiting: 0, months_over: 2, months_shown: 5,
+        months: [
+          { month: "2026-06", count: 3, over: false, partial: false },
+          { month: "2026-07", count: 4, over: false, partial: false },
+          { month: "2026-08", count: 7, over: true, partial: false },
+          { month: "2026-09", count: 5, over: false, partial: false },
+          { month: "2026-10", count: 6, over: true, partial: true },
+        ],
+      },
+      {
+        id: "holding", title: "보유 기간", line: "몇 주 들고 있다가 판다 (7~30일)",
+        measurable: true, status: "outside",
+        observed: "최근 90일 매도 6번 중 선 안 4번 · 더 일찍 2번",
+        window_days: 90, sells: 6, within: 4, shorter: 2, longer: 0, lo_days: 7, hi_days: 30,
+      },
+      {
+        id: "positions", title: "종목 수", line: "동시에 4~8종목을 들고 있다",
+        measurable: true, status: "within", observed: "지금 7종목",
+        side: null, open_positions: 7, lo: 4, hi: 8,
+      },
+      {
+        id: "drawdown", title: "하락 대응", line: "한 주에 10% 빠지면 그냥 둔다",
+        measurable: false, status: "not_counted",
+        observed: "시세를 쓰지 않아 10% 빠진 주를 알 수 없어요 — 세지 않아요",
+      },
+    ],
+  },
   radar: {
     keys: [
       "holding_period", "turnover", "sector_diversity", "ticker_diversity",

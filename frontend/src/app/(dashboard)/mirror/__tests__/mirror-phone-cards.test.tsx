@@ -112,6 +112,24 @@ describe("/mirror phone — story cards", () => {
     );
   });
 
+  it("puts 내 규칙 right after the sentence when the backend sends rules", () => {
+    setData({
+      ...payload,
+      rules: {
+        available: true, source: "onboarding", counted: 1, outside: 0,
+        items: [{
+          id: "positions", title: "종목 수", line: "동시에 4~8종목을 들고 있다",
+          measurable: true, status: "within", observed: "지금 6종목",
+        }],
+      },
+    });
+    render(<MirrorPage />);
+    const labels = screen.getAllByRole("tab").map((t) => t.getAttribute("aria-label"));
+    expect(labels).toEqual(["오늘의 거울", "내 규칙", "선언 vs 관찰", "간극", "한 가지만"]);
+    const rules = screen.getByTestId("phone-page-rules");
+    expect(within(rules).getByText("동시에 4~8종목을 들고 있다")).toBeInTheDocument();
+  });
+
   it("drops the 간극 card when there is neither a gap nor a drift", () => {
     setData({ ...payload, gap: [], drift: { available: false, descriptor: null } });
     render(<MirrorPage />);
