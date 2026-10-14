@@ -45,6 +45,7 @@ import { useTransactions } from "@/components/portfolio/v2/hooks-v2";
 import {
   PART_KEYS,
   PART_LABEL,
+  REVIEWED_PARTS,
   REVIEW_LABEL,
   TRADE_FETCH_LIMIT,
   clearStore,
@@ -56,6 +57,7 @@ import {
   parseAmount,
   partsTotal,
   previousCycle,
+  reviewFor,
   saveStore,
   shortDate,
   unassigned,
@@ -65,6 +67,7 @@ import {
   type PartKey,
   type PartReview,
   type PaydayStore,
+  type ReviewedPart,
   type TradeRowLike,
 } from "@/lib/payday-plan";
 
@@ -73,7 +76,12 @@ const DIM = "rgba(var(--pq-ivory-rgb), 0.55)";
 const FAINT = "rgba(var(--pq-ivory-rgb), 0.38)";
 const LINE = "1px solid var(--pq-ivory-line)";
 const TRACK = "rgba(var(--pq-ivory-rgb), 0.07)";
-const REVIEWED_PARTS = ["living", "saving", "other"] as const;
+/** What the typed actual is called, per part. */
+const ACTUAL_LABEL: Record<ReviewedPart, string> = {
+  living: "실제로 쓴 돈",
+  saving: "실제로 모은 돈",
+  other: "실제로 쓴 돈",
+};
 
 /** Part colours — fixed order, validated (see module doc). */
 const PART_COLOR: Record<PartKey, string> = {
@@ -605,16 +613,56 @@ function Segmented({
   );
 }
 
+type Review = NonNullable<CyclePlan["review"]>;
+type Actual = NonNullable<CyclePlan["actual"]>;
+
+/**
+ * At the next payday: how each non-investment part went. The quick answer is
+ * 계획대로 / 덜 / 더; under 덜 or 더 the user may also type what it actually
+ * came to (read off their own bank app). A typed amount sets the answer
+ * itself, so the two never disagree; 계획대로 clears it (actual = what was set).
+ */
 function ReviewBlock({
   plan,
   onSave,
+  onCancel,
 }: {
   plan: CyclePlan;
-  onSave: (review: NonNullable<CyclePlan["review"]>) => void;
+  onSave: (review: Review, actual: Actual) => void;
+  onCancel?: () => void;
 }) {
-  const [review, setReview] = React.useState<NonNullable<CyclePlan["review"]>>(plan.review ?? {});
+  const [review, setReview] = React.useState<Review>(plan.review ?? {});
+  const [typed, setTyped] = React.useState<Partial<Record<ReviewedPart, string>>>(() =>
+    Object.fromEntries(
+      Object.entries(plan.actual ?? {}).map(([k, v]) => [k, (v as number).toLocaleString("ko-KR")]),
+    ),
+  );
   const parts = REVIEWED_PARTS.filter((k) => plan.parts[k] !== null);
   if (parts.length === 0) return null;
+
+  const pick = (k: ReviewedPart, r: PartReview) => {
+    setReview((cur) => ({ ...cur, [k]: r }));
+    const n = parseAmount(typed[k] ?? "");
+    // 계획대로 means the actual is what was set; a 덜/더 tap that contradicts
+    // a typed amount drops the amount rather than keep two answers.
+    if (r === "as_planned" || (n !== null && reviewFor(plan.parts[k] ?? 0, n) !== r)) {
+      setTyped((cur) => ({ ...cur, [k]: "" }));
+    }
+  };
+  const type = (k: ReviewedPart, raw: string) => {
+    const n = parseAmount(raw);
+    setTyped((cur) => ({ ...cur, [k]: n === null ? "" : n.toLocaleString("ko-KR") }));
+    if (n !== null) setReview((cur) => ({ ...cur, [k]: reviewFor(plan.parts[k] ?? 0, n) }));
+  };
+  const save = () => {
+    const actual: Actual = {};
+    for (const k of parts) {
+      const n = parseAmount(typed[k] ?? "");
+      if (n !== null) actual[k] = n;
+    }
+    onSave(review, actual);
+  };
+
   return (
     <div
       className="mt-4 p-4"
@@ -624,28 +672,184 @@ function ReviewBlock({
       <div className="text-[14px] font-semibold" style={{ color: IVORY }}>
         지난 주기는 어땠나요?
       </div>
-      <p className="mt-1 text-[12px]" style={{ color: DIM }}>
-        {shortDate(plan.start)}부터 · 투자는 체결 기록으로 따로 보여 드려요
+      <p className="mt-1 text-[12px] leading-relaxed" style={{ color: DIM }}>
+        {shortDate(plan.start)}부터 · 덜이나 더면 실제 금액도 적을 수 있어요(선택). 투자는 체결 기록으로
+        계산해요.
       </p>
-      <ul className="mt-3 space-y-2.5">
-        {parts.map((k) => (
-          <li key={k} className="flex flex-wrap items-center justify-between gap-2">
-            <span className="flex items-center gap-2 text-[13.5px] tabular-nums" style={{ color: IVORY }}>
-              <Dot color={PART_COLOR[k]} />
-              {PART_LABEL[k]}
-              <span style={{ color: DIM }}>{man(plan.parts[k] ?? 0)}</span>
-            </span>
-            <Segmented
-              label={`${PART_LABEL[k]} 돌아보기`}
-              value={review[k]}
-              onChange={(r) => setReview((cur) => ({ ...cur, [k]: r }))}
-            />
-          </li>
-        ))}
+      <ul className="mt-3 space-y-3">
+        {parts.map((k) => {
+          const showAmount = review[k] === "less" || review[k] === "more" || Boolean(typed[k]);
+          return (
+            <li key={k}>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="flex items-center gap-2 text-[13.5px] tabular-nums" style={{ color: IVORY }}>
+                  <Dot color={PART_COLOR[k]} />
+                  {PART_LABEL[k]}
+                  <span style={{ color: DIM }}>{man(plan.parts[k] ?? 0)}</span>
+                </span>
+                <Segmented label={`${PART_LABEL[k]} 돌아보기`} value={review[k]} onChange={(r) => pick(k, r)} />
+              </div>
+              {showAmount && (
+                <div className="mt-2 flex items-center justify-between gap-3 pl-4">
+                  <label htmlFor={`payday-actual-${k}`} className="text-[12.5px]" style={{ color: DIM }}>
+                    {ACTUAL_LABEL[k]} (선택)
+                  </label>
+                  <span className="flex items-baseline gap-1" style={{ borderBottom: LINE }}>
+                    <input
+                      id={`payday-actual-${k}`}
+                      aria-label={`${PART_LABEL[k]} ${ACTUAL_LABEL[k]}`}
+                      inputMode="numeric"
+                      autoComplete="off"
+                      value={typed[k] ?? ""}
+                      placeholder="0"
+                      onChange={(e) => type(k, e.target.value)}
+                      className="w-28 bg-transparent py-1 text-right text-[15px] font-semibold tabular-nums outline-none placeholder:font-normal"
+                      style={{ color: IVORY }}
+                    />
+                    <span className="text-[12.5px]" style={{ color: DIM }}>
+                      원
+                    </span>
+                  </span>
+                </div>
+              )}
+            </li>
+          );
+        })}
       </ul>
-      <PrimaryButton className="mt-4 w-full md:w-auto" disabled={Object.keys(review).length === 0} onClick={() => onSave(review)}>
-        돌아보기 저장
-      </PrimaryButton>
+      <div className="mt-4 flex items-center gap-3">
+        <PrimaryButton className="flex-1 md:flex-none" disabled={Object.keys(review).length === 0} onClick={save}>
+          돌아보기 저장
+        </PrimaryButton>
+        {onCancel && <OutlineButton onClick={onCancel}>취소</OutlineButton>}
+      </div>
+    </div>
+  );
+}
+
+/* ── what was set next to what it came to ──────────────────────────────── */
+
+/** "32만원 더" / "20만원 덜" / "정한 대로" — the gap as a fact, no verdict. */
+function gapText(planned: number, actual: number): string {
+  const d = actual - planned;
+  return d === 0 ? "정한 대로" : d > 0 ? `${man(d)} 더` : `${man(-d)} 덜`;
+}
+
+/**
+ * One row per part: a bar filled to the actual (part colour) with a tick at
+ * what was set — a bullet bar, each row on its own scale (the larger of the
+ * two plus headroom), because the row's question is the gap, and one big
+ * part would flatten every other gap on a shared scale. The numbers carry
+ * the magnitudes. 투자 comes from the user's
+ * own fills and, as everywhere on this card, only "more than the part" is
+ * named — less is never pointed out. A part answered 덜/더 without an amount
+ * shows the answer alone; nothing is guessed.
+ */
+function PlanVsActual({
+  plan,
+  investPut,
+  investApprox,
+}: {
+  plan: CyclePlan;
+  investPut: number | null;
+  investApprox: boolean;
+}) {
+  type Row = { k: PartKey; set: number; actual: number | null; sub: string };
+  const rows: Row[] = [];
+  for (const k of PART_KEYS) {
+    const set = plan.parts[k];
+    if (set === null) continue;
+    if (k === "invest") {
+      const put = investPut === null ? null : Math.max(0, investPut);
+      rows.push({
+        k,
+        set,
+        actual: put,
+        sub:
+          put === null
+            ? `정한 ${man(set)} · 체결 합계를 셀 수 없어요`
+            : `정한 ${man(set)} · 체결로 계산${put > set ? " · 몫보다 많음" : ""}`,
+      });
+      continue;
+    }
+    const typed = plan.actual?.[k];
+    const answer = plan.review?.[k];
+    const actual = typed ?? (answer === "as_planned" ? set : null);
+    rows.push({
+      k,
+      set,
+      actual,
+      sub:
+        actual !== null
+          ? `정한 ${man(set)} · ${gapText(set, actual)}`
+          : answer
+            ? `정한 ${man(set)} · ${REVIEW_LABEL[answer]} (금액은 안 적음)`
+            : `정한 ${man(set)} · 아직 안 적음`,
+    });
+  }
+  const scaleOf = (r: Row) => Math.max(1, r.set, r.actual ?? 0) * 1.12;
+  return (
+    <ul className="mt-3 space-y-3" data-testid="payday-plan-vs-actual">
+      {rows.map((r) => (
+        <li key={r.k} data-testid={`payday-pva-${r.k}`}>
+          <div className="grid grid-cols-[3.5rem_1fr_7.5rem] items-center gap-3 text-[13px] tabular-nums">
+            <span className="flex items-center gap-1.5" style={{ color: IVORY }}>
+              <Dot color={PART_COLOR[r.k]} />
+              {PART_LABEL[r.k]}
+            </span>
+            <span className="relative h-2 rounded-[4px]" style={{ background: TRACK }} aria-hidden>
+              {r.actual !== null && (
+                <span
+                  className="absolute inset-y-0 left-0 rounded-[4px]"
+                  style={{ width: `${(r.actual / scaleOf(r)) * 100}%`, background: PART_COLOR[r.k] }}
+                />
+              )}
+              {/* what was set */}
+              <span
+                className="absolute -top-1 -bottom-1 w-[2px] rounded-full"
+                style={{ left: `calc(${(r.set / scaleOf(r)) * 100}% - 1px)`, background: IVORY }}
+              />
+            </span>
+            <span className="whitespace-nowrap text-right font-semibold" style={{ color: IVORY }}>
+              {r.actual === null ? "—" : `${r.k === "invest" && investApprox ? "약 " : ""}${man(r.actual)}`}
+            </span>
+          </div>
+          <div className="mt-1 pl-[calc(3.5rem+0.75rem)] text-[11.5px]" style={{ color: DIM }}>
+            {r.sub}
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function LastCycleResult({
+  plan,
+  end,
+  rows,
+  fx,
+  onEdit,
+}: {
+  plan: CyclePlan;
+  end: string;
+  rows: TradeRowLike[] | null;
+  fx: number | null;
+  onEdit: () => void;
+}) {
+  const flow = rows ? cycleFlow(rows, plan.start, end, fx) : null;
+  const put = flow && !flow.truncated ? flow.netKrw : null;
+  const approx = Boolean(flow && (flow.USD.in > 0 || flow.USD.out > 0));
+  return (
+    <div className="mt-5" data-testid="payday-last-result">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-[13px] font-semibold tabular-nums" style={{ color: IVORY }}>
+          지난 주기 · {shortDate(plan.start)} – {lastDayBefore(end)}
+        </span>
+        <QuietButton onClick={onEdit}>돌아보기 고치기</QuietButton>
+      </div>
+      <p className="mt-1 text-[11.5px]" style={{ color: DIM }}>
+        막대는 실제, 세로선은 정한 돈이에요.
+      </p>
+      <PlanVsActual plan={plan} investPut={put} investApprox={approx} />
     </div>
   );
 }
@@ -663,6 +867,7 @@ export function PaydayPlanCard({ variant = "card" }: { variant?: "card" | "plain
   const [today, setToday] = React.useState<string | null>(null);
   const [editingPayday, setEditingPayday] = React.useState(false);
   const [editingPlan, setEditingPlan] = React.useState(false);
+  const [editingReview, setEditingReview] = React.useState(false);
   const [saveFailed, setSaveFailed] = React.useState(false);
 
   React.useEffect(() => {
@@ -741,6 +946,9 @@ export function PaydayPlanCard({ variant = "card" }: { variant?: "card" | "plain
     last !== undefined &&
     REVIEWED_PARTS.some((k) => last.parts[k] !== null && !(last.review ?? {})[k]);
 
+  // A new cycle opens on last cycle's result; mid-cycle it sits under the plan.
+  const showResultFirst = Boolean(last && !lastNeedsReview && !editingReview && !current);
+
   const savePlan = (income: number | null, parts: Record<PartKey, number | null>) => {
     persist(
       upsertCycle(store, {
@@ -776,18 +984,38 @@ export function PaydayPlanCard({ variant = "card" }: { variant?: "card" | "plain
         </p>
       )}
 
-      {last && lastNeedsReview && (
-        <ReviewBlock plan={last} onSave={(review) => persist(upsertCycle(store, { ...last, review }))} />
+      {last && (lastNeedsReview || editingReview) && (
+        <ReviewBlock
+          plan={last}
+          onSave={(review, actual) => {
+            // No amounts typed → no `actual` key (JSON drops undefined).
+            const kept = Object.keys(actual).length > 0 ? actual : undefined;
+            persist(upsertCycle(store, { ...last, review, actual: kept }));
+            setEditingReview(false);
+          }}
+          onCancel={editingReview ? () => setEditingReview(false) : undefined}
+        />
+      )}
+
+      {/* A new cycle opens on last cycle's result, so the next split is set
+          looking at it; mid-cycle the result sits under the current plan. */}
+      {showResultFirst && last && (
+        <LastCycleResult plan={last} end={prev.end} rows={rows} fx={fx} onEdit={() => setEditingReview(true)} />
       )}
 
       {!current || editingPlan ? (
-        <PlanForm
-          cycle={cycle}
-          initial={editingPlan ? current : undefined}
-          previous={last ?? store.cycles[store.cycles.length - 1]}
-          onSave={savePlan}
-          onCancel={editingPlan ? () => setEditingPlan(false) : undefined}
-        />
+        <div
+          className={showResultFirst ? "mt-6 pt-1" : undefined}
+          style={showResultFirst ? { borderTop: LINE } : undefined}
+        >
+          <PlanForm
+            cycle={cycle}
+            initial={editingPlan ? current : undefined}
+            previous={last ?? store.cycles[store.cycles.length - 1]}
+            onSave={savePlan}
+            onCancel={editingPlan ? () => setEditingPlan(false) : undefined}
+          />
+        </div>
       ) : (
         <div className="mt-4" data-testid="payday-plan-current">
           <div className="flex items-center justify-between gap-3">
@@ -819,42 +1047,36 @@ export function PaydayPlanCard({ variant = "card" }: { variant?: "card" | "plain
           {current.parts.invest !== null && (
             <InvestCompare plan={current} rows={rows} end={cycle.end} fx={fx} />
           )}
+
+          {last && !lastNeedsReview && !editingReview && (
+            <div className="mt-6 pt-1" style={{ borderTop: LINE }}>
+              <LastCycleResult plan={last} end={prev.end} rows={rows} fx={fx} onEdit={() => setEditingReview(true)} />
+            </div>
+          )}
         </div>
       )}
 
-      {/* look-back: last and earlier cycles, as the user left them */}
-      {(last || earlier.length > 0) && (
+      {/* look-back: the cycles before the last one, as the user left them */}
+      {earlier.length > 0 && (
         <details className="mt-6 pt-4" style={{ borderTop: LINE }}>
           <summary className="cursor-pointer select-none text-[13px]" style={{ color: DIM }}>
-            지난 주기
+            그 전 주기
           </summary>
-          <ul className="mt-3 space-y-4">
-            {[...(last ? [last] : []), ...earlier].map((plan) => {
+          <ul className="mt-3 space-y-6">
+            {earlier.map((plan) => {
               // A stored start is a payday, so the cycle it opens ends at the
               // next payday (if the payday was changed since, at the next one
               // under the current setting — close enough here).
               const end = cycleFor(plan.start, store.payday ?? 1).end;
               const flow = rows ? cycleFlow(rows, plan.start, end, fx) : null;
               const put = flow && !flow.truncated ? flow.netKrw : null;
+              const approx = Boolean(flow && (flow.USD.in > 0 || flow.USD.out > 0));
               return (
                 <li key={plan.start}>
-                  <div className="flex items-baseline justify-between gap-3 text-[13px] tabular-nums">
-                    <span style={{ color: IVORY }}>{shortDate(plan.start)}부터</span>
-                    <span style={{ color: DIM }}>
-                      {plan.parts.invest !== null && `투자 몫 ${man(plan.parts.invest)}`}
-                      {put !== null && put !== undefined && ` · 넣은 돈 ${man(Math.max(0, put))}`}
-                    </span>
+                  <div className="text-[13px] tabular-nums" style={{ color: IVORY }}>
+                    {shortDate(plan.start)} – {lastDayBefore(end)}
                   </div>
-                  <div className="mt-2">
-                    <SplitBar income={plan.income} parts={plan.parts} />
-                  </div>
-                  {REVIEWED_PARTS.some((k) => plan.review?.[k]) && (
-                    <div className="mt-1.5 text-[12px]" style={{ color: DIM }}>
-                      {REVIEWED_PARTS.filter((k) => plan.review?.[k])
-                        .map((k) => `${PART_LABEL[k]} ${REVIEW_LABEL[plan.review![k]!]}`)
-                        .join(" · ")}
-                    </div>
-                  )}
+                  <PlanVsActual plan={plan} investPut={put} investApprox={approx} />
                 </li>
               );
             })}

@@ -46,6 +46,10 @@ export const PART_LABEL: Record<PartKey, string> = {
   other: "기타",
 };
 
+/** The parts the user looks back on themselves — 투자 is measured from fills. */
+export const REVIEWED_PARTS = ["living", "saving", "other"] as const;
+export type ReviewedPart = (typeof REVIEWED_PARTS)[number];
+
 /** How a non-investment part went, in the user's own words. */
 export type PartReview = "as_planned" | "less" | "more";
 export const REVIEW_LABEL: Record<PartReview, string> = {
@@ -53,6 +57,11 @@ export const REVIEW_LABEL: Record<PartReview, string> = {
   less: "덜",
   more: "더",
 };
+
+/** What a typed actual amount says about the part, against what was set. */
+export function reviewFor(planned: number, actual: number): PartReview {
+  return actual > planned ? "more" : actual < planned ? "less" : "as_planned";
+}
 
 export interface CyclePlan {
   /** KST date the cycle starts (the payday), "YYYY-MM-DD". */
@@ -62,7 +71,14 @@ export interface CyclePlan {
   /** KRW per part; null = left blank. */
   parts: Record<PartKey, number | null>;
   /** Self-report for the non-investment parts, written at the next payday. */
-  review?: Partial<Record<Exclude<PartKey, "invest">, PartReview>>;
+  review?: Partial<Record<ReviewedPart, PartReview>>;
+  /**
+   * What the user says a non-investment part actually came to (KRW), read off
+   * their own bank app at the next payday. Optional per part — the quick
+   * 계획대로 / 덜 / 더 answer stands without it. Stays in this browser like
+   * every other amount here.
+   */
+  actual?: Partial<Record<ReviewedPart, number>>;
   savedAt: string;
 }
 
@@ -253,16 +269,21 @@ function sanitizeCycle(raw: unknown): CyclePlan | null {
   for (const k of PART_KEYS) parts[k] = isAmount(partsRaw[k]) ? (partsRaw[k] as number | null) : null;
   const income = isAmount(c.income) ? (c.income as number | null) : null;
   const review: CyclePlan["review"] = {};
+  const actual: NonNullable<CyclePlan["actual"]> = {};
   const reviewRaw = (c.review ?? {}) as Record<string, unknown>;
-  for (const k of ["living", "saving", "other"] as const) {
+  const actualRaw = (c.actual ?? {}) as Record<string, unknown>;
+  for (const k of REVIEWED_PARTS) {
     const v = reviewRaw[k];
     if (v === "as_planned" || v === "less" || v === "more") review[k] = v;
+    const a = actualRaw[k];
+    if (typeof a === "number" && Number.isFinite(a) && a >= 0) actual[k] = a;
   }
   return {
     start: c.start,
     income,
     parts,
     review,
+    ...(Object.keys(actual).length > 0 ? { actual } : {}),
     savedAt: typeof c.savedAt === "string" ? c.savedAt : "",
   };
 }
