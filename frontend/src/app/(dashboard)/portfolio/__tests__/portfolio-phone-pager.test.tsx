@@ -1,7 +1,7 @@
 /**
  * /portfolio on a phone (CEO 2026-10-09 — "화면 넘어가는식으로"; 2026-10-10 —
  * "너무 웹사이트 같음 앱처럼"): a large-title summary that stays on screen above
- * three swipeable pages (보유 · 현황 · 최근 활동).
+ * swipeable pages (보유 · 현황 · 최근 활동 · 월급날).
  *
  * What must hold on the phone layout, both positions of the vendor gate:
  *   - every section is still there (holdings, hero, seed capital, sectors,
@@ -45,6 +45,9 @@ vi.mock("@/components/settings/v2/capital-card-v2", () => ({
 }));
 vi.mock("@/components/portfolio/v2/recent-transactions-block", () => ({
   RecentTransactionsBlock: () => <div data-testid="recent-tx-stub" />,
+}));
+vi.mock("@/components/portfolio/v2/payday-plan-card", () => ({
+  PaydayPlanCard: () => <div data-testid="payday-plan-stub" />,
 }));
 vi.mock("@/components/portfolio/v2/add-position-modal-v2", () => ({
   AddPositionModalV2: ({ open }: { open: boolean }) =>
@@ -116,10 +119,10 @@ describe("/portfolio phone pager — vendor gate OFF (shipped default)", () => {
     mockedFx.mockReturnValue({ rate: 1400, isStale: false });
   });
 
-  it("lays the sections out as three tabbed pages (2026-10-10)", async () => {
+  it("lays the sections out as tabbed pages (2026-10-10; 월급날 added 2026-10-14)", async () => {
     await renderPage();
     const tabs = within(screen.getByRole("tablist", { name: "포트폴리오 화면" })).getAllByRole("tab");
-    expect(tabs.map((t) => t.textContent)).toEqual(["보유", "현황", "최근 활동"]);
+    expect(tabs.map((t) => t.textContent)).toEqual(["보유", "현황", "최근 활동", "월급날"]);
     expect(tabs[0]).toHaveAttribute("aria-selected", "true");
     // The tab strip already says where you are — no carousel dots under it.
     expect(screen.queryByTestId("phone-pager-dots")).toBeNull();

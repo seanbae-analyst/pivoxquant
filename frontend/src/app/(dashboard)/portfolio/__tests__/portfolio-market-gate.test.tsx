@@ -48,6 +48,9 @@ vi.mock("@/components/settings/v2/capital-card-v2", () => ({
 vi.mock("@/components/portfolio/v2/recent-transactions-block", () => ({
   RecentTransactionsBlock: () => null,
 }));
+vi.mock("@/components/portfolio/v2/payday-plan-card", () => ({
+  PaydayPlanCard: () => null,
+}));
 vi.mock("@/components/portfolio/v2/add-position-modal-v2", () => ({
   AddPositionModalV2: () => null,
 }));
