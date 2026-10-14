@@ -81,10 +81,11 @@ describe("PaydayPlanCard", () => {
     renderCard();
     const card = await screen.findByTestId("payday-plan-card");
     expect(card).toHaveTextContent("월급날 배분");
-    expect(card).toHaveTextContent("이 기기(브라우저)에만 저장되고 서버로 보내지 않아요");
-    fireEvent.change(screen.getByLabelText("매월"), { target: { value: "25" } });
-    fireEvent.click(screen.getByRole("button", { name: "월급날로 정하기" }));
-    expect(await screen.findByTestId("payday-plan-form")).toHaveTextContent("9월 25일 ~ 10월 24일");
+    expect(card).toHaveTextContent("이 기기에만 저장돼요 · 서버로 보내지 않아요");
+    expect(card).toHaveTextContent("다른 기기에선 보이지 않고, 브라우저 데이터를 지우면 함께 지워져요");
+    fireEvent.change(screen.getByLabelText("월급날"), { target: { value: "25" } });
+    fireEvent.click(screen.getByRole("button", { name: "시작하기" }));
+    expect(await screen.findByTestId("payday-plan-form")).toHaveTextContent("9월 25일 – 10월 24일");
     expect(loadStore(7).payday).toBe(25);
   });
 
@@ -92,12 +93,15 @@ describe("PaydayPlanCard", () => {
     seed({ v: 1, payday: 25, cycles: [] });
     renderCard();
     await screen.findByTestId("payday-plan-form");
-    fireEvent.change(screen.getByLabelText(/이번에 들어온 돈/), { target: { value: "3500000" } });
+    fireEvent.change(screen.getByLabelText(/들어온 돈/), { target: { value: "3500000" } });
     fireEvent.change(screen.getByLabelText("생활비"), { target: { value: "1500000" } });
     fireEvent.change(screen.getByLabelText("투자"), { target: { value: "1,000,000" } });
-    expect(screen.getByTestId("payday-unassigned")).toHaveTextContent("아직 정하지 않은 돈 1,000,000원");
-    fireEvent.click(screen.getByRole("button", { name: "이 배분 저장" }));
-    await screen.findByTestId("payday-plan-current");
+    expect(screen.getByTestId("payday-unassigned")).toHaveTextContent("정하지 않음100만원");
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+    const current = await screen.findByTestId("payday-plan-current");
+    // The headline is what came in; the bar and its legend show the split.
+    expect(current).toHaveTextContent("350만원들어온 돈");
+    expect(within(current).getByTestId("payday-split-bar")).toBeInTheDocument();
     const saved = loadStore(7).cycles[0];
     expect(saved.start).toBe("2026-09-25");
     expect(saved.income).toBe(3_500_000);
@@ -108,9 +112,9 @@ describe("PaydayPlanCard", () => {
     seed({ v: 1, payday: 25, cycles: [] });
     renderCard();
     await screen.findByTestId("payday-plan-form");
-    fireEvent.change(screen.getByLabelText(/이번에 들어온 돈/), { target: { value: "3456789" } });
+    fireEvent.change(screen.getByLabelText(/들어온 돈/), { target: { value: "3456789" } });
     fireEvent.change(screen.getByLabelText("투자"), { target: { value: "987654" } });
-    fireEvent.click(screen.getByRole("button", { name: "이 배분 저장" }));
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
     await screen.findByTestId("payday-invest-compare");
     await waitFor(() => expect(calls.length).toBeGreaterThan(0));
     for (const c of calls) {
@@ -133,8 +137,9 @@ describe("PaydayPlanCard", () => {
     seed(PLAN_OCT);
     renderCard();
     const cmp = await screen.findByTestId("payday-invest-compare");
-    await waitFor(() => expect(cmp).toHaveTextContent("약 1,320,000원"));
-    expect(cmp).toHaveTextContent("투자 몫 1,000,000원");
+    // 900,000 + 300 × 1,400 = 1,320,000 — approximate because of the USD leg.
+    await waitFor(() => expect(cmp).toHaveTextContent("넣은 돈약 132만원"));
+    expect(cmp).toHaveTextContent("정한 몫100만원");
     expect(cmp).toHaveTextContent("몫보다 많음");
     expect(cmp).toHaveTextContent("오늘 환율로 환산");
   });
@@ -144,8 +149,18 @@ describe("PaydayPlanCard", () => {
     seed(PLAN_OCT);
     renderCard();
     const cmp = await screen.findByTestId("payday-invest-compare");
-    await waitFor(() => expect(cmp).toHaveTextContent("약 400,000원"));
+    await waitFor(() => expect(cmp).toHaveTextContent("넣은 돈40만원"));
     expect(cmp).not.toHaveTextContent("몫보다 많음");
+  });
+
+  it("an amount that is not whole 만 is printed exactly, so equal-looking figures are equal", async () => {
+    trades = [{ date: "2026-10-02", side: "Bought", total: 1_004_000, currency: "KRW", source: null }];
+    seed(PLAN_OCT);
+    renderCard();
+    const cmp = await screen.findByTestId("payday-invest-compare");
+    await waitFor(() => expect(cmp).toHaveTextContent("넣은 돈1,004,000원"));
+    expect(cmp).toHaveTextContent("정한 몫100만원");
+    expect(cmp).toHaveTextContent("몫보다 많음");
   });
 
   it("at the next payday asks how the other parts went, and keeps the answer locally", async () => {
@@ -158,8 +173,8 @@ describe("PaydayPlanCard", () => {
     fireEvent.click(screen.getByRole("button", { name: "돌아보기 저장" }));
     await waitFor(() => expect(loadStore(7).cycles[0].review).toEqual({ living: "more", saving: "as_planned" }));
     // The new cycle's form offers last cycle's split to start from.
-    expect(screen.getByTestId("payday-plan-form")).toHaveTextContent("10월 25일 ~ 11월 24일");
-    fireEvent.click(screen.getByRole("button", { name: "지난 배분 그대로 가져오기" }));
+    expect(screen.getByTestId("payday-plan-form")).toHaveTextContent("10월 25일 – 11월 24일");
+    fireEvent.click(screen.getByRole("button", { name: "지난 배분 그대로" }));
     expect(screen.getByLabelText("투자")).toHaveValue("1,000,000");
   });
 
@@ -170,7 +185,7 @@ describe("PaydayPlanCard", () => {
     await screen.findByTestId("payday-plan-current");
     fireEvent.click(screen.getByRole("button", { name: "이 기기에서 지우기" }));
     expect(window.localStorage.getItem(storageKey(7))).toBeNull();
-    expect(await screen.findByRole("button", { name: "월급날로 정하기" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "시작하기" })).toBeInTheDocument();
   });
 
   it("copy carries no trade verbs, advice, ratios or targets", async () => {
