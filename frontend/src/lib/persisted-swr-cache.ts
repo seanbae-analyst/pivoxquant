@@ -41,8 +41,8 @@
  *   local-storage use (§8.4) without claiming it is the only one; §2's
  *   "원본 파일은 저장하지 않습니다" covers import raw files, which are
  *   excluded here. No sentence says data is never kept on the user's device,
- *   so this does not contradict it. A one-line disclosure in §8 would still
- *   be more transparent — flagged for the policy owner, not edited here.
+ *   so this does not contradict it. Disclosed since 2026-10-14 in §8.5
+ *   ("기기 안 저장 — 최근 화면 데이터").
  *
  * Not in scope: the (dashboard) auth gate still waits for `/api/auth/me`,
  * because persisting identity is exactly what this module refuses to do. So
@@ -417,6 +417,15 @@ export function useStaleness(key: string = API.mirror.home): Staleness {
     isStale: meta.ageAtHydrate >= STALE_AFTER_MS,
     sameDay: saved.toDateString() === new Date(meta.hydratedAt).toDateString(),
   };
+}
+
+/**
+ * The signed-in user this tab's cache belongs to — set only once
+ * `/api/auth/me` has confirmed an id, null otherwise. lib/api reads it on an
+ * account-deletion request to remove that user's other on-device copies.
+ */
+export function persistedCacheUserId(): number | null {
+  return activeUid;
 }
 
 /** Test-only: reset module state between cases. */
