@@ -3,7 +3,8 @@ import { hadSession } from "./had-session";
 import { currentLocationPath, loginHref } from "./login-redirect";
 import { isDemoMode, demoResponseFor } from "./demo";
 import { API } from "./endpoints";
-import { clearPersistedSwrCache } from "./persisted-swr-cache";
+import { clearStore as clearPaydayStore } from "./payday-plan";
+import { clearPersistedSwrCache, persistedCacheUserId } from "./persisted-swr-cache";
 
 /**
  * Requests that end the account's session on this device. A success wipes the
@@ -20,6 +21,22 @@ const SESSION_ENDING_REQUESTS: ReadonlyArray<readonly [string, string]> = [
 function endsSession(path: string, method: string | undefined): boolean {
   const m = (method ?? "GET").toUpperCase();
   return SESSION_ENDING_REQUESTS.some(([rm, rp]) => rm === m && rp === path);
+}
+
+/**
+ * The two account-deletion requests also remove the 월급날 배분 amounts this
+ * browser keeps for that user (lib/payday-plan — the only copy; the server
+ * never had them, privacy-ko §8). Logout keeps them: they are the user's own
+ * notes on their own device. The user is the one the screen cache confirmed
+ * via /api/auth/me, read before that cache is wiped; with no confirmed user
+ * nothing is removed — never another account's plan on a shared browser.
+ */
+function deletesAccount(path: string, method: string | undefined): boolean {
+  const m = (method ?? "GET").toUpperCase();
+  return (
+    (m === "POST" && path === API.auth.deleteRequest) ||
+    (m === "DELETE" && path === API.auth.deleteAccount)
+  );
 }
 
 /** Default request timeout in milliseconds. */
@@ -244,7 +261,11 @@ async function apiFetchOnce<T = unknown>(
       body && typeof body === "object" ? body : undefined,
     );
   }
-  if (endsSession(path, init?.method)) clearPersistedSwrCache();
+  if (endsSession(path, init?.method)) {
+    const uid = persistedCacheUserId();
+    if (uid !== null && deletesAccount(path, init?.method)) clearPaydayStore(uid);
+    clearPersistedSwrCache();
+  }
   return res.json();
 }
 
