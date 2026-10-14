@@ -61,6 +61,9 @@ const DEMO_MIRROR_HOME: MirrorHomeResponse = {
   rules: {
     available: true,
     source: "onboarding",
+    confirmed: true,
+    confirmed_at: "2026-09-02T01:00:00",
+    confirmed_on: "2026-09-02",
     counted: 3,
     outside: 2,
     items: [
@@ -77,15 +80,15 @@ const DEMO_MIRROR_HOME: MirrorHomeResponse = {
         ],
       },
       {
-        id: "holding", title: "보유 기간", line: "몇 주 들고 있다가 판다 (7~30일)",
+        id: "holding", title: "보유 기간", line: "7일 이상 들고 있다가 판다",
         measurable: true, status: "outside",
-        observed: "최근 90일 매도 6번 중 선 안 4번 · 더 일찍 2번",
-        window_days: 90, sells: 6, within: 4, shorter: 2, longer: 0, lo_days: 7, hi_days: 30,
+        observed: "최근 90일 매도 6번 · 7일 전에 판 것 2번",
+        window_days: 90, sells: 6, sooner: 2, min_days: 7,
       },
       {
-        id: "positions", title: "종목 수", line: "동시에 4~8종목을 들고 있다",
+        id: "positions", title: "종목 수", line: "4종목 이상 나눠 담는다",
         measurable: true, status: "within", observed: "지금 7종목",
-        side: null, open_positions: 7, lo: 4, hi: 8,
+        open_positions: 7, min_positions: 4,
       },
       {
         id: "drawdown", title: "하락 대응", line: "한 주에 10% 빠지면 그냥 둔다",

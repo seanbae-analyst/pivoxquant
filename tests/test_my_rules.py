@@ -1,11 +1,13 @@
 """tests/test_my_rules.py — 내 규칙 (services/profile/my_rules.py).
 
-Pins: every line comes from the user's own onboarding bucket; counts come
-from their own rows only (registration rows and seed lots never count);
-"this month" is the KST calendar month; fills waiting in the import inbox
-count toward the month and are named as such; the −10% answer is shown but
-never counted; the payload carries no score / grade / label words and is a
-no-op for the legal scrub.
+Pins: every line comes from the user's own onboarding bucket; each line is
+crossed in ONE direction only (more trades, sooner sells, fewer names — doing
+less is never 선 밖); counts come from their own rows only (registration rows
+and seed lots never count); "this month" is the KST calendar month; fills
+waiting in the import inbox count toward the month and are named as such; the
+−10% answer is shown but never counted; ``confirmed`` follows
+``rules_confirmed_at``; the payload carries no score / grade / label words and
+is a no-op for the legal scrub.
 """
 from __future__ import annotations
 
@@ -19,6 +21,7 @@ from services.profile.my_rules import (
     kst_month,
     kst_month_start_utc,
     month_fill_count,
+    rule_answers_changed,
 )
 
 # 2026-10-14 03:00 UTC = 2026-10-14 12:00 KST.
@@ -58,9 +61,29 @@ def test_lines_come_from_the_users_own_buckets():
     out = compute_my_rules(ANSWERS, [], 6, NOW)
     assert [i["id"] for i in out["items"]] == ["frequency", "holding", "positions", "drawdown"]
     assert _item(out, "frequency")["line"] == "한 달에 매수·매도 5번 이하"
-    assert "7~30일" in _item(out, "holding")["line"]
-    assert _item(out, "positions")["line"] == "동시에 4~8종목을 들고 있다"
+    assert _item(out, "holding")["line"] == "7일 이상 들고 있다가 판다"
+    assert _item(out, "positions")["line"] == "4종목 이상 나눠 담는다"
     assert _item(out, "drawdown")["line"] == "한 주에 10% 빠지면 그냥 둔다"
+
+
+def test_confirmed_follows_rules_confirmed_at():
+    out = compute_my_rules(ANSWERS, [], 6, NOW)
+    assert out["confirmed"] is False and out["confirmed_at"] is None and out["confirmed_on"] is None
+    # 2026-10-13 16:30 UTC = 2026-10-14 01:30 KST → adopted on the 14th (KST).
+    at = datetime(2026, 10, 13, 16, 30)
+    out = compute_my_rules(ANSWERS, [], 6, NOW, confirmed_at=at)
+    assert out["confirmed"] is True
+    assert out["confirmed_at"] == "2026-10-13T16:30:00"
+    assert out["confirmed_on"] == "2026-10-14"
+    # Nothing to adopt → never "confirmed", whatever the column says.
+    assert compute_my_rules({}, [], 6, NOW, confirmed_at=at)["confirmed"] is False
+
+
+def test_rule_answers_changed_ignores_the_record_habit_question():
+    assert rule_answers_changed(ANSWERS, dict(ANSWERS, record_habit="never")) is False
+    assert rule_answers_changed(ANSWERS, dict(ANSWERS, declared_frequency="moderate")) is True
+    assert rule_answers_changed({}, ANSWERS) is True
+    assert rule_answers_changed(None, None) is False
 
 
 def test_frequency_ceiling_is_the_top_of_the_bucket():
@@ -146,18 +169,20 @@ def _round_trip(days_held, sold_days_ago, ticker):
     return [_t("BUY", sold - timedelta(days=days_held), ticker=ticker), _t("SELL", sold, ticker=ticker)]
 
 
-def test_each_sell_is_placed_against_the_declared_range():
+def test_only_selling_sooner_than_the_minimum_crosses_the_line():
     rows = _round_trip(2, 5, "A") + _round_trip(10, 5, "B") + _round_trip(20, 5, "C")
-    rows += _round_trip(60, 5, "D")
+    rows += _round_trip(60, 5, "D")                                     # held longer: not 선 밖
     h = _item(compute_my_rules(ANSWERS, rows, 6, NOW), "holding")
-    assert (h["sells"], h["shorter"], h["within"], h["longer"]) == (4, 1, 2, 1)
+    assert (h["sells"], h["sooner"], h["min_days"]) == (4, 1, 7.0)
     assert h["status"] == "outside"
-    assert h["observed"] == "최근 90일 매도 4번 중 선 안 2번 · 더 일찍 1번 · 더 오래 1번"
+    assert h["observed"] == "최근 90일 매도 4번 · 7일 전에 판 것 1번"
 
 
-def test_all_sells_in_range_is_within():
-    rows = _round_trip(8, 3, "A") + _round_trip(29, 3, "B")
-    assert _item(compute_my_rules(ANSWERS, rows, 6, NOW), "holding")["status"] == "within"
+def test_holding_longer_than_said_is_within():
+    rows = _round_trip(8, 3, "A") + _round_trip(400, 3, "B")
+    h = _item(compute_my_rules(ANSWERS, rows, 6, NOW), "holding")
+    assert h["status"] == "within"
+    assert h["observed"] == "최근 90일 매도 2번 · 모두 7일 이상 들고 있다가 팔았어요"
 
 
 def test_sells_outside_the_window_and_seed_lots_do_not_count():
@@ -168,29 +193,28 @@ def test_sells_outside_the_window_and_seed_lots_do_not_count():
     assert h["sells"] == 0 and h["status"] == "no_data"
 
 
-def test_years_has_no_upper_edge():
-    answers = dict(ANSWERS, declared_holding="years")
-    rows = _round_trip(800, 2, "A")
-    h = _item(compute_my_rules(answers, rows, 6, NOW), "holding")
-    assert h["hi_days"] is None and h["within"] == 1 and h["status"] == "within"
+def test_intraday_has_no_minimum_to_fall_under():
+    answers = dict(ANSWERS, declared_holding="intraday")
+    h = _item(compute_my_rules(answers, _round_trip(0.1, 2, "A"), 6, NOW), "holding")
+    assert h["status"] == "no_line" and h["min_days"] is None and h["sooner"] == 0
 
 
 # ── positions ────────────────────────────────────────────────────────────
 
-def test_positions_within_under_over_and_unregistered():
+def test_only_fewer_names_than_the_minimum_crosses_the_line():
     def pos(n):
         return _item(compute_my_rules(ANSWERS, [], n, NOW), "positions")
 
-    assert pos(6)["status"] == "within" and pos(6)["side"] is None
-    assert (pos(2)["status"], pos(2)["side"]) == ("outside", "under")
-    assert (pos(12)["status"], pos(12)["side"]) == ("outside", "over")
+    assert pos(6)["status"] == "within"
+    assert pos(30)["status"] == "within"                                # more names: not 선 밖
+    assert pos(2)["status"] == "outside" and pos(2)["observed"] == "지금 2종목 · 선보다 적음"
     assert pos(0)["status"] == "no_data"
 
 
-def test_broad_has_no_upper_edge():
-    answers = dict(ANSWERS, declared_positions="broad")
-    p = _item(compute_my_rules(answers, [], 40, NOW), "positions")
-    assert p["status"] == "within" and p["line"] == "동시에 25종목 이상 들고 있다"
+def test_ultra_focused_has_no_minimum():
+    answers = dict(ANSWERS, declared_positions="ultra_focused")
+    p = _item(compute_my_rules(answers, [], 2, NOW), "positions")
+    assert p["status"] == "no_line" and p["min_positions"] is None
 
 
 # ── drawdown ─────────────────────────────────────────────────────────────
@@ -202,7 +226,7 @@ def test_drawdown_line_is_shown_but_never_counted():
 
 # ── summary + legal posture ──────────────────────────────────────────────
 
-def test_summary_counts_only_measured_lines():
+def test_summary_counts_only_lines_with_something_to_count():
     fills = [_t("BUY", NOW - timedelta(days=d), ticker=f"T{d}") for d in range(7)]   # over 5
     out = compute_my_rules(ANSWERS, fills, 6, NOW)
     # frequency (outside) + positions (within); holding has no sells, drawdown not counted.

@@ -796,6 +796,10 @@ export interface MirrorGapDimension {
 /* ── 내 규칙 (2026-10-14) — services/profile/my_rules.py ──────────────────
  * The user's own onboarding answers as plain lines, and where their own
  * record sits against each. Thresholds are the user's buckets, never ours.
+ * Each line is crossed in ONE direction only (more trades, sooner sells,
+ * fewer names); doing less is never 선 밖. The lines are the user's rules
+ * only after they adopt them (`confirmed`, POST /api/profile/rules/confirm);
+ * before that the client shows them as "what you said", without a status.
  * `status` is a fact against their own number — no score, grade or streak. */
 export type MyRuleStatus = "within" | "outside" | "no_data" | "no_line" | "not_counted";
 
@@ -831,28 +835,37 @@ export interface MyRuleItem {
   /* holding */
   window_days?: number;
   sells?: number;
-  within?: number;
-  shorter?: number;
-  longer?: number;
-  lo_days?: number;
-  hi_days?: number | null;
+  /** Sells held fewer days than `min_days`. */
+  sooner?: number;
+  min_days?: number | null;
   /* positions */
-  side?: "under" | "over" | null;
   open_positions?: number;
-  lo?: number;
-  hi?: number | null;
+  min_positions?: number | null;
 }
 
 export interface MyRules {
   /** False when the five onboarding questions were never answered (pre-V3 / skipped). */
   available: boolean;
   source: "onboarding";
+  /** True once the user adopted the answers as their lines. */
+  confirmed: boolean;
+  /** Naive-UTC ISO timestamp of that, or null. */
+  confirmed_at: string | null;
+  /** KST date of that ("YYYY-MM-DD"), or null. */
+  confirmed_on: string | null;
   items: MyRuleItem[];
   /** Lines with something to count right now. */
   counted: number;
   /** Of those, how many the record sits outside of. */
   outside: number;
 }
+
+/** POST /api/profile/rules/confirm */
+export interface ConfirmMyRulesResponse {
+  ok: boolean;
+  rules_confirmed_at: string;
+}
+
 
 export interface MirrorHomeResponse {
   ok: boolean;

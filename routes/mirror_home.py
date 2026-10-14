@@ -187,6 +187,7 @@ def _my_rules(user_id: int, open_positions: int) -> dict | None:
     try:
         profile = InvestmentProfile.query.filter_by(user_id=user_id).first()
         answers = profile.onboarding_answers() if profile is not None else {}
+        confirmed_at = profile.rules_confirmed_at if profile is not None else None
         trades = TradeHistory.query.filter_by(user_id=user_id).all()
         pending = [
             ts for (ts,) in db.session.query(PendingTrade.traded_at)
@@ -194,7 +195,9 @@ def _my_rules(user_id: int, open_positions: int) -> dict | None:
             .all()
         ]
         now = datetime.now(timezone.utc).replace(tzinfo=None)
-        return compute_my_rules(answers, trades, open_positions, now, pending)
+        return compute_my_rules(
+            answers, trades, open_positions, now, pending, confirmed_at=confirmed_at,
+        )
     except Exception:  # pragma: no cover — defensive; a bad row must not 500 the home
         logger.debug("mirror-home: my rules unavailable", exc_info=True)
         return None

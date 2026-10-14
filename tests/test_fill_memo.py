@@ -87,8 +87,9 @@ def test_several_fills_one_push(webhook_client, token):  # noqa: F811
 
 # ── 내 규칙 line in the push (2026-10-14) ────────────────────────────────
 
-def _declare_rare(client, auth_user, app):
-    """Onboard with declared_frequency="rare" (≤ 2 fills / month)."""
+def _declare_rare(client, auth_user, app, confirm=True):
+    """Onboard with declared_frequency="rare" (≤ 2 fills / month) and, unless
+    ``confirm=False``, adopt it as the user's line (POST /rules/confirm)."""
     from tests.test_mirror_home import _LEGAL
     from extensions import db
     from models import Position
@@ -102,6 +103,8 @@ def _declare_rare(client, auth_user, app):
         "record_habit": "sometimes", "legal_confirmations": list(_LEGAL),
     }})
     assert r.status_code == 200, r.get_json()
+    if confirm:
+        assert client.post("/api/profile/rules/confirm").status_code == 200
 
 
 def _record_fills(app, user_id, n):
@@ -144,6 +147,17 @@ def test_push_says_nothing_extra_within_the_line(
 
 
 def test_push_without_declared_answers_is_unchanged(webhook_client, token):  # noqa: F811
+    with patch("services.push_service.send_push_to_user") as send:
+        _post(webhook_client, token)
+    assert "이번 달" not in send.call_args.kwargs["body"]
+
+
+def test_push_says_nothing_extra_before_the_user_adopted_the_line(
+    webhook_client, token, client, auth_user, app,  # noqa: F811
+):
+    """"정해 둔 선" would name a line the user never set — answered, not adopted."""
+    _declare_rare(client, auth_user, app, confirm=False)
+    _record_fills(app, auth_user["id"], 5)
     with patch("services.push_service.send_push_to_user") as send:
         _post(webhook_client, token)
     assert "이번 달" not in send.call_args.kwargs["body"]

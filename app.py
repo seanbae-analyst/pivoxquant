@@ -982,6 +982,10 @@ def _do_migrations():
     _add_column_if_missing("investment_profiles", "questionnaire_version", "INTEGER")
     _add_column_if_missing("investment_profiles", "onboarding_answers_json", "TEXT")
     _add_column_if_missing("investment_profiles", "declared_vector_json", "TEXT")
+    # 내 규칙 (2026-10-14, alembic 062) — when the user adopted their onboarding
+    # answers as their own lines. Read by routes/mirror_home.py and
+    # services/fill_memo.py; written by POST /api/profile/rules/confirm.
+    _add_column_if_missing("investment_profiles", "rules_confirmed_at", "TIMESTAMP")
 
     # User referrals — `invited_count` is the one post-create candidate.
     _add_column_if_missing("user_referrals", "invited_count", "INTEGER", default="0")

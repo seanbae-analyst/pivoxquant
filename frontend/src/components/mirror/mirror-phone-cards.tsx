@@ -9,8 +9,9 @@
  * of those becomes its own card, in the same order the page already tells it:
  *
  *   1. 오늘의 거울  — the one sentence (leadSentence), nothing else
- *   1b. 내 규칙    — MyRulesPanel (2026-10-14); dropped when the backend sent
- *                    no `rules` block (older backend / could not be built)
+ *   1b. 내 규칙    — MyRulesPanel (2026-10-14; "말한 나" until the user adopts
+ *                    the lines); dropped when the backend sent no `rules`
+ *                    block (older backend / could not be built)
  *   2. 선언 vs 관찰 — the radar block, identical to desktop (MirrorRadarPanel)
  *   3. 간극        — every gap row the backend sent + the drift descriptor.
  *                    Dropped when there is neither: an empty card would only
@@ -142,7 +143,11 @@ function cardSpecs(data: MirrorHomeResponse): CardSpec[] {
     },
   ];
   if (data.rules) {
-    cards.push({ id: "rules", label: "내 규칙", body: <MyRulesPanel data={data} bordered={false} /> });
+    cards.push({
+      id: "rules",
+      label: data.rules.confirmed ? "내 규칙" : "말한 나",
+      body: <MyRulesPanel data={data} bordered={false} />,
+    });
   }
   cards.push({
     id: "radar",

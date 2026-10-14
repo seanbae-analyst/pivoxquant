@@ -23,6 +23,7 @@ import type {
   TurnoverMirrorResponse,
   AveragingDownMirrorResponse,
   MirrorHomeResponse,
+  ConfirmMyRulesResponse,
   PendingImportsResponse,
   ImportTokensResponse,
   ObservationNoteSource,
@@ -403,6 +404,16 @@ export function useImportTokens() {
  *
  * Never returns a score / grade — only counts and average hold days.
  */
+/**
+ * 내 규칙 — adopt the onboarding answers as the user's own lines
+ * (POST /api/profile/rules/confirm). Through `apiFetch` for CSRF + credentials.
+ * Throws `ApiError` (409 `RULES_NOT_AVAILABLE` when there is nothing to adopt);
+ * the caller re-reads the mirror (`mutate(API.mirror.home)`) after success.
+ */
+export async function confirmMyRules(): Promise<ConfirmMyRulesResponse> {
+  return apiFetch<ConfirmMyRulesResponse>(API.profile.rulesConfirm, { method: "POST" });
+}
+
 /**
  * Mirror home (거울) — the composed 선언/관찰/트윈 read for the new home.
  * 404-safe soft-empty (returns null) so the surface degrades gracefully

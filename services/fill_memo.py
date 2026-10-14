@@ -58,9 +58,11 @@ def _label(r: dict) -> str:
 
 def rule_note(user_id: int, now: datetime | None = None) -> str:
     """One more sentence for the push when this month's fills are past the
-    line the user drew themselves (내 규칙 — services/profile/my_rules.py),
-    else ``""``. A count against their own number, never a judgement and
-    never a direction word. Never raises.
+    line the user adopted (내 규칙 — services/profile/my_rules.py), else
+    ``""``. Only after the user adopted their onboarding answers as their
+    lines (``InvestmentProfile.rules_confirmed_at``) — before that "정해 둔
+    선" would name a line they never set. A count against their own number,
+    never a judgement and never a direction word. Never raises.
 
     2026-10-14: the pause used to depend on the user remembering to open
     「멈춤」 before buying. The fill notification already reaches them at the
@@ -77,7 +79,9 @@ def rule_note(user_id: int, now: datetime | None = None) -> str:
             month_fill_count,
         )
         profile = InvestmentProfile.query.filter_by(user_id=user_id).first()
-        ceiling = frequency_ceiling(profile.onboarding_answers() if profile else None)
+        if profile is None or profile.rules_confirmed_at is None:
+            return ""
+        ceiling = frequency_ceiling(profile.onboarding_answers())
         if ceiling is None:
             return ""
         now = now or datetime.now(timezone.utc).replace(tzinfo=None)

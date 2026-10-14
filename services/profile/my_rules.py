@@ -13,10 +13,21 @@ What it is (and is not)
   the user picked in onboarding (``services/profile/questionnaire.py``). We
   never suggest a number. Changing a line = answering the five questions
   again (``/onboarding?retake=1``), the existing path.
-* **A fact, not a verdict.** Each rule reports where the record sits against
-  the user's line — 선 안 / 선 밖 — with the raw counts. No score, no grade,
-  no streak, no "지키세요". Within-vs-outside is arithmetic on the user's own
-  number, the same comparison the /mirror gap already makes on buckets.
+* **A line the user adopted.** The onboarding question asked how they
+  *usually* behave — a self-description, not a promise. It becomes a rule
+  only when the user says so (``InvestmentProfile.rules_confirmed_at``,
+  POST /api/profile/rules/confirm). Before that the lines and counts are
+  shown as "what you said", without 선 안/밖 and without the fill-push line
+  (services/fill_memo.py). Re-answering a rule question clears the
+  confirmation — a new line is adopted again, never silently.
+* **One direction per line.** A line is crossed only in the direction the
+  evidence calls costly: trading MORE often than the ceiling, selling SOONER
+  than the minimum hold, holding FEWER names than the minimum (more
+  concentrated). Doing less — fewer trades, longer holds, more names — is
+  never "선 밖"; flagging it would push the user toward more activity. Rules
+  read the way people state them: "5번 이하", "7일 이상", "4종목 이상".
+* **A fact, not a verdict.** 선 안 / 선 밖 with the raw counts. No score, no
+  grade, no streak, no "지키세요".
 * **No market data.** Trade rows and the open-position count only — the same
   rule as ``services/behavior/*`` (CLAUDE.md §핵심 3축). That is also why the
   −10% answer is shown but never counted: without prices there is no way to
@@ -55,11 +66,18 @@ MONTHS_SHOWN = 6
 # Window for the holding rule — sells are sparse, a month says too little.
 HOLD_WINDOW_DAYS = 90
 
+# The onboarding answers a line is drawn from. Changing any of them changes a
+# line, so it clears ``rules_confirmed_at`` (routes/profile.py).
+RULE_ANSWER_IDS: tuple[str, ...] = (
+    "declared_frequency",
+    "declared_holding",
+    "declared_positions",
+    "declared_drawdown_response",
+)
+
 # ── declared_frequency → monthly ceiling (fills / month) ─────────────────
-# The upper end of the bucket the user picked ("3~5번" → 5). Trading LESS
-# than the bucket is not counted as crossing the line: the question asked how
-# often they trade, and the line people hold themselves to is the ceiling.
-# "40번 이상" has no ceiling to cross.
+# The upper end of the bucket the user picked ("3~5번" → 5). "40번 이상" has
+# no ceiling to cross.
 FREQUENCY_CEILING: dict[str, int | None] = {
     "rare": 2,
     "few": 5,
@@ -68,33 +86,41 @@ FREQUENCY_CEILING: dict[str, int | None] = {
     "daily": None,
 }
 
-# ── declared_holding → hold range in days, [lo, hi) ──────────────────────
-# Natural day edges of the answer labels (하루 안 / 며칠 / 몇 주 / 몇 달 /
-# 1년 이상). These are shown to the user in days, so they use calendar edges
-# rather than the radar's log-scale buckets.
-HOLD_RANGE_DAYS: dict[str, tuple[float, float | None]] = {
-    "intraday": (0.0, 1.0),
-    "days": (1.0, 7.0),
-    "weeks": (7.0, 30.0),
-    "months": (30.0, 365.0),
-    "years": (365.0, None),
+# ── declared_holding → minimum hold in days ──────────────────────────────
+# The lower edge of the answer's natural day range (하루 안 / 며칠 1~7 /
+# 몇 주 7~30 / 몇 달 30~365 / 1년 이상). "하루 안에 정리" has no minimum.
+HOLD_MIN_DAYS: dict[str, float | None] = {
+    "intraday": None,
+    "days": 1.0,
+    "weeks": 7.0,
+    "months": 30.0,
+    "years": 365.0,
 }
 
 _HOLD_LINE: dict[str, str] = {
-    "intraday": "산 날 안에 판다 (1일 미만)",
-    "days": "며칠 들고 있다가 판다 (1~7일)",
-    "weeks": "몇 주 들고 있다가 판다 (7~30일)",
-    "months": "몇 달 들고 있다가 판다 (30일~1년)",
-    "years": "1년 넘게 들고 있다가 판다",
+    "intraday": "산 날 안에 판다 — 최소 보유 기간을 두지 않았어요",
+    "days": "1일 이상 들고 있다가 판다",
+    "weeks": "7일 이상 들고 있다가 판다",
+    "months": "30일 이상 들고 있다가 판다",
+    "years": "1년 이상 들고 있다가 판다",
 }
 
-# ── declared_positions → open-position range, inclusive ──────────────────
-POSITION_RANGE: dict[str, tuple[int, int | None]] = {
-    "ultra_focused": (1, 3),
-    "focused": (4, 8),
-    "moderate": (9, 15),
-    "diversified": (16, 25),
-    "broad": (25, None),
+_HOLD_MIN_WORD: dict[str, str] = {
+    "days": "1일",
+    "weeks": "7일",
+    "months": "30일",
+    "years": "1년",
+}
+
+# ── declared_positions → minimum open positions ──────────────────────────
+# The lower edge of the bucket ("4~8종목" → 4). "1~3종목" is a deliberately
+# concentrated style with no floor to fall under.
+POSITION_MIN: dict[str, int | None] = {
+    "ultra_focused": None,
+    "focused": 4,
+    "moderate": 9,
+    "diversified": 16,
+    "broad": 25,
 }
 
 # ── declared_drawdown_response → the user's own sentence ─────────────────
@@ -112,6 +138,14 @@ def frequency_ceiling(answers: dict | None) -> int | None:
     if not isinstance(answers, dict):
         return None
     return FREQUENCY_CEILING.get(str(answers.get("declared_frequency")))
+
+
+def rule_answers_changed(old: dict | None, new: dict | None) -> bool:
+    """True when any answer a line is drawn from differs between two
+    onboarding-answer dicts (``record_habit`` alone does not count)."""
+    old = old if isinstance(old, dict) else {}
+    new = new if isinstance(new, dict) else {}
+    return any(old.get(k) != new.get(k) for k in RULE_ANSWER_IDS)
 
 
 def kst_month(dt: datetime) -> str:
@@ -197,7 +231,6 @@ def _frequency_rule(
         line = f"한 달에 매수·매도 {ceiling}번 이하"
         status = "outside" if this_month > ceiling else "within"
         observed = f"이번 달 {this_month}번{waiting_note} · 선 {ceiling}번"
-    over_months = sum(1 for m in months if m["over"])
     return {
         "id": "frequency",
         "title": "매매 횟수",
@@ -209,37 +242,35 @@ def _frequency_rule(
         "this_month": this_month,
         "waiting": waiting,
         "months": months,
-        "months_over": over_months,
+        "months_over": sum(1 for m in months if m["over"]),
         "months_shown": len(months),
     }
 
 
 def _holding_rule(answer: str, trades: list, now: datetime) -> dict:
-    lo, hi = HOLD_RANGE_DAYS[answer]
+    min_days = HOLD_MIN_DAYS[answer]
     since = now - timedelta(days=HOLD_WINDOW_DAYS)
     sells = collapse_pairs_by_sell(fifo_match_closed_trades_with_pnl(trades))
-    shorter = within = longer = 0
+    total = sooner = 0
     for pair, _pct in sells:
         if pair.buy_is_seed or pair.sell_time < since or pair.sell_time > now:
             continue
-        d = pair.hold_days
-        if d < lo:
-            shorter += 1
-        elif hi is not None and d >= hi:
-            longer += 1
-        else:
-            within += 1
-    total = shorter + within + longer
-    if total == 0:
+        total += 1
+        if min_days is not None and pair.hold_days < min_days:
+            sooner += 1
+    head = f"최근 {HOLD_WINDOW_DAYS}일 매도 {total}번"
+    if min_days is None:
+        status = "no_line"
+        observed = head if total else f"최근 {HOLD_WINDOW_DAYS}일 매도 기록 없음"
+    elif total == 0:
         status, observed = "no_data", f"최근 {HOLD_WINDOW_DAYS}일 매도 기록 없음"
     else:
-        status = "within" if shorter == 0 and longer == 0 else "outside"
-        parts = [f"최근 {HOLD_WINDOW_DAYS}일 매도 {total}번 중 선 안 {within}번"]
-        if shorter:
-            parts.append(f"더 일찍 {shorter}번")
-        if longer:
-            parts.append(f"더 오래 {longer}번")
-        observed = " · ".join(parts)
+        word = _HOLD_MIN_WORD[answer]
+        status = "outside" if sooner else "within"
+        observed = (
+            f"{head} · {word} 전에 판 것 {sooner}번" if sooner
+            else f"{head} · 모두 {word} 이상 들고 있다가 팔았어요"
+        )
     return {
         "id": "holding",
         "title": "보유 기간",
@@ -249,27 +280,27 @@ def _holding_rule(answer: str, trades: list, now: datetime) -> dict:
         "observed": observed,
         "window_days": HOLD_WINDOW_DAYS,
         "sells": total,
-        "within": within,
-        "shorter": shorter,
-        "longer": longer,
-        "lo_days": lo,
-        "hi_days": hi,
+        "sooner": sooner,
+        "min_days": min_days,
     }
 
 
 def _positions_rule(answer: str, open_positions: int) -> dict:
-    lo, hi = POSITION_RANGE[answer]
-    line = f"동시에 {lo}~{hi}종목을 들고 있다" if hi is not None else f"동시에 {lo}종목 이상 들고 있다"
-    side = None
-    if open_positions <= 0:
-        # Holdings may simply not be registered yet — not "0 stocks".
-        status, observed = "no_data", "등록된 보유 종목 없음"
-    elif open_positions < lo:
-        status, side, observed = "outside", "under", f"지금 {open_positions}종목 · 선보다 적음"
-    elif hi is not None and open_positions > hi:
-        status, side, observed = "outside", "over", f"지금 {open_positions}종목 · 선보다 많음"
+    floor = POSITION_MIN[answer]
+    n = max(0, int(open_positions))
+    if floor is None:
+        line = "1~3종목에 모아 담는다 — 최소 종목 수를 두지 않았어요"
+        status = "no_line"
+        observed = f"지금 {n}종목" if n else "등록된 보유 종목 없음"
     else:
-        status, side, observed = "within", None, f"지금 {open_positions}종목"
+        line = f"{floor}종목 이상 나눠 담는다"
+        if n == 0:
+            # Holdings may simply not be registered yet — not "0 stocks".
+            status, observed = "no_data", "등록된 보유 종목 없음"
+        elif n < floor:
+            status, observed = "outside", f"지금 {n}종목 · 선보다 적음"
+        else:
+            status, observed = "within", f"지금 {n}종목"
     return {
         "id": "positions",
         "title": "종목 수",
@@ -277,10 +308,8 @@ def _positions_rule(answer: str, open_positions: int) -> dict:
         "measurable": True,
         "status": status,
         "observed": observed,
-        "side": side,
-        "open_positions": max(0, int(open_positions)),
-        "lo": lo,
-        "hi": hi,
+        "open_positions": n,
+        "min_positions": floor,
     }
 
 
@@ -304,6 +333,7 @@ def compute_my_rules(
     open_positions: int,
     now: datetime,
     pending_times: Iterable[datetime] = (),
+    confirmed_at: datetime | None = None,
 ) -> dict:
     """The user's declared lines and where their own record sits against each.
 
@@ -314,6 +344,9 @@ def compute_my_rules(
     ``pending_times`` — ``traded_at`` of fills still waiting in the import
     inbox (``PendingTrade`` status pending). Counted by the frequency line
     only; they have no FIFO lots yet.
+    ``confirmed_at`` — ``InvestmentProfile.rules_confirmed_at``. ``confirmed``
+    in the payload tells the client whether these are the user's adopted
+    rules or still only what they said; the counts are the same either way.
 
     ``available`` is False when none of the four lines was answered
     (pre-V3 profile or onboarding skipped) — the client then offers the
@@ -328,20 +361,27 @@ def compute_my_rules(
     if freq in FREQUENCY_CEILING:
         items.append(_frequency_rule(freq, rows, waiting, now))
     hold = str(answers.get("declared_holding"))
-    if hold in HOLD_RANGE_DAYS:
+    if hold in HOLD_MIN_DAYS:
         items.append(_holding_rule(hold, rows, now))
     pos = str(answers.get("declared_positions"))
-    if pos in POSITION_RANGE:
+    if pos in POSITION_MIN:
         items.append(_positions_rule(pos, int(open_positions or 0)))
     dd = str(answers.get("declared_drawdown_response"))
     if dd in _DRAWDOWN_LINE:
         items.append(_drawdown_rule(dd))
 
-    counted = [i for i in items if i["measurable"] and i["status"] not in ("no_data", "no_line")]
+    counted = [i for i in items if i["status"] in ("within", "outside")]
+    available = bool(items)
     return {
-        "available": bool(items),
+        "available": available,
         "source": "onboarding",
+        "confirmed": available and confirmed_at is not None,
+        "confirmed_at": confirmed_at.isoformat() if (available and confirmed_at) else None,
+        # KST calendar date the user adopted the lines, ready to print.
+        "confirmed_on": (
+            (confirmed_at + _KST).date().isoformat() if (available and confirmed_at) else None
+        ),
         "items": items,
         "counted": len(counted),
-        "outside": sum(1 for i in counted if i["status"] != "within"),
+        "outside": sum(1 for i in counted if i["status"] == "outside"),
     }
