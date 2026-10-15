@@ -25,6 +25,7 @@ vi.mock("@/lib/api", () => {
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("@/lib/hooks", () => ({
   fetcher: vi.fn(),
+  useResearchByTicker: () => ({ note: null, count: 0, isLoading: false }),
   useObservationNotesByTicker: () => ({
     notes: [], count: 0, disclaimer: null, isLoading: false, error: undefined, mutate: vi.fn(),
   }),

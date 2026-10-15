@@ -53,6 +53,7 @@ import { StorageProofToggle } from "@/components/journal/storage-proof-toggle";
 import { WeeklyPulseSection } from "@/components/journal/weekly-pulse-section";
 import { ImportInbox } from "@/components/journal/import-inbox";
 import { ObservationNoteComposer } from "@/components/journal/observation-note-composer";
+import { ResearchEntry } from "@/components/journal/research-entry";
 import { ObservationNoteCard } from "@/components/journal/observation-note-card";
 import { JournalPager } from "@/components/journal/journal-pager";
 import { PullToRefresh } from "@/components/layout/pull-to-refresh";
@@ -761,6 +762,14 @@ function JournalContent() {
                 void mutateNotes();
               }}
             />
+          </ErrorBoundary>
+        </div>
+
+        {/* 리서치 양식 — the structured way to write before buying, scored
+            later (docs/design/research-notes_2026-10-15.md). */}
+        <div className="mb-6">
+          <ErrorBoundary fallback={null}>
+            <ResearchEntry />
           </ErrorBoundary>
         </div>
 

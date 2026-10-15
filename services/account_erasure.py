@@ -87,7 +87,7 @@ def _explicit_ops(user_id: int, email: str | None = None):
         ArtifactFeedback, BehavioralScore,
         AITwinPortfolio, AITwinWeeklyReport,
         PreTradeReflection, PersonaSnapshot, WeeklyPulse,
-        PositionDDCheck, Inquiry, ObservationNote,
+        PositionDDCheck, Inquiry, ObservationNote, ResearchNote,
         ScheduledEmail, NpsFeedback,
         CheckoutExpiration, PortfolioNavSnapshot, UserAgentAudit,
         ImportBatch, ImportToken, PendingTrade,
@@ -123,6 +123,8 @@ def _explicit_ops(user_id: int, email: str | None = None):
         ("pre_trade_reflections", _d(PreTradeReflection)),
         # 관찰 노트 — 유저 본인의 암호화된 자유 텍스트 (2026-09-22).
         ("observation_notes", _d(ObservationNote)),
+        # 리서치 노트 — 양식에 쓴 암호화된 서술 + 채점 (2026-10-15).
+        ("research_notes", _d(ResearchNote)),
         ("persona_snapshots", _d(PersonaSnapshot)),
         ("weekly_pulse", _d(WeeklyPulse)),
         ("scheduled_emails", _d(ScheduledEmail)),

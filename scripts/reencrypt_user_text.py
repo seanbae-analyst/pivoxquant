@@ -65,6 +65,12 @@ ENCRYPTED_COLUMNS = [
     ("ai_twin_trades", "rationale"),
     ("ai_twin_weekly_reports", "rationale_summary"),
     ("observation_notes", "body"),
+    ("research_notes", "business"),
+    ("research_notes", "theses_json"),
+    ("research_notes", "invalidation"),
+    ("research_notes", "risk"),
+    ("research_notes", "numbers"),
+    ("research_notes", "review_note"),
     ("pending_trades", "approved_thesis"),
 ]
 

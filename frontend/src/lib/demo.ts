@@ -388,6 +388,67 @@ function _demoSearch(query: string) {
   return { results };
 }
 
+/* ── Research notes (리서치 양식) — three notes in three states ─────────── */
+
+const DEMO_RESEARCH_NOTES = [
+  {
+    id: 903, ticker: "AAPL", name: "Apple",
+    business: "아이폰을 팔고, 깔린 기기 위에서 서비스 구독료를 받는다",
+    theses: ["서비스 매출 비중이 계속 오른다", "교체 주기가 다시 짧아진다"],
+    invalidation: "서비스 매출이 두 분기 연속 줄어든다",
+    risk: "한 지역 판매 의존도", numbers: "서비스 매출 3년 연속 증가",
+    info_source: "report", surface: "journal",
+    review_on: "2026-06-15", verdicts: [], review_note: null, reviewed_at: null,
+    created_at: "2026-03-15T02:00:00", due: true, outcome: "open",
+  },
+  {
+    id: 902, ticker: "005930.KS", name: "삼성전자",
+    business: "메모리 반도체와 스마트폰을 판다",
+    theses: ["메모리 가격이 반등한다", "파운드리 적자가 줄어든다"],
+    invalidation: "재고가 두 분기 연속 늘어난다",
+    risk: null, numbers: null,
+    info_source: "youtube", surface: "journal",
+    review_on: "2026-05-01", verdicts: ["right", "wrong"],
+    review_note: "가격은 올랐는데 파운드리는 그대로였다",
+    reviewed_at: "2026-05-02T01:00:00", created_at: "2026-02-01T01:00:00",
+    due: false, outcome: "gain",
+  },
+  {
+    id: 901, ticker: "NVDA", name: "NVIDIA",
+    business: "데이터센터용 GPU를 판다",
+    theses: ["데이터센터 수요가 한 해 더 이어진다"],
+    invalidation: null, risk: "대형 고객 몇 곳에 매출이 몰려 있다", numbers: null,
+    info_source: "self", surface: "portfolio",
+    review_on: "2026-11-20", verdicts: [], review_note: null, reviewed_at: null,
+    created_at: "2026-05-20T05:00:00", due: false, outcome: "open",
+  },
+];
+
+const DEMO_RESEARCH_OVERVIEW = {
+  ok: true,
+  due: [DEMO_RESEARCH_NOTES[0]],
+  counts: { notes: 3, scored: 1, due: 1, waiting: 1 },
+  judgment: {
+    right: { gain: 1, loss: 0, flat: 0, open: 0 },
+    wrong: { gain: 1, loss: 0, flat: 0, open: 0 },
+  },
+  unknown: 0,
+  by_source: {
+    report: { right: 0, wrong: 0, unknown: 0 },
+    youtube: { right: 1, wrong: 1, unknown: 0 },
+    social: { right: 0, wrong: 0, unknown: 0 },
+    ai: { right: 0, wrong: 0, unknown: 0 },
+    self: { right: 0, wrong: 0, unknown: 0 },
+    none: { right: 0, wrong: 0, unknown: 0 },
+  },
+};
+
+function _demoResearchByTicker(base: string) {
+  const ticker = decodeURIComponent(base.slice("/api/research-notes/by-ticker/".length)).toUpperCase();
+  const hits = DEMO_RESEARCH_NOTES.filter((n) => n.ticker === ticker || n.ticker.replace(/\.(KS|KQ)$/, "") === ticker);
+  return { ok: true, ticker, count: hits.length, note: hits[0] ?? null };
+}
+
 /** Canned GET response for a path, or undefined if not registered yet. */
 function matchDemoGet(path: string): unknown | undefined {
   const qIdx = path.indexOf("?");
@@ -397,6 +458,11 @@ function matchDemoGet(path: string): unknown | undefined {
   if (base === "/api/search") return _demoSearch(query);
   if (base.startsWith("/api/observation-notes/by-ticker/"))
     return _demoNotesByTicker(base);
+  if (base.startsWith("/api/research-notes/by-ticker/"))
+    return _demoResearchByTicker(base);
+  if (base === "/api/research-notes/overview") return DEMO_RESEARCH_OVERVIEW;
+  if (base === "/api/research-notes/list")
+    return { ok: true, notes: DEMO_RESEARCH_NOTES, next_before: null };
   if (base === "/api/portfolio/history")
     return _demoEquity(new URLSearchParams(query).get("period") || "1mo");
 
