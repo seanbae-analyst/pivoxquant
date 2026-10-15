@@ -11,7 +11,14 @@ and is usable while ``revoked_at`` is NULL.
 ``consent_at`` is the upload consent the user gave when issuing the token;
 every batch the webhook creates with this token inherits it.
 
-Schema is mirrored 1:1 in ``migrations/versions/052_import_tokens.py``.
+``doorway_consent_at`` (2026-10-15, alembic 064) — the issuance consent
+also names 문 앞의 한 줄 answers (when a broker app was opened, the answer,
+the one line) from this date on. A token issued before it never agreed to
+that item, so ``/api/doorway/webhook`` refuses it (DOORWAY_TOKEN_RECONSENT)
+until the user issues a new one — legal-kr-fintech review, PIPA §15·§22.
+
+Schema is mirrored 1:1 in ``migrations/versions/052_import_tokens.py``
+(+ ``doorway_consent_at`` from ``064_doorway_checks.py``).
 """
 from __future__ import annotations
 
@@ -51,6 +58,7 @@ class ImportToken(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default=_utcnow)
     last_used_at = db.Column(db.DateTime, nullable=True)
     revoked_at = db.Column(db.DateTime, nullable=True)
+    doorway_consent_at = db.Column(db.DateTime, nullable=True)
 
     @property
     def is_active(self) -> bool:
@@ -66,6 +74,8 @@ class ImportToken(db.Model):
             "last_used_at": _iso(self.last_used_at),
             "revoked_at": _iso(self.revoked_at),
             "batches_today": int(batches_today or 0),
+            # 문 앞의 한 줄 답도 보낼 수 있는 열쇠인가 (동의 문구에 들어간 뒤 발급).
+            "doorway_ok": self.doorway_consent_at is not None,
         }
 
 

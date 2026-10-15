@@ -31,6 +31,10 @@ import type {
   ObservationNoteDeleteResponse,
   ObservationNotesResponse,
   ObservationNotesByTickerResponse,
+  DoorwayChecksResponse,
+  DoorwayCreateResponse,
+  DoorwayIntent,
+  DoorwaySummaryResponse,
   ResearchByTickerResponse,
   ResearchInfoSource,
   ResearchNoteResponse,
@@ -346,6 +350,47 @@ export function useYearRecap(year: number | null) {
 }
 
 /* ── Research notes (리서치 양식) ───────────────────────────────────────── */
+
+/* ── 문 앞의 한 줄 (doorway pause) ──────────────────────────────────────── */
+
+/** Opens × own fills over the last `days` — the /mirror card. */
+export function useDoorwaySummary(days: 7 | 30 | 90 = 30) {
+  const swr = useSWR<DoorwaySummaryResponse>(`${API.doorway.summary}?days=${days}`, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30_000,
+  });
+  return { data: swr.data ?? null, isLoading: swr.isLoading, error: swr.error as Error | undefined, mutate: swr.mutate };
+}
+
+/** The web door (/pre-trade/door) — the same record the phone automation makes. */
+export async function createDoorwayCheck(body: {
+  intent: DoorwayIntent;
+  note?: string;
+  app?: string;
+}): Promise<DoorwayCreateResponse> {
+  return apiFetch<DoorwayCreateResponse>(API.doorway.checks, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+/** The user's own door answers, newest first — the list under the web door. */
+export function useDoorwayChecks(limit = 20) {
+  const swr = useSWR<DoorwayChecksResponse>(`${API.doorway.checks}?limit=${limit}`, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 10_000,
+  });
+  return {
+    checks: swr.data?.checks ?? [],
+    isLoading: swr.isLoading,
+    error: swr.error as Error | undefined,
+    mutate: swr.mutate,
+  };
+}
+
+export async function deleteDoorwayCheck(id: number): Promise<{ ok: boolean; deleted: number }> {
+  return apiFetch<{ ok: boolean; deleted: number }>(API.doorway.check(id), { method: "DELETE" });
+}
 
 /** Due notes + judgment × outcome counts — what /journal/research opens on. */
 export function useResearchOverview() {

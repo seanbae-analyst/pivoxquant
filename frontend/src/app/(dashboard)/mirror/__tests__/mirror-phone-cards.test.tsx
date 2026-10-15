@@ -19,6 +19,8 @@ import type { MirrorHomeResponse } from "@/lib/types";
 
 const state = vi.hoisted(() => ({
   phone: true,
+  /** GET /api/doorway/summary — null = never set up / not loaded. */
+  doorway: null as unknown,
   swr: { data: null, isLoading: false, error: null } as {
     data: unknown;
     isLoading: boolean;
@@ -27,7 +29,10 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/auth", () => ({ useAuth: () => ({ loading: false }) }));
-vi.mock("@/lib/hooks", () => ({ useMirrorHome: () => state.swr }));
+vi.mock("@/lib/hooks", () => ({
+  useMirrorHome: () => state.swr,
+  useDoorwaySummary: () => ({ data: state.doorway, isLoading: false, error: undefined, mutate: vi.fn() }),
+}));
 vi.mock("@/lib/use-phone", () => ({ useIsPhone: () => state.phone }));
 vi.mock("motion/react", () => ({ useReducedMotion: () => false }));
 
@@ -146,6 +151,29 @@ describe("/mirror phone — story cards", () => {
     render(<MirrorPage />);
     const labels = screen.getAllByRole("tab").map((t) => t.getAttribute("aria-label"));
     expect(labels[1]).toBe("말한 나");
+  });
+
+  it("adds the 문 앞 card before 한 가지만 once the door is set up", () => {
+    setData(payload);
+    state.doorway = {
+      ok: true, window_days: 30, follow_minutes: 60, later_days: 30,
+      first_check_at: "2026-10-01T00:00:00", total: 3,
+      intents: { look: 2, buy: 1, sell: 0 },
+      look: { n: 2, traded: 1 },
+      said: { buy: { n: 1, as_said: 0, other: 0, none: 1 }, sell: { n: 0, as_said: 0, other: 0, none: 0 } },
+      not_happened: { n: 1, later: 0, never: 0, open: 1 },
+      fills: { total: 1, through_door: 1 },
+      by_hour_kst: Array(24).fill(0),
+      recent: [], caveats: [],
+    };
+    try {
+      render(<MirrorPage />);
+      const labels = screen.getAllByRole("tab").map((t) => t.getAttribute("aria-label"));
+      expect(labels.slice(-2)).toEqual(["문 앞", "한 가지만"]);
+      expect(within(screen.getByTestId("phone-page-doorway")).getByText("증권 앱을 3번 열었어요")).toBeInTheDocument();
+    } finally {
+      state.doorway = null;
+    }
   });
 
   it("drops the 간극 card when there is neither a gap nor a drift", () => {

@@ -10,6 +10,8 @@
  *   2. 일어나지 않은 거래 — what the year's pauses turned into
  *   3. 내 말            — up to three of the user's own sentences, verbatim
  *   4. 내 규칙          — only when the user adopted their lines
+ *   5. 문 앞            — the year's 문 앞의 한 줄 counts (2026-10-15), only
+ *                        when the user answered at the door that year
  *
  * Facts and the user's own words only: no score, grade, streak, rank or
  * "잘했어요", no comparison with anyone. Counts the backend sent are printed
@@ -18,7 +20,7 @@
  */
 import * as React from "react";
 
-import type { YearRecapQuote, YearRecapResponse } from "@/lib/types";
+import type { YearRecapDoorway, YearRecapQuote, YearRecapResponse } from "@/lib/types";
 import { VERDICT_LABEL, researchDate } from "@/lib/research";
 
 const IVORY = "var(--pq-ivory)";
@@ -216,6 +218,50 @@ function RulesSection({ rules }: { rules: NonNullable<YearRecapResponse["rules"]
   );
 }
 
+/** The year at the door — how often the broker app was opened and why, and
+ *  what the 살 게 있음 / 팔 게 있음 opens turned into. Counts only. */
+function DoorwaySection({ d }: { d: YearRecapDoorway }) {
+  const rows: Array<{ key: string; label: string; n: number }> = [
+    { key: "look", label: "그냥 보기", n: d.intents.look },
+    { key: "buy", label: "살 게 있음", n: d.intents.buy },
+    { key: "sell", label: "팔 게 있음", n: d.intents.sell },
+  ];
+  const top = Math.max(1, ...rows.map((r) => r.n));
+  const said = d.said.buy.n + d.said.sell.n;
+  const asSaid = d.said.buy.as_said + d.said.sell.as_said;
+  return (
+    <Section id="doorway" title="문 앞">
+      <BigNumber value={d.total} unit="번" label="증권 앱을 열 때 남긴 답" />
+      <ul className="mt-5 list-none space-y-2 p-0">
+        {rows.map((r) => (
+          <li key={r.key} className="flex items-center gap-3 text-[12.5px] tabular-nums" style={{ color: DIM }}>
+            <span className="w-[72px] shrink-0">{r.label}</span>
+            <span className="relative h-[6px] flex-1 rounded-[3px]" style={{ background: TRACK }}>
+              <span
+                className="absolute inset-y-0 left-0 rounded-[3px]"
+                style={{ width: `${(r.n / top) * 100}%`, background: BRONZE }}
+              />
+            </span>
+            <span className="w-10 shrink-0 text-right" style={{ color: IVORY }}>{r.n}번</span>
+          </li>
+        ))}
+      </ul>
+      <ul className="mt-4 list-none space-y-1.5 p-0 text-[13px] tabular-nums" style={{ color: DIM }}>
+        {d.look.n > 0 && (
+          <li>그냥 보기 {d.look.n}번 중 {d.look.traded}번은 {d.follow_minutes}분 안에 체결이 있었어요.</li>
+        )}
+        {said > 0 && <li>살 게 · 팔 게 있다고 한 {said}번 중 말한 대로 체결 {asSaid}번</li>}
+        {d.not_happened.n > 0 && (
+          <li>
+            종목을 적고 체결 없이 끝난 {d.not_happened.n}번 중 {d.later_days}일 안에 그 종목 체결{" "}
+            {d.not_happened.later} · 체결 없음 {d.not_happened.never}
+          </li>
+        )}
+      </ul>
+    </Section>
+  );
+}
+
 export function YearRecapView({ data }: { data: YearRecapResponse }) {
   if (data.empty) {
     return (
@@ -236,6 +282,7 @@ export function YearRecapView({ data }: { data: YearRecapResponse }) {
         </Section>
       )}
       {data.rules && <RulesSection rules={data.rules} />}
+      {data.doorway && <DoorwaySection d={data.doorway} />}
     </div>
   );
 }

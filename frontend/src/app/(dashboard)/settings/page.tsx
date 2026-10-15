@@ -11,6 +11,7 @@
  *   B · Notifications            (NotificationsMatrix + Push/Email/Marketing sub-cards
  *                                 + MonthlyReportCard, 2026-10-05)
  *   —   Import tokens            (ImportTokensSection — PAT for the import webhook, 2026-09-13)
+ *   —   문 앞의 한 줄            (DoorwaySection — broker-app-open question, same token, 2026-10-15)
  *   C · Privacy · PIPA           (PrivacyCardV2 — Consent/Export/Sign out)
  *
  * 2026-09-10 — removed three things that did nothing for a user:
@@ -74,6 +75,7 @@ import { MarketingConsentCardV2 } from "@/components/settings/v2/marketing-conse
 import { MonthlyReportCard } from "@/components/settings/v2/monthly-report-card";
 import { PrivacyCardV2, type CsvDataset } from "@/components/settings/v2/privacy-card-v2";
 import { ImportTokensSection } from "@/components/settings/import-tokens-section";
+import { DoorwaySection } from "@/components/settings/doorway-section";
 
 
 export default function SettingsPageV2() {
@@ -845,6 +847,13 @@ export default function SettingsPageV2() {
               Not in the AnchorRail — the rail letters stay A/B/C. */}
           <div className={onPhone("import")}>
             <ImportTokensSection />
+          </div>
+
+          {/* 문 앞의 한 줄 (2026-10-15) — the phone asks "뭘 하러 왔어요?" when a
+              broker app opens; same token as above. Deep link: /settings#doorway
+              or ?s=doorway. Not in the AnchorRail. */}
+          <div className={onPhone("doorway")}>
+            <DoorwaySection />
           </div>
 
           {/* SECTION E — Privacy

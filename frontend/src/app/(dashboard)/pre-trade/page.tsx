@@ -86,6 +86,19 @@ export default function PreTradePage() {
   const [side, setSide] = useState<Side>("ENTRY");
   const [sharesText, setSharesText] = useState("");
   const [rationale, setRationale] = useState("");
+  // 2026-10-15 — 문 앞의 한 줄 hands over the ticker it read from the user's
+  // line (`pause_url` → /pre-trade?ticker=005930.KS). Read once on mount from
+  // window.location — no useSearchParams, so no Suspense boundary is needed.
+  // The field is still empty at mount; the user can change it. The line
+  // itself never travels in the URL.
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get("ticker")?.trim();
+    if (!t) return;
+    // A one-time read of the URL into an editable field (cookie-consent.tsx
+    // does the same); a derived value would stop the user from editing it.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTicker(t.slice(0, 20));
+  }, []);
 
   // Step 2 — questions
   const [acks, setAcks] = useState<Record<number, boolean>>({});

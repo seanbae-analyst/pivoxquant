@@ -377,6 +377,89 @@ export interface ResearchOverviewResponse {
   by_source: Record<ResearchInfoSource | "none", Record<ResearchVerdict, number>>;
 }
 
+/* ── 문 앞의 한 줄 (doorway pause) — /api/doorway ─────────────────────── */
+
+/** The answer at the door. Lowercase data values; screen words are added here. */
+export type DoorwayIntent = "look" | "buy" | "sell";
+/** look → traded | none · buy/sell → as_said | other | none. */
+export type DoorwayOutcome = "traded" | "as_said" | "other" | "none";
+
+export interface DoorwayCheck {
+  id: number;
+  intent: DoorwayIntent;
+  ticker: string | null;
+  name: string | null;
+  note: string | null;
+  app: string | null;
+  source: "automation" | "web";
+  created_at: string | null;
+}
+
+export interface DoorwayCreateResponse {
+  ok: boolean;
+  disclaimer?: string | null;
+  check: DoorwayCheck;
+  today: number;
+  message: string;
+  pause_url: string | null;
+}
+
+/** `doorway` in GET /api/mirror-home/year — one year of door answers. */
+export interface YearRecapDoorway {
+  total: number;
+  intents: Record<DoorwayIntent, number>;
+  look: { n: number; traded: number };
+  said: { buy: DoorwaySaidCounts; sell: DoorwaySaidCounts };
+  not_happened: { n: number; later: number; never: number; open: number };
+  fills: { total: number; through_door: number };
+  follow_minutes: number;
+  later_days: number;
+}
+
+export interface DoorwayChecksResponse {
+  ok: boolean;
+  disclaimer?: string | null;
+  checks: DoorwayCheck[];
+  next_before: number | null;
+}
+
+export interface DoorwaySaidCounts {
+  n: number;
+  as_said: number;
+  other: number;
+  none: number;
+}
+
+export interface DoorwayRecent {
+  id: number | null;
+  at: string | null;
+  intent: DoorwayIntent;
+  ticker: string | null;
+  name: string | null;
+  note: string | null;
+  app: string | null;
+  outcome: DoorwayOutcome;
+}
+
+export interface DoorwaySummaryResponse {
+  ok: boolean;
+  disclaimer?: string | null;
+  window_days: number;
+  follow_minutes: number;
+  later_days: number;
+  first_check_at: string | null;
+  total: number;
+  intents: Record<DoorwayIntent, number>;
+  look: { n: number; traded: number };
+  said: { buy: DoorwaySaidCounts; sell: DoorwaySaidCounts };
+  not_happened: { n: number; later: number; never: number; open: number };
+  fills: { total: number; through_door: number };
+  /** 24 buckets, index = KST hour of the open. */
+  by_hour_kst: number[];
+  recent: DoorwayRecent[];
+  caveats: string[];
+}
+
 export interface ResearchByTickerResponse {
   ok: boolean;
   disclaimer?: string | null;
@@ -1085,6 +1168,9 @@ export interface ImportTokenDTO {
   last_used_at: string | null;
   revoked_at: string | null;
   batches_today: number;
+  /** Issued under the consent text that names 문 앞의 한 줄 answers
+   *  (2026-10-15) — only these tokens may post to /api/doorway/webhook. */
+  doorway_ok?: boolean;
 }
 
 export interface ImportTokensResponse {
@@ -1236,7 +1322,8 @@ export interface YearRecapResponse {
     holding: { min_days: number; sells: number; sooner: number } | null;
   } | null;
   quotes: YearRecapQuote[];
-  /** Reserved for the doorway pause (services/doorway/); null until that ships. */
-  doorway: null | Record<string, unknown>;
+  /** 문 앞의 한 줄 — the year's door counts (services/doorway.year_section);
+   *  null when there was no door answer that year. Counts only, no lines. */
+  doorway: null | YearRecapDoorway;
   empty: boolean;
 }

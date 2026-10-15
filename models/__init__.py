@@ -46,6 +46,8 @@ from .observation_note import (
 # 리서치 노트 — 모든 종목에 같은 양식 + 정한 날 다시 채점
 # (docs/design/research-notes_2026-10-15.md). 캡 상수는 models.research_note 에서.
 from .research_note import ResearchNote
+# 문 앞의 한 줄 — 증권 앱을 여는 순간의 답 (docs/design/doorway-pause_2026-10-15.md).
+from .doorway_check import DoorwayCheck
 # Feature 5 — AI Twin (paper portfolio simulator). 100% paper / no broker.
 from .ai_twin_portfolio import AITwinPortfolio, DEFAULT_STARTING_CASH
 from .ai_twin_position import AITwinPosition
@@ -114,4 +116,4 @@ __all__ = ["User", "Position", "Alert", "SignalCache", "TradeHistory",
            "Inquiry", "INQUIRY_VALID_STATUSES", "INQUIRY_VALID_CATEGORIES",
            "ImportBatch", "PendingTrade", "ImportToken",
            "ObservationNote", "OBSERVATION_NOTE_SOURCES",
-           "ResearchNote"]
+           "ResearchNote", "DoorwayCheck"]

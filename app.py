@@ -1032,6 +1032,11 @@ def _do_migrations():
     # sure the column exists so the ORM INSERT/SELECT never fails on a box
     # whose import_batches table predates Phase 2.
     _add_column_if_missing("import_batches", "token_id", "INTEGER")
+    # import_tokens.doorway_consent_at — 2026-10-15. Alembic twin:
+    # 064_doorway_checks. Nullable TIMESTAMP: the token was issued under the
+    # consent text that names 문 앞의 한 줄 answers. NULL (older tokens) →
+    # routes/doorway.py refuses door answers sent with it.
+    _add_column_if_missing("import_tokens", "doorway_consent_at", "TIMESTAMP")
 
     # pending_trades.currency_stated — 2026-09-29. Alembic twin:
     # 057_pending_currency_stated. Nullable BOOLEAN: did the input state the

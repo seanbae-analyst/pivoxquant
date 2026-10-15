@@ -71,6 +71,7 @@ ENCRYPTED_COLUMNS = [
     ("research_notes", "risk"),
     ("research_notes", "numbers"),
     ("research_notes", "review_note"),
+    ("doorway_checks", "note"),
     ("pending_trades", "approved_thesis"),
 ]
 

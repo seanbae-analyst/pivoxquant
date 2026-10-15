@@ -48,6 +48,7 @@ from models import (
     ObservationNote,
     PersonaSnapshot,
     ResearchNote,
+    DoorwayCheck,
     PortfolioShare,
     Position,
     PendingTrade,
@@ -1507,6 +1508,8 @@ _EXPORT_DD_CHECK_LIMIT = 5000          # one per position
 _EXPORT_OBS_NOTE_LIMIT = 5000          # 거래에 묶이지 않은 관찰 기록
 # 리서치 노트(양식 + 채점) — 같은 성격의 본인 서술, 탈퇴 시 함께 삭제 (2026-10-15).
 _EXPORT_RESEARCH_NOTE_LIMIT = 5000
+# 문 앞의 한 줄 — 증권 앱을 연 시각·답·한 줄. 하루 100건 상한이라 넉넉히 (2026-10-15).
+_EXPORT_DOORWAY_LIMIT = 20000
 _EXPORT_INQUIRY_LIMIT = 1000           # support inquiries (subject/body free-text)
 _EXPORT_TWIN_REPORT_LIMIT = 520        # ~10y weekly paper-twin reports
 _EXPORT_TWIN_POSITION_LIMIT = 5000     # paper twin open positions
@@ -2696,6 +2699,13 @@ def export_profile():
             .limit(_EXPORT_RESEARCH_NOTE_LIMIT)
             .all()
         )
+        doorway_checks = (
+            DoorwayCheck.query
+            .filter_by(user_id=user_id)
+            .order_by(DoorwayCheck.created_at.desc())
+            .limit(_EXPORT_DOORWAY_LIMIT)
+            .all()
+        )
         inquiries = (
             Inquiry.query
             .filter_by(user_id=user_id)
@@ -2866,6 +2876,7 @@ def export_profile():
         "position_dd_checks": [d.to_dict() for d in position_dd_checks],
         "observation_notes": [n.to_dict() for n in observation_notes],
         "research_notes": [n.to_dict() for n in research_notes],
+        "doorway_checks": [c.to_dict() for c in doorway_checks],
         # Inquiry.to_dict(detail=True) — include the user's own subject/body
         # and any admin reply; this is their personal data under §35.
         "inquiries": [i.to_dict(detail=True) for i in inquiries],
@@ -2912,6 +2923,7 @@ def export_profile():
             "position_dd_checks": len(position_dd_checks),
             "observation_notes": len(observation_notes),
             "research_notes": len(research_notes),
+            "doorway_checks": len(doorway_checks),
             "inquiries": len(inquiries),
             "companion_waitlist": len(companion_waitlist),
             "portfolio_shares": len(portfolio_shares),

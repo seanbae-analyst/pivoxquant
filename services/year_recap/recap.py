@@ -288,6 +288,9 @@ def compute_year_recap(
     observation_times: Iterable[datetime] = (),
     rules_answers: dict | None = None,
     rules_confirmed_at: datetime | None = None,
+    doorway_checks: Iterable = (),
+    doorway_fills: Iterable = (),
+    doorway_first_at: datetime | None = None,
 ) -> dict:
     """한 유저의 한 해. 모든 입력은 **그 유저의 행**이고 호출자가 읽어 넘긴다.
 
@@ -296,6 +299,8 @@ def compute_year_recap(
     ``approved_pending`` = 승인된 ``PendingTrade`` (``approved_thesis`` ·
     ``approved_trade_id`` · ``approved_at``). ``observation_times`` = 관찰 노트의
     ``created_at`` 만 (본문은 세지 않으므로 복호화할 필요가 없다).
+    ``doorway_*`` = 문 앞의 한 줄 열림 · 그 맞춤용 체결(services/doorway
+    ``Fill``) · 첫 열림 시각 — 개수만 센다.
     """
     start, end, partial = _year_window(year, now)
 
@@ -312,6 +317,10 @@ def compute_year_recap(
 
     records = _records_section(fills, approved, notes, list(observation_times), in_year)
     pauses = _pauses_section(year_reflections, trades, now)
+    from services.doorway.service import year_section
+
+    doorway = year_section(doorway_checks, doorway_fills, start=start, end=end, now=now,
+                           first_check_at=doorway_first_at)
     return {
         "year": year,
         "range": {"start": f"{year:04d}-01-01", "end": _kst_date(end - timedelta(microseconds=1)),
@@ -322,13 +331,12 @@ def compute_year_recap(
         "holding": _holding_section(sells),
         "rules": _rules_section(rules_answers, rules_confirmed_at, fills, sells, months, end),
         "quotes": _quotes(year_reflections, approved, notes, trades, now, in_year),
-        # 문 앞 멈춤(doorway pause, services/doorway/ — 별도 작업 중)이 채울 자리.
-        # 그 기능이 머지되면 그해의 문 앞 멈춤 개수를 여기에 담는다. 지금은 늘 None.
-        "doorway": None,
+        # 문 앞의 한 줄(services/doorway) — 그해 열림 개수. 열림이 없으면 None.
+        "doorway": doorway,
         # 그해 아무 기록도 없으면 화면은 짧은 한 줄만 쓴다 — 0 으로 채운 표를 그리지 않는다.
         "empty": not (fills or year_reflections or records["research_written"]
                       or records["research_reviewed"] or records["observation_notes"]
-                      or records["reasoned_fills"]),
+                      or records["reasoned_fills"] or doorway),
     }
 
 

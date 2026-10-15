@@ -327,6 +327,22 @@ export const API = {
   //   byTicker GET    /by-ticker/<t>   → {ticker, count, note|null}
   //   detail   GET|DELETE /<id>
   //   review   POST   /<id>/review     {verdicts, note?} → {note}
+  // 문 앞의 한 줄 (2026-10-15 — docs/design/doorway-pause_2026-10-15.md).
+  // The user's own phone automation asks "뭘 하러 왔어요?" when a broker app
+  // opens and posts the answer with the personal import token (the same key
+  // as 체결 자동 기록). We store the answer and, on read, count which opens
+  // were followed by the user's own fills. No market data, no broker access.
+  //   webhook  POST   /webhook            Bearer pvx_… · {text} | {intent, note?, app?} → 201
+  //   checks   POST   /checks             session · {intent, note?, app?} → 201 {check, today, message}
+  //            GET    /checks             ?limit=&before= → {checks, next_before}
+  //   check    DELETE /checks/<id>
+  //   summary  GET    /summary            ?days=7|30|90 → DoorwaySummaryResponse
+  doorway: {
+    webhook: "/api/doorway/webhook",
+    checks: "/api/doorway/checks",
+    check: (id: number | string) => `/api/doorway/checks/${id}`,
+    summary: "/api/doorway/summary",
+  },
   research: {
     create: "/api/research-notes",
     list: "/api/research-notes/list",

@@ -74,6 +74,9 @@ export function subScreen(pathname: string | null, pane: SettingsPane | null): S
   if (pathname === "/journal/import" || pathname.startsWith("/journal/import/")) {
     return { title: "체결 가져오기", parent: "/journal", parentLabel: "기록" };
   }
+  if (pathname === "/pre-trade/door") {
+    return { title: "문 앞", parent: "/pre-trade", parentLabel: "멈춤" };
+  }
   if (pathname === "/journal/research" || pathname.startsWith("/journal/research/")) {
     return { title: "리서치", parent: "/journal", parentLabel: "기록" };
   }

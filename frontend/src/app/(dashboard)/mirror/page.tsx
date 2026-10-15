@@ -23,6 +23,10 @@
  * 2026-10-14: 「내 규칙」 (MyRulesPanel) sits under the headline — the
  * onboarding answers as the user's own lines, counted from their own record.
  *
+ * 2026-10-15: 「문 앞」 (DoorwayPanel) under it — the answers the user's phone
+ * automation collects when a broker app opens, matched to their own fills.
+ * It fetches its own summary; before the door is set up it is one invite line.
+ *
  * 2026-10-15: one quiet row into /mirror/year (올해의 기록) at the foot.
  *
  * Legal: 3 disclosed buckets only, POSITIVE/NEGATIVE/NEUTRAL framing, no
@@ -38,6 +42,7 @@ import { EditorialHead, FootSignature } from "@/components/ui/editorial";
 import { MirrorHeadline } from "@/components/mirror/mirror-headline";
 import { MirrorRadarPanel } from "@/components/mirror/mirror-radar-panel";
 import { MyRulesPanel } from "@/components/mirror/my-rules-panel";
+import { DoorwayPanel } from "@/components/mirror/doorway-panel";
 import { MirrorPhoneCards } from "@/components/mirror/mirror-phone-cards";
 import { OneThingNudge } from "@/components/mirror/one-thing-nudge";
 import { PullToRefresh } from "@/components/layout/pull-to-refresh";
@@ -147,6 +152,9 @@ export default function MirrorPage() {
 
                 {/* 2026-10-14 — the same gap in the user's own numbers. */}
                 <MyRulesPanel data={data} />
+
+                {/* 2026-10-15 — the door: why the broker app was opened. */}
+                <DoorwayPanel invite />
 
                 <MirrorRadarPanel data={data} />
 

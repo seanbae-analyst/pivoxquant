@@ -111,6 +111,36 @@ describe("YearRecapView", () => {
     expect(screen.queryByTestId("year-not-taken")).toBeNull();
     expect(screen.queryByTestId("year-words")).toBeNull();
     expect(screen.queryByTestId("year-rules")).toBeNull();
+    expect(screen.queryByTestId("year-doorway")).toBeNull();
+  });
+
+  it("shows the year at the door as counts only", () => {
+    render(
+      <YearRecapView
+        data={{
+          ...FULL,
+          doorway: {
+            total: 41,
+            intents: { look: 23, buy: 14, sell: 4 },
+            look: { n: 23, traded: 3 },
+            said: {
+              buy: { n: 14, as_said: 6, other: 2, none: 6 },
+              sell: { n: 4, as_said: 2, other: 0, none: 2 },
+            },
+            not_happened: { n: 7, later: 2, never: 3, open: 2 },
+            fills: { total: 15, through_door: 13 },
+            follow_minutes: 60,
+            later_days: 30,
+          },
+        }}
+      />,
+    );
+    const door = screen.getByTestId("year-doorway");
+    const text = door.textContent ?? "";
+    expect(text).toContain("41번");
+    expect(text).toContain("살 게 · 팔 게 있다고 한 18번 중 말한 대로 체결 8번");
+    expect(text).toContain("종목을 적고 체결 없이 끝난 7번 중 30일 안에 그 종목 체결 2 · 체결 없음 3");
+    expect(text).not.toMatch(BANNED);
   });
 
   it("an empty year is one honest line, not a table of zeros", () => {

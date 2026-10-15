@@ -15,7 +15,7 @@ Response (``ok`` · ``disclaimer`` 봉투 + 아래)::
     holding                  — {sells, median_days}
     rules                    — null | {confirmed_on, frequency, holding}
     quotes[]                 — {kind, source, text, date, ticker, name, verdict?}
-    doorway                  — null (문 앞 멈춤 기능이 채울 자리)
+    doorway                  — null | 그해 문 앞의 한 줄 개수 (services/doorway.year_section)
     empty                    — 그해 기록이 하나도 없음
     share_disclaimer         — 공유 카드에 찍는 한 줄 (SoT services/legal/disclaimers.py)
 
@@ -30,13 +30,15 @@ Legal posture
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
 from extensions import db
-from models import InvestmentProfile, ObservationNote, PreTradeReflection, ResearchNote, TradeHistory
+from models import (
+    DoorwayCheck, InvestmentProfile, ObservationNote, PreTradeReflection, ResearchNote, TradeHistory,
+)
 from models.import_batch import STATUS_APPROVED, PendingTrade
 from security import general_rate_limit
 from services.error_responses import api_error
@@ -103,7 +105,19 @@ def _load_rows(uid: int) -> dict:
         ],
         "rules_answers": profile.onboarding_answers() if profile else None,
         "rules_confirmed_at": profile.rules_confirmed_at if profile else None,
+        **_doorway_rows(uid),
     }
+
+
+def _doorway_rows(uid: int) -> dict:
+    """문 앞의 한 줄 — 열림 전부 + 첫 열림 이후의 체결(대기 중 포함). 한 줄
+    (note)은 셀 때 쓰지 않는다."""
+    from services.doorway.service import FOLLOW_MINUTES, load_fills
+
+    checks = DoorwayCheck.query.filter_by(user_id=uid).all()
+    first = min((c.created_at for c in checks if c.created_at), default=None)
+    fills = load_fills(uid, first - timedelta(minutes=FOLLOW_MINUTES)) if first else []
+    return {"doorway_checks": checks, "doorway_fills": fills, "doorway_first_at": first}
 
 
 def _row_times(rows: dict) -> list:
@@ -114,6 +128,7 @@ def _row_times(rows: dict) -> list:
         + [n.created_at for n in rows["research_notes"]]
         + [n.reviewed_at for n in rows["research_notes"]]
         + rows["observation_times"]
+        + [c.created_at for c in rows["doorway_checks"]]
     )
 
 

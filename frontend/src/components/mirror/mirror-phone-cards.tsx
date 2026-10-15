@@ -16,6 +16,8 @@
  *   3. 간극        — every gap row the backend sent + the drift descriptor.
  *                    Dropped when there is neither: an empty card would only
  *                    repeat card 1's "아직 쌓이지 않았어요".
+ *   3b. 문 앞      — DoorwayPanel (2026-10-15), only once the user has set
+ *                    the door up (`first_check_at`); no invite card here
  *   4. 한 가지만    — OneThingNudge → 「멈춤」, then one quiet row into
  *                    /mirror/year (올해의 기록, 2026-10-15)
  *
@@ -29,7 +31,8 @@
  */
 import * as React from "react";
 
-import type { MirrorGapDimension, MirrorHomeResponse } from "@/lib/types";
+import { useDoorwaySummary } from "@/lib/hooks";
+import type { DoorwaySummaryResponse, MirrorGapDimension, MirrorHomeResponse } from "@/lib/types";
 import { PhonePager, type PhonePage } from "@/components/portfolio/v2/phone-pager";
 import {
   DriftChip,
@@ -39,6 +42,7 @@ import {
 } from "@/components/mirror/mirror-headline";
 import { MirrorRadarPanel } from "@/components/mirror/mirror-radar-panel";
 import { MyRulesPanel } from "@/components/mirror/my-rules-panel";
+import { DoorwayPanelView } from "@/components/mirror/doorway-panel";
 import { OneThingNudge } from "@/components/mirror/one-thing-nudge";
 import { YearRecapEntry } from "@/components/mirror/year/year-entry";
 
@@ -128,7 +132,7 @@ export function hasGapCard(data: MirrorHomeResponse): boolean {
 
 type CardSpec = { id: string; label: string; wide?: boolean; body: React.ReactNode };
 
-function cardSpecs(data: MirrorHomeResponse): CardSpec[] {
+function cardSpecs(data: MirrorHomeResponse, doorway: DoorwaySummaryResponse | null): CardSpec[] {
   const cards: CardSpec[] = [
     {
       id: "today",
@@ -164,6 +168,9 @@ function cardSpecs(data: MirrorHomeResponse): CardSpec[] {
   if (hasGapCard(data)) {
     cards.push({ id: "gap", label: "간극", body: <GapCard data={data} /> });
   }
+  if (doorway?.first_check_at) {
+    cards.push({ id: "doorway", label: "문 앞", body: <DoorwayPanelView data={doorway} bordered={false} /> });
+  }
   cards.push({
     id: "one-thing",
     label: "한 가지만",
@@ -188,7 +195,8 @@ export function MirrorPhoneCards({
   /** Shown above the cards (e.g. a revalidation error line). */
   header?: React.ReactNode;
 }) {
-  const pages: PhonePage[] = cardSpecs(data).map((c) => ({
+  const { data: doorway } = useDoorwaySummary(30);
+  const pages: PhonePage[] = cardSpecs(data, doorway).map((c) => ({
     id: c.id,
     label: c.label,
     content: <StoryCard wide={c.wide}>{c.body}</StoryCard>,
