@@ -66,7 +66,7 @@ def seeded_user(app, cascade_user):
     from models import (
         Position, Watchlist, TradeHistory, BrokerConnection,
         PushSubscription, PositionDDCheck, Alert, PortfolioShare,
-        InvestmentProfile, ObservationNote, ResearchNote,
+        InvestmentProfile, ObservationNote, ResearchNote, DoorwayCheck,
     )
     from models.companion_waitlist import CompanionWaitlist
 
@@ -99,6 +99,8 @@ def seeded_user(app, cascade_user):
             ResearchNote(user_id=user_id, ticker="TEST",
                          business="리서치 캐스케이드 확인",
                          theses_json='["가정"]', review_on=date(2026, 1, 1)),
+            DoorwayCheck(user_id=user_id, intent="buy", ticker="TEST",
+                         note="문 앞 캐스케이드 확인", source="automation"),
             Alert(user_id=user_id, ticker="TEST", title="T", message="M"),
             PortfolioShare(
                 user_id=user_id,
@@ -132,6 +134,7 @@ _USER_OWNED_TABLES = {
     "position_dd_checks":  "cascade",
     "observation_notes":   "cascade",
     "research_notes":      "cascade",
+    "doorway_checks":      "cascade",
     "alerts":              "cascade",
     "portfolio_shares":    "cascade",
     "investment_profiles": "cascade",
@@ -166,7 +169,7 @@ def _row_count_by_id_anywhere(db, table: str, user_id: int) -> int:
     "positions", "watchlist", "trade_history", "broker_connections",
     "push_subscriptions", "position_dd_checks", "alerts",
     "portfolio_shares", "investment_profiles", "observation_notes",
-    "research_notes",
+    "research_notes", "doorway_checks",
 ])
 def test_cascade_delete_user_removes(seeded_user, app, table_name):
     """Each user-owned CASCADE table loses its rows when the User is deleted.

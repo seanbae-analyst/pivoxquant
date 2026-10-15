@@ -449,6 +449,39 @@ function _demoResearchByTicker(base: string) {
   return { ok: true, ticker, count: hits.length, note: hits[0] ?? null };
 }
 
+/* ── 문 앞의 한 줄 (doorway pause) — 30 days of opens ───────────────────── */
+
+const DEMO_DOORWAY_SUMMARY = {
+  ok: true,
+  window_days: 30,
+  follow_minutes: 60,
+  later_days: 30,
+  first_check_at: "2026-09-20T00:12:00",
+  total: 41,
+  intents: { look: 23, buy: 14, sell: 4 },
+  look: { n: 23, traded: 3 },
+  said: {
+    buy: { n: 14, as_said: 6, other: 2, none: 6 },
+    sell: { n: 4, as_said: 2, other: 0, none: 2 },
+  },
+  not_happened: { n: 7, later: 2, never: 3, open: 2 },
+  fills: { total: 15, through_door: 13 },
+  by_hour_kst: [0, 0, 0, 0, 0, 0, 0, 1, 3, 9, 4, 2, 3, 2, 1, 2, 0, 0, 0, 1, 2, 3, 6, 2],
+  recent: [
+    { id: 41, at: "2026-10-15T00:05:00", intent: "buy", ticker: "005930.KS", name: "삼성전자", note: "삼성전자 실적 발표 전에 조금", app: "toss", outcome: "none" },
+    { id: 40, at: "2026-10-14T13:40:00", intent: "look", ticker: null, name: null, note: null, app: "toss", outcome: "none" },
+    { id: 39, at: "2026-10-14T13:02:00", intent: "buy", ticker: "NVDA", name: "NVIDIA", note: "엔비디아 눌림", app: "toss", outcome: "as_said" },
+    { id: 38, at: "2026-10-14T00:31:00", intent: "look", ticker: null, name: null, note: null, app: "kiwoom", outcome: "traded" },
+    { id: 37, at: "2026-10-13T06:10:00", intent: "sell", ticker: "TSLA", name: "Tesla", note: "테슬라 반등에 정리", app: "toss", outcome: "as_said" },
+  ],
+  caveats: [
+    "체결은 문을 연 뒤 60분 안에 들어온 것만 그 열림에 잇습니다. 한 체결은 바로 앞의 열림 하나에만 이어집니다.",
+    "자동화가 꺼져 있던 때나 다른 기기·PC에서 한 거래는 '문을 거치지 않은 체결'로 셉니다.",
+    "기록 대기 목록에 아직 있는 체결도 함께 셉니다.",
+    "누가 언제 앱을 열지는 무작위가 아니므로, 이 숫자로 질문의 효과를 말할 수는 없습니다.",
+  ],
+};
+
 /** Canned GET response for a path, or undefined if not registered yet. */
 function matchDemoGet(path: string): unknown | undefined {
   const qIdx = path.indexOf("?");
@@ -461,6 +494,7 @@ function matchDemoGet(path: string): unknown | undefined {
   if (base.startsWith("/api/research-notes/by-ticker/"))
     return _demoResearchByTicker(base);
   if (base === "/api/research-notes/overview") return DEMO_RESEARCH_OVERVIEW;
+  if (base === "/api/doorway/summary") return DEMO_DOORWAY_SUMMARY;
   if (base === "/api/research-notes/list")
     return { ok: true, notes: DEMO_RESEARCH_NOTES, next_before: null };
   if (base === "/api/portfolio/history")

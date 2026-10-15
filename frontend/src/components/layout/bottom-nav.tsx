@@ -52,7 +52,7 @@ type Tab = {
 // the bar on mobile.
 export const PRIMARY_TABS: ReadonlyArray<Tab> = [
   { href: "/mirror", label: "거울", icon: Contrast },
-  { href: "/pre-trade", label: "멈춤", icon: Gavel },
+  { href: "/pre-trade", label: "멈춤", icon: Gavel, subRoutes: ["/pre-trade/door"] },
   { href: "/journal", label: "기록", icon: NotebookPen, subRoutes: ["/journal/import", "/journal/research"] },
   { href: "/portfolio", label: "포트폴리오", icon: Briefcase },
 ];

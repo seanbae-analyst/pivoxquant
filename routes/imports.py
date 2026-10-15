@@ -794,6 +794,8 @@ def issue_token():
     token = ImportToken(
         user_id=current_user.id, name=name, token_hash=_hash_token(raw),
         prefix=raw[:TOKEN_PREFIX_DISPLAY_LEN], consent_at=now, created_at=now,
+        # The consent label now also names 문 앞의 한 줄 answers (2026-10-15).
+        doorway_consent_at=now,
     )
     db.session.add(token)
     try:
