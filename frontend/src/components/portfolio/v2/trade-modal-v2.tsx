@@ -43,6 +43,7 @@ import {
   useReflectionLink,
 } from "@/components/pre-trade/reflection-link-line";
 import { PreTradeFirstLink } from "@/components/portfolio/v2/pre-trade-first-link";
+import { TypedSellMoment } from "@/components/journal/sell-moment";
 
 interface TradeModalV2Props {
   open: boolean;
@@ -402,6 +403,18 @@ export function TradeModalV2({
                   style={{ ...fieldInputStyle, colorScheme: "dark" }}
                 />
               </FormField>
+              {/* 매도 순간의 거울 (2026-10-15): once shares and price are
+                  known, what the user wrote about this stock before + the
+                  hold of the lots this sell closes. Read-only. */}
+              {action === "sell" && (
+                <TypedSellMoment
+                  ticker={position.symbol}
+                  shares={Number(shares)}
+                  price={Number(price)}
+                  date={date}
+                  currency={position.currency}
+                />
+              )}
               <FormField label="메모 · 언제·왜 거래했나 (선택)">
                 <textarea
                   value={note}

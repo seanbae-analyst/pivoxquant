@@ -17,6 +17,7 @@ vi.mock("@/lib/hooks", () => ({
   usePendingImports: vi.fn(),
   // Buy ↔ pause link line (2026-09-29) — no candidates here.
   useLinkableReflections: () => ({ reflections: [], isLoading: false, error: undefined }),
+  useSellMomentForPending: () => ({ data: null, isLoading: false }),
 }));
 vi.mock("@/lib/locale", () => ({
   useT: () => (k: string) => k,

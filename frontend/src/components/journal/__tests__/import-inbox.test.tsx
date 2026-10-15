@@ -16,6 +16,8 @@ import { render, cleanup, screen, within, fireEvent, act } from "@testing-librar
 const hooks = vi.hoisted(() => ({
   usePendingImports: vi.fn(),
   useLinkableReflections: vi.fn(),
+  // 매도 순간의 거울 — nothing to show unless a test seeds it.
+  useSellMomentForPending: vi.fn(() => ({ data: null, isLoading: false })),
 }));
 vi.mock("@/lib/hooks", () => hooks);
 vi.mock("@/lib/locale", () => ({

@@ -385,6 +385,40 @@ export interface ResearchByTickerResponse {
   note: ResearchNote | null;
 }
 
+/* ──────────────────────────────────────────────────────────────────────
+ * Sell-moment mirror (매도 순간의 거울, 2026-10-15) — routes/sell_moment.py.
+ * ────────────────────────────────────────────────────────────────────── */
+
+/** Where a quote came from — labelled 멈춤 / 체결 이유 / 리서치 / 관찰 노트. */
+export type SellMomentSource = "pause" | "fill_reason" | "research" | "note";
+
+/** One thing the user wrote about the stock before the sell — verbatim. */
+export interface SellMomentQuote {
+  source: SellMomentSource;
+  ticker: string;
+  text: string;
+  /** Research only — the user's own "틀렸다고 볼 신호". */
+  invalidation: string | null;
+  /** When it was written (naive UTC ISO). */
+  at: string;
+}
+
+/** `GET /api/sell-moment` · `GET /api/sell-moment/pending/<id>`. */
+export interface SellMomentResponse {
+  ok: boolean;
+  disclaimer?: string | null;
+  ticker: string;
+  /** Newest first, at most 4. Empty → the block renders nothing. */
+  words: SellMomentQuote[];
+  /** Share-weighted days the FIFO lots this sell closes were held; null when
+   *  no recorded 매수 or only holding-registration lots. */
+  held_days: number | null;
+  /** Sell price vs those lots' own cost, in percent; null across currencies. */
+  vs_cost_pct: number | null;
+  /** Shares matched to recorded lots (≤ the sell's shares). */
+  matched_shares: number;
+}
+
 /** `GET /api/observation-notes/by-ticker/<ticker>` — read back on /pre-trade. */
 export interface ObservationNotesByTickerResponse {
   ok: boolean;
