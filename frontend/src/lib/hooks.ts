@@ -38,6 +38,7 @@ import type {
   ResearchOverviewResponse,
   ResearchVerdict,
   YearRecapResponse,
+  SellMomentResponse,
 } from "./types";
 
 // Exported so post-mutation handlers (e.g. portfolio refreshAll) can feed a
@@ -414,6 +415,52 @@ export async function reviewResearchNote(
 
 export async function deleteResearchNote(id: number): Promise<{ ok: boolean; deleted: number }> {
   return apiFetch<{ ok: boolean; deleted: number }>(API.research.detail(id), { method: "DELETE" });
+}
+
+/* ── Sell-moment mirror (매도 순간의 거울) ─────────────────────────────── */
+
+/** The typed-sell query — `null` (or a non-positive number) disables the fetch. */
+export interface TypedSell {
+  ticker: string;
+  shares: number;
+  price: number;
+  /** The modal's "YYYY-MM-DD". */
+  date?: string;
+  currency?: "KRW" | "USD";
+}
+
+export function typedSellKey(sell: TypedSell | null): string | null {
+  if (!sell || !sell.ticker.trim()) return null;
+  if (!(sell.shares > 0) || !(sell.price > 0)) return null;
+  const q = new URLSearchParams({
+    ticker: sell.ticker.trim(),
+    shares: String(sell.shares),
+    price: String(sell.price),
+  });
+  if (sell.date) q.set("date", sell.date);
+  if (sell.currency) q.set("currency", sell.currency);
+  return `${API.sellMoment.typed}?${q.toString()}`;
+}
+
+/** A 매도 being typed in the portfolio sell modal. Read-only. */
+export function useSellMomentForTyped(sell: TypedSell | null) {
+  const swr = useSWR<SellMomentResponse>(typedSellKey(sell), fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30_000,
+    shouldRetryOnError: false,
+    keepPreviousData: true,
+  });
+  return { data: swr.data ?? null, isLoading: swr.isLoading };
+}
+
+/** A waiting 매도 fill in the import inbox (`/journal?pending=<id>`). */
+export function useSellMomentForPending(pendingId: number | null) {
+  const swr = useSWR<SellMomentResponse>(
+    pendingId != null ? API.sellMoment.pending(pendingId) : null,
+    fetcher,
+    { revalidateOnFocus: false, dedupingInterval: 30_000, shouldRetryOnError: false },
+  );
+  return { data: swr.data ?? null, isLoading: swr.isLoading };
 }
 
 /**

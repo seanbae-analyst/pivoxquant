@@ -496,6 +496,30 @@ const DEMO_YEAR_RECAP = {
   empty: false,
 };
 
+/* ── Sell-moment mirror (매도 순간의 거울) — the demo user's own words ────── */
+
+function _demoSellMoment(query: string) {
+  const ticker = (new URLSearchParams(query).get("ticker") || "").toUpperCase();
+  const research = DEMO_RESEARCH_NOTES.find(
+    (n) => n.ticker === ticker || n.ticker.replace(/\.(KS|KQ)$/, "") === ticker,
+  );
+  const words = [
+    {
+      source: "pause", ticker,
+      text: "실적 발표 전에 들어간다. 발표가 기대보다 약하면 다시 본다.",
+      invalidation: null, at: "2026-08-28T01:30:00",
+    },
+    ...(research
+      ? [{
+          source: "research", ticker, text: research.theses.join(" · "),
+          invalidation: research.invalidation, at: research.created_at,
+        }]
+      : []),
+  ];
+  // No percent in demo — it would need the typed price against a real cost.
+  return { ok: true, ticker, words, held_days: 41, vs_cost_pct: null, matched_shares: 0 };
+}
+
 /** Canned GET response for a path, or undefined if not registered yet. */
 function matchDemoGet(path: string): unknown | undefined {
   const qIdx = path.indexOf("?");
@@ -509,6 +533,7 @@ function matchDemoGet(path: string): unknown | undefined {
   if (base.startsWith("/api/research-notes/by-ticker/"))
     return _demoResearchByTicker(base);
   if (base === "/api/research-notes/overview") return DEMO_RESEARCH_OVERVIEW;
+  if (base === "/api/sell-moment") return _demoSellMoment(query);
   if (base === "/api/research-notes/list")
     return { ok: true, notes: DEMO_RESEARCH_NOTES, next_before: null };
   if (base === "/api/portfolio/history")

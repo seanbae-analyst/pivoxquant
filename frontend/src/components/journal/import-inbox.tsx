@@ -44,7 +44,8 @@ import { apiFetch, ApiError } from "@/lib/api";
 import { API, PORTFOLIO_POSITIONS, PORTFOLIO_SUMMARY, PORTFOLIO_TRADES } from "@/lib/endpoints";
 import { displayName, parseIsoUtc } from "@/lib/format";
 import { fadeUp } from "@/lib/motion";
-import { SIDE_BUY } from "@/lib/fill-side";
+import { SIDE_BUY, SIDE_SELL } from "@/lib/fill-side";
+import { PendingSellMoment } from "@/components/journal/sell-moment";
 import { sideLabelKo } from "@/components/pre-trade/pre-trade-friction-core";
 import {
   RuledKicker,
@@ -501,6 +502,15 @@ export function PendingTradeRow({
           busy={busy !== null}
           t={t}
         />
+      )}
+
+      {/* 매도 순간의 거울 (2026-10-15): before the user writes why they sold,
+          what they wrote about this stock before — read-only, renders
+          nothing when there is nothing (services/sell_moment.py). */}
+      {row.action === SIDE_SELL && row.ticker && !row.needs_ticker && row.status === "pending" && (
+        <div className="mt-3">
+          <PendingSellMoment pendingId={row.id} sellShares={row.shares} />
+        </div>
       )}
 
       {/* Thesis — the one line that turns a received fill into a record. */}
