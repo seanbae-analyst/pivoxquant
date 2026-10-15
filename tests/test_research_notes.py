@@ -224,6 +224,36 @@ def test_outcome_loss_and_list_carries_outcome(app, make_user):
         assert listed["notes"][0]["outcome"] == "loss"
 
 
+def test_outcome_ignores_a_sale_from_before_the_note_on_the_same_utc_date(app, make_user):
+    """2026-10-15: outcomes compared UTC *dates*, so a note written 00:00–09:00
+    KST took a sale from the previous KST day as its result."""
+    uid = make_user(email="rn-instant@test.com")["id"]
+    # Written 2026-10-15 08:00 KST = 2026-10-14 23:00 UTC.
+    written = datetime(2026, 10, 14, 23, 0)
+    with app.app_context():
+        a = _create(uid)
+        _backdate(a["id"], written=written, review_on=date(2027, 1, 15))
+        _sell(uid, "AAPL", -50.0, datetime(2026, 10, 14, 1, 0))     # 10-14 10:00 KST, 22h before
+        _sell(uid, "AAPL", -50.0, datetime(2026, 10, 14, 22, 59))   # one minute before
+        _sell(uid, "AAPL", -50.0, datetime(2026, 10, 14, 0, 0))     # date-only, 10-14 KST
+        assert get_research(a["id"], uid)["outcome"] == "open"
+        _sell(uid, "AAPL", 30.0, datetime(2026, 10, 15, 2, 0))      # 10-15 11:00 KST, after
+        assert get_research(a["id"], uid)["outcome"] == "gain"
+
+
+def test_outcome_date_only_sale_counts_from_the_notes_kst_day(app, make_user):
+    """A fill typed with only a date has no time — the KST same-day rule of
+    pre_trade.friction_outcome._at_or_after: the note's own day counts."""
+    uid = make_user(email="rn-dateonly@test.com")["id"]
+    # Written 2026-10-15 14:00 KST = 05:00 UTC; the sale is typed as 2026-10-15.
+    written = datetime(2026, 10, 15, 5, 0)
+    with app.app_context():
+        a = _create(uid)
+        _backdate(a["id"], written=written, review_on=date(2027, 1, 15))
+        _sell(uid, "AAPL", 40.0, datetime(2026, 10, 15, 0, 0))
+        assert get_research(a["id"], uid)["outcome"] == "gain"
+
+
 def test_ownership_everywhere(app, make_user):
     me = make_user(email="rn-me@test.com")
     other = make_user(email="rn-other@test.com")

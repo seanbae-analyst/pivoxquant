@@ -11,7 +11,9 @@ closes the gap between "the fill happened" and "the user opened the app":
   * ``notify_fill_memo`` — one web push per webhook call (not per fill), only
     for rows that are actually waiting (duplicates and errors are skipped),
     gated by the user's ``fill_memo`` push setting, never to an account
-    pending deletion.
+    pending deletion;
+  * ``sell_note`` — for a lone 매도 fill, one pointer sentence (적어 둔 말이
+    있다 · 보유 일수 · 산 값 대비) from services/sell_moment.py — 2026-10-15.
 
 Wording: a record prompt — what happened and "why" — never a judgement of
 the trade, never a direction word in the push text.
@@ -68,6 +70,10 @@ def rule_note(user_id: int, now: datetime | None = None) -> str:
     「멈춤」 before buying. The fill notification already reaches them at the
     one moment that matters; when it is also the 6th fill against a line of
     5, saying so is the most useful thing the push can carry.
+
+    2026-10-15: only fills from the adoption on count — the same cut as the
+    /mirror card ("YYYY-MM-DD부터"). In the month the line was adopted the
+    sentence says the count runs from then.
     """
     try:
         from extensions import db
@@ -75,6 +81,7 @@ def rule_note(user_id: int, now: datetime | None = None) -> str:
         from models.import_batch import STATUS_PENDING, PendingTrade
         from services.profile.my_rules import (
             frequency_ceiling,
+            kst_month,
             kst_month_start_utc,
             month_fill_count,
         )
@@ -96,12 +103,45 @@ def rule_note(user_id: int, now: datetime | None = None) -> str:
                 PendingTrade.traded_at >= start,
             ).all()
         ]
-        n = month_fill_count(trades, pending, now)
+        since = profile.rules_confirmed_at
+        n = month_fill_count(trades, pending, now, since=since)
         if n <= ceiling:
             return ""
-        return f"이번 달 들어온 거래가 {n}번이에요 — 정해 둔 선은 {ceiling}번."
+        lead = "선을 정한 뒤 이번 달" if kst_month(since) == kst_month(now) else "이번 달"
+        return f"{lead} 들어온 거래가 {n}번이에요 — 정해 둔 선은 {ceiling}번."
     except Exception:
         log.warning("fill_memo rule note failed user_id=%s", user_id, exc_info=True)
+        return ""
+
+
+def sell_note(user_id: int, rows: Iterable[dict], now: datetime | None = None) -> str:
+    """One more sentence when exactly one fill waits and it is a 매도 of a
+    known ticker: that the user wrote something about it before, how long
+    the lots it closes were held, where it sits against their own cost —
+    else ``""``. Never raises.
+
+    2026-10-15 (매도 순간의 거울, services/sell_moment.py): the disposition
+    mirror used to be a statistic read weeks later. The fill push is the one
+    moment that reliably reaches the user, so the sell meets what they wrote
+    when they bought. **Pointer + facts only — never the user's own words on
+    a lock screen**; the words wait behind the link, above the reason box.
+    """
+    waiting = _waiting(rows)
+    if len(waiting) != 1:
+        return ""
+    try:
+        from models.import_batch import PendingTrade
+        from services.sell_moment import load_sell_moment, pending_sell_input, push_sentence
+        # The stored row decides (매도 · waiting · ticker known), not the
+        # response dict — its fields may already be display-shaped.
+        row = PendingTrade.query.filter_by(id=waiting[0]["id"], user_id=user_id).first()
+        sell = pending_sell_input(row)
+        if sell is None:
+            return ""
+        now = now or datetime.now(timezone.utc).replace(tzinfo=None)
+        return push_sentence(load_sell_moment(user_id, sell, now=now))
+    except Exception:
+        log.warning("fill_memo sell note failed user_id=%s", user_id, exc_info=True)
         return ""
 
 
@@ -127,7 +167,9 @@ def notify_fill_memo(user_id: int, rows: Iterable[dict]) -> bool:
         else:
             arrived = f"체결 {len(waiting)}건이 들어왔습니다."
             ask = "잊기 전에 이유를 한 줄씩 남겨 두세요."
-        body = " ".join(x for x in (arrived, rule_note(user_id), ask) if x)
+        body = " ".join(
+            x for x in (arrived, rule_note(user_id), sell_note(user_id, waiting), ask) if x
+        )
         from services.push_service import send_push_to_user
         # transactional: the user set this up themselves (token + automation);
         # it is a record of their own fill, not marketing (정통망법 §50).

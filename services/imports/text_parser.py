@@ -28,7 +28,7 @@ import re
 from . import (
     RawTrade,
     mask_sensitive,
-    parse_datetime,
+    parse_datetime_has_time,
     parse_number,
     today_naive,
 )
@@ -221,7 +221,7 @@ def _parse_line(line: str) -> RawTrade:
     elif t.name and _HANGUL.search(t.name):
         t.currency, t.currency_guessed = "KRW", True
 
-    dt = _date(line)
+    dt, t.time_given = _date(line)
     if dt is None:
         t.traded_at = today_naive()
         t.confidence = 0.6
@@ -279,6 +279,9 @@ def _price(line: str, shares: float) -> tuple[float | None, bool]:
 
 
 def _date(line: str):
+    """``(datetime, time_given)`` for the line, ``(None, False)`` without a
+    date or time. ``time_given`` says a time was printed — a 09:00 fill reads
+    00:00 UTC once shifted, so 00:00 cannot tell (services.imports.kst_to_utc)."""
     m = _DATE_ANY.search(line)
     if not m:
         # Time only ("09:31 삼성전자 10주 매수 체결 71,200원"): today (KST) at
@@ -288,24 +291,25 @@ def _date(line: str):
         if tm:
             h, mi = int(tm.group(1)), int(tm.group(2))
             if h < 24 and mi < 60:
-                return today_naive().replace(hour=h, minute=mi, second=int(tm.group(3) or 0))
-        return None
+                return today_naive().replace(hour=h, minute=mi, second=int(tm.group(3) or 0)), True
+        return None, False
     s = m.group(1)
     if re.fullmatch(r"\d{1,2}/\d{1,2}(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?", s):
         # MM/DD [HH:MM] → current year
         mm, rest = s.split("/", 1)
         dd = rest.split()[0]
         s = f"{today_naive().year}-{int(mm):02d}-{int(dd):02d}" + (" " + rest.split()[1] if " " in rest else "")
-    dt = parse_datetime(s)
+    dt, has_time = parse_datetime_has_time(s)
     if dt is None:
-        return None
-    if dt.hour == 0 and dt.minute == 0:
+        return None, False
+    if not has_time:
         tm = _TIME_ONLY.search(line.replace(s, " "))
         if tm:
             h, mi = int(tm.group(1)), int(tm.group(2))
             if h < 24 and mi < 60:
                 dt = dt.replace(hour=h, minute=mi, second=int(tm.group(3) or 0))
-    return dt
+                has_time = True
+    return dt, has_time
 
 
 # Push notifications are usually prefixed with the sender — "[키움증권]",

@@ -18,7 +18,9 @@ from __future__ import annotations
 import difflib
 import re
 
-from services.imports import RawTrade, amount_ok, mask_sensitive, parse_datetime, parse_number, side_from_text
+from services.imports import (
+    RawTrade, amount_ok, mask_sensitive, parse_datetime_has_time, parse_number, side_from_text,
+)
 
 MAX_ROWS = 200
 HIGH_CONFIDENCE = 0.9
@@ -82,7 +84,7 @@ def rows_to_raw(rows) -> list[RawTrade]:
         # than converted by a guessed offset — the date stays.
         if str(item.get("tz") or "KST").upper() != "KST":
             time_s = None
-        traded_at = parse_datetime(date_s, time_s)
+        traded_at, time_given = parse_datetime_has_time(date_s, time_s)
         if traded_at is None:
             raise RowError(f"{label}.date is not a real date.", f"{label}.date 가 실제 날짜가 아닙니다.")
 
@@ -93,7 +95,8 @@ def rows_to_raw(rows) -> list[RawTrade]:
             snippet += " [직접 입력: " + "·".join(_FIELD_LABELS[f] for f in typed) + "]"
         out.append(RawTrade(
             name=name, code=code, action=side, shares=float(shares), price=float(price),
-            currency=currency, traded_at=traded_at, confidence=HIGH_CONFIDENCE,
+            currency=currency, traded_at=traded_at, time_given=time_given,
+            confidence=HIGH_CONFIDENCE,
             raw_snippet=mask_sensitive(snippet), extra={"row": i + 1},
         ))
     return out

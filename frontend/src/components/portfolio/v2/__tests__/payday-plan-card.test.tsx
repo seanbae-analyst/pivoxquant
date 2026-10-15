@@ -236,6 +236,62 @@ describe("PaydayPlanCard", () => {
     expect(screen.queryByLabelText("생활비 실제로 쓴 돈")).toBeNull();
   });
 
+  // 2026-10-15 bug hunt: "100만" saved 100원 and "150.5" saved 1,505원.
+  it("reads 만 / 억 as typed, shows the won on blur, and holds the save on text it cannot read", async () => {
+    seed({ v: 1, payday: 25, cycles: [] });
+    renderCard();
+    await screen.findByTestId("payday-plan-form");
+    const invest = screen.getByLabelText("투자");
+    expect(invest).toHaveAttribute("inputmode", "text");
+    fireEvent.change(invest, { target: { value: "100만" } });
+    expect(invest).toHaveValue("100만"); // kept as typed while editing
+    fireEvent.blur(invest);
+    expect(invest).toHaveValue("1,000,000");
+
+    const living = screen.getByLabelText("생활비");
+    fireEvent.change(living, { target: { value: "150.5" } });
+    fireEvent.blur(living);
+    expect(living).toHaveValue("150.5");
+    expect(living).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByTestId("payday-plan-form")).toHaveTextContent("금액으로 읽지 못했어요");
+    expect(screen.getByRole("button", { name: "저장" })).toBeDisabled();
+
+    fireEvent.change(living, { target: { value: "150만" } });
+    expect(screen.getByRole("button", { name: "저장" })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "저장" }));
+    await screen.findByTestId("payday-plan-current");
+    expect(loadStore(7).cycles[0].parts).toEqual({ living: 1_500_000, saving: null, invest: 1_000_000, other: null });
+  });
+
+  it("an actual amount it cannot read holds the look-back save instead of being dropped", async () => {
+    vi.setSystemTime(new Date("2026-10-26T03:00:00Z"));
+    seed(PLAN_OCT);
+    renderCard();
+    const review = await screen.findByTestId("payday-review");
+    fireEvent.click(within(within(review).getByRole("group", { name: "생활비 돌아보기" })).getByRole("button", { name: "더" }));
+    fireEvent.change(screen.getByLabelText("생활비 실제로 쓴 돈"), { target: { value: "-182만" } });
+    expect(review).toHaveTextContent("금액으로 읽지 못했어요");
+    expect(screen.getByRole("button", { name: "돌아보기 저장" })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("생활비 실제로 쓴 돈"), { target: { value: "182만" } });
+    fireEvent.click(screen.getByRole("button", { name: "돌아보기 저장" }));
+    await waitFor(() => expect(loadStore(7).cycles[0].actual).toEqual({ living: 1_820_000 }));
+  });
+
+  // 2026-10-15 bug hunt: payday 25 → 10 on 10/14 hid the 9/25 plan from
+  // current, last and the earlier list alike.
+  it("changing the payday keeps this cycle's plan on screen", async () => {
+    seed(PLAN_OCT);
+    renderCard();
+    await screen.findByTestId("payday-plan-current");
+    fireEvent.click(screen.getByRole("button", { name: "월급날 바꾸기" }));
+    fireEvent.change(screen.getByLabelText("월급날"), { target: { value: "10" } });
+    fireEvent.click(screen.getByRole("button", { name: "바꾸기" }));
+    const current = await screen.findByTestId("payday-plan-current");
+    expect(current).toHaveTextContent("10월 10일 – 11월 9일");
+    expect(current).toHaveTextContent("350만원들어온 돈");
+    expect(loadStore(7)).toMatchObject({ payday: 10, cycles: [{ start: "2026-10-10", income: 3_500_000 }] });
+  });
+
   it("'이 기기에서 지우기' removes everything stored for this user", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
     seed(PLAN_OCT);

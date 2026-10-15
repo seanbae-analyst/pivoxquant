@@ -51,7 +51,7 @@ type Tab = {
 // Labels are literal (no locale dep) so a missing i18n key can never blank
 // the bar on mobile.
 export const PRIMARY_TABS: ReadonlyArray<Tab> = [
-  { href: "/mirror", label: "거울", icon: Contrast },
+  { href: "/mirror", label: "거울", icon: Contrast, subRoutes: ["/mirror/year"] },
   { href: "/pre-trade", label: "멈춤", icon: Gavel, subRoutes: ["/pre-trade/door"] },
   { href: "/journal", label: "기록", icon: NotebookPen, subRoutes: ["/journal/import", "/journal/research"] },
   { href: "/portfolio", label: "포트폴리오", icon: Briefcase },

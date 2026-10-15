@@ -96,7 +96,7 @@ export function ResearchSummary({ data }: { data: ResearchOverviewResponse }) {
       </div>
       <Caption className="mt-2">
         {unknown > 0 ? `모름 ${unknown}개는 빼고 셌어요. ` : ""}결과는 이 서비스에 기록된 본인 체결만 봐요 — 리서치를 쓴
-        날 이후 그 종목을 판 기록의 손익 합계의 부호예요. 리서치와 무관하게 산 수량의 매도도 포함하고, 이유가 맞았다는
+        뒤 그 종목을 판 기록의 손익 합계의 부호예요. 리서치와 무관하게 산 수량의 매도도 포함하고, 이유가 맞았다는
         증거는 아니에요.
       </Caption>
 

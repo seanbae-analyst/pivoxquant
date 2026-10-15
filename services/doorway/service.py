@@ -377,14 +377,22 @@ def summarize(
     now: datetime,
     days: int = DEFAULT_WINDOW_DAYS,
     first_check_at: datetime | None = None,
+    start: datetime | None = None,
+    end: datetime | None = None,
 ) -> dict:
     """열림 × 체결 → 개수. 순수 함수 — ``now`` 를 받는다.
 
     ``checks`` 는 창보다 조금 앞의 열림을 포함해도 된다(창 경계 직후의 체결을
     바르게 잇기 위해). 세는 것은 ``created_at >= now - days`` 인 열림뿐이다.
+    ``start`` / ``end`` 를 주면 그 [시작, 끝) 으로 센다 — 올해의 기록이 한 해를
+    셀 때 (``year_section``). 30일 뒤를 보는 "일어나지 않은 거래" 판정은 언제나
+    ``now`` 까지의 체결로 한다.
     """
     now = _naive(now)
-    window_start = now - timedelta(days=days)
+    window_start = start if start is not None else now - timedelta(days=days)
+
+    def in_window(ts: datetime) -> bool:
+        return ts >= window_start and (end is None or ts < end)
     follow = timedelta(minutes=FOLLOW_MINUTES)
     later = timedelta(days=LATER_DAYS)
 
@@ -403,7 +411,7 @@ def summarize(
     window_rows: list[tuple] = []
 
     for i, c in enumerate(all_checks):
-        if c.created_at < window_start:
+        if not in_window(c.created_at):
             continue
         mine = attributed.get(i, [])
         outcome = _outcome(c, mine)
@@ -438,7 +446,7 @@ def summarize(
     fills_total = fills_door = 0
     if since is not None:
         for f in all_fills:
-            if f.traded_at >= since:
+            if f.traded_at >= since and (end is None or f.traded_at < end):
                 fills_total += 1
                 if id(f) in door_ids:
                     fills_door += 1
@@ -470,6 +478,34 @@ def summarize(
         "by_hour_kst": by_hour,
         "recent": recent,
         "caveats": list(CAVEATS),
+    }
+
+
+def year_section(
+    checks: Iterable,
+    fills: Iterable[Fill],
+    *,
+    start: datetime,
+    end: datetime,
+    now: datetime,
+    first_check_at: datetime | None,
+) -> dict | None:
+    """올해의 기록(services/year_recap)의 ``doorway`` 칸 — 그해 [start, end) 의
+    문 앞 개수. 그해 열림이 없으면 None (화면이 칸을 그리지 않는다). 최근 기록과
+    유저의 한 줄은 넣지 않는다 — 연간 화면은 개수만 (legal-kr-fintech 2026-10-15:
+    note 가 본인 화면 밖으로 나가면 재검수)."""
+    s = summarize(checks, fills, now=now, first_check_at=first_check_at, start=start, end=end)
+    if s["total"] == 0:
+        return None
+    return {
+        "total": s["total"],
+        "intents": s["intents"],
+        "look": s["look"],
+        "said": s["said"],
+        "not_happened": s["not_happened"],
+        "fills": s["fills"],
+        "follow_minutes": s["follow_minutes"],
+        "later_days": s["later_days"],
     }
 
 

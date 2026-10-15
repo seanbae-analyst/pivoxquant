@@ -16,6 +16,7 @@ import { clearHadSession, markHadSession } from "./had-session";
 import { isDemoMode, DEMO_USER } from "./demo";
 import {
   clearPersistedSwrCache,
+  onSessionEndedElsewhere,
   syncPersistedCacheIdentity,
 } from "./persisted-swr-cache";
 import { useAuthWakePoll } from "./auth-wake";
@@ -270,6 +271,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // leaves `data` at the last good response.
     keepPreviousData: true,
   });
+
+  // Another tab signed out, or in as someone else (2026-10-15): the persisted
+  // cache has already stopped writing for this tab's user; ask the server who
+  // this tab is now rather than showing the old user until the 5-min poll.
+  useEffect(() => onSessionEndedElsewhere(() => void mutate()), [mutate]);
 
   // Local override for logout — clears the user immediately without waiting
   // for the network round-trip, mirroring the previous setUser(null) behavior.

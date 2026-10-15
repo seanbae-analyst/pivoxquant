@@ -18,6 +18,10 @@
  *   flow finished (`locked`)  → history.go(-n) back to the page's own entry,
  *                                so back from the result screen leaves the
  *                                page instead of reopening the submitted form
+ *   flow left midway (`leave`) → history.go(-n) to the page's own entry, THEN
+ *                                the host's navigation (router.replace) takes
+ *                                that entry's place — skip / quit / a guard's
+ *                                redirect leave no step entries behind
  *
  * Never submits: a pop only ever calls `onPopTo` with a step number. Saving
  * stays the buttons' job, so back cannot resubmit anything.
@@ -34,10 +38,12 @@
  * Phone only: pass `enabled: false` on desktop and nothing is pushed.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export const STEP_STATE_KEY = "__pqStep";
 const OVERLAY_STATE_KEY = "__pqOverlays";
+/** `leave` navigates anyway if its pop has not arrived by then. */
+const LEAVE_FALLBACK_MS = 600;
 
 interface StepMarker {
   key: string;
@@ -62,6 +68,21 @@ export interface HistoryStepsOptions {
   onPopTo: (step: number) => boolean;
   /** A step forward was taken by the user (not by a pop). */
   onAdvance?: () => void;
+}
+
+export interface HistorySteps {
+  /**
+   * Leave the flow from the middle of it — skip, quit, a guard's redirect.
+   * The step entries this mount pushed are popped first and `navigate` runs
+   * once the page's own entry is current, so a `router.replace` in it takes
+   * that entry's place: back then goes to whatever was before the flow.
+   * Calling `router.replace` straight from step 3 replaced only step 3's
+   * entry, and back walked into steps 2, 1 — the wizard came back, or a
+   * completed user bounced to /mirror once per step (2026-10-15 bug hunt).
+   * With nothing pushed (desktop, step 0) `navigate` runs at once. A second
+   * call while the pop is on its way replaces the destination.
+   */
+  leave: (navigate: () => void) => void;
 }
 
 function readMarker(state: unknown): StepMarker | null {
@@ -89,7 +110,7 @@ export function useHistorySteps({
   locked,
   onPopTo,
   onAdvance,
-}: HistoryStepsOptions): void {
+}: HistoryStepsOptions): HistorySteps {
   const [mount] = useState(() => `m${Date.now().toString(36)}${++mountSeq}`);
   /** Steps by entry index, for this mount. entries[0] = the page's own entry. */
   const entries = useRef<number[]>([]);
@@ -102,6 +123,48 @@ export function useHistorySteps({
   useEffect(() => {
     latest.current = { step, locked, onPopTo, onAdvance };
   });
+  /** A `leave` waiting for its pop to land on the page's own entry. */
+  const pendingLeave = useRef<(() => void) | null>(null);
+  const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const runLeave = useCallback(() => {
+    if (leaveTimer.current !== null) clearTimeout(leaveTimer.current);
+    leaveTimer.current = null;
+    const navigate = pendingLeave.current;
+    pendingLeave.current = null;
+    navigate?.();
+  }, []);
+
+  const leave = useCallback(
+    (navigate: () => void) => {
+      if (pendingLeave.current) {
+        pendingLeave.current = navigate;
+        return;
+      }
+      if (typeof window === "undefined" || curIdx.current === 0) {
+        navigate();
+        return;
+      }
+      pendingLeave.current = navigate;
+      const back = curIdx.current;
+      curIdx.current = 0;
+      selfPops.current += 1;
+      window.history.go(-back);
+      // The listener runs it on arrival; this covers a pop that never comes
+      // (the listener is gone once `enabled` went false).
+      leaveTimer.current = setTimeout(runLeave, LEAVE_FALLBACK_MS);
+    },
+    [runLeave],
+  );
+
+  useEffect(
+    () => () => {
+      if (leaveTimer.current !== null) clearTimeout(leaveTimer.current);
+      leaveTimer.current = null;
+      pendingLeave.current = null;
+    },
+    [],
+  );
 
   // Mark the page's own entry as this mount's base. Overwrites a marker left
   // by an earlier visit (we came back to an entry that one pushed).
@@ -170,6 +233,7 @@ export function useHistorySteps({
       if (selfPops.current > 0) {
         selfPops.current -= 1;
         if (marker && marker.key === key && marker.mount === mount) curIdx.current = marker.idx;
+        if (selfPops.current === 0 && pendingLeave.current) runLeave();
         return;
       }
       const samePage = window.location.pathname === pagePath.current;
@@ -214,5 +278,7 @@ export function useHistorySteps({
     };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
-  }, [enabled, key, mount]);
+  }, [enabled, key, mount, runLeave]);
+
+  return { leave };
 }

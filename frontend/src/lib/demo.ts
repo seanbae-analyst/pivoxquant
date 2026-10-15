@@ -482,6 +482,78 @@ const DEMO_DOORWAY_SUMMARY = {
   ],
 };
 
+
+/* ── 올해의 기록 — one demo year, consistent with the research notes above ── */
+
+const DEMO_YEAR_MONTHS = [3, 2, 0, 5, 4, 1, 0, 6, 3, 2];
+
+const DEMO_YEAR_RECAP = {
+  ok: true,
+  disclaimer: "본 정보는 지난 거래의 회고적 사실 관찰이며 미래 예측이나 거래 권유가 아닙니다.",
+  share_disclaimer: "정보 제공 목적이며 투자 권유가 아닙니다. / Information only, not investment advice.", // legal-ok — disclaimer SoT text
+  year: 2026,
+  years: [2026],
+  range: { start: "2026-01-01", end: "2026-10-15", partial: true },
+  fills: {
+    total: 26, buys: 17, sells: 9, tickers: 8, months_active: 8,
+    by_month: DEMO_YEAR_MONTHS.map((count, i) => ({ month: `2026-${String(i + 1).padStart(2, "0")}`, count })),
+  },
+  pauses: {
+    started: 14, proceeded: 7, cancelled: 6, open: 1,
+    cancelled_buy: 6, bought_later_anyway: 2, never_bought: 4,
+  },
+  records: {
+    reasoned_fills: 19, research_written: 3, research_reviewed: 1,
+    verdicts: { right: 1, wrong: 1, unknown: 0 },
+    observation_notes: 5,
+  },
+  holding: { sells: 9, median_days: 23.5 },
+  rules: {
+    confirmed_on: "2026-08-10",
+    frequency: {
+      ceiling: 5,
+      months: [
+        { month: "2026-08", count: 4, over: false, partial: true },
+        { month: "2026-09", count: 3, over: false, partial: false },
+        { month: "2026-10", count: 2, over: false, partial: true },
+      ],
+      within: 3, outside: 0,
+    },
+    holding: { min_days: 7, sells: 3, sooner: 1 },
+  },
+  quotes: [
+    { kind: "first_reason", source: "pause", text: "실적 발표 전에 사 두고 싶다. 근데 지난번에도 이랬다.", date: "2026-01-06", ticker: "NVDA", name: "NVIDIA" },
+    { kind: "not_taken", source: "pause", text: "다들 산다길래 나도 들어가려 했다. 이유가 그것뿐이다.", date: "2026-03-18", ticker: "TSLA", name: "Tesla" },
+    { kind: "scored_thesis", source: "research", text: "메모리 가격이 반등한다", date: "2026-02-01", ticker: "005930.KS", name: "삼성전자", verdict: "right" },
+  ],
+  doorway: null,
+  empty: false,
+};
+
+/* ── Sell-moment mirror (매도 순간의 거울) — the demo user's own words ────── */
+
+function _demoSellMoment(query: string) {
+  const ticker = (new URLSearchParams(query).get("ticker") || "").toUpperCase();
+  const research = DEMO_RESEARCH_NOTES.find(
+    (n) => n.ticker === ticker || n.ticker.replace(/\.(KS|KQ)$/, "") === ticker,
+  );
+  const words = [
+    {
+      source: "pause", ticker,
+      text: "실적 발표 전에 들어간다. 발표가 기대보다 약하면 다시 본다.",
+      invalidation: null, at: "2026-08-28T01:30:00",
+    },
+    ...(research
+      ? [{
+          source: "research", ticker, text: research.theses.join(" · "),
+          invalidation: research.invalidation, at: research.created_at,
+        }]
+      : []),
+  ];
+  // No percent in demo — it would need the typed price against a real cost.
+  return { ok: true, ticker, words, held_days: 41, vs_cost_pct: null, matched_shares: 0 };
+}
+
 /** Canned GET response for a path, or undefined if not registered yet. */
 function matchDemoGet(path: string): unknown | undefined {
   const qIdx = path.indexOf("?");
@@ -489,12 +561,15 @@ function matchDemoGet(path: string): unknown | undefined {
   const query = qIdx === -1 ? "" : path.slice(qIdx + 1);
 
   if (base === "/api/search") return _demoSearch(query);
+  if (base === "/api/mirror-home/year") return DEMO_YEAR_RECAP;
   if (base.startsWith("/api/observation-notes/by-ticker/"))
     return _demoNotesByTicker(base);
   if (base.startsWith("/api/research-notes/by-ticker/"))
     return _demoResearchByTicker(base);
   if (base === "/api/research-notes/overview") return DEMO_RESEARCH_OVERVIEW;
   if (base === "/api/doorway/summary") return DEMO_DOORWAY_SUMMARY;
+
+  if (base === "/api/sell-moment") return _demoSellMoment(query);
   if (base === "/api/research-notes/list")
     return { ok: true, notes: DEMO_RESEARCH_NOTES, next_before: null };
   if (base === "/api/portfolio/history")

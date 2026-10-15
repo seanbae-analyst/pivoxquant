@@ -13,9 +13,12 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   EMPTY_STORE,
   MAX_CYCLES,
+  changePayday,
   clearStore,
   cycleFlow,
   cycleFor,
+  findCycle,
+  isUnreadableAmount,
   kstToday,
   loadStore,
   paydayIn,
@@ -76,11 +79,85 @@ describe("plan arithmetic", () => {
     expect(reviewFor(1_500_000, 1_500_000)).toBe("as_planned");
   });
 
-  it("amounts are digits only", () => {
+  it("reads won with commas, spaces and a trailing 원", () => {
     expect(parseAmount("1,000,000")).toBe(1_000_000);
     expect(parseAmount("  250000원 ")).toBe(250_000);
+    expect(parseAmount("1 500 000")).toBe(1_500_000);
+    expect(parseAmount("0")).toBe(0);
     expect(parseAmount("")).toBeNull();
     expect(parseAmount("abc")).toBeNull();
+    expect(parseAmount("원")).toBeNull();
+  });
+
+  // 2026-10-15 bug hunt: every non-digit used to be stripped, so "100만"
+  // saved 100원 and "150.5" saved 1,505원.
+  it("reads 만 and 억 as units", () => {
+    expect(parseAmount("100만")).toBe(1_000_000);
+    expect(parseAmount("350만원")).toBe(3_500_000);
+    expect(parseAmount("1억")).toBe(100_000_000);
+    expect(parseAmount("1억 2,000만")).toBe(120_000_000);
+    expect(parseAmount("1억2000만 5,000원")).toBe(120_005_000);
+    expect(parseAmount("150만 5000")).toBe(1_505_000);
+  });
+
+  it("a decimal only on a 만 / 억 term, rounded to the won", () => {
+    expect(parseAmount("1.5만")).toBe(15_000);
+    expect(parseAmount("2.35억")).toBe(235_000_000);
+    expect(parseAmount("1.23456만")).toBe(12_346);
+    expect(parseAmount("150000.5")).toBeNull();
+    expect(parseAmount("1.500")).toBeNull();
+  });
+
+  it("refuses what it would have to guess at — never another number", () => {
+    for (const text of ["-30000", "−30,000", "-3만", "5천", "1만5천", "만", "$100", "100만억", "1억 1억", "100원원", "1e6"]) {
+      expect(parseAmount(text)).toBeNull();
+      expect(isUnreadableAmount(text)).toBe(true);
+    }
+    expect(isUnreadableAmount("   ")).toBe(false);
+    expect(isUnreadableAmount("100만")).toBe(false);
+  });
+
+  // Review 2026-10-15: "₩" and "KRW" (copied from a bank app) stopped reading,
+  // and "1억5" — usually 1억 5천만 — read as 100,000,005원.
+  it("reads a leading ₩ or a trailing KRW, and refuses a bare number after 억", () => {
+    expect(parseAmount("₩1,000,000")).toBe(1_000_000);
+    expect(parseAmount("1,000,000 KRW")).toBe(1_000_000);
+    expect(parseAmount("1,000,000krw")).toBe(1_000_000);
+    expect(parseAmount("1억5")).toBeNull();
+    expect(parseAmount("1억 5000")).toBeNull();
+    expect(parseAmount("1억 5000만 300")).toBe(150_000_300);
+  });
+});
+
+describe("changing the payday", () => {
+  const store = (payday: number | null, ...starts: string[]): PaydayStore => ({
+    v: 1,
+    payday,
+    cycles: starts.map((s) => plan(s)),
+  });
+
+  // 2026-10-15 bug hunt: payday 25 → 10 on 10/15 left the 9/25 plan between
+  // the new cycles — not current, not last, not earlier.
+  it("moves the plan of the cycle holding today to the new cycle's start", () => {
+    const next = changePayday(store(25, "2026-08-25", "2026-09-25"), 10, "2026-10-15");
+    expect(next.payday).toBe(10);
+    expect(next.cycles.map((c) => c.start)).toEqual(["2026-08-25", "2026-10-10"]);
+    expect(findCycle(next, cycleFor("2026-10-15", 10).start)?.parts).toEqual(plan("x").parts);
+  });
+
+  it("keeps both plans when the new start already holds one", () => {
+    const before = store(25, "2026-09-25", "2026-10-10");
+    const next = changePayday(before, 10, "2026-10-15");
+    expect(next.cycles).toEqual(before.cycles);
+    expect(next.payday).toBe(10);
+  });
+
+  it("first payday, the same payday, or no plan this cycle → only the day changes", () => {
+    expect(changePayday(store(null, "2026-09-25"), 10, "2026-10-15").cycles[0].start).toBe("2026-09-25");
+    expect(changePayday(store(25, "2026-09-25"), 25, "2026-10-15").cycles[0].start).toBe("2026-09-25");
+    expect(changePayday(store(25, "2026-08-25"), 10, "2026-10-15").cycles.map((c) => c.start)).toEqual([
+      "2026-08-25",
+    ]);
   });
 });
 

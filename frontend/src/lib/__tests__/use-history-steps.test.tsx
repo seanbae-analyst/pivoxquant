@@ -9,17 +9,20 @@
  *   - a refused pop (e.g. system forward into an unanswered step) is undone;
  *   - locking the flow (submitted) collapses back to the page's own entry;
  *   - overlay entries (lib/use-back-dismiss `__pqOverlays`) are not steps;
- *   - disabled (desktop) pushes nothing.
+ *   - disabled (desktop) pushes nothing;
+ *   - `leave` (skip / quit / a guard's redirect) pops the step entries before
+ *     the host navigates, so back after it never lands inside the flow.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { act, cleanup, render } from "@testing-library/react";
 import { useEffect, useState } from "react";
-import { STEP_STATE_KEY, useHistorySteps } from "@/lib/use-history-steps";
+import { STEP_STATE_KEY, useHistorySteps, type HistorySteps } from "@/lib/use-history-steps";
 
 type Api = {
   setStep: (n: number) => void;
   setLocked: (b: boolean) => void;
   step: () => number;
+  leave: HistorySteps["leave"];
 };
 
 function Harness({
@@ -35,10 +38,7 @@ function Harness({
 }) {
   const [step, setStep] = useState(0);
   const [locked, setLocked] = useState(false);
-  useEffect(() => {
-    Object.assign(api, { setStep, setLocked, step: () => step });
-  }, [api, step]);
-  useHistorySteps({
+  const { leave } = useHistorySteps({
     key: "test-flow",
     enabled,
     step,
@@ -50,6 +50,9 @@ function Harness({
     },
     onAdvance,
   });
+  useEffect(() => {
+    Object.assign(api, { setStep, setLocked, step: () => step, leave });
+  }, [api, step, leave]);
   return <div data-testid="step">{step}</div>;
 }
 
@@ -165,5 +168,63 @@ describe("useHistorySteps", () => {
     act(() => api.setStep!(1));
     expect(window.history.length).toBe(startLength);
     expect(marker()).toBeUndefined();
+  });
+});
+
+/** Next.js's router.replace, as far as history goes. */
+const routerReplace = (href: string) => window.history.replaceState({ __NA: true }, "", href);
+
+// 2026-10-15 bug hunt: onboarding's skip and retake-quit called
+// router.replace from step 3, which replaced only step 3's entry — back from
+// /settings walked into step 2 and the wizard came back.
+describe("useHistorySteps · leave", () => {
+  beforeEach(() => {
+    window.history.replaceState({ __NA: true }, "", "/before");
+    window.history.pushState({ __NA: true }, "", "/flow");
+  });
+
+  it("pops the step entries, then navigates from the page's own entry", async () => {
+    const api: Partial<Api> = {};
+    const r = render(<Harness api={api} />);
+    for (const s of [1, 2, 3]) act(() => api.setStep!(s));
+    const atNavigate: unknown[] = [];
+    act(() =>
+      api.leave!(() => {
+        atNavigate.push(marker()?.idx);
+        routerReplace("/settings");
+      }),
+    );
+    expect(atNavigate).toEqual([]); // waits for the pop
+    await settle();
+    expect(atNavigate).toEqual([0]);
+    expect(window.location.pathname).toBe("/settings");
+    r.unmount();
+    act(() => window.history.back());
+    await settle();
+    expect(window.location.pathname).toBe("/before");
+  });
+
+  it("with nothing pushed (desktop, or still on the first step) navigates at once", () => {
+    const api: Partial<Api> = {};
+    render(<Harness api={api} enabled={false} />);
+    const go = vi.fn();
+    act(() => api.leave!(go));
+    expect(go).toHaveBeenCalledTimes(1);
+  });
+
+  it("a second leave on the way out replaces the destination — one navigation", async () => {
+    const api: Partial<Api> = {};
+    render(<Harness api={api} />);
+    act(() => api.setStep!(1));
+    act(() => api.setStep!(2));
+    const first = vi.fn();
+    const second = vi.fn();
+    act(() => {
+      api.leave!(first); // the completed-user guard
+      api.leave!(second); // the skip handler's own finally
+    });
+    await settle();
+    expect(first).not.toHaveBeenCalled();
+    expect(second).toHaveBeenCalledTimes(1);
   });
 });

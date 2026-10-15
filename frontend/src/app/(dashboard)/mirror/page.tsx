@@ -27,6 +27,8 @@
  * automation collects when a broker app opens, matched to their own fills.
  * It fetches its own summary; before the door is set up it is one invite line.
  *
+ * 2026-10-15: one quiet row into /mirror/year (올해의 기록) at the foot.
+ *
  * Legal: 3 disclosed buckets only, POSITIVE/NEGATIVE/NEUTRAL framing, no
  * advice, no score on the radar. No italic (CEO 2026-06-15).
  */
@@ -45,6 +47,7 @@ import { MirrorPhoneCards } from "@/components/mirror/mirror-phone-cards";
 import { OneThingNudge } from "@/components/mirror/one-thing-nudge";
 import { PullToRefresh } from "@/components/layout/pull-to-refresh";
 import { LastSyncNote } from "@/components/mirror/last-sync-note";
+import { YearRecapEntry } from "@/components/mirror/year/year-entry";
 
 function MirrorSkeleton() {
   const bar = { background: "rgba(var(--pq-ivory-rgb), 0.06)" };
@@ -156,6 +159,9 @@ export default function MirrorPage() {
                 <MirrorRadarPanel data={data} />
 
                 <OneThingNudge data={data} />
+
+                {/* 2026-10-15 — 올해의 기록, one quiet row under the loop. */}
+                <YearRecapEntry />
               </div>
             </ErrorBoundary>
           )}

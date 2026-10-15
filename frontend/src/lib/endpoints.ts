@@ -274,6 +274,11 @@ export const API = {
   // persona name (8-code or 3-bucket) — only neutral dimension labels.
   mirror: {
     home: "/api/mirror-home",
+    // 올해의 기록 (2026-10-15, routes/year_recap.py) — one KST calendar year of
+    // the user's own record: counts, a median, and up to three of their own
+    // sentences. No market data, no score. `?year=` omitted = this year.
+    year: (year?: number) =>
+      year ? `/api/mirror-home/year?year=${year}` : "/api/mirror-home/year",
   },
   // Pre-Trade Friction (Feature 6) — self-imposed cooldown + reflection.
   // Backend never places an order; /proceed only stamps "user finished
@@ -346,6 +351,16 @@ export const API = {
       `/api/research-notes/by-ticker/${encodeURIComponent(ticker)}`,
     detail: (id: number | string) => `/api/research-notes/${id}`,
     review: (id: number | string) => `/api/research-notes/${id}/review`,
+  },
+  // Sell-moment mirror (매도 순간의 거울, 2026-10-15 — routes/sell_moment.py).
+  // At a 매도, what the user wrote about the stock before it + how long the
+  // FIFO lots it closes were held + the sell price vs their own cost. The
+  // user's own rows only — no market data. Read-only.
+  //   typed    GET /?ticker=&shares=&price=&date=&currency= → SellMomentResponse
+  //   pending  GET /pending/<id>                            → SellMomentResponse
+  sellMoment: {
+    typed: "/api/sell-moment",
+    pending: (id: number | string) => `/api/sell-moment/pending/${id}`,
   },
   // Marketing-consent record (정통망법 §50 ① — sender bears the burden of
   // proving prior opt-in). Backend lives in routes/consents.py (PR #73).

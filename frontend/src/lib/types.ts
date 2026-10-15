@@ -404,6 +404,18 @@ export interface DoorwayCreateResponse {
   pause_url: string | null;
 }
 
+/** `doorway` in GET /api/mirror-home/year — one year of door answers. */
+export interface YearRecapDoorway {
+  total: number;
+  intents: Record<DoorwayIntent, number>;
+  look: { n: number; traded: number };
+  said: { buy: DoorwaySaidCounts; sell: DoorwaySaidCounts };
+  not_happened: { n: number; later: number; never: number; open: number };
+  fills: { total: number; through_door: number };
+  follow_minutes: number;
+  later_days: number;
+}
+
 export interface DoorwayChecksResponse {
   ok: boolean;
   disclaimer?: string | null;
@@ -454,6 +466,40 @@ export interface ResearchByTickerResponse {
   ticker: string;
   count: number;
   note: ResearchNote | null;
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+ * Sell-moment mirror (매도 순간의 거울, 2026-10-15) — routes/sell_moment.py.
+ * ────────────────────────────────────────────────────────────────────── */
+
+/** Where a quote came from — labelled 멈춤 / 체결 이유 / 리서치 / 관찰 노트. */
+export type SellMomentSource = "pause" | "fill_reason" | "research" | "note";
+
+/** One thing the user wrote about the stock before the sell — verbatim. */
+export interface SellMomentQuote {
+  source: SellMomentSource;
+  ticker: string;
+  text: string;
+  /** Research only — the user's own "틀렸다고 볼 신호". */
+  invalidation: string | null;
+  /** When it was written (naive UTC ISO). */
+  at: string;
+}
+
+/** `GET /api/sell-moment` · `GET /api/sell-moment/pending/<id>`. */
+export interface SellMomentResponse {
+  ok: boolean;
+  disclaimer?: string | null;
+  ticker: string;
+  /** Newest first, at most 4. Empty → the block renders nothing. */
+  words: SellMomentQuote[];
+  /** Share-weighted days the FIFO lots this sell closes were held; null when
+   *  no recorded 매수 or only holding-registration lots. */
+  held_days: number | null;
+  /** Sell price vs those lots' own cost, in percent; null across currencies. */
+  vs_cost_pct: number | null;
+  /** Shares matched to recorded lots (≤ the sell's shares). */
+  matched_shares: number;
 }
 
 /** `GET /api/observation-notes/by-ticker/<ticker>` — read back on /pre-trade. */
@@ -1199,4 +1245,85 @@ export interface HoldingsClosedItem {
   prev_shares: number;
   prev_avg_cost: number;
   note_kept: boolean;
+}
+
+/* ── 올해의 기록 (GET /api/mirror-home/year, routes/year_recap.py) ────────── */
+
+export interface YearRecapMonth {
+  month: string; // "YYYY-MM" (KST)
+  count: number;
+}
+
+export interface YearRecapRuleMonth extends YearRecapMonth {
+  /** More fills than the user's own monthly line. */
+  over: boolean;
+  /** The adoption month (counted from adoption) or this month (to today). */
+  partial: boolean;
+}
+
+export type YearRecapQuoteKind = "first_reason" | "not_taken" | "scored_thesis";
+
+export interface YearRecapQuote {
+  kind: YearRecapQuoteKind;
+  /** Where the sentence was written: a pause, a fill's reason, a research note. */
+  source: "pause" | "fill" | "research";
+  /** The user's own words, first line, kept verbatim by the scrub. */
+  text: string;
+  /** KST "YYYY-MM-DD" — the day it was written. */
+  date: string;
+  ticker: string | null;
+  name: string | null;
+  /** scored_thesis only — the user's own scoring of that thesis. */
+  verdict?: ResearchVerdict | null;
+}
+
+export interface YearRecapResponse {
+  ok: boolean;
+  disclaimer: string;
+  /** The one line printed on the share image (SoT services/legal/disclaimers.py). */
+  share_disclaimer: string;
+  year: number;
+  /** Years with any of the user's rows, newest first. */
+  years: number[];
+  range: { start: string; end: string; partial: boolean };
+  fills: {
+    total: number;
+    buys: number;
+    sells: number;
+    tickers: number;
+    months_active: number;
+    by_month: YearRecapMonth[];
+  };
+  pauses: {
+    started: number;
+    proceeded: number;
+    cancelled: number;
+    open: number;
+    cancelled_buy: number;
+    bought_later_anyway: number;
+    never_bought: number;
+  };
+  records: {
+    reasoned_fills: number;
+    research_written: number;
+    research_reviewed: number;
+    verdicts: Record<ResearchVerdict, number>;
+    observation_notes: number;
+  };
+  holding: { sells: number; median_days: number | null };
+  rules: {
+    confirmed_on: string;
+    frequency: {
+      ceiling: number;
+      months: YearRecapRuleMonth[];
+      within: number;
+      outside: number;
+    } | null;
+    holding: { min_days: number; sells: number; sooner: number } | null;
+  } | null;
+  quotes: YearRecapQuote[];
+  /** 문 앞의 한 줄 — the year's door counts (services/doorway.year_section);
+   *  null when there was no door answer that year. Counts only, no lines. */
+  doorway: null | YearRecapDoorway;
+  empty: boolean;
 }

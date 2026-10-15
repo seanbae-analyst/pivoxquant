@@ -21,7 +21,7 @@ from . import (
     ImportParseError,
     RawTrade,
     mask_sensitive,
-    parse_datetime,
+    parse_datetime_has_time,
     parse_number,
     side_from_text,
     today_naive,
@@ -241,6 +241,16 @@ def _norm(h) -> str:
     return _NORMALISE.sub("", str(h or "").strip().lower())
 
 
+def _header_rank(fld: str, h: str) -> tuple:
+    """Pass-1 preference among exact matches: the longer header. For the
+    clock (date / time) a fill column beats an order column first — a file
+    with both ``주문시간`` and ``체결시간`` (same length, order first) took the
+    order clock and imported every row date-only (review 2026-10-15)."""
+    if fld in ("date", "time"):
+        return ("주문" not in h, len(h))
+    return (len(h),)
+
+
 def map_headers(headers: list) -> tuple[dict[str, int], dict[str, str], list[str]]:
     """Return (field→column index, field→raw header, unmapped raw headers)."""
     normed = [_norm(h) for h in headers]
@@ -256,7 +266,7 @@ def map_headers(headers: list) -> tuple[dict[str, int], dict[str, str], list[str
         for i, h in enumerate(normed):
             if i in used or not h:
                 continue
-            if h in syns and (best is None or len(h) > len(normed[best])):
+            if h in syns and (best is None or _header_rank(fld, h) > _header_rank(fld, normed[best])):
                 best = i
         if best is not None:
             idx[fld] = best
@@ -324,18 +334,37 @@ def _parse_grid(grid: list[list]) -> ParseResult:
     result.unmapped_headers = unmapped
     result.broker_guess = guess_broker(headers)
 
+    order_clock = _clock_is_order_time(raw_map)
+
     body = grid[hdr_i + 1: hdr_i + 1 + MAX_ROWS]
     for offset, row in enumerate(body):
         row_no = hdr_i + 2 + offset  # 1-based line number for the user
         if not any(str(c or "").strip() for c in row):
             continue
         trade = _row_to_trade(row, idx)
+        if order_clock:
+            # The clock is when the order was placed, not when it filled —
+            # keep the day only (see _clock_is_order_time).
+            trade.time_given = False
         trade.raw_snippet = mask_sensitive(" | ".join(str(c) for c in row if str(c or "").strip()))
         trade.extra["row"] = row_no
         if trade.skip_reason:
             result.skipped.append({"row": row_no, "reason": trade.skip_reason})
         result.rows.append(trade)
     return result
+
+
+def _clock_is_order_time(raw_map: dict[str, str]) -> bool:
+    """Is the file's time of day an ORDER time (``주문시간`` / ``주문일시``)?
+
+    A limit order placed at 08:55 can fill at 09:20. Taken as the fill time,
+    it sits 25 minutes from the same fill's notification (09:20), past the
+    one-minute window that tells two genuine same-size fills apart
+    (``dedupe.FILL_TIME_TOLERANCE``), and one fill was recorded twice. A day
+    order fills on the day it was placed, so such rows import date-only and
+    dedupe on the day, as every row did before 2026-10-15."""
+    clock = raw_map.get("time") or raw_map.get("date") or ""
+    return "주문" in _norm(clock)
 
 
 def _cell(row: list, idx: dict[str, int], fld: str):
@@ -381,7 +410,7 @@ def _row_to_trade(row: list, idx: dict[str, int]) -> RawTrade:
         return t
     t.price = price
 
-    dt = parse_datetime(_cell(row, idx, "date"), _cell(row, idx, "time"))
+    dt, t.time_given = parse_datetime_has_time(_cell(row, idx, "date"), _cell(row, idx, "time"))
     if dt is None:
         if "date" in idx and str(_cell(row, idx, "date") or "").strip():
             t.skip_reason = "날짜 형식 미인식"

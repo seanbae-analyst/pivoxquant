@@ -175,8 +175,12 @@ export function AppWelcome() {
                 서버를 깨우는 중입니다 · 들어가서 기다려도 됩니다
               </p>
             ) : null}
+            {/* replace, not push (2026-10-15): the cover gives way to the
+                app, so back from the home tab leaves the app instead of
+                returning to the cards. */}
             <Link
               href="/mirror"
+              replace
               className="pq-ink-btn-bronze flex min-h-[52px] items-center justify-center text-[16px]"
               data-testid="app-welcome-enter"
             >

@@ -27,6 +27,7 @@ from services.doorway.service import (
     normalize_app,
     parse_text,
     summarize,
+    year_section,
 )
 
 TOKENS = "/api/portfolio/imports/tokens"
@@ -235,6 +236,26 @@ def test_no_checks_is_an_empty_summary():
     assert out["first_check_at"] is None
 
 
+def test_year_section_counts_only_that_year():
+    # KST 2026 = [2025-12-31 15:00 UTC, 2026-12-31 15:00 UTC).
+    start, end = datetime(2025, 12, 31, 15, 0), datetime(2026, 12, 31, 15, 0)
+    checks = [
+        _check(1, datetime(2025, 12, 31, 14, 0), "look"),               # 2025-12-31 23:00 KST
+        _check(2, datetime(2025, 12, 31, 15, 30), "buy", "TSLA", "테슬라"),  # 2026-01-01 00:30 KST
+        _check(3, datetime(2026, 3, 2, 1, 0), "look"),
+    ]
+    fills = [Fill(datetime(2025, 12, 31, 15, 40), "TSLA", "BUY")]
+    out = year_section(checks, fills, start=start, end=end, now=NOW, first_check_at=checks[0].created_at)
+    assert out["total"] == 2
+    assert out["intents"] == {"look": 1, "buy": 1, "sell": 0}
+    assert out["said"]["buy"]["as_said"] == 1
+    assert out["fills"] == {"total": 1, "through_door": 1}
+    # Counts only — no recent rows, no user line.
+    assert "recent" not in out and "테슬라" not in str(out)
+    assert year_section(checks, fills, start=end, end=end + timedelta(days=365), now=NOW,
+                        first_check_at=checks[0].created_at) is None
+
+
 # ─────────────────────────────────────────────────────────────────────
 # Routes
 # ─────────────────────────────────────────────────────────────────────
@@ -345,6 +366,18 @@ def test_session_path_list_summary_delete(client, app, auth_user):
 
     assert client.delete(f"{CHECKS}/{cid}").status_code == 200
     assert client.get(CHECKS).get_json()["checks"] == []
+
+
+def test_year_recap_carries_the_door_counts(client, auth_user):
+    from services.year_recap.recap import kst_year
+
+    client.post(CHECKS, json={"intent": "sell", "note": "반등 정리하려고"})
+    year = kst_year(datetime.now(timezone.utc).replace(tzinfo=None))
+    body = client.get(f"/api/mirror-home/year?year={year}").get_json()
+    assert body["doorway"]["total"] == 1
+    assert body["doorway"]["intents"]["sell"] == 1
+    assert body["empty"] is False and year in body["years"]
+    assert "반등" not in str(body["doorway"])
 
 
 def test_only_note_skips_the_scrub():

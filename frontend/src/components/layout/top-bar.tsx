@@ -80,6 +80,9 @@ export function subScreen(pathname: string | null, pane: SettingsPane | null): S
   if (pathname === "/journal/research" || pathname.startsWith("/journal/research/")) {
     return { title: "리서치", parent: "/journal", parentLabel: "기록" };
   }
+  if (pathname === "/mirror/year") {
+    return { title: "올해의 기록", parent: "/mirror", parentLabel: "거울" };
+  }
   if (/^\/support\/inbox\/[^/]+$/.test(pathname)) {
     return { title: "문의 내용", parent: "/support/inbox", parentLabel: "내 문의함" };
   }
