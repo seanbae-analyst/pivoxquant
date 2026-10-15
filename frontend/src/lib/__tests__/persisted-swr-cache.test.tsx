@@ -20,6 +20,7 @@ import useSWR, { SWRConfig, type Cache } from "swr";
 import {
   PERSIST_MAX_AGE_MS,
   PERSIST_MAX_CHARS,
+  PERSIST_OWNER_KEY,
   PERSIST_STORAGE_PREFIX,
   PERSIST_VERSION,
   STALE_AFTER_MS,
@@ -28,8 +29,10 @@ import {
   clearPersistedSwrCache,
   flushPersistedCache,
   isPersistableKey,
+  onSessionEndedElsewhere,
   persistStorageKey,
   persistedCacheMiddleware,
+  persistedCacheUserId,
   recordFetched,
   syncPersistedCacheIdentity,
   useStaleness,
@@ -273,6 +276,102 @@ describe("payload rules", () => {
     recordFetched(API.mirror.home, { a: 1 }, NOW);
     clearPersistedSwrCache();
     vi.advanceTimersByTime(5_000);
+    expect(ourKeys()).toEqual([]);
+  });
+});
+
+/* ── Another tab ───────────────────────────────────────────────────────── */
+
+/** What another tab's writes look like here: the change, then its event. */
+function otherTabSets(key: string, value: string | null) {
+  if (value === null) window.localStorage.removeItem(key);
+  else window.localStorage.setItem(key, value);
+  window.dispatchEvent(new StorageEvent("storage", { key, newValue: value }));
+}
+
+// 2026-10-15 bug hunt: a tab left open as user 7 kept writing under 7's key
+// after another tab switched the device to user 8 — and 8's portfolio, fetched
+// with 8's cookie, was painted for 7 at 7's next sign-in.
+describe("another tab ends this tab's session", () => {
+  it("another account signs in: nothing more is written for the old user, and its copy goes", () => {
+    const cache = newCache();
+    const told = vi.fn();
+    onSessionEndedElsewhere(told);
+    activatePersistedCacheForUser(cache, 7, NOW);
+    recordFetched(API.mirror.home, { who: 7 }, NOW);
+    flushPersistedCache(NOW);
+    expect(stored(7)).not.toBeNull();
+    expect(window.localStorage.getItem(PERSIST_OWNER_KEY)).toBe("7");
+
+    otherTabSets(PERSIST_OWNER_KEY, "8");
+
+    expect(told).toHaveBeenCalledTimes(1);
+    expect(persistedCacheUserId()).toBeNull();
+    expect(stored(7)).toBeNull();
+    // This tab's next answer comes with 8's cookie — it must not land as 7's.
+    recordFetched(PORTFOLIO_POSITIONS, { positions: [{ ticker: "ONLY-8" }] }, NOW);
+    flushPersistedCache(NOW);
+    expect(ourKeys()).toEqual([]);
+    expect(window.localStorage.getItem(PERSIST_OWNER_KEY)).toBe("8"); // the other tab's mark stays
+  });
+
+  it("the event never arrived (frozen tab): the write itself checks the owner mark", () => {
+    activatePersistedCacheForUser(newCache(), 7, NOW);
+    window.localStorage.removeItem(PERSIST_OWNER_KEY); // another tab logged out, silently
+
+    recordFetched(PORTFOLIO_POSITIONS, { positions: [{ ticker: "AFTER-LOGOUT" }] }, NOW);
+    flushPersistedCache(NOW);
+
+    expect(persistedCacheUserId()).toBeNull();
+    expect(ourKeys()).toEqual([]);
+  });
+
+  it("drops what this tab fetched from memory, so the next user's copy cannot capture it", () => {
+    const cache = newCache();
+    activatePersistedCacheForUser(cache, 7, NOW);
+    cache.set(PORTFOLIO_SUMMARY, { data: { fetchedFor: 7 } });
+    cache.set(API.auth.me, { data: { authenticated: true } }); // not ours to touch
+
+    otherTabSets(PERSIST_OWNER_KEY, null);
+    expect(cache.get(PORTFOLIO_SUMMARY)).toBeUndefined();
+    expect(cache.get(API.auth.me)).toBeDefined();
+
+    // /me then names user 8 in this tab — 7's value must not be written as 8's.
+    activatePersistedCacheForUser(cache, 8, NOW);
+    flushPersistedCache(NOW);
+    expect(JSON.stringify(stored(8))).not.toContain("fetchedFor");
+  });
+
+  it("the same user in another tab changes nothing", () => {
+    const told = vi.fn();
+    onSessionEndedElsewhere(told);
+    activatePersistedCacheForUser(newCache(), 7, NOW);
+    otherTabSets(PERSIST_OWNER_KEY, "7");
+    otherTabSets("unrelated", "x");
+    recordFetched(API.mirror.home, { who: 7 }, NOW);
+    flushPersistedCache(NOW);
+    expect(told).not.toHaveBeenCalled();
+    expect(stored(7)!.entries[API.mirror.home].data).toEqual({ who: 7 });
+  });
+
+  it("this tab's logout removes the owner mark, which is what the other tabs hear", () => {
+    activatePersistedCacheForUser(newCache(), 7, NOW);
+    clearPersistedSwrCache();
+    expect(window.localStorage.getItem(PERSIST_OWNER_KEY)).toBeNull();
+  });
+
+  it("an owner mark that cannot be written means no on-device copy at all", () => {
+    seed(7, { [API.mirror.home]: { at: NOW, data: { who: 7 } } });
+    const setItem = Storage.prototype.setItem;
+    const spy = vi.spyOn(Storage.prototype, "setItem").mockImplementation(function (this: Storage, k: string, v: string) {
+      if (k === PERSIST_OWNER_KEY) throw new DOMException("full", "QuotaExceededError");
+      return setItem.call(this, k, v);
+    });
+    const cache = newCache();
+    activatePersistedCacheForUser(cache, 7, NOW);
+    spy.mockRestore();
+    expect(persistedCacheUserId()).toBeNull();
+    expect(cache.get(API.mirror.home)).toBeUndefined();
     expect(ourKeys()).toEqual([]);
   });
 });

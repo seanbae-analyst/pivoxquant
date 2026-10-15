@@ -11,8 +11,9 @@ Ownership
 What "결과" means here
 ----------------------
 채점은 유저가 한다(가정마다 맞음/틀림/모름). 우리가 붙이는 것은 같은 종목의
-**본인 체결** 하나뿐이다: 리서치를 적은 날 이후 그 종목을 판 기록이 있으면
+**본인 체결** 하나뿐이다: 리서치를 적은 시각 이후 그 종목을 판 기록이 있으면
 그 매도들의 실현 손익 합의 부호(이익 / 손실 / 본전), 없으면 "아직 안 팖".
+날짜만 있는 체결은 KST 같은 날 규칙을 따른다(``_sold_after``).
 시세를 부르지 않는다 — 보유 중인 종목의 평가손익은 결과로 쓰지 않는다
 (MARKET_DATA_DISPLAY_ENABLED 와 무관하게 3축 규칙). 등록용 행
 (holding_seed / holding_adjust)은 체결이 아니라 뺀다.
@@ -48,11 +49,13 @@ from models.research_note import (
     VERDICTS,
 )
 from models.trade_history import REGISTRATION_SOURCES
+from services.imports import is_date_only
 from services.ticker_normalizer import normalize_ticker
 
 logger = logging.getLogger(__name__)
 
 KST = timezone(timedelta(hours=9))
+_KST_OFFSET = timedelta(hours=9)   # naive-UTC → KST wall clock (no DST)
 DEFAULT_REVIEW_MONTHS = 3
 DEFAULT_LIST_LIMIT = 50
 MAX_LIST_LIMIT = 200
@@ -266,18 +269,31 @@ def review_research(note_id: int, user_id: int, data) -> dict:
 
 # ── Outcome from the user's own fills ────────────────────────────────
 
+def _sold_after(traded_at: datetime, written_at: datetime | None) -> bool:
+    """Did this sale happen at or after the note was written?
+
+    ``created_at`` and timed fills are naive-UTC instants and compare as
+    such. A date-only fill is stored as its KST date at 00:00, unshifted
+    (``services.imports.kst_to_utc``), and has no time of day: it counts
+    when that date is the note's KST day or later — the calendar-day rule
+    of ``pre_trade.friction_outcome._at_or_after``.
+
+    2026-10-15: both sides used to be cut to their UTC date, so a note
+    written 00:00–09:00 KST took a sale from the previous KST day — before
+    the note existed — as its result.
+    """
+    if written_at is None or traded_at >= written_at:
+        return True
+    return is_date_only(traded_at) and traded_at.date() >= (written_at + _KST_OFFSET).date()
+
+
 def _outcomes(user_id: int, rows: list[ResearchNote]) -> dict[int, str]:
     """note id → gain / loss / flat / open, from SELLs of the same ticker
-    on or after the day the note was written.
-
-    Date grain on purpose: manual and imported trades are often stamped at
-    midnight of the trade day, so a sale later the same day as the note
-    would otherwise fall before ``created_at``.
-    """
+    at or after the moment the note was written (``_sold_after``)."""
     tickers = {r.ticker for r in rows if r.ticker}
     if not tickers:
         return {}
-    sells: dict[str, list[tuple[date, float]]] = {}
+    sells: dict[str, list[tuple[datetime, float]]] = {}
     q = TradeHistory.query.filter(
         TradeHistory.user_id == int(user_id),
         func.upper(TradeHistory.action) == _DISPOSAL_ACTION,
@@ -292,12 +308,11 @@ def _outcomes(user_id: int, rows: list[ResearchNote]) -> dict[int, str]:
             pnl = float(t.pnl or 0.0)
         except (TypeError, ValueError):
             pnl = 0.0
-        sells.setdefault(tk, []).append((t.traded_at.date(), pnl))
+        sells.setdefault(tk, []).append((t.traded_at, pnl))
 
     out: dict[int, str] = {}
     for r in rows:
-        written = r.created_at.date() if r.created_at else None
-        after = [p for d, p in sells.get(r.ticker, []) if written is None or d >= written]
+        after = [p for at, p in sells.get(r.ticker, []) if _sold_after(at, r.created_at)]
         if not after:
             out[r.id] = "open"
             continue

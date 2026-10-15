@@ -8,7 +8,8 @@
  *   - system forward re-enters only reached, answered steps (and never the
  *     result screen — that is Save's alone);
  *   - after Save, back does not reopen the legal step (no second save);
- *   - md+ pushes no history entries.
+ *   - md+ pushes no history entries;
+ *   - skip and retake-quit leave no step entries behind.
  */
 import { describe, it, expect, vi, afterEach, beforeAll } from "vitest";
 import { render, cleanup, screen, fireEvent, act } from "@testing-library/react";
@@ -121,7 +122,8 @@ function swipeThroughQuestions(oi = 0) {
 afterEach(() => {
   cleanup();
   window.matchMedia = originalMatchMedia;
-  replace.mockClear();
+  replace.mockReset();
+  vi.restoreAllMocks();
   apiFetch.mockClear();
   search = "";
   authUser = { id: 1, onboarding_completed: false };
@@ -213,5 +215,69 @@ describe("/onboarding · system back (phone)", () => {
     pick(0);
     tap(nextBtn());
     expect(window.history.length).toBe(before);
+  });
+});
+
+/** Record which step entry each router.replace hit, and apply it like Next does. */
+function recordReplaces(): (number | undefined)[] {
+  const hit: (number | undefined)[] = [];
+  replace.mockImplementation((href: string) => {
+    hit.push((window.history.state as { __pqStep?: { idx: number } } | null)?.__pqStep?.idx);
+    window.history.replaceState({ __NA: true }, "", href);
+  });
+  return hit;
+}
+
+// 2026-10-15 bug hunt: both exits called router.replace from the step on
+// screen, so only that step's entry was replaced — back from /settings walked
+// into the wizard again, and back from /mirror landed on an onboarding step
+// that bounced to /mirror, once per step.
+describe("/onboarding · leaving midway (phone)", () => {
+  it("quitting a retake on question 3: back from /settings does not reopen the wizard", async () => {
+    search = "retake=1";
+    window.history.replaceState({ __NA: true }, "", "/before");
+    window.history.pushState({ __NA: true }, "", "/onboarding?retake=1");
+    const hit = recordReplaces();
+    stubViewport(true);
+    render(<OnboardingPage />);
+    pick(0);
+    tap(nextBtn());
+    pick(1);
+    tap(nextBtn());
+    expect(progress()).toContain("문항 3 / 5");
+
+    fireEvent.click(screen.getByText("settingsV2.retake.quit"));
+    await popstateSettle();
+    expect(replace).toHaveBeenCalledWith("/settings");
+    expect(hit).toEqual([0]); // the page's own entry, not question 3's
+
+    cleanup();
+    await systemBack();
+    expect(window.location.pathname).toBe("/before");
+  });
+
+  it("skipping on question 3: back from /mirror leaves instead of bouncing", async () => {
+    window.history.replaceState({ __NA: true }, "", "/before");
+    window.history.pushState({ __NA: true }, "", "/onboarding");
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const hit = recordReplaces();
+    stubViewport(true);
+    render(<OnboardingPage />);
+    pick(0);
+    tap(nextBtn());
+    pick(1);
+    tap(nextBtn());
+
+    await act(async () => {
+      fireEvent.click(screen.getByText(/Skip for now/));
+    });
+    await popstateSettle();
+    expect(replace).toHaveBeenCalledWith("/mirror");
+    expect(hit.length).toBeGreaterThan(0);
+    expect(hit.every((idx) => idx === 0)).toBe(true);
+
+    cleanup();
+    await systemBack();
+    expect(window.location.pathname).toBe("/before");
   });
 });

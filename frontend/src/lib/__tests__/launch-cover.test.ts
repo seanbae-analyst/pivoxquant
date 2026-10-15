@@ -7,19 +7,22 @@ import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 let standalone = true;
 vi.mock("@/components/pwa/app-cover", () => ({ isStandaloneDisplay: () => standalone }));
 
-import { markLaunchCovered, shouldOpenOnCover } from "../launch-cover";
+import { NOTIFICATION_LAUNCH_PARAM, markLaunchCovered, shouldOpenOnCover } from "../launch-cover";
 
 function at(path: string) {
   window.history.replaceState(null, "", path);
 }
 
 let navType = "navigate";
+/** The document URL of the launch (PerformanceNavigationTiming.name); undefined = not reported. */
+let navName: string | undefined;
 beforeEach(() => {
   standalone = true;
   navType = "navigate";
+  navName = undefined;
   window.sessionStorage.clear();
   vi.spyOn(window.performance, "getEntriesByType").mockImplementation(
-    () => [{ type: navType }] as unknown as PerformanceEntryList,
+    () => [{ type: navType, name: navName }] as unknown as PerformanceEntryList,
   );
 });
 
@@ -57,5 +60,23 @@ describe("shouldOpenOnCover", () => {
     at("/mirror");
     navType = "reload";
     expect(shouldOpenOnCover()).toBe(false);
+  });
+
+  // 2026-10-15 bug hunt: the concentration alert opens bare /mirror, and a
+  // cold launch from it was sent to the cover.
+  it("a notification tap (the service worker's mark) is never sent to the cover", () => {
+    at(`/mirror?${NOTIFICATION_LAUNCH_PARAM}=push`);
+    expect(shouldOpenOnCover()).toBe(false);
+    // …and the rest of that session skips the cover too, even on bare /mirror.
+    at("/mirror");
+    expect(shouldOpenOnCover()).toBe(false);
+  });
+
+  it("judges the URL the app was launched at, not where the page is now", () => {
+    navName = "https://www.pivoxquant.com/journal";
+    at("/mirror"); // walked here later; the dashboard layout mounted again
+    expect(shouldOpenOnCover()).toBe(false);
+    navName = "https://www.pivoxquant.com/mirror";
+    expect(shouldOpenOnCover()).toBe(true);
   });
 });

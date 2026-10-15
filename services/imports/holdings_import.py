@@ -18,7 +18,9 @@ through two endpoints (``routes/holdings_import.py``):
 ``commit``   — writes the reviewed rows in one transaction. Every row is
                validated first; any bad row is a 400 naming the row and field
                and nothing is written. ``close`` (optional) names holdings to
-               take off because the new capture no longer shows them.
+               take off because the new capture no longer shows them. With a
+               ``close``, ``rows`` may be empty (everything was sold); both
+               empty is a 400.
 
 Decisions (and why):
 
@@ -80,6 +82,13 @@ Decisions (and why):
   id whose ticker also has a row (any mode) is a 400
   ``IMPORT_CLOSE_CONFLICT``: the capture shows it, so it is not gone. An id
   that is not a current holding of this user is skipped ``NOT_HELD``.
+* **Same stock, other spelling** (2026-10-15). A row matches a stored
+  position by ``pre_trade.friction_outcome.ticker_key`` — the same-stock
+  rule of ``pre_trade.link.same_ticker`` — not by the exact string: a
+  holding stored as ``035720.KQ`` is the capture's ``035720.KS`` (preview
+  ``existing``, the commit's replace/add target and the close conflict
+  check). Writes to a matched position keep its stored ticker, so its lots
+  stay on one spelling.
 """
 from __future__ import annotations
 
@@ -92,6 +101,7 @@ from dataclasses import dataclass
 
 from services.imports import mask_sensitive, ticker_ok
 from services.imports import ocr_rows
+from services.pre_trade.friction_outcome import ticker_key
 from services.ticker_normalizer import is_korean_ticker, normalize_ticker
 
 MAX_ROWS = 200
@@ -167,7 +177,10 @@ def canonical_known_ticker(raw) -> str | None:
     return t
 
 
-def _check_rows_list(rows) -> list:
+def _check_rows_list(rows, allow_empty: bool = False) -> list:
+    """``allow_empty``: the commit carries a ``close`` (everything sold)."""
+    if allow_empty and rows in (None, []):
+        return []
     if not isinstance(rows, list) or not rows:
         raise HoldingsError("rows must be a non-empty list.", "rows 는 비어 있지 않은 배열이어야 합니다.",
                             field="rows")
@@ -219,7 +232,6 @@ def resolve_row(name: str, code: str, currency: str | None) -> dict:
 
 
 def preview(user_id: int, rows) -> list[dict]:
-    from models import Position
     rows = _check_rows_list(rows)
     parsed = []
     for i, item in enumerate(rows):
@@ -239,16 +251,34 @@ def preview(user_id: int, rows) -> list[dict]:
         out.append({"index": i, "read_name": name or None, "read_code": code or None, **res,
                     "currency_mismatch": bool(cur and res["currency"] and cur != res["currency"]),
                     "existing": None})
-    tickers = {r["ticker"] for r in out if r["ticker"]}
-    if tickers:
-        held = {p.ticker: p for p in Position.query.filter(
-            Position.user_id == user_id, Position.ticker.in_(tickers))}
+    if any(r["ticker"] for r in out):
+        held = _positions_by_stock(user_id)
         for r in out:
-            p = held.get(r["ticker"]) if r["ticker"] else None
+            p = _same_stock(held, r["ticker"]) if r["ticker"] else None
             if p is not None:
                 r["existing"] = {"id": p.id, "shares": p.shares, "avg_cost": p.avg_cost,
                                  "currency": ticker_currency(p.ticker)}
     return out
+
+
+def _positions_by_stock(user_id: int) -> dict:
+    """The user's Position rows grouped by same-stock key (module doc)."""
+    from models import Position
+    out: dict[str, list] = {}
+    for p in Position.query.filter(Position.user_id == user_id).order_by(Position.id):
+        out.setdefault(ticker_key(p.ticker), []).append(p)
+    return out
+
+
+def _same_stock(by_stock: dict, ticker: str):
+    """The position for ``ticker``: a held one (the exact spelling first),
+    else a stored zero-share row (the exact spelling first)."""
+    found = by_stock.get(ticker_key(ticker), [])
+    held = [p for p in found if p.shares and p.shares > 0]
+    for group in (held, found):
+        if group:
+            return next((p for p in group if p.ticker == ticker), group[0])
+    return None
 
 
 def held_positions(user_id: int) -> list[dict]:
@@ -290,8 +320,8 @@ def _number(item: dict, key: str, i: int) -> float:
     return f
 
 
-def validate_commit_rows(rows) -> list[CommitRow]:
-    rows = _check_rows_list(rows)
+def validate_commit_rows(rows, allow_empty: bool = False) -> list[CommitRow]:
+    rows = _check_rows_list(rows, allow_empty)
     out: list[CommitRow] = []
     seen: dict[str, int] = {}
     for i, item in enumerate(rows):
@@ -403,14 +433,14 @@ def commit(user, rows: list[CommitRow], fx_rate_fn,
         if close_ids:
             found = {p.id: p for p in Position.query.filter(
                 Position.user_id == user.id, Position.id.in_(close_ids))}
-            row_tickers = {r.ticker for r in rows}
+            row_stocks = {ticker_key(r.ticker) for r in rows}
             closing = []
             for pid in close_ids:
                 p = found.get(pid)
                 if p is None or not (p.shares and p.shares > 0):
                     result["skipped"].append({"ticker": p.ticker if p else None, "position_id": pid,
                                               "reason": "NOT_HELD"})
-                elif p.ticker in row_tickers:
+                elif ticker_key(p.ticker) in row_stocks:
                     raise HoldingsError(
                         f"{p.ticker} is in the capture rows, so it cannot also be closed.",
                         f"{p.ticker} 는 캡처에 있는 종목이라 정리할 수 없습니다.",
@@ -423,10 +453,7 @@ def commit(user, rows: list[CommitRow], fx_rate_fn,
                     active -= 1
 
         live = [r for r in rows if r.mode != "skip"]
-        held = {}
-        if live:
-            held = {p.ticker: p for p in Position.query.filter(
-                Position.user_id == user.id, Position.ticker.in_([r.ticker for r in live]))}
+        held = _positions_by_stock(user.id) if live else {}
         fx_rate = fx_rate_fn() if any(r.currency == "USD" for r in live) else 0.0
 
         for r in rows:
@@ -434,7 +461,7 @@ def commit(user, rows: list[CommitRow], fx_rate_fn,
                 result["skipped"].append({"ticker": r.ticker, "reason": "USER_SKIP"})
                 continue
             is_kr = r.currency == "KRW"
-            ex = held.get(r.ticker)
+            ex = _same_stock(held, r.ticker)
             reactivates = ex is None or not (ex.shares and ex.shares > 0)
             if capped and reactivates:
                 if active >= FREE_POSITION_CAP:
@@ -460,18 +487,18 @@ def commit(user, rows: list[CommitRow], fx_rate_fn,
                     # Seed only the increase; a decrease writes an adjust 매도
                     # at the previous average cost (2026-09-29).
                     seed_shares = r.shares - float(prev_shares or 0.0)
-                    add_holding_adjust(user.id, r.ticker, -seed_shares, prev_avg, r.currency,
-                                       _seed_name(r.ticker, is_kr))
+                    add_holding_adjust(user.id, ex.ticker, -seed_shares, prev_avg, r.currency,
+                                       _seed_name(ex.ticker, is_kr))
                 else:
                     merge_buy_into(ex, r.shares, r.avg_cost, is_kr=is_kr, fx_rate=fx_rate)
                     bucket = "added"
                     seed_shares = r.shares
-                add_holding_seed(user.id, r.ticker, seed_shares, r.avg_cost, r.currency,
-                                 _seed_name(r.ticker, is_kr))
-                result[bucket].append({"ticker": r.ticker, "shares": ex.shares, "avg_cost": ex.avg_cost,
+                add_holding_seed(user.id, ex.ticker, seed_shares, r.avg_cost, r.currency,
+                                 _seed_name(ex.ticker, is_kr))
+                result[bucket].append({"ticker": ex.ticker, "shares": ex.shares, "avg_cost": ex.avg_cost,
                                        "currency": r.currency, "prev_shares": prev_shares,
                                        "prev_avg_cost": prev_avg})
-            written.append(r.ticker)
+            written.append(ex.ticker if ex is not None else r.ticker)
         db.session.commit()
     except IntegrityError:
         db.session.rollback()

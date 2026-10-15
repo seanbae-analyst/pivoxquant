@@ -345,12 +345,60 @@ export function findCycle(store: PaydayStore, start: string): CyclePlan | undefi
   return store.cycles.find((c) => c.start === start);
 }
 
-/** Parse a typed amount ("1,000,000" / "100만" not supported — digits only). */
+/**
+ * Set a new payday without losing the cycle the user is in.
+ *
+ * The plan saved for the cycle that holds `today` under the old payday moves
+ * to the start of the cycle that holds `today` under the new one, so it stays
+ * 이번 주기. Left where it was, it would fall between the cycles the new
+ * payday draws and show in no list (2026-10-15 bug hunt: payday 25 → 10 on
+ * 10/15 hid the 9/25 plan). When the new start already holds a plan nothing
+ * moves — the card lists the other one under 그 전 주기. Other cycles keep
+ * their dates.
+ */
+export function changePayday(store: PaydayStore, payday: number, today: string): PaydayStore {
+  if (store.payday === null || store.payday === payday) return { ...store, payday };
+  const from = cycleFor(today, store.payday).start;
+  const to = cycleFor(today, payday).start;
+  const current = findCycle(store, from);
+  if (!current || from === to || findCycle(store, to)) return { ...store, payday };
+  const others = { ...store, payday, cycles: store.cycles.filter((c) => c.start !== from) };
+  return upsertCycle(others, { ...current, start: to });
+}
+
+/** 억 · 만 terms (each once, 억 first), then a plain number. */
+const AMOUNT_RE = /^(?:(\d+(?:\.\d+)?)억)?(?:(\d+(?:\.\d+)?)만)?(\d+)?$/;
+
+/**
+ * Read a typed won amount. null = blank, or text that cannot be read as an
+ * amount without guessing — never a different number than the one meant.
+ *
+ *   read     "1,500,000" · "1500000원" · "₩1,500,000" · "1,500,000 KRW" ·
+ *            "150만" · "1억 2,000만" · "1만 5000" · "1.5만"
+ *            Commas and spaces are dropped; 억 and 만 multiply the number in
+ *            front of them; one leading ₩ and one trailing 원 / KRW are allowed.
+ *   refused  a minus sign ("-30000"), a decimal point on a plain number
+ *            ("150000.5" — 원 has no fraction, and "1.500" could mean 1,500),
+ *            a bare number straight after 억 ("1억5" — 1억 5천만, or 5원?),
+ *            other units ("5천", "$100"), anything else.
+ *   decimal  only on a 만 / 억 term ("1.5만" = 15,000); the total is rounded
+ *            to the nearest won.
+ *
+ * Before 2026-10-15 every non-digit was stripped: "100만" read as 100원 and
+ * "150.5" as 1,505원.
+ */
 export function parseAmount(text: string): number | null {
-  const digits = text.replace(/[^\d]/g, "");
-  if (!digits) return null;
-  const n = Number(digits);
-  return Number.isFinite(n) ? n : null;
+  const compact = text.replace(/[\s,]/g, "").replace(/^[₩￦]/, "").replace(/(?:원|KRW)$/i, "");
+  const m = AMOUNT_RE.exec(compact);
+  if (!m || (m[1] === undefined && m[2] === undefined && m[3] === undefined)) return null;
+  if (m[1] !== undefined && m[2] === undefined && m[3] !== undefined) return null;
+  const won = Math.round(Number(m[1] ?? 0) * 1e8 + Number(m[2] ?? 0) * 1e4 + Number(m[3] ?? 0));
+  return Number.isSafeInteger(won) ? won : null;
+}
+
+/** Typed text that is not blank and still cannot be read as an amount. */
+export function isUnreadableAmount(text: string): boolean {
+  return text.trim() !== "" && parseAmount(text) === null;
 }
 
 /** 1234567 → "1,234,567원". */

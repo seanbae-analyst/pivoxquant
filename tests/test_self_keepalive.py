@@ -10,6 +10,8 @@ from datetime import datetime
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
+import pytest
+
 import app as app_module
 
 
@@ -93,7 +95,7 @@ def test_lock_lost_at_boot_is_retried_and_the_scheduler_starts():
 
     sched = _Sched()
     answers = iter([False, False, True])
-    with patch.object(app_module, "_try_acquire_scheduler_lock", side_effect=lambda: next(answers)):
+    with patch.object(app_module, "_try_acquire_scheduler_lock", side_effect=lambda **_: next(answers)):
         t = app_module._retry_scheduler_lock_in_background(sched, interval_s=0.01, window_s=5)
         t.join(timeout=5)
     assert sched.started == 1
@@ -122,3 +124,131 @@ def test_init_scheduler_retries_when_the_lock_is_held_elsewhere():
          patch.object(app_module, "_retry_scheduler_lock_in_background") as retry:
         app_module._init_scheduler(app_module.app)
     retry.assert_called_once()
+
+
+# ── 2026-10-15: an error during the retry never starts a lockless scheduler ──
+
+
+class _FakeCursor:
+    def __init__(self, held: bool):
+        self.held = held
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def execute(self, *a):
+        pass
+
+    def fetchone(self):
+        return (not self.held,)
+
+
+class _FakeConn:
+    autocommit = False
+
+    def __init__(self, held: bool):
+        self.held = held
+
+    def cursor(self):
+        return _FakeCursor(self.held)
+
+    def close(self):
+        pass
+
+
+def _fake_pg(monkeypatch, script):
+    """``psycopg2.connect`` answers from ``script``: "held" (another process
+    has the lock), "free" (we get it) or "error" (the pooler drops us)."""
+    import config
+    import psycopg2
+
+    steps = iter(script)
+
+    def _connect(*a, **k):
+        step = next(steps, "held")
+        if step == "error":
+            raise psycopg2.OperationalError("server closed the connection unexpectedly")
+        return _FakeConn(held=step == "held")
+
+    monkeypatch.setattr(config, "IS_POSTGRES", True)
+    monkeypatch.setattr(psycopg2, "connect", _connect)
+    monkeypatch.setattr(app_module, "_SCHEDULER_LOCK_CONN", None)
+
+
+def test_boot_attempt_keeps_its_fail_safe(monkeypatch):
+    """Boot cannot tell whether anyone holds the lock → start (never lose crons)."""
+    _fake_pg(monkeypatch, ["error"])
+    assert app_module._try_acquire_scheduler_lock() is True
+    assert app_module._SCHEDULER_LOCK_CONN is None
+
+
+def test_retry_error_while_the_lock_is_held_does_not_start(monkeypatch):
+    """Deploy overlap: boot saw the lock held (2 attempts), then the pooler
+    drops one retry. That must not start a second scheduler without the lock."""
+    _fake_pg(monkeypatch, ["held", "held", "held", "held", "error", "held", "held"])
+
+    class _Sched:
+        started = 0
+
+        def start(self):
+            self.started += 1
+
+    assert app_module._try_acquire_scheduler_lock() is False
+    sched = _Sched()
+    t = app_module._retry_scheduler_lock_in_background(sched, interval_s=0.01, window_s=0.3)
+    t.join(timeout=5)
+    assert not t.is_alive()
+    assert sched.started == 0
+    assert app_module._SCHEDULER_LOCK_CONN is None
+
+
+def test_retry_after_an_error_starts_once_the_lock_is_free(monkeypatch):
+    _fake_pg(monkeypatch, ["held", "held", "error", "free"])
+
+    class _Sched:
+        started = 0
+
+        def start(self):
+            self.started += 1
+
+    assert app_module._try_acquire_scheduler_lock() is False
+    sched = _Sched()
+    t = app_module._retry_scheduler_lock_in_background(sched, interval_s=0.01, window_s=5)
+    t.join(timeout=5)
+    assert sched.started == 1
+    assert app_module._SCHEDULER_LOCK_CONN is not None
+
+
+def test_errored_attempt_closes_its_connection(monkeypatch):
+    """An error after connecting (the lock query dies) holds no lock — the
+    connection is closed, so repeated errored retries do not pile up open
+    connections against the pooler's limit."""
+    import config
+    import psycopg2
+
+    closed = []
+
+    class _DyingCursor(_FakeCursor):
+        def execute(self, *a):
+            raise psycopg2.OperationalError("SSL SYSCALL error: EOF detected")
+
+    class _DyingConn(_FakeConn):
+        def cursor(self):
+            return _DyingCursor(self.held)
+
+        def close(self):
+            closed.append(self)
+
+    monkeypatch.setattr(config, "IS_POSTGRES", True)
+    monkeypatch.setattr(psycopg2, "connect", lambda *a, **k: _DyingConn(held=True))
+    monkeypatch.setattr(app_module, "_SCHEDULER_LOCK_CONN", None)
+
+    with pytest.raises(psycopg2.OperationalError):
+        app_module._try_acquire_scheduler_lock(fail_safe=False)
+    assert len(closed) == 1
+    assert app_module._try_acquire_scheduler_lock() is True  # boot keeps its fail-safe
+    assert len(closed) == 2
+    assert app_module._SCHEDULER_LOCK_CONN is None

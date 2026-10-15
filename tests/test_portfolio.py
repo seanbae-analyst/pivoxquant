@@ -221,6 +221,21 @@ class TestPurchaseDate:
         assert added.year == datetime.now(timezone.utc).year
         assert added.date() <= datetime.now(timezone.utc).date()
 
+    def test_today_in_kst_before_0900_is_not_future(self):
+        """2026-10-15: before 09:00 KST the UTC day is still yesterday, so
+        today's date typed then read as "future" and fell back to now()."""
+        from datetime import datetime as _dt, timezone
+        import routes.portfolio as rp
+
+        class _Clock(_dt):
+            @classmethod
+            def now(cls, tz=None):
+                return _dt(2026, 10, 14, 23, 30, tzinfo=timezone.utc)  # 10-15 08:30 KST
+
+        with patch.object(rp, "datetime", _Clock):
+            assert rp._parse_purchase_date("2026-10-15") == _dt(2026, 10, 15)
+            assert rp._parse_purchase_date("2026-10-16") is None
+
     def test_ancient_date_rejected_falls_back_to_now(self, client, app, auth_user):
         from datetime import datetime, timezone
         with patch("routes.portfolio.cache_service.cache_ticker"):

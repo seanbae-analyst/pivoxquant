@@ -1252,7 +1252,7 @@ _SCHEDULER_LOCK_CONN = None
 _SCHEDULER_LOCK_KEY = 0x50_49_56_4F_58  # "PIVOX" hex — any constant works.
 
 
-def _try_acquire_scheduler_lock() -> bool:
+def _try_acquire_scheduler_lock(fail_safe: bool = True) -> bool:
     """Return True if THIS process should own the scheduler.
 
     On PostgreSQL: opens a dedicated connection and calls
@@ -1260,7 +1260,13 @@ def _try_acquire_scheduler_lock() -> bool:
     lifetime via ``_SCHEDULER_LOCK_CONN`` and auto-released by PG on
     disconnect (i.e. when the old container dies during a deploy).
 
-    On SQLite / any error: returns True (fail-safe — never lose crons).
+    On SQLite: returns True (no advisory locks, no deploy overlap). On an
+    error: returns True when ``fail_safe`` (the boot attempt — it cannot tell
+    whether anyone holds the lock, and never losing crons wins), else
+    re-raises. The background retry passes ``fail_safe=False``: it only runs
+    because the boot attempt SAW the lock held elsewhere, so an error there
+    is no reason to start a second scheduler (2026-10-15 — one pooler hiccup
+    during a deploy overlap used to start the crons twice).
     """
     global _SCHEDULER_LOCK_CONN
     try:
@@ -1270,6 +1276,7 @@ def _try_acquire_scheduler_lock() -> bool:
     if not IS_POSTGRES:
         # Local dev (SQLite) has no advisory locks and no deploy overlap.
         return True
+    conn = None
     try:
         # A raw psycopg2 connection — deliberately OUTSIDE the SQLAlchemy pool
         # so it is never recycled/returned (which would drop the lock).
@@ -1306,6 +1313,15 @@ def _try_acquire_scheduler_lock() -> bool:
                 _time.sleep(0.5)
         return False
     except Exception:
+        # A connection that errored after connecting holds no lock — close it,
+        # or every errored retry leaves one open against the pooler's limit.
+        if conn is not None and conn is not _SCHEDULER_LOCK_CONN:
+            try:
+                conn.close()
+            except Exception:
+                pass
+        if not fail_safe:
+            raise
         logger.exception(
             "scheduler advisory-lock acquire failed — falling back to "
             "starting the scheduler (fail-safe)"
@@ -1752,21 +1768,41 @@ def _retry_scheduler_lock_in_background(
 
     def _loop():
         deadline = _time.monotonic() + window
+        errors = 0
         while _time.monotonic() < deadline:
             _time.sleep(interval)
             try:
-                if _try_acquire_scheduler_lock():
-                    sched.start()
-                    logger.info(
-                        "scheduler started after deploy overlap (advisory lock "
-                        "acquired on retry) pid=%s", os.getpid(),
-                    )
-                    return
+                # Never the boot fail-safe here: the lock was seen held
+                # elsewhere, so an error is not a licence to start.
+                acquired = _try_acquire_scheduler_lock(fail_safe=False)
             except Exception:
-                logger.exception("scheduler lock retry failed")
+                errors += 1
+                logger.exception(
+                    "scheduler lock retry errored — scheduler stays stopped, "
+                    "retrying pid=%s", os.getpid(),
+                )
+                continue
+            if not acquired:
+                continue
+            try:
+                sched.start()
+            except Exception:
+                # The lock is ours now; another attempt cannot do better.
+                logger.exception(
+                    "scheduler.start failed after acquiring the advisory lock "
+                    "on retry pid=%s", os.getpid(),
+                )
+                return
+            logger.info(
+                "scheduler started after deploy overlap (advisory lock "
+                "acquired on retry) pid=%s", os.getpid(),
+            )
+            return
         logger.warning(
-            "scheduler lock still held elsewhere after %ss — giving up in pid=%s",
-            int(window), os.getpid(),
+            "scheduler advisory lock not acquired within %ss (%s attempt(s) "
+            "errored, the rest found it held elsewhere) — giving up, scheduler "
+            "stays stopped in pid=%s",
+            int(window), errors, os.getpid(),
         )
 
     t = threading.Thread(target=_loop, name="scheduler-lock-retry", daemon=True)

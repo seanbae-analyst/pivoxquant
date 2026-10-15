@@ -250,10 +250,21 @@ export function commitPayload(rows: HoldingRow[]) {
     }));
 }
 
+/** Same-name key — only the KRX suffix differs (`035720.KQ` = `035720.KS` =
+ * `035720`). Mirrors the server's `pre_trade.friction_outcome.ticker_key`,
+ * which the commit's close/replace checks use (2026-10-15). */
+export function tickerKey(ticker: string): string {
+  const t = (ticker || "").trim().toUpperCase();
+  for (const suffix of [".KS", ".KQ", ".KRX"]) {
+    if (t.endsWith(suffix)) return t.slice(0, -suffix.length);
+  }
+  return t;
+}
+
 /** Holdings on record that no row of the capture shows (any mode — a skipped
- * row is still on the screen). Same exact-ticker match as the server's. */
+ * row is still on the screen). Same suffix-blind match as the server's. */
 export function absentHoldings(held: HoldingsHeld[], rows: HoldingRow[]): HoldingsHeld[] {
-  return held.filter((h) => !rows.some((r) => r.ticker === h.ticker));
+  return held.filter((h) => !rows.some((r) => tickerKey(r.ticker) === tickerKey(h.ticker)));
 }
 
 /** Ids to close: marked by the user and still absent from the capture. */
