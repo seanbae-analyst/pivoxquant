@@ -37,6 +37,7 @@ import type {
   ResearchNotesResponse,
   ResearchOverviewResponse,
   ResearchVerdict,
+  YearRecapResponse,
   SellMomentResponse,
 } from "./types";
 
@@ -327,6 +328,21 @@ export async function deleteObservationNote(
     API.observationNotes.detail(id),
     { method: "DELETE" },
   );
+}
+
+/* ── 올해의 기록 (year recap) ──────────────────────────────────────────── */
+
+/**
+ * One KST calendar year of the user's own record (routes/year_recap.py).
+ * `null` year = this year (the backend picks it, so the client clock never
+ * decides which year "this year" is).
+ */
+export function useYearRecap(year: number | null) {
+  const swr = useSWR<YearRecapResponse>(API.mirror.year(year ?? undefined), fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 60_000,
+  });
+  return { data: swr.data ?? null, isLoading: swr.isLoading, error: swr.error as Error | undefined };
 }
 
 /* ── Research notes (리서치 양식) ───────────────────────────────────────── */

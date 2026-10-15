@@ -16,7 +16,8 @@
  *   3. 간극        — every gap row the backend sent + the drift descriptor.
  *                    Dropped when there is neither: an empty card would only
  *                    repeat card 1's "아직 쌓이지 않았어요".
- *   4. 한 가지만    — OneThingNudge → 「멈춤」
+ *   4. 한 가지만    — OneThingNudge → 「멈춤」, then one quiet row into
+ *                    /mirror/year (올해의 기록, 2026-10-15)
  *
  * Same data object, same components and copy as desktop — only the
  * arrangement differs. The pager is the shared PhonePager in "dots" mode
@@ -39,6 +40,7 @@ import {
 import { MirrorRadarPanel } from "@/components/mirror/mirror-radar-panel";
 import { MyRulesPanel } from "@/components/mirror/my-rules-panel";
 import { OneThingNudge } from "@/components/mirror/one-thing-nudge";
+import { YearRecapEntry } from "@/components/mirror/year/year-entry";
 
 const DIM = "rgba(var(--pq-ivory-rgb), 0.55)";
 
@@ -166,9 +168,13 @@ function cardSpecs(data: MirrorHomeResponse): CardSpec[] {
     id: "one-thing",
     label: "한 가지만",
     body: (
-      <div className="my-auto">
-        <OneThingNudge data={data} />
-      </div>
+      <>
+        <div className="my-auto">
+          <OneThingNudge data={data} />
+        </div>
+        {/* 2026-10-15 — the way into 올해의 기록, at the foot of the last card. */}
+        <YearRecapEntry className="mt-6" />
+      </>
     ),
   });
   return cards;

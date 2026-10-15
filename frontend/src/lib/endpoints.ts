@@ -274,6 +274,11 @@ export const API = {
   // persona name (8-code or 3-bucket) — only neutral dimension labels.
   mirror: {
     home: "/api/mirror-home",
+    // 올해의 기록 (2026-10-15, routes/year_recap.py) — one KST calendar year of
+    // the user's own record: counts, a median, and up to three of their own
+    // sentences. No market data, no score. `?year=` omitted = this year.
+    year: (year?: number) =>
+      year ? `/api/mirror-home/year?year=${year}` : "/api/mirror-home/year",
   },
   // Pre-Trade Friction (Feature 6) — self-imposed cooldown + reflection.
   // Backend never places an order; /proceed only stamps "user finished
