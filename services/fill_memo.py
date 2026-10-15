@@ -68,6 +68,10 @@ def rule_note(user_id: int, now: datetime | None = None) -> str:
     「멈춤」 before buying. The fill notification already reaches them at the
     one moment that matters; when it is also the 6th fill against a line of
     5, saying so is the most useful thing the push can carry.
+
+    2026-10-15: only fills from the adoption on count — the same cut as the
+    /mirror card ("YYYY-MM-DD부터"). In the month the line was adopted the
+    sentence says the count runs from then.
     """
     try:
         from extensions import db
@@ -75,6 +79,7 @@ def rule_note(user_id: int, now: datetime | None = None) -> str:
         from models.import_batch import STATUS_PENDING, PendingTrade
         from services.profile.my_rules import (
             frequency_ceiling,
+            kst_month,
             kst_month_start_utc,
             month_fill_count,
         )
@@ -96,10 +101,12 @@ def rule_note(user_id: int, now: datetime | None = None) -> str:
                 PendingTrade.traded_at >= start,
             ).all()
         ]
-        n = month_fill_count(trades, pending, now)
+        since = profile.rules_confirmed_at
+        n = month_fill_count(trades, pending, now, since=since)
         if n <= ceiling:
             return ""
-        return f"이번 달 들어온 거래가 {n}번이에요 — 정해 둔 선은 {ceiling}번."
+        lead = "선을 정한 뒤 이번 달" if kst_month(since) == kst_month(now) else "이번 달"
+        return f"{lead} 들어온 거래가 {n}번이에요 — 정해 둔 선은 {ceiling}번."
     except Exception:
         log.warning("fill_memo rule note failed user_id=%s", user_id, exc_info=True)
         return ""

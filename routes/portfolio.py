@@ -2,7 +2,7 @@
 import logging
 import math
 import threading
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from flask import Blueprint, current_app, request, jsonify
 from flask_login import current_user
 from sqlalchemy.exc import IntegrityError
@@ -562,9 +562,13 @@ def _parse_purchase_date(raw):
     except (ValueError, TypeError):
         return None
     parsed = parsed.replace(tzinfo=None)
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
     # Future date: reject → default now (cannot open a position in the future).
-    if parsed.date() > now.date():
+    # "Today" is the KST calendar day the user typed it on — the date-only
+    # convention stores the KST date (services/imports kst_to_utc). Against
+    # the UTC day, today's date typed before 09:00 KST read as tomorrow and
+    # fell back to now() (2026-10-15).
+    kst_today = (datetime.now(timezone.utc) + timedelta(hours=9)).date()
+    if parsed.date() > kst_today:
         return None
     # Implausibly old: guard against typos / sentinel dates.
     if parsed.year < 1900:

@@ -45,7 +45,11 @@ import { LocaleProvider } from "@/lib/locale";
 import AuthEntryPage from "@/app/(auth)/login/page";
 import ko from "@/messages/ko.json";
 import { API } from "@/lib/endpoints";
-import { persistStorageKey, __resetPersistedCacheForTests } from "@/lib/persisted-swr-cache";
+import {
+  PERSIST_OWNER_KEY,
+  persistStorageKey,
+  __resetPersistedCacheForTests,
+} from "@/lib/persisted-swr-cache";
 
 const WAKING = ko.auth.login.waking;
 
@@ -268,6 +272,28 @@ describe("AuthProvider — loading latches; unknown is `waking`", () => {
     expect(screen.getByTestId("loading").textContent).toBe("false");
     expect(screen.getByTestId("waking").textContent).toBe("false");
     expect(window.localStorage.getItem(persistStorageKey(7))).toBeNull();
+  });
+});
+
+// 2026-10-15 bug hunt: a tab left open as one user kept that user on screen
+// (and in its on-device copy) after another tab signed out or switched.
+describe("AuthProvider — another tab changes who is signed in", () => {
+  it("re-asks /api/auth/me at once instead of waiting for the 5-minute poll", async () => {
+    meRoute = async () => json(200, { authenticated: true, user: { id: 7 } });
+    render(tree(<AuthProbe />));
+    await advance(10);
+    expect(screen.getByTestId("user").textContent).toBe("7");
+    expect(window.localStorage.getItem(PERSIST_OWNER_KEY)).toBe("7");
+    const before = meCalls;
+
+    // Another tab signs in as 8: the cookie (shared) and the owner mark move.
+    meRoute = async () => json(200, { authenticated: true, user: { id: 8 } });
+    window.localStorage.setItem(PERSIST_OWNER_KEY, "8");
+    window.dispatchEvent(new StorageEvent("storage", { key: PERSIST_OWNER_KEY, newValue: "8" }));
+    await advance(10);
+
+    expect(meCalls).toBe(before + 1);
+    expect(screen.getByTestId("user").textContent).toBe("8");
   });
 });
 

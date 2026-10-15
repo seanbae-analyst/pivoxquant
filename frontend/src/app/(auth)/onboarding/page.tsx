@@ -709,17 +709,6 @@ function OnboardingWizard() {
   // The step screen that slides on a phone (the swipe surface is <main>).
   const screenRef = useRef<HTMLDivElement>(null);
 
-  // Redirect if not logged in, or if onboarding is already complete
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.replace(loginHref(currentLocationPath()));
-      return;
-    }
-    if (!authLoading && user && user.onboarding_completed === true && !retake) {
-      router.replace("/mirror");
-    }
-  }, [authLoading, user, router, retake]);
-
   // Holdings come first (2026-09-28): opened by URL with an empty book, the
   // questions send the user back to step 0. The server refuses to complete
   // onboarding without a holding either (ONBOARDING_HOLDINGS_REQUIRED).
@@ -975,7 +964,9 @@ function OnboardingWizard() {
   // instead of leaving onboarding. A pop only moves between screens — saving
   // stays the legal step's button. Once saved (the result screen) the flow is
   // locked: back leaves, it never reopens the legal step to save twice.
-  useHistorySteps({
+  // Leaving midway (skip, quit, the guard below) goes through `leaveSteps`,
+  // so the step entries go before the page does.
+  const { leave: leaveSteps } = useHistorySteps({
     key: "onboarding",
     enabled: isPhone,
     step: isResultScreen ? 0 : step,
@@ -989,6 +980,20 @@ function OnboardingWizard() {
       return true;
     },
   });
+
+  // Redirect if not logged in, or if onboarding is already complete. After
+  // the step hook: a skip completes onboarding mid-flow, and this redirect
+  // must clear the step entries too, or back from /mirror lands on a step
+  // and bounces to /mirror again, once per step.
+  useEffect(() => {
+    if (!authLoading && !user) {
+      leaveSteps(() => router.replace(loginHref(currentLocationPath())));
+      return;
+    }
+    if (!authLoading && user && user.onboarding_completed === true && !retake) {
+      leaveSteps(() => router.replace("/mirror"));
+    }
+  }, [authLoading, user, router, retake, leaveSteps]);
 
   const [skipping, setSkipping] = useState(false);
   const handleSkip = useCallback(async () => {
@@ -1021,9 +1026,9 @@ function OnboardingWizard() {
     } catch {
       // Fall through — still navigate so user isn't stuck if backend is down.
     } finally {
-      router.replace("/mirror");
+      leaveSteps(() => router.replace("/mirror"));
     }
-  }, [router, refresh, skipping]);
+  }, [router, refresh, skipping, leaveSteps]);
 
   // Result screen CTA: refresh the user (onboarding_completed flips to true)
   // and go to the mirror. Done here, not in handleSubmit, so the auth guard
@@ -1184,7 +1189,7 @@ function OnboardingWizard() {
             {retake ? (
               <button
                 type="button"
-                onClick={() => router.replace("/settings")}
+                onClick={() => leaveSteps(() => router.replace("/settings"))}
                 className="text-xs font-semibold transition-colors"
                 style={{
                   color: "rgba(var(--pq-ivory-rgb), 0.85)",

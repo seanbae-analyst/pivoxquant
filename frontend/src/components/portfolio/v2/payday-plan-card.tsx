@@ -48,10 +48,12 @@ import {
   REVIEWED_PARTS,
   REVIEW_LABEL,
   TRADE_FETCH_LIMIT,
+  changePayday,
   clearStore,
   cycleFlow,
   cycleFor,
   findCycle,
+  isUnreadableAmount,
   kstToday,
   loadStore,
   parseAmount,
@@ -330,6 +332,59 @@ function draftFrom(plan?: Pick<CyclePlan, "income" | "parts">): Draft {
   };
 }
 
+/**
+ * A won amount as typed. The text is kept as written while the field has
+ * focus — "150만" or "1억 2,000만" can only be typed a character at a time —
+ * and rewritten as the won it was read as ("1,500,000") on blur, so the user
+ * sees how it was read. Text that cannot be read stays on screen and is
+ * flagged (lib/payday-plan parseAmount), never dropped or turned into
+ * another number. A full keyboard, not the digit pad: 만 and 억 are typed.
+ */
+function AmountInput({
+  id,
+  label,
+  value,
+  onChange,
+  className,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  className: string;
+}) {
+  const unreadable = isUnreadableAmount(value);
+  return (
+    <input
+      id={id}
+      aria-label={label}
+      aria-invalid={unreadable || undefined}
+      aria-describedby={unreadable ? `${id}-unreadable` : undefined}
+      inputMode="text"
+      autoComplete="off"
+      autoCorrect="off"
+      spellCheck={false}
+      value={value}
+      placeholder="0"
+      onChange={(e) => onChange(e.target.value)}
+      onBlur={() => {
+        const n = parseAmount(value);
+        if (n !== null) onChange(n.toLocaleString("ko-KR"));
+      }}
+      className={className}
+      style={{ color: IVORY }}
+    />
+  );
+}
+
+function UnreadableNote({ id }: { id: string }) {
+  return (
+    <p id={`${id}-unreadable`} className="mt-1 text-right text-[12px]" style={{ color: "var(--pq-bronze)" }}>
+      금액으로 읽지 못했어요 · 숫자나 만·억으로 적어 주세요
+    </p>
+  );
+}
+
 function AmountRow({
   id,
   label,
@@ -344,30 +399,26 @@ function AmountRow({
   onChange: (v: string) => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 py-3" style={{ borderBottom: LINE }}>
-      <label htmlFor={id} className="flex items-center gap-2 text-[14px]" style={{ color: IVORY }}>
-        {dot !== undefined && <Dot color={dot} />}
-        {label}
-      </label>
-      <span className="flex items-baseline gap-1">
-        <input
-          id={id}
-          aria-label={label}
-          inputMode="numeric"
-          autoComplete="off"
-          value={value}
-          placeholder="0"
-          onChange={(e) => {
-            const n = parseAmount(e.target.value);
-            onChange(n === null ? "" : n.toLocaleString("ko-KR"));
-          }}
-          className="w-36 bg-transparent text-right text-[17px] font-semibold tabular-nums outline-none placeholder:font-normal"
-          style={{ color: IVORY }}
-        />
-        <span className="text-[13px]" style={{ color: DIM }}>
-          원
+    <div className="py-3" style={{ borderBottom: LINE }}>
+      <div className="flex items-center justify-between gap-3">
+        <label htmlFor={id} className="flex items-center gap-2 text-[14px]" style={{ color: IVORY }}>
+          {dot !== undefined && <Dot color={dot} />}
+          {label}
+        </label>
+        <span className="flex items-baseline gap-1">
+          <AmountInput
+            id={id}
+            label={label}
+            value={value}
+            onChange={onChange}
+            className="w-36 bg-transparent text-right text-[17px] font-semibold tabular-nums outline-none placeholder:font-normal"
+          />
+          <span className="text-[13px]" style={{ color: DIM }}>
+            원
+          </span>
         </span>
-      </span>
+      </div>
+      {isUnreadableAmount(value) && <UnreadableNote id={id} />}
     </div>
   );
 }
@@ -390,7 +441,10 @@ function PlanForm({
     PART_KEYS.map((k) => [k, parseAmount(draft.parts[k])]),
   ) as Record<PartKey, number | null>;
   const income = parseAmount(draft.income);
-  const canSave = PART_KEYS.some((k) => (parts[k] ?? 0) > 0);
+  const hasParts = PART_KEYS.some((k) => (parts[k] ?? 0) > 0);
+  // An unreadable field would otherwise save as blank — hold the save instead.
+  const unreadable = [draft.income, ...PART_KEYS.map((k) => draft.parts[k])].some(isUnreadableAmount);
+  const canSave = hasParts && !unreadable;
 
   return (
     <div className="mt-4" data-testid="payday-plan-form">
@@ -406,7 +460,7 @@ function PlanForm({
       {/* The bar fills in as the amounts are typed. */}
       <div className="mt-4">
         <SplitBar income={income} parts={parts} />
-        {canSave && <SplitLegend income={income} parts={parts} />}
+        {hasParts && <SplitLegend income={income} parts={parts} />}
       </div>
 
       <div className="mt-4" style={{ borderTop: LINE }}>
@@ -427,7 +481,9 @@ function PlanForm({
           />
         ))}
       </div>
-      <p className="mt-3 text-[12px]" style={{ color: DIM }}>
+      <p className="mt-3 text-[12px] leading-relaxed" style={{ color: DIM }}>
+        숫자로 적거나 만·억을 붙여 적어요(100만 = 1,000,000원).
+        <br />
         금액은 내가 정해요. 서비스는 비율이나 금액을 권하지 않아요.
       </p>
 
@@ -650,10 +706,14 @@ function ReviewBlock({
     }
   };
   const type = (k: ReviewedPart, raw: string) => {
+    // Kept as typed (AmountInput rewrites it on blur); only a readable amount
+    // moves the answer.
+    setTyped((cur) => ({ ...cur, [k]: raw }));
     const n = parseAmount(raw);
-    setTyped((cur) => ({ ...cur, [k]: n === null ? "" : n.toLocaleString("ko-KR") }));
     if (n !== null) setReview((cur) => ({ ...cur, [k]: reviewFor(plan.parts[k] ?? 0, n) }));
   };
+  // An unreadable amount would otherwise be dropped on save — hold the save.
+  const unreadable = parts.some((k) => isUnreadableAmount(typed[k] ?? ""));
   const save = () => {
     const actual: Actual = {};
     for (const k of parts) {
@@ -695,16 +755,12 @@ function ReviewBlock({
                     {ACTUAL_LABEL[k]} (선택)
                   </label>
                   <span className="flex items-baseline gap-1" style={{ borderBottom: LINE }}>
-                    <input
+                    <AmountInput
                       id={`payday-actual-${k}`}
-                      aria-label={`${PART_LABEL[k]} ${ACTUAL_LABEL[k]}`}
-                      inputMode="numeric"
-                      autoComplete="off"
+                      label={`${PART_LABEL[k]} ${ACTUAL_LABEL[k]}`}
                       value={typed[k] ?? ""}
-                      placeholder="0"
-                      onChange={(e) => type(k, e.target.value)}
+                      onChange={(v) => type(k, v)}
                       className="w-28 bg-transparent py-1 text-right text-[15px] font-semibold tabular-nums outline-none placeholder:font-normal"
-                      style={{ color: IVORY }}
                     />
                     <span className="text-[12.5px]" style={{ color: DIM }}>
                       원
@@ -712,12 +768,13 @@ function ReviewBlock({
                   </span>
                 </div>
               )}
+              {isUnreadableAmount(typed[k] ?? "") && <UnreadableNote id={`payday-actual-${k}`} />}
             </li>
           );
         })}
       </ul>
       <div className="mt-4 flex items-center gap-3">
-        <PrimaryButton className="flex-1 md:flex-none" disabled={Object.keys(review).length === 0} onClick={save}>
+        <PrimaryButton className="flex-1 md:flex-none" disabled={Object.keys(review).length === 0 || unreadable} onClick={save}>
           돌아보기 저장
         </PrimaryButton>
         {onCancel && <OutlineButton onClick={onCancel}>취소</OutlineButton>}
@@ -927,7 +984,8 @@ export function PaydayPlanCard({ variant = "card" }: { variant?: "card" | "plain
           initial={store.payday}
           cta={store.payday === null ? "시작하기" : "바꾸기"}
           onSave={(day) => {
-            persist({ ...store, payday: day });
+            // The plan of the cycle the user is in follows the new payday.
+            persist(changePayday(store, day, today));
             setEditingPayday(false);
           }}
           onCancel={store.payday !== null ? () => setEditingPayday(false) : undefined}
@@ -941,7 +999,12 @@ export function PaydayPlanCard({ variant = "card" }: { variant?: "card" | "plain
   const prev = previousCycle(cycle.start, store.payday);
   const current = findCycle(store, cycle.start);
   const last = findCycle(store, prev.start);
-  const earlier = store.cycles.filter((c) => c.start < prev.start).slice(-5).reverse();
+  // Every stored cycle before this one other than the last — a plan whose
+  // start a changed payday no longer lands on still shows here.
+  const earlier = store.cycles
+    .filter((c) => c.start < cycle.start && c.start !== prev.start)
+    .slice(-5)
+    .reverse();
   const lastNeedsReview =
     last !== undefined &&
     REVIEWED_PARTS.some((k) => last.parts[k] !== null && !(last.review ?? {})[k]);

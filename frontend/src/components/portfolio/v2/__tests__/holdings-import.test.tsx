@@ -254,6 +254,12 @@ describe("row rules", () => {
     expect(closePayload(absent, [1, 3])).toEqual([3]);
     expect(closePayload(absentHoldings(held, [...rows, { ...base, key: "k3", ticker: "035720.KS" }]), [3])).toEqual([]);
   });
+  it("a holding stored under another KRX suffix (or none) is not absent — the server matches by ticker_key", () => {
+    const h = (id: number, ticker: string): HoldingsHeld => ({ id, ticker, name: ticker, shares: 1, avg_cost: 1000, currency: "KRW", has_note: false });
+    const held = [h(1, "035720.KQ"), h(2, "005930"), h(3, "AAPL")];
+    const rows = [{ ...base, ticker: "035720.KS" }, { ...base, key: "b", ticker: "005930.KS" }];
+    expect(absentHoldings(held, rows).map((a) => a.id)).toEqual([3]);
+  });
   it("blank or invalid cells block the row", () => {
     expect(rowIssues(base, [base])).toEqual([]);
     expect(rowIssues({ ...base, avgCost: "" }, [base])).toContain("avgCost");

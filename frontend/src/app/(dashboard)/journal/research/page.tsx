@@ -9,7 +9,7 @@
  *   2. 새 리서치 — the five-field form (open by default when there is nothing
  *      yet, or when arriving with ?ticker= from a /portfolio row).
  *   3. 채점 결과 — 판단 × 결과 and 출처별, counts only.
- *   4. 내 리서치 — every note, newest first.
+ *   4. 내 리서치 — every note, newest first, 100 at a time ("더 보기").
  *
  * The page is a sub-screen of 기록 (bottom-nav subRoutes, top-bar ‹). Nothing
  * here reads a quote or says anything about a stock we did not hear from the
@@ -18,12 +18,47 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useResearchNotes, useResearchOverview } from "@/lib/hooks";
+import useSWRInfinite from "swr/infinite";
+import { API } from "@/lib/endpoints";
+import { fetcher, useResearchOverview } from "@/lib/hooks";
 import { researchDate } from "@/lib/research";
+import type { ResearchNotesResponse } from "@/lib/types";
 import { Caption, EditorialHead, RuledKicker } from "@/components/ui/editorial";
 import { ResearchForm } from "@/components/journal/research/research-form";
 import { ResearchCard } from "@/components/journal/research/research-card";
 import { ResearchSummary } from "@/components/journal/research/research-summary";
+
+/** One read of 내 리서치 (the server allows up to 200). */
+const RESEARCH_PAGE_SIZE = 100;
+
+/**
+ * 내 리서치, page by page on the server's id cursor (`next_before` →
+ * `?before=`, routes/research_notes.py). 2026-10-15: the page read one
+ * `?limit=100` and dropped `next_before`, so the 101st note on was neither
+ * shown nor deletable here. `mutate()` re-reads every loaded page, so a
+ * delete or a score never leaves a stale page behind.
+ */
+function useResearchPages() {
+  const swr = useSWRInfinite<ResearchNotesResponse>(
+    (_index, prev: ResearchNotesResponse | null) => {
+      if (prev && prev.next_before === null) return null;
+      const before = prev ? `&before=${prev.next_before}` : "";
+      return `${API.research.list}?limit=${RESEARCH_PAGE_SIZE}${before}`;
+    },
+    fetcher,
+    { revalidateOnFocus: false, dedupingInterval: 30_000 },
+  );
+  const pages = swr.data ?? [];
+  const last = pages[pages.length - 1];
+  return {
+    notes: pages.flatMap((p) => p.notes),
+    hasMore: Boolean(last && last.next_before !== null),
+    loadingMore: swr.size > pages.length,
+    isLoading: swr.isLoading,
+    loadMore: () => void swr.setSize(swr.size + 1),
+    mutate: swr.mutate,
+  };
+}
 
 function SectionTitle({ children, id }: { children: React.ReactNode; id?: string }) {
   return (
@@ -38,7 +73,7 @@ function ResearchPageInner() {
   const tickerParam = params.get("ticker");
   const fromPortfolio = params.get("from") === "portfolio";
   const overview = useResearchOverview();
-  const list = useResearchNotes(100);
+  const list = useResearchPages();
   const [formOpen, setFormOpen] = useState<boolean | null>(tickerParam || params.get("new") ? true : null);
   const [saved, setSaved] = useState<string | null>(null);
 
@@ -138,7 +173,7 @@ function ResearchPageInner() {
       )}
 
       {/* 4. 내 리서치 */}
-      {rest.length > 0 && (
+      {(rest.length > 0 || list.hasMore) && (
         <section aria-labelledby="research-all" className="pt-6" style={{ borderTop: "1px solid var(--pq-ivory-line)" }}>
           <SectionTitle id="research-all">
             {due.length > 0 ? "그 밖의 리서치" : "내 리서치"} <span className="tabular-nums">{rest.length}</span>개
@@ -150,6 +185,17 @@ function ResearchPageInner() {
               </li>
             ))}
           </ul>
+          {list.hasMore && (
+            <button
+              type="button"
+              onClick={list.loadMore}
+              disabled={list.loadingMore}
+              className="mt-4 inline-flex h-10 items-center text-pq-body-sm text-[var(--pq-bronze-light)] underline-offset-4 hover:underline disabled:opacity-60"
+              data-testid="research-load-more"
+            >
+              {list.loadingMore ? "불러오는 중…" : "이전 리서치 더 보기"}
+            </button>
+          )}
         </section>
       )}
     </div>

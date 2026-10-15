@@ -26,9 +26,10 @@ from models.import_batch import PendingTrade
 from services import fx_service
 from services.kr_stock_registry import get_name
 from services.position_writes import FREE_POSITION_CAP
+from services.pre_trade.friction_outcome import _KR_SUFFIXES, ticker_key
 from services.ticker_normalizer import is_korean_ticker
 
-from . import KST_OFFSET, utcnow_naive
+from . import KST_OFFSET, is_date_only, utcnow_naive
 
 CLOSE_EPS = 0.0001
 PRE_TRADE_WINDOW = timedelta(days=7)
@@ -172,10 +173,19 @@ def _enforce_position_cap(user_id: int) -> None:
 
 
 def _date_only(traded_at: datetime) -> bool:
-    """A fill stored with no time of day. The row has no flag for it, so this
-    is the 00:00 convention ``services.imports.kst_to_utc`` and
-    ``pre_trade.friction_outcome._at_or_after`` already rely on."""
-    return (traded_at.hour, traded_at.minute, traded_at.second, traded_at.microsecond) == (0, 0, 0, 0)
+    """A fill stored with no time of day — ``services.imports.is_date_only``
+    (a timed fill at 00:00 UTC, i.e. 09:00 KST, is stored 1 µs later, so it is
+    not one; ``pre_trade.friction_outcome._at_or_after`` reads the same shape)."""
+    return is_date_only(traded_at)
+
+
+def _ticker_variants(ticker: str) -> list[str]:
+    """Every spelling :func:`ticker_key` treats as ``ticker`` (2026-10-15:
+    one same-stock rule with ``pre_trade.link.same_ticker``). The first-dot
+    split used here before missed a pause on ``035720.KQ`` for a fill on
+    ``035720.KS`` and took ``BRK`` for ``BRK.B``."""
+    key = ticker_key(ticker)
+    return [key] + [key + suffix for suffix in _KR_SUFFIXES]
 
 
 def _reflection_ceiling(traded_at: datetime) -> datetime:
@@ -199,11 +209,7 @@ class PreTradeIndex:
         self.rows: dict[str, list[tuple[datetime, int]]] = {}
         if not tickers or start is None or end is None:
             return
-        candidates: set[str] = set()
-        for t in tickers:
-            candidates.add(t)
-            if "." in t:
-                candidates.add(t.split(".", 1)[0])
+        candidates = {v for t in tickers for v in _ticker_variants(t)}
         found = (
             PreTradeReflection.query
             .filter(PreTradeReflection.user_id == user_id,
@@ -216,19 +222,17 @@ class PreTradeIndex:
             .all()
         )
         for r in found:
-            self.rows.setdefault(r.intended_ticker, []).append((r.created_at, r.id))
+            self.rows.setdefault(ticker_key(r.intended_ticker), []).append((r.created_at, r.id))
 
     def match(self, ticker: str | None, traded_at: datetime | None) -> int | None:
         if not ticker or traded_at is None:
             return None
-        keys = [ticker] + ([ticker.split(".", 1)[0]] if "." in ticker else [])
         ceiling = _reflection_ceiling(traded_at)
         best: tuple[datetime, int] | None = None
-        for k in keys:
-            for created, rid in self.rows.get(k, []):
-                if created < ceiling and created >= traded_at - PRE_TRADE_WINDOW:
-                    if best is None or created > best[0]:
-                        best = (created, rid)
+        for created, rid in self.rows.get(ticker_key(ticker), []):
+            if created < ceiling and created >= traded_at - PRE_TRADE_WINDOW:
+                if best is None or created > best[0]:
+                    best = (created, rid)
         return best[1] if best else None
 
 
@@ -237,14 +241,11 @@ def match_pre_trade(user_id: int, ticker: str | None, traded_at: datetime | None
     (a date-only fill: up to the end of its KST day)."""
     if not ticker or traded_at is None:
         return None
-    candidates = {ticker}
-    if "." in ticker:
-        candidates.add(ticker.split(".", 1)[0])
     row = (
         PreTradeReflection.query
         .filter(
             PreTradeReflection.user_id == user_id,
-            PreTradeReflection.intended_ticker.in_(list(candidates)),
+            PreTradeReflection.intended_ticker.in_(_ticker_variants(ticker)),
             PreTradeReflection.created_at < _reflection_ceiling(traded_at),
             PreTradeReflection.created_at >= traded_at - PRE_TRADE_WINDOW,
         )

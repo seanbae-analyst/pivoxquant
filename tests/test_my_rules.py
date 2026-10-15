@@ -6,8 +6,9 @@ less is never 선 밖); counts come from their own rows only (registration rows
 and seed lots never count); "this month" is the KST calendar month; fills
 waiting in the import inbox count toward the month and are named as such; the
 −10% answer is shown but never counted; ``confirmed`` follows
-``rules_confirmed_at``; the payload carries no score / grade / label words and
-is a no-op for the legal scrub.
+``rules_confirmed_at`` and, once set, only records from then on are counted;
+holds are KST calendar days; the payload carries no score / grade / label
+words and is a no-op for the legal scrub.
 """
 from __future__ import annotations
 
@@ -162,6 +163,57 @@ def test_forty_plus_has_no_line_to_cross():
     assert f["status"] == "no_line" and f["ceiling"] is None
 
 
+# ── adopted lines count from the adoption on (2026-10-15) ────────────────
+
+# 2026-10-13 23:00 UTC = 2026-10-14 08:00 KST — adopted this morning.
+ADOPTED = datetime(2026, 10, 13, 23, 0)
+
+
+def test_fills_before_the_adoption_are_not_past_the_line():
+    """The card says "2026-10-14부터" — six fills earlier this month must not
+    make the line the user drew today read 선 밖."""
+    before = [_t("BUY", datetime(2026, 10, d, 3, 0)) for d in range(1, 7)]
+    after = [_t("SELL", NOW)]
+    preview = _item(compute_my_rules(ANSWERS, before + after, 6, NOW), "frequency")
+    assert preview["this_month"] == 7 and preview["status"] == "outside"      # unchanged
+    f = _item(compute_my_rules(ANSWERS, before + after, 6, NOW, confirmed_at=ADOPTED), "frequency")
+    assert f["this_month"] == 1 and f["status"] == "within"
+    assert f["observed"] == "선을 정한 뒤 이번 달 1번 · 선 5번"
+    assert month_fill_count(before + after, [], NOW, since=ADOPTED) == 1
+
+
+def test_months_before_the_adoption_leave_the_series():
+    rows = [_t("BUY", datetime(2026, 8, 10 + i)) for i in range(9)]           # Aug: 9 > 5
+    rows += [_t("BUY", datetime(2026, 9, 20, 3, 0))]
+    adopted = datetime(2026, 9, 15, 3, 0)
+    f = _item(compute_my_rules(ANSWERS, rows, 6, NOW, confirmed_at=adopted), "frequency")
+    assert [m["month"] for m in f["months"]] == ["2026-09", "2026-10"]
+    assert f["months_over"] == 0
+    assert f["observed"] == "이번 달 0번 · 선 5번"                          # adopted last month
+
+
+def test_a_date_only_fill_on_the_adoption_day_counts():
+    """00:00 = typed with a date only; the KST same-day rule
+    (pre_trade.friction_outcome._at_or_after) keeps it."""
+    rows = [_t("BUY", datetime(2026, 10, 14, 0, 0)), _t("BUY", datetime(2026, 10, 13, 0, 0))]
+    pending = [datetime(2026, 10, 14, 0, 0), datetime(2026, 10, 13, 22, 0)]  # 2nd: before
+    f = _item(compute_my_rules(ANSWERS, rows, 6, NOW, pending, confirmed_at=ADOPTED), "frequency")
+    assert f["this_month"] == 2 and f["waiting"] == 1
+
+
+def test_sells_before_the_adoption_do_not_count_for_holding():
+    rows = _round_trip(2, 5, "EARLY")                                  # sooner, but before
+    rows += _round_trip(10, 0, "LATE")
+    h = _item(compute_my_rules(ANSWERS, rows, 6, NOW, confirmed_at=ADOPTED), "holding")
+    assert (h["sells"], h["sooner"], h["status"]) == (1, 0, "within")
+    assert h["observed"] == "선을 정한 뒤 매도 1번 · 모두 7일 이상 들고 있다가 팔았어요"
+    none_yet = compute_my_rules(ANSWERS, _round_trip(2, 5, "EARLY"), 6, NOW, confirmed_at=ADOPTED)
+    assert _item(none_yet, "holding")["observed"] == "선을 정한 뒤 매도 기록 없음"
+    # Adopted before the 90-day window: the window is the cut, as before.
+    old = compute_my_rules(ANSWERS, rows, 6, NOW, confirmed_at=NOW - timedelta(days=200))
+    assert _item(old, "holding")["observed"].startswith("최근 90일 매도 2번")
+
+
 # ── holding ──────────────────────────────────────────────────────────────
 
 def _round_trip(days_held, sold_days_ago, ticker):
@@ -191,6 +243,29 @@ def test_sells_outside_the_window_and_seed_lots_do_not_count():
     rows += [_t("BUY", seed_at, ticker="SEED", source="holding_seed"), _t("SELL", NOW, ticker="SEED")]
     h = _item(compute_my_rules(ANSWERS, rows, 6, NOW), "holding")
     assert h["sells"] == 0 and h["status"] == "no_data"
+
+
+def test_hold_is_counted_in_kst_calendar_days():
+    """2026-10-15: "하루 안에 정리 / 며칠" is the same KST day vs a later one.
+    A 14:00 buy sold at 10:00 next morning (20h) used to be "1일 전에 판 것"."""
+    days = dict(ANSWERS, declared_holding="days")
+    # Bought 2026-10-12 14:00 KST (05:00 UTC), sold 2026-10-13 10:00 KST (01:00 UTC).
+    overnight = [_t("BUY", datetime(2026, 10, 12, 5, 0), ticker="O"),
+                 _t("SELL", datetime(2026, 10, 13, 1, 0), ticker="O")]
+    h = _item(compute_my_rules(days, overnight, 6, NOW), "holding")
+    assert h["line"] == "산 날을 넘겨 들고 있다가 판다"
+    assert (h["sooner"], h["status"]) == (0, "within")
+    assert h["observed"] == "최근 90일 매도 1번 · 모두 산 날을 넘겨 들고 있다가 팔았어요"
+    # Bought 09:30 KST, sold 15:00 KST the same day — under the line.
+    same_day = [_t("BUY", datetime(2026, 10, 12, 0, 30), ticker="S"),
+                _t("SELL", datetime(2026, 10, 12, 6, 0), ticker="S")]
+    h = _item(compute_my_rules(days, same_day, 6, NOW), "holding")
+    assert (h["sooner"], h["status"]) == (1, "outside")
+    assert h["observed"] == "최근 90일 매도 1번 · 산 날 판 것 1번"
+    # 7일: 10-01 14:00 KST → 10-08 10:00 KST is 7 calendar days (6.8 × 24h).
+    week = [_t("BUY", datetime(2026, 10, 1, 5, 0), ticker="W"),
+            _t("SELL", datetime(2026, 10, 8, 1, 0), ticker="W")]
+    assert _item(compute_my_rules(ANSWERS, week, 6, NOW), "holding")["status"] == "within"
 
 
 def test_intraday_has_no_minimum_to_fall_under():

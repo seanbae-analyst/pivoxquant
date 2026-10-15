@@ -66,6 +66,10 @@ class RawTrade:
     # the other currency must not re-label it (routes/imports.py).
     currency_guessed: bool = False
     traded_at: datetime | None = None
+    # True when the input printed a time of day for ``traded_at`` (2026-10-15).
+    # ``kst_to_utc`` shifts only such a value; one without is a date-only fill.
+    # Guessing it from 00:00 made a 09:00 KST fill (00:00 UTC) date-only.
+    time_given: bool = False
     confidence: float = 1.0
     raw_snippet: str = ""
     skip_reason: str | None = None
@@ -120,10 +124,12 @@ def parse_number(value) -> float | None:
 
 
 _DATE_PATTERNS = (
-    # 2026-09-01, 2026/09/01, 2026.09.01 (+ optional time)
+    # 2026-09-01, 2026/09/01, 2026.09.01 (+ optional time). The fraction is
+    # our own export's isoformat() (a timed fill stored at 00:00:00.000001 —
+    # see ``as_timed``) and must survive a re-import.
     re.compile(
         r"(?P<y>\d{4})[-./](?P<m>\d{1,2})[-./](?P<d>\d{1,2})"
-        r"(?:[ T](?P<H>\d{1,2}):(?P<M>\d{2})(?::(?P<S>\d{2}))?)?"
+        r"(?:[ T](?P<H>\d{1,2}):(?P<M>\d{2})(?::(?P<S>\d{2})(?:\.(?P<f>\d{1,6}))?)?)?"
     ),
     # 20260901 (+ optional time)
     re.compile(
@@ -146,15 +152,27 @@ def parse_datetime(value, time_value=None) -> datetime | None:
     string shapes listed in the design: ``YYYY-MM-DD`` · ``/`` · ``.`` ·
     ``YYYYMMDD``, each with an optional ``HH:MM[:SS]``.
     """
+    return parse_datetime_has_time(value, time_value)[0]
+
+
+def parse_datetime_has_time(value, time_value=None) -> tuple[datetime | None, bool]:
+    """:func:`parse_datetime` plus whether the input gave a time of day.
+
+    Text: a time was printed (``HH:MM`` in the value or a parsed
+    ``time_value``). A ``datetime`` cell carries no such fact — openpyxl
+    returns a date-formatted cell as 00:00 — so there a non-midnight time is
+    the only evidence of one (a 00:00:00 cell reads as date-only).
+    """
     if value is None or value == "":
-        return None
+        return None, False
     if isinstance(value, datetime):
         dt = value.replace(tzinfo=None) if value.tzinfo else value
+        has_time = not is_date_only(dt)
     elif hasattr(value, "year") and hasattr(value, "month") and hasattr(value, "day"):
-        dt = datetime(value.year, value.month, value.day)
+        dt, has_time = datetime(value.year, value.month, value.day), False
     else:
         s = str(value).strip()
-        dt = None
+        dt, has_time = None, False
         for pat in _DATE_PATTERNS:
             m = pat.search(s)
             if not m:
@@ -165,17 +183,20 @@ def parse_datetime(value, time_value=None) -> datetime | None:
                 dt = datetime(
                     year, int(g["m"]), int(g["d"]),
                     int(g["H"] or 0), int(g["M"] or 0), int(g["S"] or 0),
+                    int((g.get("f") or "0").ljust(6, "0")),
                 )
             except ValueError:
-                return None
+                return None, False
+            has_time = g.get("H") is not None
             break
         if dt is None:
-            return None
+            return None, False
     if time_value not in (None, ""):
         t = _parse_time(time_value)
         if t is not None:
-            dt = dt.replace(hour=t[0], minute=t[1], second=t[2])
-    return dt
+            dt = dt.replace(hour=t[0], minute=t[1], second=t[2], microsecond=0)
+            has_time = True
+    return dt, has_time
 
 
 def _parse_time(value) -> tuple[int, int, int] | None:
@@ -247,35 +268,59 @@ def traded_at_ok(dt) -> bool:
     return dt.year >= MIN_FILL_YEAR and dt <= utcnow_naive() + timedelta(days=1)
 
 
-def kst_to_utc(dt: datetime) -> datetime:
-    """Broker wall-clock (Asia/Seoul) → naive UTC. Date-only values (00:00)
-    are left alone so they line up with manual entries, which stamp
-    ``YYYY-MM-DD`` as 00:00 UTC (routes/portfolio.py::_parse_purchase_date)."""
-    if dt.hour == 0 and dt.minute == 0 and dt.second == 0:
-        return dt
-    return dt - KST_OFFSET
+# ── stored fill time: date-only vs timed (2026-10-15) ─────────────────
+# ``traded_at`` has no "time known" column. A date-only fill is stored as its
+# KST date at exactly 00:00:00.000000, unshifted — the shape manual entries
+# use (routes/portfolio.py::_parse_purchase_date stamps ``YYYY-MM-DD`` at
+# midnight). A timed fill is a UTC instant; one that lands exactly on UTC
+# midnight (09:00:00 KST — the KRX open) is stored 1 µs later, so that shape
+# stays unambiguous for every reader that tests all four fields
+# (``is_date_only`` here, ledger, pre_trade.friction_outcome._at_or_after,
+# research_notes). Rows stored before this convention keep their 00:00.
+
+def is_date_only(dt: datetime) -> bool:
+    """A stored ``traded_at`` with no time of day (see the block above)."""
+    return (dt.hour, dt.minute, dt.second, dt.microsecond) == (0, 0, 0, 0)
+
+
+def as_timed(dt: datetime) -> datetime:
+    """Store a timed UTC instant so it can never read as date-only."""
+    return dt + timedelta(microseconds=1) if is_date_only(dt) else dt
+
+
+def kst_to_utc(dt: datetime, *, has_time: bool) -> datetime:
+    """Broker wall-clock (Asia/Seoul) → naive UTC. ``has_time`` is the
+    parser's word that the input printed a time (``RawTrade.time_given``);
+    without one the value is a date-only fill and stays its KST date at
+    00:00. The 00:00 itself is no evidence either way: 09:00 KST is 00:00
+    UTC, and a US fill at 00:00 KST must still move back 9 hours."""
+    if not has_time:
+        return dt.replace(hour=0, minute=0, second=0, microsecond=0)
+    return as_timed(dt - KST_OFFSET)
 
 
 _TZ_SUFFIX = re.compile(r"(Z|[+-]\d{2}:?\d{2})$")
 
 
-def parse_datetime_tz(value) -> tuple[datetime | None, bool]:
+def parse_datetime_tz(value) -> tuple[datetime | None, bool, bool]:
     """Like :func:`parse_datetime` but honours an explicit zone.
 
-    Returns ``(naive_dt, is_utc)``: ``True`` when the input carried ``Z`` or
-    an offset (converted to UTC), ``False`` when it was wall-clock text the
-    caller should treat as KST.
+    Returns ``(naive_dt, is_utc, has_time)``: ``is_utc`` is ``True`` when the
+    input carried ``Z`` or an offset (converted to UTC, and timed), ``False``
+    when it was wall-clock text the caller should treat as KST; ``has_time``
+    as in :func:`parse_datetime_has_time`.
     """
     if isinstance(value, datetime) and value.tzinfo is not None:
-        return value.astimezone(timezone.utc).replace(tzinfo=None), True
+        return value.astimezone(timezone.utc).replace(tzinfo=None), True, True
     if isinstance(value, str) and _TZ_SUFFIX.search(value.strip()):
         try:
             aware = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
             if aware.tzinfo is not None:
-                return aware.astimezone(timezone.utc).replace(tzinfo=None), True
+                return aware.astimezone(timezone.utc).replace(tzinfo=None), True, True
         except ValueError:
             pass
-    return parse_datetime(value), False
+    dt, has_time = parse_datetime_has_time(value)
+    return dt, False, has_time
 
 
 __all__ = [
@@ -284,11 +329,14 @@ __all__ = [
     "mask_sensitive",
     "parse_number",
     "parse_datetime",
+    "parse_datetime_has_time",
     "parse_datetime_tz",
     "amount_ok",
     "ticker_ok",
     "traded_at_ok",
     "kst_to_utc",
+    "is_date_only",
+    "as_timed",
     "MAX_AMOUNT",
     "side_from_text",
     "utcnow_naive",
