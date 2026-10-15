@@ -319,6 +319,72 @@ export interface ObservationNoteDeleteResponse {
   deleted: number;
 }
 
+/* ──────────────────────────────────────────────────────────────────────
+ * Research notes (리서치 양식, 2026-10-15) — routes/research_notes.py.
+ * ────────────────────────────────────────────────────────────────────── */
+
+export type ResearchInfoSource = "report" | "youtube" | "social" | "ai" | "self";
+export type ResearchVerdict = "right" | "wrong" | "unknown";
+/** Sign of the user's own realized result on that stock since the note. */
+export type ResearchOutcome = "gain" | "loss" | "flat" | "open";
+
+export interface ResearchNote {
+  id: number;
+  ticker: string;
+  name: string;
+  business: string;
+  /** 1~3 assumptions, in the order written. */
+  theses: string[];
+  invalidation: string | null;
+  risk: string | null;
+  /** null = 안 봄 (left blank). */
+  numbers: string | null;
+  info_source: ResearchInfoSource | null;
+  surface: string;
+  /** KST date "YYYY-MM-DD". */
+  review_on: string;
+  /** Aligned with `theses`; empty until scored. */
+  verdicts: ResearchVerdict[];
+  review_note: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  due?: boolean;
+  outcome: ResearchOutcome;
+}
+
+export interface ResearchNoteResponse {
+  ok: boolean;
+  disclaimer?: string | null;
+  note: ResearchNote;
+}
+
+export interface ResearchNotesResponse {
+  ok: boolean;
+  disclaimer?: string | null;
+  notes: ResearchNote[];
+  next_before: number | null;
+}
+
+export type ResearchOutcomeCounts = Record<ResearchOutcome, number>;
+
+export interface ResearchOverviewResponse {
+  ok: boolean;
+  disclaimer?: string | null;
+  due: ResearchNote[];
+  counts: { notes: number; scored: number; due: number; waiting: number };
+  judgment: { right: ResearchOutcomeCounts; wrong: ResearchOutcomeCounts };
+  unknown: number;
+  by_source: Record<ResearchInfoSource | "none", Record<ResearchVerdict, number>>;
+}
+
+export interface ResearchByTickerResponse {
+  ok: boolean;
+  disclaimer?: string | null;
+  ticker: string;
+  count: number;
+  note: ResearchNote | null;
+}
+
 /** `GET /api/observation-notes/by-ticker/<ticker>` — read back on /pre-trade. */
 export interface ObservationNotesByTickerResponse {
   ok: boolean;

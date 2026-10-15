@@ -68,6 +68,7 @@ import {
   type QuestionsNav,
 } from "@/components/pre-trade/pre-trade-friction-core";
 import { RelatedObservationNotes } from "@/components/pre-trade/related-observation-notes";
+import { RelatedResearch } from "@/components/pre-trade/related-research";
 import { TickerSearch } from "@/components/shared/ticker-search";
 import type { BackendPositionRow } from "@/components/portfolio/types";
 import { PORTFOLIO_POSITIONS } from "@/lib/endpoints";
@@ -217,6 +218,11 @@ export default function PreTradePage() {
             placed before the questions so it is context for the answers
             (docs/design/observation-notes_2026-09-22.md §4-1). Renders
             nothing when there are none. */}
+        {/* The user's own research on this symbol (리서치 양식) — the cold
+            reason and "틀렸다고 볼 신호" next to Q1/Q2. Read-only; nothing when
+            there is none (docs/design/research-notes_2026-10-15.md §4). */}
+        {cycle.phase === "questions" && <RelatedResearch ticker={ticker} />}
+
         {cycle.phase === "questions" && (
           <RelatedObservationNotes ticker={ticker} />
         )}

@@ -31,6 +31,12 @@ import type {
   ObservationNoteDeleteResponse,
   ObservationNotesResponse,
   ObservationNotesByTickerResponse,
+  ResearchByTickerResponse,
+  ResearchInfoSource,
+  ResearchNoteResponse,
+  ResearchNotesResponse,
+  ResearchOverviewResponse,
+  ResearchVerdict,
 } from "./types";
 
 // Exported so post-mutation handlers (e.g. portfolio refreshAll) can feed a
@@ -320,6 +326,78 @@ export async function deleteObservationNote(
     API.observationNotes.detail(id),
     { method: "DELETE" },
   );
+}
+
+/* ── Research notes (리서치 양식) ───────────────────────────────────────── */
+
+/** Due notes + judgment × outcome counts — what /journal/research opens on. */
+export function useResearchOverview() {
+  const swr = useSWR<ResearchOverviewResponse>(API.research.overview, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30_000,
+  });
+  return { data: swr.data ?? null, isLoading: swr.isLoading, error: swr.error as Error | undefined, mutate: swr.mutate };
+}
+
+/** The user's own research notes, newest first. */
+export function useResearchNotes(limit = 50) {
+  const swr = useSWR<ResearchNotesResponse>(`${API.research.list}?limit=${limit}`, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30_000,
+  });
+  return {
+    notes: swr.data?.notes ?? [],
+    isLoading: swr.isLoading,
+    error: swr.error as Error | undefined,
+    mutate: swr.mutate,
+  };
+}
+
+/**
+ * The latest research on ONE ticker — read on /pre-trade once a symbol is
+ * picked, so the cold reasoning sits next to the seven questions. `null`
+ * ticker disables the fetch. Read-only: the 멈춤 screen never writes one.
+ */
+export function useResearchByTicker(ticker: string | null) {
+  const swr = useSWR<ResearchByTickerResponse>(ticker ? API.research.byTicker(ticker) : null, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30_000,
+  });
+  return { note: swr.data?.note ?? null, count: swr.data?.count ?? 0, isLoading: swr.isLoading };
+}
+
+/** Body of `POST /api/research-notes`. */
+export interface CreateResearchNoteBody {
+  ticker: string;
+  business: string;
+  theses: string[];
+  invalidation?: string;
+  risk?: string;
+  numbers?: string;
+  info_source?: ResearchInfoSource | null;
+  review_months: 1 | 3 | 6;
+  surface?: "journal" | "portfolio" | "pre_trade";
+}
+
+export async function createResearchNote(payload: CreateResearchNoteBody): Promise<ResearchNoteResponse> {
+  return apiFetch<ResearchNoteResponse>(API.research.create, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function reviewResearchNote(
+  id: number,
+  payload: { verdicts: ResearchVerdict[]; note?: string },
+): Promise<ResearchNoteResponse> {
+  return apiFetch<ResearchNoteResponse>(API.research.review(id), {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteResearchNote(id: number): Promise<{ ok: boolean; deleted: number }> {
+  return apiFetch<{ ok: boolean; deleted: number }>(API.research.detail(id), { method: "DELETE" });
 }
 
 /**

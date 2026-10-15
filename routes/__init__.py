@@ -17,6 +17,7 @@ def register_blueprints(app):
     from .pre_trade import pre_trade_bp  # Feature 6 — Pre-Trade Friction
     from .behavior import behavior_bp    # Feature 7 — Weekly Behavioural Score
     from .observation_notes import observation_notes_bp  # 관찰 노트 — 거래 없이 적는 기록
+    from .research_notes import research_notes_bp  # 리서치 양식 + 정한 날 다시 채점
     from .email_preferences import email_pref_bp  # 정통망법 §50 unsubscribe
     from .consents import consents_bp  # 정통망법 §50 ① marketing-consent record
     from .feedback import feedback_bp  # Wave G C-AC2 — NPS 1-click (transactional)
@@ -38,6 +39,7 @@ def register_blueprints(app):
         billing_bp, push_bp,
         pre_trade_bp, behavior_bp,
         observation_notes_bp,
+        research_notes_bp,
         email_pref_bp,
         consents_bp,
         feedback_bp,

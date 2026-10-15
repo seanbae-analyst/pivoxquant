@@ -310,6 +310,27 @@ export const API = {
     byTicker: (ticker: string) =>
       `/api/observation-notes/by-ticker/${encodeURIComponent(ticker)}`,
   },
+  // Research notes (리서치 양식, 2026-10-15 —
+  // docs/design/research-notes_2026-10-15.md). The same five-field form for
+  // every stock, written by the user before buying, then scored by the user
+  // on a review day they chose. We fill in nothing about the stock and call
+  // no market data; the only thing we add is counts against the user's own
+  // fills. Read back (read-only) on /pre-trade.
+  //   create   POST   /                → 201 {note}
+  //   list     GET    /list            ?limit=&before=&ticker= → {notes, next_before}
+  //   overview GET    /overview        → {due, counts, judgment, unknown, by_source}
+  //   byTicker GET    /by-ticker/<t>   → {ticker, count, note|null}
+  //   detail   GET|DELETE /<id>
+  //   review   POST   /<id>/review     {verdicts, note?} → {note}
+  research: {
+    create: "/api/research-notes",
+    list: "/api/research-notes/list",
+    overview: "/api/research-notes/overview",
+    byTicker: (ticker: string) =>
+      `/api/research-notes/by-ticker/${encodeURIComponent(ticker)}`,
+    detail: (id: number | string) => `/api/research-notes/${id}`,
+    review: (id: number | string) => `/api/research-notes/${id}/review`,
+  },
   // Marketing-consent record (정통망법 §50 ① — sender bears the burden of
   // proving prior opt-in). Backend lives in routes/consents.py (PR #73).
   // - GET    : returns { opted_in, marketing_consent_at, marketing_consent_revoked_at }
