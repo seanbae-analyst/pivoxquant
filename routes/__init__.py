@@ -24,6 +24,7 @@ def register_blueprints(app):
     from .support import support_bp  # 고객문의센터 + 지원 챗봇
     from .inbox import inbox_bp  # v57 CEO Inbox single-pane (admin only)
     from .mirror_home import mirror_home_bp  # 거울 home — composed 선언/관찰/트윈 read
+    from .year_recap import year_recap_bp  # 올해의 기록 — 한 해를 본인의 기록과 말로
     from .imports import imports_bp  # Import Inbox — uploaded fills awaiting the user's thesis
     from .holdings_import import holdings_import_bp  # 잔고 캡처 → 포지션 (preview/commit)
     from .reports import reports_bp  # 월간 거울 리포트 — 온디맨드 PDF 다운로드
@@ -46,6 +47,7 @@ def register_blueprints(app):
         support_bp,
         inbox_bp,
         mirror_home_bp,
+        year_recap_bp,
         imports_bp,
         holdings_import_bp,
         reports_bp,

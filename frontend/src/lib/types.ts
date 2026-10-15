@@ -1126,3 +1126,83 @@ export interface HoldingsClosedItem {
   prev_avg_cost: number;
   note_kept: boolean;
 }
+
+/* ── 올해의 기록 (GET /api/mirror-home/year, routes/year_recap.py) ────────── */
+
+export interface YearRecapMonth {
+  month: string; // "YYYY-MM" (KST)
+  count: number;
+}
+
+export interface YearRecapRuleMonth extends YearRecapMonth {
+  /** More fills than the user's own monthly line. */
+  over: boolean;
+  /** The adoption month (counted from adoption) or this month (to today). */
+  partial: boolean;
+}
+
+export type YearRecapQuoteKind = "first_reason" | "not_taken" | "scored_thesis";
+
+export interface YearRecapQuote {
+  kind: YearRecapQuoteKind;
+  /** Where the sentence was written: a pause, a fill's reason, a research note. */
+  source: "pause" | "fill" | "research";
+  /** The user's own words, first line, kept verbatim by the scrub. */
+  text: string;
+  /** KST "YYYY-MM-DD" — the day it was written. */
+  date: string;
+  ticker: string | null;
+  name: string | null;
+  /** scored_thesis only — the user's own scoring of that thesis. */
+  verdict?: ResearchVerdict | null;
+}
+
+export interface YearRecapResponse {
+  ok: boolean;
+  disclaimer: string;
+  /** The one line printed on the share image (SoT services/legal/disclaimers.py). */
+  share_disclaimer: string;
+  year: number;
+  /** Years with any of the user's rows, newest first. */
+  years: number[];
+  range: { start: string; end: string; partial: boolean };
+  fills: {
+    total: number;
+    buys: number;
+    sells: number;
+    tickers: number;
+    months_active: number;
+    by_month: YearRecapMonth[];
+  };
+  pauses: {
+    started: number;
+    proceeded: number;
+    cancelled: number;
+    open: number;
+    cancelled_buy: number;
+    bought_later_anyway: number;
+    never_bought: number;
+  };
+  records: {
+    reasoned_fills: number;
+    research_written: number;
+    research_reviewed: number;
+    verdicts: Record<ResearchVerdict, number>;
+    observation_notes: number;
+  };
+  holding: { sells: number; median_days: number | null };
+  rules: {
+    confirmed_on: string;
+    frequency: {
+      ceiling: number;
+      months: YearRecapRuleMonth[];
+      within: number;
+      outside: number;
+    } | null;
+    holding: { min_days: number; sells: number; sooner: number } | null;
+  } | null;
+  quotes: YearRecapQuote[];
+  /** Reserved for the doorway pause (services/doorway/); null until that ships. */
+  doorway: null | Record<string, unknown>;
+  empty: boolean;
+}
