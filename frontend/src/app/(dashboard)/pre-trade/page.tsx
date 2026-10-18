@@ -227,6 +227,32 @@ export default function PreTradePage() {
           />
         )}
 
+        {/* The way into 리서치 양식 — setup only. Once the questions start the
+            screen stays read-only (<RelatedResearch />), so a link can never
+            become a way around the seven (docs/design/research-notes_2026-10-15.md §4). */}
+        {cycle.phase === "setup" && (
+          <Link
+            href={
+              ticker.trim()
+                ? `/journal/research?ticker=${encodeURIComponent(ticker.trim().toUpperCase())}`
+                : "/journal/research?new=1"
+            }
+            data-testid="pre-trade-research-link"
+            className="flex items-center justify-between gap-3 rounded-[var(--pq-radius-card)] px-4 py-3 transition-colors hover:bg-[var(--pq-card-veil-strong)]"
+            style={{ border: "1px solid var(--pq-ivory-line)", background: "var(--pq-card-veil)" }}
+          >
+            <span className="min-w-0">
+              <span className="block text-pq-body-sm font-semibold text-[var(--pq-ivory)]">
+                회사부터 정리하고 싶다면 · 리서치 양식
+              </span>
+              <span className="mt-0.5 block text-pq-caption text-[var(--pq-ivory-dim)]">
+                뭘로 돈을 버는지, 이유, 틀렸다고 볼 신호를 먼저 적어 두고 정한 날 채점해요
+              </span>
+            </span>
+            <ChevronRight size={16} aria-hidden className="shrink-0 text-[var(--pq-ivory-faint)]" />
+          </Link>
+        )}
+
         {/* The user's own past observations on this symbol — read-only, and
             placed before the questions so it is context for the answers
             (docs/design/observation-notes_2026-09-22.md §4-1). Renders
