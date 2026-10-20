@@ -16,6 +16,11 @@ import type { ResearchNote, ResearchOverviewResponse } from "@/lib/types";
 const createResearchNote = vi.fn();
 const reviewResearchNote = vi.fn();
 const deleteResearchNote = vi.fn();
+let overview: { data: ResearchOverviewResponse | null; isLoading: boolean; error: Error | undefined } = {
+  data: null,
+  isLoading: true,
+  error: undefined,
+};
 let byTicker: { note: ResearchNote | null; count: number; isLoading: boolean } = { note: null, count: 0, isLoading: false };
 
 vi.mock("@/lib/hooks", () => ({
@@ -23,12 +28,14 @@ vi.mock("@/lib/hooks", () => ({
   reviewResearchNote: (...a: unknown[]) => reviewResearchNote(...a),
   deleteResearchNote: (...a: unknown[]) => deleteResearchNote(...a),
   useResearchByTicker: () => byTicker,
+  useResearchOverview: () => overview,
 }));
 
 import { ResearchForm } from "@/components/journal/research/research-form";
 import { ResearchCard } from "@/components/journal/research/research-card";
 import { ResearchSummary } from "@/components/journal/research/research-summary";
 import { RelatedResearch } from "@/components/pre-trade/related-research";
+import { ResearchEntry } from "@/components/journal/research-entry";
 
 const NOTE: ResearchNote = {
   id: 11,
@@ -176,6 +183,32 @@ describe("ResearchSummary", () => {
   it("says plainly that nothing is scored yet", () => {
     render(<ResearchSummary data={{ ...base, counts: { ...base.counts, scored: 0 } }} />);
     expect(screen.getByTestId("research-summary-empty")).toHaveTextContent("아직 채점한 리서치가 없어요");
+  });
+});
+
+describe("ResearchEntry (기록 화면)", () => {
+  it("stays reachable while the overview loads or fails — only the count waits", () => {
+    for (const state of [
+      { data: null, isLoading: true, error: undefined },
+      { data: null, isLoading: false, error: new Error("cold start") },
+    ]) {
+      overview = state;
+      render(<ResearchEntry />);
+      const row = screen.getByTestId("research-entry");
+      expect(row.getAttribute("href")).toBe("/journal/research");
+      expect(row).not.toHaveTextContent("다시 볼 것");
+      cleanup();
+    }
+  });
+
+  it("shows the due count once the overview arrives", () => {
+    overview = {
+      data: { counts: { due: 2 } } as unknown as ResearchOverviewResponse,
+      isLoading: false,
+      error: undefined,
+    };
+    render(<ResearchEntry />);
+    expect(screen.getByTestId("research-entry")).toHaveTextContent("다시 볼 것 2개");
   });
 });
 

@@ -4,8 +4,10 @@
  * <ResearchEntry /> — the way into /journal/research from the 기록 page.
  *
  * One quiet row under the observation-note composer: what the form is, and
- * how many notes have reached their review day. Renders nothing while the
- * overview loads or fails — a wrong count is worse than none.
+ * how many notes have reached their review day. The row itself always
+ * renders — hiding it while the overview loads made the form unreachable
+ * through a whole Render cold start. Only the count waits: it is dropped
+ * while loading or on error, since a wrong count is worse than none.
  */
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
@@ -13,8 +15,7 @@ import { useResearchOverview } from "@/lib/hooks";
 
 export function ResearchEntry() {
   const { data, isLoading, error } = useResearchOverview();
-  if (isLoading || error) return null;
-  const due = data?.counts?.due ?? 0;
+  const due = isLoading || error ? 0 : (data?.counts?.due ?? 0);
   return (
     <Link
       href="/journal/research"
