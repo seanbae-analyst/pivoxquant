@@ -22,6 +22,7 @@ import type {
   ProfitLossMirrorResponse,
   TurnoverMirrorResponse,
   AveragingDownMirrorResponse,
+  RebuyMirrorResponse,
   MirrorHomeResponse,
   ConfirmMyRulesResponse,
   PendingImportsResponse,
@@ -819,6 +820,44 @@ export function useAveragingDownMirror() {
     async (url: string): Promise<AveragingDownMirrorResponse | null> => {
       const res = await fetch(url, { credentials: "include" });
       // Backend not yet wired (or genuinely empty) → soft-empty, not an error.
+      if (res.status === 404) return null;
+      if (!res.ok) {
+        const err = new Error(`HTTP ${res.status}`) as Error & {
+          status?: number;
+        };
+        err.status = res.status;
+        throw err;
+      }
+      return res.json();
+    },
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 60_000,
+      keepPreviousData: true,
+      shouldRetryOnError: false,
+    },
+  );
+
+  return {
+    data: swr.data ?? null,
+    isLoading: swr.data === undefined && !swr.error,
+    error: swr.error as Error | undefined,
+    mutate: swr.mutate,
+  };
+}
+
+/**
+ * Rebuy Mirror — names the user sold and bought again within the backend's
+ * window, compared on the user's own two prices. 1:1 with
+ * `useAveragingDownMirror`: a 404 normalises to `data === null` (calm empty
+ * state); a 5xx / network failure surfaces through `error` so the panel can
+ * render nothing — a mirror failure must NEVER take down the journal feed.
+ */
+export function useRebuyMirror() {
+  const swr = useSWR<RebuyMirrorResponse | null>(
+    API.behavior.rebuyMirror,
+    async (url: string): Promise<RebuyMirrorResponse | null> => {
+      const res = await fetch(url, { credentials: "include" });
       if (res.status === 404) return null;
       if (!res.ok) {
         const err = new Error(`HTTP ${res.status}`) as Error & {

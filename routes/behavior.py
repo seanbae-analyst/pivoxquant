@@ -12,6 +12,10 @@ Endpoints (all under ``/api/behavior``):
     GET /averaging-down-mirror  — follow-on-add mirror: counts of adds to an
                                   already-held position below / above / at the
                                   running average cost (?period=30d|all)
+    GET /rebuy-mirror           — sell → later-buy mirror: how often a sold
+                                  name was bought again within 90 days, and
+                                  where that price sat vs the sale price
+                                  (?period=30d|all)
 
 The former AI behavioural-scoring endpoints (``/score``, ``/breakdown``,
 ``/persona-comparison``) were removed 2026-05-30 per the "AI 점수화 폐기"
@@ -36,6 +40,7 @@ from services.behavior.averaging_down_mirror import (
 )
 from services.behavior.concentration_mirror import compute_concentration_mirror
 from services.behavior.profit_loss_mirror import compute_profit_loss_mirror
+from services.behavior.rebuy_mirror import compute_rebuy_mirror
 from services.behavior.turnover_mirror import compute_turnover_mirror
 from services.pre_trade.friction_outcome import compute_friction_outcome
 from services.profile.holding_mirror import compute_holding_mirror
@@ -282,6 +287,62 @@ def averaging_down_mirror():
     body = {
         "ok": True,
         "disclaimer": _AVERAGING_DOWN_MIRROR_DISCLAIMER,
+        "period": period,
+    }
+    body.update(result)
+    return jsonify(body), 200
+
+
+# ── /rebuy-mirror ───────────────────────────────────────────────────
+
+# Wording kept byte-identical to the other retrospective trade-history
+# mirror disclaimers so all behaviour mirrors read with one legal voice.
+_REBUY_MIRROR_DISCLAIMER = DISCLAIMER_MIRROR_RETROSPECTIVE_KR
+
+# Accepted ``?period`` values → window in days. ``all`` (default) = no
+# window. Kept tiny and explicit so we never echo an arbitrary
+# user-supplied integer back into a window.
+_REBUY_MIRROR_PERIODS: dict[str, int | None] = {
+    "all": None,
+    "30d": 30,
+}
+
+
+@behavior_bp.route("/rebuy-mirror", methods=["GET"])
+@api_auth
+@legal_scrub_response
+def rebuy_mirror():
+    """Retrospective sell → later-buy mirror for the user.
+
+    ``?period=30d|all`` (default ``all``). For each recorded sale that the
+    user followed with a buy of the same name within 90 days, returns counts
+    of whether that buy was priced above / below / at the sale price, plus
+    the median gap in days and the median price change between the two
+    fills. Both prices are the user's own fills of the same ticker, so there
+    is no market-data / FX call — this mirror stays visible while vendor-price
+    display is off (``MARKET_DATA_DISPLAY_ENABLED``).
+    """
+    period = request.args.get("period", "all")
+    if period not in _REBUY_MIRROR_PERIODS:
+        return jsonify({
+            "error": (
+                "period must be one of: "
+                + ", ".join(sorted(_REBUY_MIRROR_PERIODS))
+            ),
+            "code": "BAD_INPUT",
+        }), 400
+    period_days = _REBUY_MIRROR_PERIODS[period]
+
+    trades = (
+        TradeHistory.query
+        .filter_by(user_id=current_user.id)
+        .all()
+    )
+    result = compute_rebuy_mirror(trades, period_days=period_days)
+
+    body = {
+        "ok": True,
+        "disclaimer": _REBUY_MIRROR_DISCLAIMER,
         "period": period,
     }
     body.update(result)

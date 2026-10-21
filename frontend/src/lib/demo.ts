@@ -219,6 +219,12 @@ const DEMO_AVGDOWN_MIRROR = {
   ok: true, period: "all", period_days: null, sufficient_data: true, follow_on_count: 9, below_avg_count: 6, above_avg_count: 2, flat_count: 1,
   by_ticker: [{ ticker: "NVDA", name: "NVIDIA", follow_on: 3, below_avg: 2, above_avg: 1 }, { ticker: "005930", name: "삼성전자", follow_on: 4, below_avg: 3, above_avg: 1 }, { ticker: "TSLA", name: "Tesla", follow_on: 2, below_avg: 1, above_avg: 0 }],
 };
+// Rebuy mirror — names sold and bought again within 90 days, own prices only.
+const DEMO_REBUY_MIRROR = {
+  ok: true, period: "all", period_days: null, rebuy_window_days: 90, sufficient_data: true,
+  rebuy_count: 5, higher_count: 3, lower_count: 2, flat_count: 0, median_gap_days: 12.0, median_price_change_pct: 4.2,
+  by_ticker: [{ ticker: "NVDA", name: "NVIDIA", rebuy_count: 2, higher_count: 2, lower_count: 0 }, { ticker: "005930", name: "삼성전자", rebuy_count: 2, higher_count: 1, lower_count: 1 }, { ticker: "TSLA", name: "Tesla", rebuy_count: 1, higher_count: 0, lower_count: 1 }],
+};
 const DEMO_PRETRADE_LIST = {
   ok: true,
   reflections: [
@@ -604,6 +610,8 @@ function matchDemoGet(path: string): unknown | undefined {
       return DEMO_TURNOVER_MIRROR;
     case "/api/behavior/averaging-down-mirror":
       return DEMO_AVGDOWN_MIRROR;
+    case "/api/behavior/rebuy-mirror":
+      return DEMO_REBUY_MIRROR;
     case "/api/pre-trade/list":
       return DEMO_PRETRADE_LIST;
     case "/api/observation-notes/list":

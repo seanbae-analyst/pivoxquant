@@ -48,6 +48,7 @@ import { ConcentrationMirror } from "@/components/journal/concentration-mirror";
 import { ProfitLossMirror } from "@/components/journal/profit-loss-mirror";
 import { TurnoverMirror } from "@/components/journal/turnover-mirror";
 import { AveragingDownMirror } from "@/components/journal/averaging-down-mirror";
+import { RebuyMirror } from "@/components/journal/rebuy-mirror";
 import { FrictionOutcomeMirror } from "@/components/journal/friction-outcome-mirror";
 import { StorageProofToggle } from "@/components/journal/storage-proof-toggle";
 import { WeeklyPulseSection } from "@/components/journal/weekly-pulse-section";
@@ -884,7 +885,15 @@ function JournalContent() {
           <AveragingDownMirror />
         </div>
 
-        {/* Friction outcome sits LAST in the section on purpose. The five
+        {/* Rebuy sits after the follow-on-add mirror: both compare two of the
+            user's own fills of one name, never a vendor price, so this is the
+            "what did it cost when I came back" view while market-data display
+            is off (MARKET_DATA_DISPLAY_ENABLED). */}
+        <div className="mb-8">
+          <RebuyMirror />
+        </div>
+
+        {/* Friction outcome sits LAST in the section on purpose. The six
             mirrors above read TradeHistory — what you did. This one reads
             PreTradeReflection alongside it, so it is the only one that can
             speak about the trade that did not happen, and it reads best after

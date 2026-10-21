@@ -522,6 +522,22 @@
       "emptyDesc": "When you buy more of a name you already hold, we show whether that price was below or above your average at the time, as a plain count.",
       "insufficient": "There are still too few follow-on buys to mirror stably. It will appear automatically as records accumulate."
     },
+    "rebuyMirror": {
+      "kicker": "OBSERVED",
+      "heading": "The price when you came back",
+      "rebuyLabel": "Bought again",
+      "higherLabel": "Above sale price",
+      "lowerLabel": "Below sale price",
+      "gapLabel": "Time until you came back (median)",
+      "changeLabel": "Vs. your sale price (median)",
+      "daysUnit": "d",
+      "byTickerLabel": "By name",
+      "tickerRow": "{rebuy} times · {higher} above / {lower} below",
+      "framing": "We reflect names you bought again within {window} days of selling them, using only the two prices you recorded. No market data, no judgement, no recommendation.",
+      "emptyTitle": "Nothing to mirror yet",
+      "emptyDesc": "Once you have bought a name again within {window} days of selling it, we show whether that price was above or below your sale price, as a plain count.",
+      "insufficient": "There are still too few names bought again after selling to mirror stably. It will appear automatically as records accumulate."
+    },
     "import": {
       "kicker": "Received fills · IMPORT INBOX",
       "title": "{n} received fills — write one line on why you bought or sold",
