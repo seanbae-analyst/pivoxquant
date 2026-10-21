@@ -94,6 +94,7 @@ const EXACT_KEYS: ReadonlySet<string> = new Set([
   API.behavior.profitLossMirror,
   API.behavior.turnoverMirror,
   API.behavior.averagingDownMirror,
+  API.behavior.rebuyMirror,
   API.behavior.frictionOutcome,
   PORTFOLIO_SUMMARY,
   PORTFOLIO_POSITIONS,

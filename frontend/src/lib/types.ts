@@ -793,6 +793,53 @@ export interface AveragingDownMirrorResponse {
   by_ticker: AveragingDownMirrorTickerRow[];
 }
 
+/* ── Rebuy Mirror (GET /api/behavior/rebuy-mirror) ──
+ *   A neutral, retrospective record of names the user SOLD and then bought
+ *   again within `rebuy_window_days`, comparing the later buy price with the
+ *   sale price. Both prices are the user's own fills of the same ticker, so
+ *   there is no market data and no FX conversion.
+ *
+ *   Invariants:
+ *   - Counts, a median gap in days and a median price change — never a
+ *     score / grade / label, and no "good / bad" judgement vocabulary.
+ *   - Every number is `null` when `sufficient_data` is false; `by_ticker` is
+ *     `[]`.
+ * ──────────────────────────────────────────────────────────────────── */
+export interface RebuyMirrorTickerRow {
+  ticker: string;
+  /** Display name when known; null falls back to the ticker at render. */
+  name: string | null;
+  rebuy_count: number;
+  higher_count: number;
+  lower_count: number;
+}
+
+export interface RebuyMirrorResponse {
+  ok: boolean;
+  disclaimer?: string;
+  /** Trailing window label echoed by the route ("all" / "30d"). */
+  period?: string;
+  /** Window length in days the backend applied (null = all history). */
+  period_days: number | null;
+  /** Max days from a sale to the buy that pairs with it. */
+  rebuy_window_days: number;
+  sufficient_data: boolean;
+  /** Sale → later-buy pairs in the window; null when insufficient. */
+  rebuy_count: number | null;
+  /** Pairs where the later buy was priced above the sale; null when insufficient. */
+  higher_count: number | null;
+  /** Pairs where the later buy was priced below the sale; null when insufficient. */
+  lower_count: number | null;
+  /** Pairs at the sale price (±epsilon); null when insufficient. */
+  flat_count: number | null;
+  /** Median days from sale to later buy; null when insufficient. */
+  median_gap_days: number | null;
+  /** Median (buy - sale) / sale × 100; null when insufficient. */
+  median_price_change_pct: number | null;
+  /** Neutral per-ticker breakdown; [] when sufficient_data is false. */
+  by_ticker: RebuyMirrorTickerRow[];
+}
+
 /* ── Artifact / Reports Archive ── */
 
 export type ArtifactType =

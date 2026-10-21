@@ -266,6 +266,12 @@ export const API = {
     // grade, or "물타기" judgement (자본시장법 / PIPA §23).
     // Response = AveragingDownMirrorResponse, 1:1.
     averagingDownMirror: "/api/behavior/averaging-down-mirror",
+    // Rebuy Mirror — names the user sold and bought again within 90 days:
+    // counts above / below the sale price, median gap in days, median price
+    // change between the two fills. Both prices are the user's own fills of
+    // the same ticker → no market data / FX, so it renders while vendor-price
+    // display is off. Read-only, @api_auth. Response = RebuyMirrorResponse, 1:1.
+    rebuyMirror: "/api/behavior/rebuy-mirror",
   },
   // Mirror home (거울) — single composed read: 선언 vs 관찰 persona shape, the
   // top diverging behavioural dimensions, the drift descriptor, and the latest
