@@ -68,7 +68,7 @@ def _parse_year(raw: str | None, now: datetime) -> int | None:
     this_year = kst_year(now)
     if raw is None or raw == "":
         return this_year
-    if not raw.isdigit() or len(raw) != 4:
+    if not (raw.isascii() and raw.isdigit()) or len(raw) != 4:  # "²⁰²⁶".isdigit() is True
         return None
     year = int(raw)
     return year if _MIN_YEAR <= year <= this_year else None

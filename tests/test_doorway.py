@@ -72,6 +72,8 @@ def test_parse_text_without_a_head_is_an_error(text):
     ("TSLA 반등", "TSLA"),
     ("005930 조금", "005930.KS"),
     ("AI 관련주 하나", None),      # stop-listed acronym, not C3.ai
+    ("CASH 조금 남겨두고 LOW 에서", None),  # common words that are US symbols
+    ("GOOD 타이밍 TSLA", "TSLA"),
     ("그냥 느낌", None),
     ("", None),
 ])
@@ -201,7 +203,73 @@ def test_window_edges_grace_and_follow():
     ]
     out = summarize(checks, fills, now=NOW, first_check_at=t0)
     assert {r["id"]: r["outcome"] for r in out["recent"]} == {1: "traded", 2: "none"}
-    # Only fills from the first open on count; the grace fill is 40s earlier.
+    # The grace fill 40s before the first open is that open's fill, so it is
+    # counted — and as through the door (it used to read 1 total · 0 door next
+    # to an open marked "traded").
+    assert out["fills"] == {"total": 2, "through_door": 1}
+
+
+def test_a_later_open_does_not_end_the_window():
+    """2026-10-21 — the not-happened check reassigned ``start``/``end``, which
+    the window filter reads, so every open after the first no-fill buy's
+    +30 days fell out of a 90-day (or yearly) count."""
+    checks = [
+        _check(1, NOW - timedelta(days=80), "buy", "TSLA"),
+        *[_check(i, NOW - timedelta(days=10, minutes=i), "look") for i in range(2, 7)],
+    ]
+    fills = [Fill(NOW - timedelta(days=9), "AAPL", "BUY")]
+    out = summarize(checks, fills, now=NOW, days=90, first_check_at=checks[0].created_at)
+    assert out["total"] == 6
+    assert out["intents"] == {"look": 5, "buy": 1, "sell": 0}
+    assert out["fills"]["total"] == 1
+
+    # The year: a sell in January must not cut June off, nor pull January of
+    # the next year in.
+    start, end = datetime(2025, 12, 31, 15, 0), datetime(2026, 12, 31, 15, 0)
+    year_checks = [
+        _check(1, datetime(2026, 1, 5, 1, 0), "sell", "TSLA"),
+        _check(2, datetime(2026, 6, 5, 1, 0), "look"),
+        _check(3, datetime(2027, 1, 5, 1, 0), "look"),
+    ]
+    later = datetime(2027, 6, 1)
+    out = year_section(year_checks, [], start=start, end=end, now=later,
+                       first_check_at=year_checks[0].created_at)
+    assert out["total"] == 2
+
+
+def test_reopening_the_app_does_not_turn_a_buy_into_never():
+    """살 → 20분 뒤 다시 열어 "그냥 보기" → 그 종목 체결. The fill is the later
+    open's (latest open only), but the stock was bought — not "never"."""
+    t0 = NOW - timedelta(days=40)
+    checks = [_check(1, t0, "buy", "005930.KS"), _check(2, t0 + timedelta(minutes=20), "look")]
+    fills = [Fill(t0 + timedelta(minutes=30), "005930.KS", "BUY")]
+    out = summarize(checks, fills, now=NOW, days=90, first_check_at=t0)
+    assert {r["id"]: r["outcome"] for r in out["recent"]} == {1: "none", 2: "traded"}
+    assert out["not_happened"] == {"n": 1, "later": 1, "never": 0, "open": 0}
+
+
+def test_a_bare_code_fill_is_the_same_stock_as_the_open():
+    t0 = NOW - timedelta(days=40)
+    checks = [_check(1, t0, "buy", "005930.KS"), _check(2, t0 + timedelta(days=1), "buy", "005930.KS")]
+    fills = [Fill(t0 + timedelta(minutes=5), "005930", "BUY"), Fill(t0 + timedelta(days=3), "005930", "BUY")]
+    out = summarize(checks, fills, now=NOW, days=90, first_check_at=t0)
+    assert {r["id"]: r["outcome"] for r in out["recent"]} == {1: "as_said", 2: "none"}
+    assert out["not_happened"] == {"n": 1, "later": 1, "never": 0, "open": 0}
+
+
+def test_date_only_fills_join_no_open_but_count_by_kst_day():
+    """A manual / CSV fill with no time is stored at its KST date 00:00 — read
+    as UTC that is 09:00 KST. It must not be tied to an open near 09:00, and
+    the not-happened check reads it by KST day."""
+    day = datetime(2026, 9, 1)                     # stored date-only fill of 9/1 (KST)
+    look = _check(1, datetime(2026, 8, 31, 23, 30), "look")       # 9/1 08:30 KST
+    buy = _check(2, datetime(2026, 9, 1, 11, 0), "buy", "TSLA")   # 9/1 20:00 KST
+    fills = [Fill(day, "TSLA", "BUY")]
+    out = summarize([look, buy], fills, now=NOW, days=90, first_check_at=look.created_at)
+    assert {r["id"]: r["outcome"] for r in out["recent"]} == {1: "none", 2: "none"}
+    assert out["look"] == {"n": 1, "traded": 0}
+    # Same KST day as the buy open → it was bought (not "never").
+    assert out["not_happened"] == {"n": 1, "later": 1, "never": 0, "open": 0}
     assert out["fills"] == {"total": 1, "through_door": 0}
 
 
@@ -300,6 +368,10 @@ def test_webhook_records_with_the_import_token(client, bearer_client, auth_user)
     assert plain.status_code == 201
     assert plain.get_json()["check"]["intent"] == "look"
     assert plain.get_json()["pause_url"] is None
+
+    # Settings shows when a key was last used — door answers count as use.
+    listed = client.get(TOKENS).get_json()["tokens"]
+    assert listed[0]["last_used_at"]
 
 
 def test_token_issued_before_door_consent_is_refused(client, bearer_client, auth_user, app):

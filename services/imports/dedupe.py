@@ -49,6 +49,7 @@ from extensions import db
 from models import TradeHistory
 from models.import_batch import STATUS_APPROVED, PendingTrade
 from services.imports import KST_OFFSET, is_date_only
+from services.pre_trade.friction_outcome import _KR_SUFFIXES, ticker_key
 
 SHARES_TOL = 1e-6
 PRICE_TOL = 1e-4
@@ -140,12 +141,25 @@ def _same_time(p1: str, t1: datetime, p2: str, t2: datetime) -> bool:
     return abs(t1 - t2) < FILL_TIME_TOLERANCE
 
 
+def _spellings(tickers) -> list[str]:
+    """Every spelling of each ticker (``ticker_key``: ``035720`` · ``.KS`` ·
+    ``.KQ`` are one stock — 2026-10-21, the same-stock rule the pause match
+    and holdings resync already use). A manual ``035720.KQ`` entry blocked
+    nothing when the same fill was imported as ``035720.KS``."""
+    out: set[str] = set()
+    for t in tickers:
+        key = ticker_key(t)
+        out.update({t, key, *(key + s for s in _KR_SUFFIXES)})
+    return sorted(out)
+
+
 def _history_fills(user_id: int, tickers: list[str], day_start: datetime,
                    day_end: datetime, action: str | None = None):
     """``trade_history`` rows in ``[day_start, day_end)`` with their time
     precision: ``(ticker, action, shares, price, traded_at, precision)``.
     Only a row an import approval wrote (``pending_trades.approved_trade_id``)
-    carries a fill time; every other row is ``day`` (module doc)."""
+    carries a fill time; every other row is ``day`` (module doc). ``tickers``
+    match under every spelling (:func:`_spellings`)."""
     q = (
         db.session.query(TradeHistory.ticker, TradeHistory.action, TradeHistory.shares,
                          TradeHistory.price_per_share, TradeHistory.traded_at,
@@ -154,7 +168,7 @@ def _history_fills(user_id: int, tickers: list[str], day_start: datetime,
                                       PendingTrade.user_id == user_id,
                                       PendingTrade.status == STATUS_APPROVED))
         .filter(TradeHistory.user_id == user_id,
-                TradeHistory.ticker.in_(tickers),
+                TradeHistory.ticker.in_(_spellings(tickers)),
                 TradeHistory.traded_at >= day_start,
                 TradeHistory.traded_at < day_end)
     )
@@ -235,13 +249,13 @@ class DedupeIndex:
                 .all()
             )
             self.keys = {r[0] for r in rows}
-        # (ticker, side, KST day) → [(shares, price, traded_at, precision)]
+        # (ticker_key, side, KST day) → [(shares, price, traded_at, precision)]
         self.history: dict[tuple[str, str, date], list[tuple[float, float, datetime, str]]] = {}
         if tickers and start is not None and end is not None:
             day_start = _kst_day_bounds(kst_day(start))[0]
             day_end = _kst_day_bounds(kst_day(end))[1]
             for t, a, s, p, at, prec in _history_fills(user_id, list(tickers), day_start, day_end):
-                self.history.setdefault((t, a, kst_day(at)), []).append((s, p, at, prec))
+                self.history.setdefault((ticker_key(t), a, kst_day(at)), []).append((s, p, at, prec))
 
     def _load_untimed(self, since: datetime) -> None:
         rows = (
@@ -269,7 +283,7 @@ class DedupeIndex:
         mine = _precision(traded_at, arrival=arrival)
         return any(
             _same_amounts(s, p, shares, price) and _same_time(mine, traded_at, prec, at)
-            for s, p, at, prec in self.history.get((ticker, action, kst_day(traded_at)), [])
+            for s, p, at, prec in self.history.get((ticker_key(ticker), action, kst_day(traded_at)), [])
         )
 
     def is_untimed_retry(self, ticker_or_name: str, action: str,

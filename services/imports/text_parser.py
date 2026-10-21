@@ -28,6 +28,7 @@ import re
 from . import (
     RawTrade,
     mask_sensitive,
+    meridiem_hour,
     parse_datetime_has_time,
     parse_number,
     today_naive,
@@ -291,6 +292,7 @@ def _date(line: str):
         if tm:
             h, mi = int(tm.group(1)), int(tm.group(2))
             if h < 24 and mi < 60:
+                h = meridiem_hour(line, tm.start(), tm.end(), h)
                 return today_naive().replace(hour=h, minute=mi, second=int(tm.group(3) or 0)), True
         return None, False
     s = m.group(1)
@@ -303,12 +305,17 @@ def _date(line: str):
     if dt is None:
         return None, False
     if not has_time:
-        tm = _TIME_ONLY.search(line.replace(s, " "))
+        rest = line.replace(s, " ")
+        tm = _TIME_ONLY.search(rest)
         if tm:
             h, mi = int(tm.group(1)), int(tm.group(2))
             if h < 24 and mi < 60:
+                h = meridiem_hour(rest, tm.start(), tm.end(), h)
                 dt = dt.replace(hour=h, minute=mi, second=int(tm.group(3) or 0))
                 has_time = True
+    else:
+        # "2026-09-01 2:05 PM" — the date pattern took "2:05"; the marker is after it.
+        dt = dt.replace(hour=meridiem_hour(line, m.start(1), m.end(1), dt.hour))
     return dt, has_time
 
 

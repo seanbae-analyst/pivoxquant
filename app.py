@@ -1282,6 +1282,7 @@ def _try_acquire_scheduler_lock(fail_safe: bool = True) -> bool:
         # Local dev (SQLite) has no advisory locks and no deploy overlap.
         return True
     conn = None
+    saw_held = False
     try:
         # A raw psycopg2 connection — deliberately OUTSIDE the SQLAlchemy pool
         # so it is never recycled/returned (which would drop the lock).
@@ -1313,7 +1314,9 @@ def _try_acquire_scheduler_lock(fail_safe: bool = True) -> bool:
                 return True
             # Lost the race — release this short-lived connection immediately,
             # then retry once (the old container may still be releasing).
+            saw_held = True
             conn.close()
+            conn = None
             if _attempt == 0:
                 _time.sleep(0.5)
         return False
@@ -1327,6 +1330,13 @@ def _try_acquire_scheduler_lock(fail_safe: bool = True) -> bool:
                 pass
         if not fail_safe:
             raise
+        if saw_held:
+            # The first try saw the lock held elsewhere — an error on the second
+            # is no reason to start a second scheduler (2026-10-21: the
+            # background retry already had this rule, the boot attempt did not).
+            # False → the caller retries in the background.
+            logger.warning("scheduler advisory-lock retry failed after the lock was seen held")
+            return False
         logger.exception(
             "scheduler advisory-lock acquire failed — falling back to "
             "starting the scheduler (fail-safe)"

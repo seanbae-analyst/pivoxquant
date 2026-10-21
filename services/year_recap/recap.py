@@ -56,7 +56,16 @@ from typing import Any
 from models.research_note import VERDICTS
 from services.pre_trade.friction_outcome import compute_friction_outcome, ticker_key
 from services.profile.fifo_util import collapse_pairs_by_sell, fifo_match_closed_trades_with_pnl
-from services.profile.my_rules import HOLD_MIN_DAYS, frequency_ceiling, is_recorded_fill, kst_month
+from services.imports import is_date_only
+from services.profile.my_rules import (
+    _HOLD_SOONER,
+    HOLD_MIN_DAYS,
+    _at_or_after,
+    frequency_ceiling,
+    is_recorded_fill,
+    kst_day,
+    kst_month,
+)
 
 _KST = timedelta(hours=9)
 # TradeHistory.action 저장값 — 매수/매도 구분 데이터 필드다.
@@ -178,7 +187,8 @@ def _rules_section(
     ceiling = frequency_ceiling(answers)
     hold_min = HOLD_MIN_DAYS.get(str(answers.get("declared_holding")))
     adopted = kst_month(confirmed_at)
-    after = [t for t in fills if t.traded_at >= confirmed_at]
+    # 내 규칙 카드(my_rules)와 같은 규약 — 날짜만 있는 체결은 채택한 날이면 센다.
+    after = [t for t in fills if _at_or_after(t.traded_at, confirmed_at)]
     frequency = None
     if ceiling is not None:
         rows = []
@@ -194,9 +204,13 @@ def _rules_section(
         }
     holding = None
     if hold_min is not None:
-        later = [p for p in sells if p.sell_time >= confirmed_at]
+        # 보유는 KST 달력 날짜 차이 — "며칠"은 "산 날이 아님"이다 (my_rules._holding_rule).
+        later = [p for p in sells if _at_or_after(p.sell_time, confirmed_at)]
+        answer = str(answers.get("declared_holding"))
         holding = {"min_days": hold_min, "sells": len(later),
-                   "sooner": sum(1 for p in later if p.hold_days < hold_min)}
+                   "sooner": sum(1 for p in later
+                                 if (kst_day(p.sell_time) - kst_day(p.buy_time)).days < hold_min),
+                   "sooner_label": _HOLD_SOONER.get(answer)}
     if frequency is None and holding is None:
         return None
     return {"confirmed_on": _kst_date(confirmed_at), "frequency": frequency, "holding": holding}
@@ -303,9 +317,16 @@ def compute_year_recap(
     ``Fill``) · 첫 열림 시각 — 개수만 센다.
     """
     start, end, partial = _year_window(year, now)
+    first_day, last_day = kst_day(start), kst_day(end - timedelta(microseconds=1))
 
     def in_year(ts: datetime | None) -> bool:
-        return ts is not None and start <= ts < end
+        if ts is None:
+            return False
+        # 날짜만 있는 체결(그 KST 날짜 00:00)은 날짜로 — UTC 로 읽으면 오늘 것이
+        # 00~09시 KST 동안 ``now`` 뒤에 있어 안 보였다.
+        if is_date_only(ts):
+            return first_day <= ts.date() <= last_day
+        return start <= ts < end
 
     trades = list(trades)
     approved = list(approved_pending)
@@ -342,5 +363,9 @@ def compute_year_recap(
 
 def available_years(timestamps: Iterable[datetime | None], now: datetime) -> list[int]:
     """기록이 하나라도 있는 KST 해, 최신순. ``now`` 이후 시각은 무시한다."""
-    years = {kst_year(ts) for ts in timestamps if ts is not None and ts <= now}
+    today = kst_day(now)
+    years = {
+        kst_year(ts) for ts in timestamps
+        if ts is not None and (ts.date() <= today if is_date_only(ts) else ts <= now)
+    }
     return sorted(years, reverse=True)

@@ -109,7 +109,8 @@ describe("plan arithmetic", () => {
   });
 
   it("refuses what it would have to guess at — never another number", () => {
-    for (const text of ["-30000", "−30,000", "-3만", "5천", "1만5천", "만", "$100", "100만억", "1억 1억", "100원원", "1e6"]) {
+    for (const text of ["-30000", "−30,000", "-3만", "5천", "1만5천", "만", "$100", "100만억", "1억 1억", "100원원", "1e6",
+      "3만5", "1만 50"]) {
       expect(parseAmount(text)).toBeNull();
       expect(isUnreadableAmount(text)).toBe(true);
     }

@@ -1366,7 +1366,8 @@ export interface YearRecapResponse {
       within: number;
       outside: number;
     } | null;
-    holding: { min_days: number; sells: number; sooner: number } | null;
+    /** sooner_label — the my_rules wording ("산 날 판 것"), 2026-10-21. */
+    holding: { min_days: number; sells: number; sooner: number; sooner_label?: string | null } | null;
   } | null;
   quotes: YearRecapQuote[];
   /** 문 앞의 한 줄 — the year's door counts (services/doorway.year_section);

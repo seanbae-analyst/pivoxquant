@@ -83,6 +83,9 @@ describe("<SellMomentBlock />", () => {
     expect(container.innerHTML).toBe("");
     const none = render(<SellMomentBlock data={null} />);
     expect(none.container.innerHTML).toBe("");
+    // Demo mode answers `{}` — nothing, not a crash.
+    const bare = render(<SellMomentBlock data={{} as SellMomentResponse} />);
+    expect(bare.container.innerHTML).toBe("");
   });
 
   it("facts alone still show, without the quote heading", () => {

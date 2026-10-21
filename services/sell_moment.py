@@ -21,6 +21,15 @@ the same discipline as ``services/behavior/*`` and
 ``services/pre_trade/friction_outcome.py``. No score, no verdict, no
 direction: the user reads their own words and decides nothing here.
 
+One stock, one key: ``035720``, ``035720.KS`` and ``035720.KQ`` are the same
+stock everywhere here (``friction_outcome.ticker_key`` — the rule of
+``pre_trade.link.same_ticker``), in memory and in the SQL filters.
+
+A date-only row (no time printed — stored as its KST date at 00:00,
+``services.imports.is_date_only``) is ordered by KST day against timed rows:
+a sell typed for today goes after a timed 매수 earlier today, and its quote
+cut is the end of that KST day.
+
 FIFO is ``services/profile/fifo_util.py`` — reused, never re-implemented.
 Holding-registration seeds stay in the lot queue (their quantity and cost are
 real) but their ``traded_at`` is the registration time, so a sell that closes
@@ -32,6 +41,8 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Iterable, NamedTuple
 
+from services.imports import KST_OFFSET, is_date_only
+from services.pre_trade.friction_outcome import ticker_key
 from services.profile.fifo_util import (
     collapse_pairs_by_sell,
     fifo_match_closed_trades_with_pnl,
@@ -109,7 +120,7 @@ def build_sell_moment(
     ``now``.
     """
     ticker = (sell.ticker or "").strip().upper()
-    cut = min(words_before or sell.traded_at or now, now)
+    cut = min(words_before or _default_cut(sell, now), now)
     held_days, vs_cost_pct, matched = _closed_lots(sell, ticker, trades)
     words = _words(
         ticker, cut,
@@ -136,15 +147,18 @@ def _closed_lots(sell: SellInput, ticker: str, trades: Iterable) -> tuple[int | 
     """
     if not ticker or sell.traded_at is None or not (sell.shares > 0):
         return None, None, 0.0
-    rows = [
+    key = ticker_key(ticker)
+    same = [
         t for t in trades
-        if (getattr(t, "ticker", None) or "").upper() == ticker
+        if ticker_key(getattr(t, "ticker", None)) == key
         and getattr(t, "traded_at", None) is not None
-        and t.traded_at <= sell.traded_at
     ]
+    replay_at = _replay_at(sell.traded_at, same)
+    # One spelling for the replay — fifo_util queues lots by ticker string.
+    rows = [_as_ticker(t, ticker) for t in same if t.traded_at <= replay_at]
     synthetic = _SyntheticSell(
         ticker=ticker, action=_SELL, shares=float(sell.shares),
-        price_per_share=float(sell.price), traded_at=sell.traded_at,
+        price_per_share=float(sell.price), traded_at=replay_at,
         id=max((int(getattr(t, "id", 0) or 0) for t in rows), default=0) + 1,
     )
     before = fifo_match_closed_trades_with_pnl(rows)
@@ -155,6 +169,57 @@ def _closed_lots(sell: SellInput, ticker: str, trades: Iterable) -> tuple[int | 
     merged, _pct = collapse_pairs_by_sell(mine)[0]
     held = None if merged.buy_is_seed else int(round(merged.hold_days))
     return held, _vs_cost(sell, ticker, rows, mine, merged.buy_price), float(merged.quantity)
+
+
+def _kst_day(dt: datetime):
+    return (dt + KST_OFFSET).date()
+
+
+def _replay_at(sold_at: datetime, rows: list) -> datetime:
+    """Where the sell sits in the replay. A timed row and a date-only row of
+    the same KST day have no order between them as instants (a date-only row
+    reads 09:00 KST), so the sell goes after every such row of its day — the
+    user sold what they held by then."""
+    day = _kst_day(sold_at)
+    sell_dated = is_date_only(sold_at)
+    later = [
+        t.traded_at for t in rows
+        if _kst_day(t.traded_at) == day and (sell_dated or is_date_only(t.traded_at))
+    ]
+    return max([sold_at, *later])
+
+
+class _Spelled(NamedTuple):
+    ticker: str
+    action: str
+    shares: float
+    price_per_share: float
+    traded_at: datetime
+    id: int
+    pnl: float
+    pnl_pct: float
+    source: str | None
+    currency: str | None
+
+
+def _as_ticker(t, ticker: str):
+    """``t`` under the sell's spelling (``005930`` → ``005930.KS``), else ``t``."""
+    if (getattr(t, "ticker", None) or "").upper() == ticker:
+        return t
+    return _Spelled(
+        ticker=ticker, action=t.action, shares=t.shares, price_per_share=t.price_per_share,
+        traded_at=t.traded_at, id=getattr(t, "id", 0) or 0, pnl=getattr(t, "pnl", 0.0) or 0.0,
+        pnl_pct=getattr(t, "pnl_pct", 0.0) or 0.0, source=getattr(t, "source", None),
+        currency=getattr(t, "currency", None),
+    )
+
+
+def _default_cut(sell: SellInput, now: datetime) -> datetime:
+    """Quotes count up to the sell — for a date-only sell, up to the end of
+    its KST day (a note written that afternoon still came before it)."""
+    if sell.traded_at is None:
+        return now
+    return end_of_day(sell.traded_at) if is_date_only(sell.traded_at) else sell.traded_at
 
 
 def _vs_cost(sell: SellInput, ticker: str, rows: list, mine: list, cost: float) -> float | None:
@@ -173,8 +238,9 @@ def _vs_cost(sell: SellInput, ticker: str, rows: list, mine: list, cost: float) 
 
 
 def _words(ticker: str, cut: datetime, *, reflections, fill_reasons, research, notes) -> list[dict]:
-    """The user's own text about ``ticker`` written before ``cut``, newest
-    first, at most ``MAX_PER_SOURCE`` per source and ``MAX_WORDS`` in all."""
+    """The user's own text about ``ticker`` (any spelling of it,
+    :func:`ticker_key`) written before ``cut``, newest first, at most
+    ``MAX_PER_SOURCE`` per source and ``MAX_WORDS`` in all."""
     picked = [
         *_pause_quotes(ticker, cut, reflections),
         *_fill_quotes(ticker, cut, fill_reasons),
@@ -214,7 +280,7 @@ def _pause_quotes(ticker: str, cut: datetime, reflections) -> list[dict]:
     user went through with comes first — that is the one they acted on."""
     rows = [
         r for r in reflections
-        if (getattr(r, "intended_ticker", "") or "").upper() == ticker
+        if ticker_key(getattr(r, "intended_ticker", None)) == ticker_key(ticker)
         and (getattr(r, "intended_side", None) or _BUY).upper() == _BUY
         and (getattr(r, "rationale", None) or "").strip()
         and _before(getattr(r, "created_at", None), cut)
@@ -242,7 +308,7 @@ def _fill_quotes(ticker: str, cut: datetime, fill_reasons: Iterable[Written]) ->
 def _research_quotes(ticker: str, cut: datetime, research) -> list[dict]:
     rows = [
         n for n in research
-        if (getattr(n, "ticker", "") or "").upper() == ticker
+        if ticker_key(getattr(n, "ticker", None)) == ticker_key(ticker)
         and _before(getattr(n, "created_at", None), cut)
         and n.theses_list()
     ]
@@ -257,7 +323,7 @@ def _research_quotes(ticker: str, cut: datetime, research) -> list[dict]:
 def _note_quotes(ticker: str, cut: datetime, notes) -> list[dict]:
     rows = [
         n for n in notes
-        if ticker in [str(t).upper() for t in n.tickers_list()]
+        if ticker_key(ticker) in [ticker_key(t) for t in n.tickers_list()]
         and (getattr(n, "body", None) or "").strip()
         and _before(getattr(n, "created_at", None), cut)
     ]
@@ -279,37 +345,40 @@ def load_sell_moment(
     Every query filters on ``user_id`` — nobody else's rows can reach the
     pure core. Reads only; no market data.
     """
-    from sqlalchemy import func
+    from sqlalchemy import func, or_
 
     from models import ObservationNote, Position, PreTradeReflection, ResearchNote, TradeHistory
     from models.import_batch import STATUS_APPROVED, PendingTrade
-    from services.observation_notes.service import _filter_json_element
 
     uid = int(user_id)
     ticker = (sell.ticker or "").strip().upper()
-    cut = min(words_before or sell.traded_at or now, now)
+    cut = min(words_before or _default_cut(sell, now), now)
+    variants = _variants(ticker)
 
     trades = TradeHistory.query.filter(
-        TradeHistory.user_id == uid, func.upper(TradeHistory.ticker) == ticker,
+        TradeHistory.user_id == uid, func.upper(TradeHistory.ticker).in_(variants),
     ).all()
     reflections = (
         PreTradeReflection.query.filter(
             PreTradeReflection.user_id == uid,
-            func.upper(PreTradeReflection.intended_ticker) == ticker,
+            func.upper(PreTradeReflection.intended_ticker).in_(variants),
             PreTradeReflection.created_at < cut,
         ).order_by(PreTradeReflection.created_at.desc()).limit(_LOAD_LIMIT).all()
     )
     approved = (
         PendingTrade.query.filter(
             PendingTrade.user_id == uid,
-            PendingTrade.ticker == ticker,
+            PendingTrade.ticker.in_(variants),
             PendingTrade.action == _BUY,
             PendingTrade.status == STATUS_APPROVED,
             PendingTrade.approved_thesis.isnot(None),
         ).order_by(PendingTrade.approved_at.desc()).limit(_LOAD_LIMIT).all()
     )
     fill_reasons = [Written(p.approved_thesis, p.approved_at) for p in approved]
-    position = Position.query.filter_by(user_id=uid, ticker=ticker).first()
+    position = (
+        Position.query.filter(Position.user_id == uid, Position.ticker.in_(variants))
+        .order_by(Position.id.asc()).first()
+    )
     if position is not None and position.thesis:
         # Legacy rows have a thesis but no thesis_created_at — the position's
         # own open time is the closest honest date.
@@ -319,17 +388,16 @@ def load_sell_moment(
     research = (
         ResearchNote.query.filter(
             ResearchNote.user_id == uid,
-            ResearchNote.ticker == ticker,
+            ResearchNote.ticker.in_(variants),
             ResearchNote.created_at < cut,
         ).order_by(ResearchNote.created_at.desc()).limit(_LOAD_LIMIT).all()
     )
     notes = (
-        _filter_json_element(
-            ObservationNote.query.filter(
-                ObservationNote.user_id == uid, ObservationNote.created_at < cut,
-            ),
-            ObservationNote.tickers_json,
-            ticker,
+        ObservationNote.query.filter(
+            ObservationNote.user_id == uid, ObservationNote.created_at < cut,
+            # The notes service's exact-element LIKE, once per spelling.
+            or_(*(ObservationNote.tickers_json.like(f"%{_json_like(v)}%", escape="\\")
+                  for v in variants)),
         ).order_by(ObservationNote.created_at.desc()).limit(_LOAD_LIMIT).all()
     )
     return build_sell_moment(
@@ -366,8 +434,25 @@ def empty_moment(ticker: str | None = None) -> dict:
 
 
 def end_of_day(day_start: datetime) -> datetime:
-    """A date-grain sell's quote cut — the end of that (UTC-midnight) day."""
-    return day_start + timedelta(days=1)
+    """A date-grain sell's quote cut — the end of that **KST** day, as naive
+    UTC. ``day_start`` is the stored date-only shape (its KST date at 00:00);
+    adding a UTC day put the cut at 09:00 KST the next morning (2026-10-21)."""
+    return day_start + timedelta(days=1) - KST_OFFSET
+
+
+def _variants(ticker: str) -> list[str]:
+    """Every spelling :func:`ticker_key` treats as ``ticker`` — for SQL ``IN``."""
+    key = ticker_key(ticker)
+    return sorted({ticker, key, key + ".KS", key + ".KQ", key + ".KRX"})
+
+
+def _json_like(value: str) -> str:
+    """``value`` as a quoted JSON element, LIKE wildcards escaped
+    (``services.observation_notes.service._filter_json_element``)."""
+    import json
+
+    encoded = json.dumps(value, ensure_ascii=False)
+    return encoded.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
 # ── Push sentence ────────────────────────────────────────────────────
