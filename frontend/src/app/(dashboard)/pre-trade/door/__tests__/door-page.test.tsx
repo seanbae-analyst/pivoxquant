@@ -107,4 +107,16 @@ describe("web door", () => {
     await waitFor(() => expect(calls.remove).toHaveBeenCalledWith(7));
     expect(calls.mutate).toHaveBeenCalled();
   });
+
+  it("says so when a delete fails instead of dropping the error", async () => {
+    calls.checks = [
+      { id: 7, intent: "look", ticker: null, name: null, note: null, app: "toss", source: "automation", created_at: "2026-10-14T06:10:00" },
+    ];
+    calls.remove.mockReset().mockRejectedValue(new Error("network"));
+    render(<DoorPage />);
+    const list = screen.getByTestId("door-recent");
+    fireEvent.click(within(list).getByRole("button", { name: /기록 지우기/ }));
+    expect(await within(list).findByRole("alert")).toHaveTextContent("지우지 못했어요");
+    expect(calls.mutate).not.toHaveBeenCalled();
+  });
 });

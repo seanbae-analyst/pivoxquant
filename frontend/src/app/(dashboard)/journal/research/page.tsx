@@ -21,7 +21,7 @@ import { useSearchParams } from "next/navigation";
 import useSWRInfinite from "swr/infinite";
 import { API } from "@/lib/endpoints";
 import { fetcher, useResearchOverview } from "@/lib/hooks";
-import { researchDate } from "@/lib/research";
+import { looksLikeTicker, researchDate } from "@/lib/research";
 import type { ResearchNotesResponse } from "@/lib/types";
 import { Caption, EditorialHead, RuledKicker } from "@/components/ui/editorial";
 import { ResearchForm } from "@/components/journal/research/research-form";
@@ -41,7 +41,9 @@ const RESEARCH_PAGE_SIZE = 100;
 function useResearchPages() {
   const swr = useSWRInfinite<ResearchNotesResponse>(
     (_index, prev: ResearchNotesResponse | null) => {
-      if (prev && prev.next_before === null) return null;
+      // `== null` — a body without the field (demo `{}`) is the end, not
+      // `?before=undefined` re-reading page 1.
+      if (prev && prev.next_before == null) return null;
       const before = prev ? `&before=${prev.next_before}` : "";
       return `${API.research.list}?limit=${RESEARCH_PAGE_SIZE}${before}`;
     },
@@ -51,8 +53,8 @@ function useResearchPages() {
   const pages = swr.data ?? [];
   const last = pages[pages.length - 1];
   return {
-    notes: pages.flatMap((p) => p.notes),
-    hasMore: Boolean(last && last.next_before !== null),
+    notes: pages.flatMap((p) => (Array.isArray(p?.notes) ? p.notes : [])),
+    hasMore: Boolean(last && last.next_before != null),
     loadingMore: swr.size > pages.length,
     isLoading: swr.isLoading,
     loadMore: () => void swr.setSize(swr.size + 1),
@@ -70,11 +72,14 @@ function SectionTitle({ children, id }: { children: React.ReactNode; id?: string
 
 function ResearchPageInner() {
   const params = useSearchParams();
-  const tickerParam = params.get("ticker");
-  const fromPortfolio = params.get("from") === "portfolio";
+  // An old link can carry a typed name — only a symbol is pre-picked.
+  const rawTicker = params.get("ticker");
+  const tickerParam = rawTicker && looksLikeTicker(rawTicker) ? rawTicker.trim().toUpperCase() : null;
+  const from = params.get("from");
+  const surface = from === "portfolio" || from === "pre_trade" ? from : "journal";
   const overview = useResearchOverview();
   const list = useResearchPages();
-  const [formOpen, setFormOpen] = useState<boolean | null>(tickerParam || params.get("new") ? true : null);
+  const [formOpen, setFormOpen] = useState<boolean | null>(rawTicker || params.get("new") ? true : null);
   const [saved, setSaved] = useState<string | null>(null);
 
   const refresh = () => {
@@ -140,7 +145,7 @@ function ResearchPageInner() {
             <div className="mt-4">
               <ResearchForm
                 defaultTicker={tickerParam ? { ticker: tickerParam, name: params.get("name") ?? "" } : null}
-                surface={fromPortfolio ? "portfolio" : "journal"}
+                surface={surface}
                 onSaved={(note) => {
                   setSaved(researchDate(note.review_on));
                   setFormOpen(false);

@@ -6,7 +6,8 @@
  *
  * A sub-screen of 거울 (bottom-nav subRoutes, top-bar ‹). The title avoids
  * "결산" — the CFO metaphor is retired (pwa-assets copy test). The year
- * selector shows only when the user has records in more than one year. The
+ * selector shows when there is more than one year to pick — the years with a
+ * record plus the year on screen, so an empty January still reaches last year. The
  * share button draws a counts-only PNG on the device (share-card.ts).
  *
  * Disclaimer: mounted once by (dashboard)/layout.tsx — /mirror/year falls
@@ -20,6 +21,7 @@ import { researchDate } from "@/lib/research";
 import { Caption, EditorialHead } from "@/components/ui/editorial";
 import { YearRecapView } from "@/components/mirror/year/year-recap-view";
 import { canShareCard, shareYearCard, type ShareResult } from "@/components/mirror/year/share-card";
+import type { YearRecapResponse } from "@/lib/types";
 
 const DIM = "rgba(var(--pq-ivory-rgb), 0.55)";
 
@@ -53,11 +55,23 @@ function YearSelector({ years, year, onPick }: { years: number[]; year: number; 
   );
 }
 
+/** The years to offer: every year with a record, plus the one on screen — an
+ *  empty current year (early January) must still lead to last year. */
+function selectableYears(data: YearRecapResponse): number[] {
+  return Array.from(new Set([...data.years, data.year])).sort((a, b) => b - a);
+}
+
 export default function YearRecapPage() {
   const [year, setYear] = React.useState<number | null>(null);
-  const { data, isLoading, error } = useYearRecap(year);
+  const { data: raw, isLoading, error } = useYearRecap(year);
+  // A 200 with a body that is not a recap (demo `{}`) draws nothing, not a crash.
+  const data = raw && raw.range && Array.isArray(raw.years) ? raw : null;
   const [status, setStatus] = React.useState<string | null>(null);
   const [sharing, setSharing] = React.useState(false);
+  // Keep the selector while another year loads (data is null meanwhile).
+  const [years, setYears] = React.useState<number[]>([]);
+  const nextYears = data ? selectableYears(data) : null;
+  if (nextYears && nextYears.join() !== years.join()) setYears(nextYears);
 
   const onShare = async () => {
     if (!data) return;
@@ -83,8 +97,8 @@ export default function YearRecapPage() {
             {researchDate(data.range.start)}부터 {researchDate(data.range.end)}까지, 여기에 남긴 기록만 셌어요.
           </Caption>
         )}
-        {data && data.years.length > 1 && (
-          <YearSelector years={data.years} year={data.year} onPick={(y) => { setStatus(null); setYear(y); }} />
+        {years.length > 1 && shownYear != null && (
+          <YearSelector years={years} year={shownYear} onPick={(y) => { setStatus(null); setYear(y); }} />
         )}
         <Link
           href="/mirror"

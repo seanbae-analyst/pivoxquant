@@ -139,7 +139,8 @@ describe("YearRecapView", () => {
     const text = door.textContent ?? "";
     expect(text).toContain("41번");
     expect(text).toContain("살 게 · 팔 게 있다고 한 18번 중 말한 대로 체결 8번");
-    expect(text).toContain("종목을 적고 체결 없이 끝난 7번 중 30일 안에 그 종목 체결 2 · 체결 없음 3");
+    // 2 + 3 + 2 = 7 — the opens under 30 days are named, as on /mirror.
+    expect(text).toContain("종목을 적고 체결 없이 끝난 7번 중 30일 안에 그 종목 체결 2 · 체결 없음 3 · 아직 30일이 안 됨 2");
     expect(text).not.toMatch(BANNED);
   });
 
@@ -219,6 +220,19 @@ describe("/mirror/year page", () => {
     render(<YearRecapPage />);
     const group = screen.getByRole("group", { name: "연도" });
     expect(within(group).getAllByRole("button").map((b) => b.textContent)).toEqual(["2026년", "2025년"]);
+  });
+
+  it("an empty current year still leads to last year", () => {
+    recap = { data: { ...FULL, year: 2026, years: [2025], empty: true }, isLoading: false, error: undefined };
+    render(<YearRecapPage />);
+    const group = screen.getByRole("group", { name: "연도" });
+    expect(within(group).getAllByRole("button").map((b) => b.textContent)).toEqual(["2026년", "2025년"]);
+  });
+
+  it("a body that is not a recap draws nothing instead of crashing", () => {
+    recap = { data: {} as YearRecapResponse, isLoading: false, error: undefined };
+    render(<YearRecapPage />);
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("올해의 기록");
   });
 
   it("an empty year shows no share button", () => {

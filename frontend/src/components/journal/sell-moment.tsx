@@ -68,7 +68,9 @@ export function SellMomentBlock({
 }) {
   if (!data) return null;
   const facts = factsLine(data, sellShares);
-  if (!data.words.length && !facts) return null;
+  // A body without `words` (demo `{}`) draws nothing rather than crashing.
+  const words = Array.isArray(data.words) ? data.words : [];
+  if (!words.length && !facts) return null;
   const thisYear = new Date().getFullYear();
 
   return (
@@ -78,13 +80,13 @@ export function SellMomentBlock({
       className="rounded-[var(--pq-radius-card)] border px-4 py-3"
       style={{ borderColor: "var(--pq-ivory-line)", background: "var(--pq-card-veil)" }}
     >
-      {data.words.length > 0 && (
+      {words.length > 0 && (
         <>
           <p className="m-0" style={{ fontSize: "var(--pq-text-eyebrow)", color: "var(--pq-bronze)" }}>
             이 종목에 적어 둔 말
           </p>
           <ul className="mt-2 space-y-2.5 list-none p-0 m-0">
-            {data.words.map((w, i) => (
+            {words.map((w, i) => (
               <li key={`${w.source}-${w.at}-${i}`} data-testid="sell-moment-quote">
                 <div
                   style={{ fontSize: "var(--pq-text-eyebrow)", color: "var(--pq-ivory-faint)", whiteSpace: "nowrap" }}
@@ -118,7 +120,7 @@ export function SellMomentBlock({
       )}
       {facts && (
         <p
-          className={`m-0 tabular-nums${data.words.length ? " mt-3" : ""}`}
+          className={`m-0 tabular-nums${words.length ? " mt-3" : ""}`}
           data-testid="sell-moment-facts"
           style={{ fontSize: "var(--pq-text-body-sm)", color: "var(--pq-ivory-mid)", wordBreak: "keep-all" }}
         >

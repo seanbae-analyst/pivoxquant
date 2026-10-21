@@ -24,6 +24,7 @@ from services.sell_moment import (
     SellInput,
     Written,
     build_sell_moment,
+    end_of_day,
     push_sentence,
 )
 
@@ -112,6 +113,45 @@ def test_mixed_seed_and_dated_lots_hold_from_the_dated_ones():
     ]
     m = build_sell_moment(_sell(), trades=trades, now=NOW)
     assert m["held_days"] == 30
+
+
+def test_a_date_only_sell_closes_a_timed_buy_of_the_same_kst_day():
+    """2026-10-21 — a sell typed for today is stored at today 00:00 (date-only),
+    which sorts before a 10:00 KST fill of the same day (01:00 UTC): the buy
+    was left out and the sell closed nothing."""
+    day = datetime(2026, 9, 1)  # 9/1, date-only
+    buy = _trade(1, "BUY", 10, 100.0, datetime(2026, 9, 1, 1, 0, 0, 1), ticker="005930.KS", currency="KRW")
+    m = build_sell_moment(_sell(shares=10, price=105.0, at=day, ticker="005930.KS", currency="KRW"),
+                          trades=[buy], now=NOW)
+    assert m["matched_shares"] == 10
+    assert m["held_days"] == 0
+    assert m["vs_cost_pct"] == pytest.approx(5.0)
+
+
+def test_one_stock_under_every_spelling():
+    """``005930`` · ``005930.KS`` · ``005930.KQ`` are one stock — lots and words."""
+    trades = [_trade(1, "BUY", 10, 100.0, T0, ticker="005930", currency="KRW")]
+    sell = _sell(price=110.0, ticker="005930.KS", currency="KRW")
+    m = build_sell_moment(
+        sell, trades=trades, now=NOW,
+        reflections=[_refl("실적 발표 전", T0 - timedelta(days=1), ticker="005930.KQ")],
+        notes=[_note("관찰", T0 + timedelta(days=2), tickers=("005930",))],
+    )
+    assert m["held_days"] == 30 and m["matched_shares"] == 10
+    assert [w["source"] for w in m["words"]] == [SOURCE_NOTE, SOURCE_PAUSE]
+    assert {w["ticker"] for w in m["words"]} == {"005930.KS"}
+
+
+def test_a_date_only_sell_counts_words_until_the_end_of_its_kst_day():
+    day = datetime(2026, 9, 1)  # 9/1 KST, date-only
+    afternoon = datetime(2026, 9, 1, 5, 0)    # 9/1 14:00 KST — before the end of that day
+    next_dawn = datetime(2026, 9, 1, 20, 0)   # 9/2 05:00 KST — after
+    m = build_sell_moment(
+        _sell(at=day), now=NOW,
+        notes=[_note("오후에 쓴 것", afternoon), _note("다음 날 새벽", next_dawn)],
+    )
+    assert [w["text"] for w in m["words"]] == ["오후에 쓴 것"]
+    assert end_of_day(day) == datetime(2026, 9, 1, 15, 0)  # 9/2 00:00 KST
 
 
 def test_currency_mismatch_gives_no_percent():
@@ -279,6 +319,16 @@ def test_route_pending_sell_returns_own_words_verbatim(client, app, auth_user):
     assert "목표가 상향 기사를 읽었다" in texts
     assert "HBM 공급 계약을 보고 산다" in texts
     assert "메모리 가격 반등을 기다렸다" in texts
+
+
+def test_route_pending_sell_reads_rows_under_another_spelling(client, app, auth_user):
+    """The rows say ``035720.KQ``, the fill says ``035720.KS`` — one stock."""
+    with app.app_context():
+        batch = _seed_user_rows(auth_user["id"], ticker="035720.KQ")
+        pid = _pending_sell(auth_user["id"], batch, ticker="035720.KS")
+    body = client.get(f"/api/sell-moment/pending/{pid}").get_json()
+    assert body["held_days"] == 30
+    assert len(body["words"]) == 3
 
 
 def test_route_pending_buy_or_approved_row_is_empty(client, app, auth_user):

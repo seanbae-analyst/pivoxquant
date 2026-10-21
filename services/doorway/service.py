@@ -34,6 +34,10 @@ docs/design/doorway-pause_2026-10-15.md · models/doorway_check.py.
   ``FOLLOW_MINUTES`` 안에서 가장 늦게 연 열림. 같은 체결을 두 열림이 나눠 갖지
   않는다. 체결 문자는 분 단위라 열기 직전으로 찍힐 수 있어
   ``EARLY_GRACE_SECONDS`` 만큼 앞선 체결도 그 열림에 잇는다.
+* 시각 없이 날짜만 남은 체결(``services.imports.is_date_only``)은 어느 열림에도
+  잇지 않는다 — 60분 창을 잴 시각이 없다. "결국 체결했나"(30일)와 체결 수는
+  KST 날짜로 센다 (my_rules · research_notes 와 같은 규약).
+* 같은 종목 = ``friction_outcome.ticker_key`` (``005930`` · ``.KS`` · ``.KQ`` 는 하나).
 * 체결 = 본인 기록 체결(등록 경로가 쓴 행 제외, ``fifo_util.is_registration_row``)
   + 가져오기 대기 목록에 아직 있는 체결. 승인된 대기 행은 이미 trade_history 에
   있으므로 다시 세지 않는다 — my_rules.month_fill_count 와 같은 단위.
@@ -59,6 +63,8 @@ from models.doorway_check import (
     DoorwayCheck,
     offline_name,
 )
+from services.imports import is_date_only
+from services.pre_trade.friction_outcome import ticker_key
 
 log = logging.getLogger(__name__)
 
@@ -83,6 +89,7 @@ CAVEATS = (
     "한 체결은 바로 앞의 열림 하나에만 이어집니다.",
     "자동화가 꺼져 있던 때나 다른 기기·PC에서 한 거래는 '문을 거치지 않은 체결'로 셉니다.",
     "기록 대기 목록에 아직 있는 체결도 함께 셉니다.",
+    "시각 없이 날짜만 적은 체결은 어느 열림에도 잇지 않습니다 — 문을 거치지 않은 체결로 셉니다.",
     "누가 언제 앱을 열지는 무작위가 아니므로, 이 숫자로 질문의 효과를 말할 수는 없습니다.",
 )
 
@@ -183,6 +190,9 @@ _LATIN_STOP = frozenset({
     "AI", "ETF", "ETN", "IPO", "PER", "PBR", "EPS", "ROE", "CEO", "IR", "DCA",
     "FOMC", "CPI", "GDP", "USD", "KRW", "US", "KR", "OK", "VS", "TV", "IT",
     "PC", "EV", "UP", "GO", "ALL", "NEW", "NOW", "ONE", "SO", "AM", "PM",
+    # 2026-10-21 — 미국 마스터에 기호로 있는 흔한 영어 낱말.
+    "A", "FOR", "ARE", "CAN", "ANY", "KEY", "GOOD", "CASH", "LOW", "HIGH",
+    "HOLD",  # // legal-ok — 낱말 거르기용, 화면에 나가지 않는다
 })
 # 이름 끝에 붙는 조사 — "삼성전자를" → "삼성전자".
 _PARTICLES = ("에서", "으로", "까지", "부터", "이랑", "하고", "처럼",
@@ -340,13 +350,33 @@ def _iso(dt: datetime | None) -> str | None:
     return dt.isoformat() if dt else None
 
 
+def _kst_day(dt: datetime):
+    """저장된 시각의 KST 날짜 — 시각 있는 체결은 UTC, 날짜만 있는 체결은 그 KST
+    날짜 00:00 이라 +9h 가 둘 다 맞다 (``my_rules.kst_day``)."""
+    return (dt + _KST).date()
+
+
+def _at_or_after(ts: datetime, since: datetime) -> bool:
+    """날짜만 있는 체결은 날짜로 비교한다 — 시각이 없으니 그날이면 그 뒤로 본다."""
+    return _kst_day(ts) >= _kst_day(since) if is_date_only(ts) else ts >= since
+
+
+def _before(ts: datetime, end: datetime) -> bool:
+    """``end`` 는 배타 — 날짜만 있는 체결은 ``end`` 바로 앞 순간의 KST 날짜까지."""
+    return _kst_day(ts) <= _kst_day(end - timedelta(microseconds=1)) if is_date_only(ts) else ts < end
+
+
 def _attribute(checks: Sequence, fills: Sequence[Fill]) -> dict[int, list[Fill]]:
-    """체결마다 바로 앞의 열림 하나를 찾는다 → ``{check index: [fills]}``."""
+    """체결마다 바로 앞의 열림 하나를 찾는다 → ``{check index: [fills]}``.
+
+    날짜만 있는 체결은 넘기지 않는다 — 60분 창을 잴 시각이 없다."""
     times = [c.created_at for c in checks]
     follow = timedelta(minutes=FOLLOW_MINUTES)
     grace = timedelta(seconds=EARLY_GRACE_SECONDS)
     out: dict[int, list[Fill]] = {}
     for f in fills:
+        if is_date_only(f.traded_at):
+            continue
         # 체결 시각 + 유예 안쪽에서 가장 늦은 열림.
         i = bisect.bisect_right(times, f.traded_at + grace) - 1
         if i < 0:
@@ -357,6 +387,13 @@ def _attribute(checks: Sequence, fills: Sequence[Fill]) -> dict[int, list[Fill]]
     return out
 
 
+def _later_fill(ts: datetime, opened: datetime, upto: datetime) -> bool:
+    """열림 뒤 ``(opened, upto]`` 의 체결인가 — 날짜만 있는 체결은 KST 날짜로."""
+    if is_date_only(ts):
+        return _kst_day(opened) <= _kst_day(ts) <= _kst_day(upto)
+    return opened < ts <= upto
+
+
 def _outcome(check, attributed: list[Fill]) -> str:
     """look → traded | none · buy/sell → as_said | other | none."""
     if not attributed:
@@ -365,7 +402,7 @@ def _outcome(check, attributed: list[Fill]) -> str:
         return "traded"
     side = _SIDE_FOR_INTENT.get(check.intent)
     for f in attributed:
-        if f.side == side and (check.ticker is None or f.ticker == check.ticker):
+        if f.side == side and (check.ticker is None or ticker_key(f.ticker) == ticker_key(check.ticker)):
             return "as_said"
     return "other"
 
@@ -393,7 +430,6 @@ def summarize(
 
     def in_window(ts: datetime) -> bool:
         return ts >= window_start and (end is None or ts < end)
-    follow = timedelta(minutes=FOLLOW_MINUTES)
     later = timedelta(days=LATER_DAYS)
 
     all_checks = sorted(
@@ -429,24 +465,32 @@ def summarize(
             # 같은 종목을 같은 방향으로 체결했나.
             if outcome == "none" and c.ticker:
                 not_happened["n"] += 1
+                # 창은 열림 바로 뒤부터 — 60분 안의 체결이 그 뒤 다시 연 열림에
+                # 이어졌어도(앱을 다시 열고 "그냥 보기") 그 종목을 산 것은 맞다.
+                # 지역 변수 이름이 ``start``/``end`` 면 위 ``in_window`` 가 보는
+                # 창 끝을 덮어쓴다 (2026-10-21 수정).
                 side = _SIDE_FOR_INTENT[c.intent]
-                start, end = c.created_at + follow, c.created_at + later
-                if any(f.ticker == c.ticker and f.side == side and start < f.traded_at <= end
+                upto = c.created_at + later
+                key = ticker_key(c.ticker)
+                if any(ticker_key(f.ticker) == key and f.side == side
+                       and _later_fill(f.traded_at, c.created_at, upto)
                        for f in all_fills):
                     not_happened["later"] += 1
-                elif now < end:
+                elif now < upto:
                     not_happened["open"] += 1
                 else:
                     not_happened["never"] += 1
         window_rows.append((c, outcome))
 
     # 문을 거친 체결 — 첫 열림 이후(그 전엔 자동화가 없었다), 창 안의 체결만.
+    # 첫 열림 바로 앞 유예 안의 체결도 그 열림에 이어지므로 함께 센다.
     door_ids = {id(f) for fs in attributed.values() for f in fs}
-    since = max(window_start, first_check_at) if first_check_at else None
+    grace = timedelta(seconds=EARLY_GRACE_SECONDS)
+    since = max(window_start, first_check_at - grace) if first_check_at else None
     fills_total = fills_door = 0
     if since is not None:
         for f in all_fills:
-            if f.traded_at >= since and (end is None or f.traded_at < end):
+            if _at_or_after(f.traded_at, since) and (end is None or _before(f.traded_at, end)):
                 fills_total += 1
                 if id(f) in door_ids:
                     fills_door += 1
