@@ -23,14 +23,46 @@
  */
 import * as React from "react";
 import Link from "next/link";
+import useSWRInfinite from "swr/infinite";
 
 import { ApiError } from "@/lib/api";
-import { createDoorwayCheck, deleteDoorwayCheck, useDoorwayChecks } from "@/lib/hooks";
-import type { DoorwayCheck, DoorwayCreateResponse, DoorwayIntent } from "@/lib/types";
+import { API } from "@/lib/endpoints";
+import { createDoorwayCheck, deleteDoorwayCheck, fetcher } from "@/lib/hooks";
+import type { DoorwayCheck, DoorwayChecksResponse, DoorwayCreateResponse, DoorwayIntent } from "@/lib/types";
 import { INTENT_LABEL, kstStamp } from "@/components/mirror/doorway-panel";
 
 const DIM = "rgba(var(--pq-ivory-rgb), 0.55)";
 const MAX_LINE = 200;
+/** One read of past answers (the server allows up to 100). */
+const DOOR_PAGE_SIZE = 20;
+
+/**
+ * Past answers, page by page on the server's id cursor (`next_before` →
+ * `?before=`, routes/doorway.py). 2026-10-21: the page read one `?limit=20`
+ * and dropped `next_before`, so only the newest 20 could be deleted here —
+ * against the privacy policy's "하나씩 지울 수 있습니다". `mutate()` re-reads
+ * every loaded page. Same pattern as /journal/research.
+ */
+function useDoorwayPages() {
+  const swr = useSWRInfinite<DoorwayChecksResponse>(
+    (_index, prev: DoorwayChecksResponse | null) => {
+      if (prev && !prev.next_before) return null;
+      const before = prev ? `&before=${prev.next_before}` : "";
+      return `${API.doorway.checks}?limit=${DOOR_PAGE_SIZE}${before}`;
+    },
+    fetcher,
+    { revalidateOnFocus: false, dedupingInterval: 10_000 },
+  );
+  const pages = swr.data ?? [];
+  const last = pages[pages.length - 1];
+  return {
+    checks: pages.flatMap((p) => p.checks ?? []),
+    hasMore: Boolean(last && last.next_before),
+    loadingMore: swr.size > pages.length,
+    loadMore: () => void swr.setSize(swr.size + 1),
+    mutate: swr.mutate,
+  };
+}
 
 function readApp(): string | undefined {
   try {
@@ -89,8 +121,8 @@ function ChoiceButton({
   );
 }
 
-function RecentChecks() {
-  const { checks, mutate } = useDoorwayChecks(20);
+function RecentChecks({ pages }: { pages: ReturnType<typeof useDoorwayPages> }) {
+  const { checks, mutate, hasMore, loadingMore, loadMore } = pages;
   const [busy, setBusy] = React.useState<number | null>(null);
   if (checks.length === 0) return null;
 
@@ -139,6 +171,18 @@ function RecentChecks() {
           </li>
         ))}
       </ul>
+      {hasMore && (
+        <button
+          type="button"
+          onClick={loadMore}
+          disabled={loadingMore}
+          className="mt-3 text-[12.5px] underline underline-offset-2 disabled:opacity-60"
+          style={{ color: "var(--pq-bronze)" }}
+          data-testid="door-more"
+        >
+          {loadingMore ? "불러오는 중…" : "이전 기록 더 보기"}
+        </button>
+      )}
     </section>
   );
 }
@@ -152,7 +196,8 @@ export default function DoorPage() {
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [done, setDone] = React.useState<ReturnType<typeof doneView> | null>(null);
-  const { mutate: refreshList } = useDoorwayChecks(20);
+  const pages = useDoorwayPages();
+  const refreshList = pages.mutate;
 
   const save = async (which: DoorwayIntent, note?: string) => {
     setBusy(true);
@@ -283,7 +328,7 @@ export default function DoorPage() {
         </section>
       )}
 
-      <RecentChecks />
+      <RecentChecks pages={pages} />
     </div>
   );
 }

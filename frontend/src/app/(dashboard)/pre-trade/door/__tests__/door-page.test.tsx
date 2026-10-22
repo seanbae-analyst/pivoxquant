@@ -4,26 +4,54 @@
  * Pins: 그냥 보기 saves at once; 살/팔 게 있음 ask for one optional line and
  * then save; the `app` tag comes from ?app= (and only a safe slug); the reply
  * is the server's count line; 「멈춤」 is offered only for 살 게 있음 with a
- * ticker and carries the ticker, never the line; past answers can be deleted.
+ * ticker and carries the ticker, never the line; past answers can be deleted,
+ * all of them — the list follows the server's `next_before` cursor
+ * ("이전 기록 더 보기", 2026-10-21).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render as rtlRender, screen, waitFor, within } from "@testing-library/react";
+import * as React from "react";
+import { SWRConfig } from "swr";
 
 const calls = vi.hoisted(() => ({
   create: vi.fn(),
   remove: vi.fn(),
-  mutate: vi.fn(),
+  fetch: vi.fn<(url: string) => Promise<unknown>>(),
   checks: [] as unknown[],
 }));
 
 vi.mock("@/lib/hooks", () => ({
   createDoorwayCheck: calls.create,
   deleteDoorwayCheck: calls.remove,
-  useDoorwayChecks: () => ({ checks: calls.checks, isLoading: false, error: undefined, mutate: calls.mutate }),
+  fetcher: (url: string) => calls.fetch(url),
   useDoorwaySummary: () => ({ data: null, isLoading: false, error: undefined, mutate: vi.fn() }),
 }));
 
 import DoorPage from "@/app/(dashboard)/pre-trade/door/page";
+
+function render(ui: React.ReactElement) {
+  return rtlRender(
+    <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>{ui}</SWRConfig>,
+  );
+}
+
+/** Serves `calls.checks` (newest first) the way routes/doorway.py pages them by id. */
+function serve(url: string) {
+  const u = new URL(url, "http://x");
+  const limit = Number(u.searchParams.get("limit"));
+  const before = u.searchParams.get("before");
+  const rows = (calls.checks as { id: number }[]).filter((c) => before === null || c.id < Number(before));
+  const page = rows.slice(0, limit);
+  return Promise.resolve({
+    ok: true,
+    checks: page,
+    next_before: rows.length > limit ? page[page.length - 1].id : null,
+  });
+}
+
+function check(id: number, note: string) {
+  return { id, intent: "look", ticker: null, name: null, note, app: "toss", source: "automation", created_at: "2026-10-14T06:10:00" };
+}
 
 function reply(intent: string, ticker: string | null, message: string) {
   return {
@@ -38,7 +66,7 @@ function reply(intent: string, ticker: string | null, message: string) {
 beforeEach(() => {
   calls.create.mockReset();
   calls.remove.mockReset().mockResolvedValue({ ok: true, deleted: 7 });
-  calls.mutate.mockReset().mockResolvedValue(undefined);
+  calls.fetch.mockReset().mockImplementation(serve);
   calls.checks = [];
   window.history.replaceState(null, "", "/pre-trade/door?app=kiwoom");
 });
@@ -101,10 +129,34 @@ describe("web door", () => {
       { id: 7, intent: "sell", ticker: "TSLA", name: "Tesla", note: "반등 정리", app: "toss", source: "automation", created_at: "2026-10-14T06:10:00" },
     ];
     render(<DoorPage />);
-    const list = screen.getByTestId("door-recent");
+    const list = await screen.findByTestId("door-recent");
     expect(within(list).getByText("반등 정리")).toBeInTheDocument();
+    expect(screen.queryByTestId("door-more")).toBeNull();
+    const reads = calls.fetch.mock.calls.length;
     fireEvent.click(within(list).getByRole("button", { name: /기록 지우기/ }));
     await waitFor(() => expect(calls.remove).toHaveBeenCalledWith(7));
-    expect(calls.mutate).toHaveBeenCalled();
+    await waitFor(() => expect(calls.fetch.mock.calls.length).toBeGreaterThan(reads));
+  });
+
+  it("reaches answers past the first 20 and can delete them", async () => {
+    calls.checks = Array.from({ length: 25 }, (_, i) => check(25 - i, `열림 ${25 - i}`));
+    render(<DoorPage />);
+    await screen.findByText("열림 25");
+    expect(screen.queryByText("열림 5")).toBeNull();
+    fireEvent.click(screen.getByTestId("door-more"));
+    await screen.findByText("열림 5");
+    expect(calls.fetch).toHaveBeenCalledWith("/api/doorway/checks?limit=20&before=6");
+    expect(screen.getByText("열림 1")).toBeInTheDocument();
+    expect(screen.queryByTestId("door-more")).toBeNull();
+
+    calls.remove.mockImplementation(async (id: number) => {
+      calls.checks = (calls.checks as { id: number }[]).filter((c) => c.id !== id);
+      return { ok: true, deleted: id };
+    });
+    const row = screen.getByText("열림 1").closest("li") as HTMLElement;
+    fireEvent.click(within(row).getByRole("button", { name: /기록 지우기/ }));
+    await waitFor(() => expect(calls.remove).toHaveBeenCalledWith(1));
+    await waitFor(() => expect(screen.queryByText("열림 1")).toBeNull());
+    expect(screen.getByText("열림 2")).toBeInTheDocument();
   });
 });

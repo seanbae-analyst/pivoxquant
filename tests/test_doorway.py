@@ -256,6 +256,75 @@ def test_year_section_counts_only_that_year():
                         first_check_at=checks[0].created_at) is None
 
 
+def test_a_not_happened_open_does_not_shrink_the_window():
+    """2026-10-21: the 30-day follow-up rebound ``summarize``'s ``start``/``end``,
+    so the first unfilled buy/sell open with a ticker cut every later open and
+    fill out of a 90-day window and out of the year."""
+    old = NOW - timedelta(days=80)
+    checks = [_check(1, old, "buy", "005930.KS")] + [
+        _check(i, NOW - timedelta(days=11 - i), "look") for i in range(2, 7)
+    ]
+    fills = [Fill(NOW - timedelta(days=5, minutes=-10), "TSLA", "BUY")]
+    out = summarize(checks, fills, now=NOW, days=90, first_check_at=old)
+    assert out["total"] == 6
+    assert out["intents"] == {"look": 5, "buy": 1, "sell": 0}
+    assert out["not_happened"] == {"n": 1, "later": 0, "never": 1, "open": 0}
+    assert out["fills"] == {"total": 1, "through_door": 1}
+    assert len(out["recent"]) == 6
+
+    start, end = datetime(2025, 12, 31, 15, 0), datetime(2026, 12, 31, 15, 0)
+    year = [
+        _check(1, datetime(2026, 1, 10, 1, 0), "buy", "AAPL"),
+        _check(2, datetime(2026, 8, 1, 1, 0), "look"),
+        _check(3, datetime(2026, 8, 2, 1, 0), "look"),
+        _check(4, datetime(2026, 8, 3, 1, 0), "look"),
+    ]
+    out = year_section(year, [Fill(datetime(2026, 8, 3, 1, 20), "TSLA", "BUY")],
+                       start=start, end=end, now=NOW, first_check_at=year[0].created_at)
+    assert out["total"] == 4
+    assert out["fills"] == {"total": 1, "through_door": 1}
+
+
+@pytest.mark.parametrize("fill_ticker", ["035720.KS", "035720", "035720.KQ"])
+def test_suffix_variants_are_the_same_name(fill_ticker):
+    """.KS / .KQ / bare code are one name — friction_outcome.ticker_key."""
+    t0 = NOW - timedelta(days=40)
+    checks = [_check(1, t0, "buy", "035720.KQ"), _check(2, t0 + timedelta(days=1), "buy", "035720.KQ")]
+    fills = [
+        Fill(t0 + timedelta(minutes=5), fill_ticker, "BUY"),
+        # check 2 has no fill of its own; a later fill of the same name is "later".
+        Fill(t0 + timedelta(days=3), fill_ticker, "BUY"),
+    ]
+    out = summarize(checks, fills, now=NOW, days=90, first_check_at=t0)
+    assert out["said"]["buy"] == {"n": 2, "as_said": 1, "other": 0, "none": 1}
+    assert out["not_happened"] == {"n": 1, "later": 1, "never": 0, "open": 0}
+
+
+def test_a_date_only_fill_is_counted_but_never_follows_an_open():
+    """A date-only fill is stored as its KST date at 00:00 (= 09:00 KST): it
+    has no time, so it must not read as the fill right after a pre-open door."""
+    door = datetime(2026, 10, 13, 23, 30)  # 2026-10-14 08:30 KST
+    checks = [_check(1, door, "look")]
+    fills = [Fill(datetime(2026, 10, 14, 0, 0), "AAPL", "BUY", untimed=True)]
+    out = summarize(checks, fills, now=NOW, first_check_at=door)
+    assert out["look"] == {"n": 1, "traded": 0}
+    assert out["fills"] == {"total": 1, "through_door": 0}
+
+
+def test_load_fills_marks_date_only_rows(app, auth_user):
+    from services.doorway.service import load_fills
+
+    with app.app_context():
+        for at in (datetime(2026, 10, 14, 0, 0), datetime(2026, 10, 14, 5, 0)):
+            db.session.add(TradeHistory(
+                user_id=auth_user["id"], ticker="AAPL", action="BUY", shares=1.0,
+                price_per_share=100.0, total_value=100.0, currency="USD", traded_at=at,
+            ))
+        db.session.commit()
+        got = sorted((f.traded_at.hour, f.untimed) for f in load_fills(auth_user["id"], datetime(2026, 10, 1)))
+    assert got == [(0, True), (5, False)]
+
+
 # ─────────────────────────────────────────────────────────────────────
 # Routes
 # ─────────────────────────────────────────────────────────────────────
@@ -300,6 +369,8 @@ def test_webhook_records_with_the_import_token(client, bearer_client, auth_user)
     assert plain.status_code == 201
     assert plain.get_json()["check"]["intent"] == "look"
     assert plain.get_json()["pause_url"] is None
+    # A token used only at the door still shows as used in Settings.
+    assert client.get(TOKENS).get_json()["tokens"][0]["last_used_at"]
 
 
 def test_token_issued_before_door_consent_is_refused(client, bearer_client, auth_user, app):

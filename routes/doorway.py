@@ -35,6 +35,7 @@ import logging
 from flask import Blueprint, g, jsonify, request
 from flask_login import current_user
 
+from extensions import db
 from models.doorway_check import SOURCE_AUTOMATION, SOURCE_WEB
 from services.doorway import (
     DoorwayInputError,
@@ -46,6 +47,7 @@ from services.doorway import (
     reply_line,
 )
 from services.error_responses import api_error
+from services.imports import utcnow_naive
 from services.legal.disclaimers import DISCLAIMER_ARTIFACT_KR
 
 from .decorators import api_auth, legal_scrub_response
@@ -118,7 +120,18 @@ def webhook_check():
                "설정 → 체결 자동 기록에서 새 열쇠를 만들어 바꿔 주세요.",
             code="DOORWAY_TOKEN_RECONSENT", status=403,
         )
-    return _created(g.import_user_id, SOURCE_AUTOMATION)
+    result = _created(g.import_user_id, SOURCE_AUTOMATION)
+    if result[1] != 201:
+        return result
+    # 설정의 "마지막 사용"이 문 앞으로만 쓰는 열쇠에도 맞게 — imports.webhook 과 같다.
+    token = g.import_token
+    token.last_used_at = utcnow_naive()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.warning("doorway.webhook last_used_at update failed token_id=%s", token.id)
+    return result
 
 
 @doorway_bp.route("/checks", methods=["POST"])
