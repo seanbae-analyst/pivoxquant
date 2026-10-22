@@ -158,6 +158,22 @@ def _get_cache_stale(key):
     return None
 
 
+def _stale_quote(key):
+    """The cached quote regardless of age, marked with ``_stale_at`` (epoch of
+    the fetch) — or None. ``get_quote`` returns this when it serves an old
+    quote (budget low, or every live source missed) so callers can show
+    "지연" instead of passing a frozen price off as live (2026-10-22). A
+    copy: the cache entry itself stays unmarked."""
+    with _cache_lock:
+        entry = _cache.get(key)
+        if not entry or not entry.get("data"):
+            return None
+        data, ts = entry["data"], entry.get("ts")
+    if isinstance(data, dict):
+        return {**data, "_stale_at": ts}
+    return data
+
+
 _CACHE_MAX_ENTRIES = 4000  # cap to prevent unbounded growth → Railway OOM
 
 
@@ -258,10 +274,15 @@ def _is_endpoint_blocked(endpoint):
     a second 30-min cooldown (lifetime counter, not fresh-window counter).
     """
     with _cache_lock:
-        until = _endpoint_402_cooldown.get(endpoint, 0)
+        until = _endpoint_402_cooldown.get(endpoint)
+        if until is None:
+            # Never cooled — keep the running count. (2026-10-22: this branch
+            # also cleared the count, so every call reset it to zero and the
+            # 3-strike cooldown could never trip.)
+            return False
         if time.time() >= until:
-            # Cooldown ended (or never set) — clear accumulated count so the
-            # next failure window starts from zero.
+            # Cooldown ended — clear accumulated count so the next failure
+            # window starts from zero.
             _endpoint_402_cooldown.pop(endpoint, None)
             _endpoint_402_counts.pop(endpoint, None)
             return False
@@ -311,9 +332,17 @@ def _fmp_get(endpoint, params=None, timeout=5):
         logger.debug("FMP call deferred (429 cooldown, %.0fs remaining): %s",
                      _429_cooldown_until - time.time(), endpoint)
         return None
-    if _is_endpoint_blocked(endpoint):
+    # 402s are tracked per (endpoint, symbol) when the call names a symbol:
+    # one plan-gated symbol (an index, a KRX code) must not cool the endpoint
+    # for every ticker for 30 min. (The 3-strike counter was reset on every
+    # check until 2026-10-22, so the cooldown never tripped at all; now that
+    # it does, it stays narrow.) Symbol-less calls stay keyed by path.
+    block_key = endpoint
+    if params and params.get("symbol"):
+        block_key = f"{endpoint}:{params['symbol']}"
+    if _is_endpoint_blocked(endpoint) or _is_endpoint_blocked(block_key):
         # Endpoint is in 402 cooldown — short-circuit without network call
-        logger.debug("FMP %s skipped (402 cooldown active)", endpoint)
+        logger.debug("FMP %s skipped (402 cooldown active)", block_key)
         return None
     _track_call()
     url = f"{FMP_BASE}{endpoint}"
@@ -330,7 +359,7 @@ def _fmp_get(endpoint, params=None, timeout=5):
         try:
             r = requests.get(url, params=p, timeout=timeout)
             if r.status_code == 200:
-                _record_success(endpoint)
+                _record_success(block_key)
                 return r.json()
             if r.status_code == 429:
                 # 2026-05-18 Wave H-1 P1: short cooldown instead of 24h lockout.
@@ -351,7 +380,7 @@ def _fmp_get(endpoint, params=None, timeout=5):
                 # Don't count this against the daily budget — the call wasn't served.
                 with _cache_lock:
                     _daily_calls = max(0, _daily_calls - 1)
-                _record_402(endpoint)
+                _record_402(block_key)
                 logger.warning(
                     f"FMP {endpoint} returned 402 (plan-gated or rate limited) — "
                     f"caller should fall back to Alpaca/KIS"
@@ -590,7 +619,7 @@ def get_quote(ticker):
     if cached:
         return cached
     if _is_budget_stale():
-        stale = _get_cache_stale(cache_key)
+        stale = _stale_quote(cache_key)
         if stale:
             return stale
     data = _fmp_get("/quote", {"symbol": ticker})
@@ -625,7 +654,7 @@ def get_quote(ticker):
                 return a_quote
 
     # Final resort: any stale cache rather than None so callers can show *something*.
-    stale = _get_cache_stale(cache_key)
+    stale = _stale_quote(cache_key)
     if stale:
         return stale
     return None

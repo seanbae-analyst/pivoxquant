@@ -108,12 +108,18 @@ def overlay_prices(tickers: Iterable[str]) -> dict:
                 chg = float(r.get("change_pct") or 0)
             except (TypeError, ValueError):
                 chg = 0.0
+            # A last-known value (KIS/FMP outage, FMP budget low) keeps its
+            # stale label — relabelled "realtime" it read as a live price
+            # with no 지연 chip (2026-10-22). Same literal the SSE path sets.
+            is_stale = r.get("stale") is True
             out[t] = {
                 "price": float(price),
                 "change_pct": chg,
                 "observed_at": normalize_observed_at(r.get("timestamp")) or now,
-                "source": "realtime",
+                "source": (r.get("source") or "fmp_stale") if is_stale else "realtime",
             }
+            if is_stale:
+                out[t]["stale"] = True
             continue
 
         # ── 2) SignalCache, only if NOT stale ──
