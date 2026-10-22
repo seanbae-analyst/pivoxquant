@@ -272,7 +272,7 @@ function CtaFooter() {
               two adjacent pills pointing at the same URL is not a choice. */}
           <Link
             href={user ? "/mirror" : "/login"}
-            className="group inline-flex items-center gap-2 rounded-sm px-7 py-3.5 font-serif transition-transform active:scale-[0.98]"
+            className="group inline-flex items-center gap-2 rounded-[var(--pq-radius-cta)] px-7 py-3.5 font-serif transition-transform active:scale-[0.98]"
             style={{
               backgroundColor: "var(--pq-bronze)",
               color: "var(--pq-ink)",
@@ -489,24 +489,26 @@ function SiteFooter() {
           className="pt-6"
           style={{ borderTop: "0.5pt solid var(--pq-ivory-line)" }}
         >
-          <div className="grid grid-cols-1 items-center gap-6 md:grid-cols-3">
+          {/* 2026-10-22: two columns. A third held a lone uppercase "이메일"
+              mailto — the same address the business-info line right above
+              already links, so it read as a stray word in the corner. */}
+          <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-[auto_1fr] md:gap-10">
             <p
-              className="font-serif"
               style={{
                 fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.01em",
                 color: "var(--pq-ivory-faint)",
+                whiteSpace: "nowrap",
               }}
             >
-              © {new Date().getFullYear()} PivoxQuant &nbsp;·&nbsp; All rights
-              reserved.
+              © {new Date().getFullYear()}&nbsp;PivoxQuant
             </p>
             {/* FINDING-LAND-002 (design-audit-20260514): the footer
                 compliance disclaimer was 11px (--pq-text-mono-sm) — raised
                 to the --pq-text-body-sm (13px) token so the legal notice
                 is legible rather than visually minimized. */}
             <p
-              className="font-serif text-center"
+              className="md:text-right [word-break:keep-all]"
               style={{
                 fontSize: "var(--pq-text-body-sm)",
                 lineHeight: 1.6,
@@ -515,23 +517,6 @@ function SiteFooter() {
             >
               {t("landing.footer.disclaimer")}
             </p>
-            {/* FINDING-LAND-006 (design-audit-20260514): removed the public
-                GitHub repo link — PivoxQuant is a private beta on the §101
-                exemption track, so the repository is not advertised. The
-                ❦ separator was dropped with it since only one link remains. */}
-            <div className="flex items-center gap-4 md:justify-end">
-              <a
-                href={`mailto:${supportEmail}`}
-                className="font-serif uppercase transition-colors"
-                style={{
-                  fontSize: "var(--pq-text-eyebrow)",
-                  letterSpacing: "0.01em",
-                  color: "var(--pq-ivory-faint)",
-                }}
-              >
-                {t("landing.footer.email")}
-              </a>
-            </div>
           </div>
         </div>
       </div>

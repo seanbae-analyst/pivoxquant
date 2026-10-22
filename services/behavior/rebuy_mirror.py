@@ -43,10 +43,17 @@ Per ticker, walking the user's fills in chronological order:
 * Fills of one name under ``.KS`` / ``.KQ`` / the bare code are one ticker
   (``friction_outcome.ticker_key``), and a sale pairs only with a buy in the
   same currency.
-* Order is by instant, except a date-only fill (stored as its KST date at
-  00:00) sits at the **end of its KST day** — the calendar-day rule of
-  ``friction_outcome._at_or_after``. A same-day timed sale and date-only
-  buy read as sale → buy, not the other way round.
+* Order is by KST day, then by instant within the day — except that a
+  date-only fill (stored as its KST date at 00:00) has no instant. On such a
+  day a date-only 매수 goes **before** every timed fill of that day and a
+  date-only 매도 **after** them: where the order is unknown, buys precede
+  sells, so an ambiguous day never manufactures a same-day "sold, then
+  bought back" pair. (2026-10-22, CEO "재매수 버그도 고쳐": the earlier
+  end-of-day rule read a date-only buy + timed sale on one day — a day
+  trade, or a manual entry of the morning's buy — as a sale and a rebuy
+  0.4 days later. A sale larger than the recorded holding also says the buy
+  came first.) A timed sale and a timed buy on one day still pair as
+  recorded. Gaps are measured with a date-only fill at the end of its day.
 * The first recorded 매수 after a pending sale closes the pair **if** it
   lands within :data:`REBUY_WINDOW_DAYS` of that sale. A 매수 after the
   window does not pair (it reads as a new decision, not a return to the
@@ -117,11 +124,23 @@ _KST = timedelta(hours=9)
 
 
 def _order_at(traded_at: datetime) -> datetime:
-    """The instant a fill is ordered by — a date-only fill (its KST date at
-    00:00) at the end of that KST day, a timed fill at its own instant."""
+    """The instant a pair's gap and window are measured from — a date-only
+    fill (its KST date at 00:00) at the end of that KST day, a timed fill at
+    its own instant."""
     if is_date_only(traded_at):
         return traded_at + timedelta(days=1) - _KST
     return traded_at
+
+
+def _walk_key(t: TradeHistory) -> tuple:
+    """Walk order: KST day, then within the day date-only 매수 (0) → timed
+    fills by instant (1) → date-only 매도 (2), then id. See the module
+    docstring's pairing rule."""
+    at = t.traded_at
+    if is_date_only(at):
+        bucket = 2 if (t.action or "").upper() == "SELL" else 0  # // legal-ok — trade.action value, compared only
+        return (at.date(), bucket, at, t.id or 0)
+    return ((at + _KST).date(), 1, at, t.id or 0)
 
 
 class _Pair(NamedTuple):
@@ -151,14 +170,12 @@ def _pair_rebuys(
 
     ``names`` maps ticker key → (freshest non-empty display name, latest
     ticker spelling). The walk is deterministic: fills are sorted by
-    ``(order instant, id)`` so out-of-order ingestion (backfill) and
-    same-day date-grain fills give one answer.
+    :func:`_walk_key` so out-of-order ingestion (backfill) and same-day
+    date-grain fills give one answer.
     """
     ordered = sorted(
         (t for t in trades if t.traded_at and t.ticker),
-        # A date-only fill and a timed fill at the same instant: the date-only
-        # one belongs to the earlier KST day, so it goes first.
-        key=lambda t: (_order_at(t.traded_at), 0 if is_date_only(t.traded_at) else 1, t.id or 0),
+        key=_walk_key,
     )
     window = timedelta(days=window_days)
 

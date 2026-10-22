@@ -15,7 +15,9 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Optional, Union
+
+from sqlalchemy import or_
 
 from extensions import db
 from models import Alert
@@ -46,7 +48,39 @@ ALLOWED_KINDS = {
 #              noise. One reminder per sector per week.
 PRICE_52W_DEDUP_HOURS = 7 * 24
 CONCENTRATION_DEDUP_HOURS = 7 * 24
-CONCENTRATION_TITLE_PREFIX = "Portfolio concentration — "
+CONCENTRATION_TITLE_PREFIX = "섹터 집중도 · "
+# Rows written before 2026-10-22 carry the English title. The dedup also
+# matches it, so the switch does not re-send every standing sector once.
+LEGACY_CONCENTRATION_TITLE_PREFIX = "Portfolio concentration — "
+
+# Bell titles and the push that mirrors them read in Korean (2026-10-22: the
+# push on a Korean phone said "Portfolio concentration — Technology 48.0%").
+# Display names only — the same table as frontend/src/lib/sector.ts; an
+# unknown sector keeps the vendor's name.
+_SECTOR_KO = {
+    "technology": "기술",
+    "information technology": "기술",
+    "consumer cyclical": "경기소비재",
+    "consumer discretionary": "경기소비재",
+    "consumer defensive": "필수소비재",
+    "consumer staples": "필수소비재",
+    "financial services": "금융",
+    "financials": "금융",
+    "financial": "금융",
+    "healthcare": "헬스케어",
+    "health care": "헬스케어",
+    "communication services": "커뮤니케이션",
+    "industrials": "산업재",
+    "energy": "에너지",
+    "basic materials": "소재",
+    "materials": "소재",
+    "real estate": "부동산",
+    "utilities": "유틸리티",
+}
+
+
+def _sector_label(sector: str) -> str:
+    return _SECTOR_KO.get((sector or "").strip().lower(), sector)
 
 
 # Bell-alert kind → notification_prefs event_id map.
@@ -91,7 +125,7 @@ def create_alert(
     ticker: Optional[str] = None,
     link: Optional[str] = None,
     dedup_window_hours: Optional[int] = None,
-    dedup_title_prefix: Optional[str] = None,
+    dedup_title_prefix: Optional[Union[str, tuple]] = None,
 ) -> Optional[Alert]:
     """Insert a new notification-bell alert.
 
@@ -162,8 +196,13 @@ def create_alert(
             q = q.filter(Alert.ticker == ticker)
         if dedup_title_prefix:
             # Non-ticker key (e.g. one sector). autoescape: a "%"/"_" in the
-            # prefix must match literally, not as a LIKE wildcard.
-            q = q.filter(Alert.title.startswith(dedup_title_prefix, autoescape=True))
+            # prefix must match literally, not as a LIKE wildcard. A tuple
+            # matches any of its prefixes (a title format and its legacy one).
+            prefixes = (
+                (dedup_title_prefix,) if isinstance(dedup_title_prefix, str)
+                else tuple(dedup_title_prefix)
+            )
+            q = q.filter(or_(*(Alert.title.startswith(p, autoescape=True) for p in prefixes)))
         if q.first() is not None:
             return None
 
@@ -238,8 +277,8 @@ def alert_52w_high(user_id: int, ticker: str, name: Optional[str] = None):
     return create_alert(
         user_id,
         kind="price_52w_high",
-        title=f"{label} reached 52-week high",
-        body="Observation — price level noted against trailing 52-week range.",
+        title=f"{label} · 52주 최고가",
+        body="지난 52주 가격 범위의 맨 위에 닿았어요.",
         ticker=ticker,
         link="/portfolio",
         dedup_window_hours=PRICE_52W_DEDUP_HOURS,
@@ -251,8 +290,8 @@ def alert_52w_low(user_id: int, ticker: str, name: Optional[str] = None):
     return create_alert(
         user_id,
         kind="price_52w_low",
-        title=f"{label} at 52-week low",
-        body="Observation — price level noted against trailing 52-week range.",
+        title=f"{label} · 52주 최저가",
+        body="지난 52주 가격 범위의 맨 아래에 닿았어요.",
         ticker=ticker,
         link="/portfolio",
         dedup_window_hours=PRICE_52W_DEDUP_HOURS,
@@ -270,15 +309,16 @@ def alert_concentration(user_id: int, sector: str, pct: float):
     reads it as a real ticker.
     """
     # Trailing space: "Tech " must not match "Technology 41.0%".
-    sector_prefix = f"{CONCENTRATION_TITLE_PREFIX}{sector} "
+    sector_prefix = f"{CONCENTRATION_TITLE_PREFIX}{_sector_label(sector)} "
+    legacy_prefix = f"{LEGACY_CONCENTRATION_TITLE_PREFIX}{sector} "
     return create_alert(
         user_id,
         kind="concentration_alert",
         title=f"{sector_prefix}{pct:.1f}%",
-        body="Observation — single-sector weighting exceeds 30% of portfolio.",
+        body="한 섹터가 취득가 기준으로 장부의 30% 이상이에요.",
         link="/mirror",
         dedup_window_hours=CONCENTRATION_DEDUP_HOURS,
-        dedup_title_prefix=sector_prefix,
+        dedup_title_prefix=(sector_prefix, legacy_prefix),
     )
 
 

@@ -190,14 +190,40 @@ def _set_cache(key, data):
         _cache[key] = {"data": data, "ts": time.time()}
 
 
+_DAILY_WINDOW_SEC = 86400
+
+
+def _roll_daily_window():
+    """Start a fresh daily window once the current one has run out.
+
+    Checked by every budget read, not only by ``_track_call``: past the hard
+    stop ``_fmp_get`` returns before ``_track_call``, and past the stale
+    threshold ``get_quote`` serves cache without calling — so the counter
+    never reached its reset and FMP stayed blocked (quotes stale, search and
+    FX on FMP dead) until the process restarted (2026-10-22).
+    """
+    global _daily_calls, _daily_calls_reset
+    with _cache_lock:
+        now = time.time()
+        if now - _daily_calls_reset > _DAILY_WINDOW_SEC:
+            _daily_calls = 0
+            _daily_calls_reset = now
+
+
+def daily_calls_used():
+    """FMP calls counted in the current daily window."""
+    _roll_daily_window()
+    return _daily_calls
+
+
 def _is_budget_stale():
     """True when we should prefer stale cache over fresh API calls."""
-    return _daily_calls >= _BUDGET_STALE_THRESHOLD
+    return daily_calls_used() >= _BUDGET_STALE_THRESHOLD
 
 
 def _is_budget_exhausted():
     """True when we must stop making API calls entirely."""
-    return _daily_calls >= _BUDGET_HARD_STOP
+    return daily_calls_used() >= _BUDGET_HARD_STOP
 
 
 def _is_429_cooldown() -> bool:
@@ -246,16 +272,13 @@ def _throttle_per_minute() -> None:
 
 
 def _track_call():
-    global _daily_calls, _daily_calls_reset
+    global _daily_calls
     # 2026-05-17 wave 13 P1 (PR #440): per-minute throttle runs first so
     # the daily counter only increments after we've made sure we're
     # inside the plan's per-minute window.
     _throttle_per_minute()
+    _roll_daily_window()
     with _cache_lock:
-        now = time.time()
-        if now - _daily_calls_reset > 86400:
-            _daily_calls = 0
-            _daily_calls_reset = now
         _daily_calls += 1
         current = _daily_calls
     if current >= _BUDGET_HARD_STOP:

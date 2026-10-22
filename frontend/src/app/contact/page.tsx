@@ -44,7 +44,7 @@ export default function ContactPage() {
             return (
               <section
                 key={c.title}
-                className="rounded-sm p-6"
+                className="rounded-[var(--pq-radius-card)] p-6"
                 style={{
                   backgroundColor: "rgba(245,240,232,0.03)",
                   border: "0.5px solid var(--pq-ivory-line)",

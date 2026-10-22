@@ -114,11 +114,9 @@ export default function SplashPage() {
           aria-hidden="true"
         />
         <span
-          className="font-serif"
           style={{
             fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.01em",
-            textTransform: "uppercase",
             /* Was bronze-wash @ 0.40 → 1.57:1, effectively invisible. This
                string is the ONLY instruction for getting past a full-viewport
                splash, so it is an affordance, not decoration.

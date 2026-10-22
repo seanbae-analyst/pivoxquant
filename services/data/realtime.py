@@ -264,10 +264,18 @@ class RealtimeService:
         todo = [t for t in tickers if t not in results]
         mine, theirs = self._claim(todo)
         start = time.time()
+        late = {}
         try:
-            results.update(self._fetch_batch(mine))
+            results.update(self._fetch_batch(mine, late))
         finally:
-            self._release(mine)
+            # A fetch still running past the deadline keeps its claim until
+            # it lands: released at the deadline, the next round (SSE, every
+            # few seconds) queued a second fetch of the same ticker behind it
+            # on the shared pool and the KIS throttle (2026-10-22). The next
+            # caller waits on it instead and reads the cache it fills.
+            self._release([t for t in mine if t not in late])
+            for t, fut in late.items():
+                fut.add_done_callback(lambda _f, t=t: self._release([t]))
 
         # Tickers another caller was fetching: wait for its answer (bounded
         # by the same deadline), then read the cache it filled.
@@ -288,8 +296,9 @@ class RealtimeService:
 
         return results
 
-    def _fetch_batch(self, tickers):
-        """Network fetch for ``tickers`` (this caller owns them)."""
+    def _fetch_batch(self, tickers, late=None):
+        """Network fetch for ``tickers`` (this caller owns them). Futures
+        still running at their deadline go into ``late`` ({ticker: future})."""
         us_tickers = [t for t in tickers if not self.is_korean(t)]
         kr_tickers = [t for t in tickers if self.is_korean(t)]
         results = {}
@@ -337,7 +346,18 @@ class RealtimeService:
                         "currency": "USD",
                         "source": "alpaca",
                         "timestamp": ts,
+                        "_ts": time.time(),
                     }
+                # Seed the shared cache like the KIS / FMP paths do: a
+                # concurrent caller waiting on this fetch (single-flight)
+                # reads its answer from the cache, and found nothing — US
+                # rows came back empty on the second of /summary +
+                # /positions (2026-10-22).
+                with self._price_cache_lock:
+                    for t in us_tickers:
+                        hit = results.get(t)
+                        if hit is not None:
+                            self._price_cache[t.upper().strip()] = hit
             except Exception as e:
                 logger.warning("Alpaca batch failed: %s", e)
 
@@ -373,6 +393,8 @@ class RealtimeService:
                     logger.debug("silent-fallback: %s batch fetch", label, exc_info=True)
             if any(not f.done() for f in futs):
                 logger.warning("%s batch hit its collect deadline; partial result", label)
+                if late is not None:
+                    late.update({t: f for f, t in futs.items() if not f.done()})
 
         if us_fut:
             _wait(list(us_fut), timeout=self._FMP_BATCH_DEADLINE)

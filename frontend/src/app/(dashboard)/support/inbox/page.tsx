@@ -140,7 +140,7 @@ function InboxContent() {
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
       <header className="mb-6">
-        <RuledKicker>Inbox</RuledKicker>
+        <RuledKicker>고객지원</RuledKicker>
         <EditorialHead as="h1" size={32} className="mt-3">
           내 문의함
         </EditorialHead>

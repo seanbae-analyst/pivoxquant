@@ -8,7 +8,7 @@
  * sentence; no copy carries a score, grade, advice or "결산".
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import * as React from "react";
 import type { YearRecapResponse } from "@/lib/types";
 
@@ -226,6 +226,16 @@ describe("/mirror/year page", () => {
     render(<YearRecapPage />);
     const group = screen.getByRole("group", { name: "연도" });
     expect(within(group).getAllByRole("button").map((b) => b.textContent)).toEqual(["2026년", "2025년"]);
+  });
+
+  it("after picking last year, the current year stays pickable", () => {
+    recap = { data: { ...FULL, year: 2026, years: [2025], empty: true }, isLoading: false, error: undefined };
+    render(<YearRecapPage />);
+    recap = { data: { ...FULL, year: 2025, years: [2025] }, isLoading: false, error: undefined };
+    fireEvent.click(within(screen.getByRole("group", { name: "연도" })).getByText("2025년"));
+    const group = screen.getByRole("group", { name: "연도" });
+    expect(within(group).getAllByRole("button").map((b) => b.textContent)).toEqual(["2026년", "2025년"]);
+    expect(within(group).getByText("2025년").getAttribute("aria-pressed")).toBe("true");
   });
 
   it("names an unregistered KR stock by its code, never the .KS ticker", () => {

@@ -64,7 +64,7 @@ export function RealtimeStatusBanner() {
       <div
         role="status"
         aria-live="polite"
-        className="mx-4 mt-3 rounded-sm border px-3 py-2 md:mx-10"
+        className="mx-4 mt-3 rounded-[var(--pq-radius-cta)] border px-3 py-2 md:mx-10"
         style={{
           borderColor: "rgba(209, 136, 136, 0.45)",
           backgroundColor: "rgba(209, 136, 136, 0.08)",
@@ -97,7 +97,7 @@ export function RealtimeStatusBanner() {
             }}
             lang="ko"
             aria-label="새로고침"
-            className="shrink-0 rounded-sm border px-2.5 py-1 font-mono text-pq-eyebrow uppercase tracking-[0.01em] transition-colors hover:bg-white/5"
+            className="shrink-0 rounded-[8px] border px-2.5 py-1 text-pq-eyebrow tracking-[0.01em] transition-colors hover:bg-white/5"
             style={{
               borderColor: "rgba(209, 136, 136, 0.45)",
               color: "var(--pq-error)",
@@ -115,7 +115,7 @@ export function RealtimeStatusBanner() {
     <div
       role="status"
       aria-live="polite"
-      className="mx-4 mt-3 rounded-sm border px-3 py-2 md:mx-10"
+      className="mx-4 mt-3 rounded-[var(--pq-radius-cta)] border px-3 py-2 md:mx-10"
       style={{
         borderColor: "rgba(234, 179, 8, 0.35)",
         backgroundColor: "rgba(234, 179, 8, 0.06)",

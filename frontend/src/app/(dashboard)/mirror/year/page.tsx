@@ -56,6 +56,9 @@ function YearSelector({ years, year, onPick }: { years: number[]; year: number; 
 export default function YearRecapPage() {
   const [year, setYear] = React.useState<number | null>(null);
   const { data, isLoading, error } = useYearRecap(year);
+  // 처음 연 해(서버의 올해). 작년을 고른 뒤에는 data.year 가 작년이라 이 해를 따로 기억해야 돌아올 버튼이 남는다.
+  const [homeYear, setHomeYear] = React.useState<number | null>(null);
+  if (year === null && data && homeYear !== data.year) setHomeYear(data.year);
   const [status, setStatus] = React.useState<string | null>(null);
   const [sharing, setSharing] = React.useState(false);
 
@@ -72,7 +75,9 @@ export default function YearRecapPage() {
   };
 
   const shownYear = data?.year ?? year;
-  const pickable = data ? Array.from(new Set([data.year, ...data.years])).sort((a, b) => b - a) : [];
+  const pickable = data
+    ? Array.from(new Set([data.year, ...(homeYear !== null ? [homeYear] : []), ...data.years])).sort((a, b) => b - a)
+    : [];
   return (
     <div className="mx-auto w-full max-w-2xl px-0 pb-8 md:px-6 md:py-8" data-testid="year-recap-page">
       <header className="mb-8">
@@ -84,7 +89,7 @@ export default function YearRecapPage() {
             {researchDate(data.range.start)}부터 {researchDate(data.range.end)}까지, 여기에 남긴 기록만 셌어요.
           </Caption>
         )}
-        {/* 보고 있는 해도 버튼에 넣는다 — 1월에 작년 기록만 있으면 years 는 [작년] 하나라 선택기가 숨어 갈 길이 없었다. */}
+        {/* 보고 있는 해와 처음 연 해도 버튼에 넣는다 — 1월에 작년 기록만 있으면 years 는 [작년] 하나라, 선택기가 숨거나(첫 화면) 작년을 고른 뒤 올해로 돌아갈 버튼이 사라졌다. */}
         {data && pickable.length > 1 && (
           <YearSelector years={pickable} year={data.year} onPick={(y) => { setStatus(null); setYear(y); }} />
         )}

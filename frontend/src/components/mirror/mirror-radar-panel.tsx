@@ -41,7 +41,7 @@ export function MirrorRadarPanel({
 }) {
   return (
     <section
-      className={bordered ? "rounded-[4px] p-4" : undefined}
+      className={bordered ? "rounded-[var(--pq-radius-card)] p-4" : undefined}
       style={bordered ? { border: "1px solid var(--pq-ivory-line)" } : undefined}
       data-testid="mirror-radar-panel"
     >
@@ -68,7 +68,7 @@ export function MirrorRadarPanel({
         />
       </div>
 
-      <p className="mt-1 text-center text-[10.5px]" style={{ color: "var(--pq-bronze)" }}>
+      <p className="mt-1 text-center text-[11px] leading-relaxed [word-break:keep-all]" style={{ color: "rgba(var(--pq-ivory-rgb), 0.55)" }}>
         각 축의 % = 최근 30일 관찰값 · — = 아직 잴 기록이 부족 · 브론즈=선언, 아이보리=관찰
       </p>
     </section>

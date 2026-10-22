@@ -295,7 +295,7 @@ export function StatRow({
 
 /**
  * Footer signature — placed at the base of each dashboard page, just
- * above the DisclaimerBanner. Fleuron + upright caption (v3 lock-in: no italic).
+ * above the DisclaimerBanner. One upright caption under a hairline.
  */
 // FINDING-038: this default used to repeat "Observational research only \u00b7
 // Not investment advice" \u2014 the SAME legal text the page-level
@@ -325,11 +325,9 @@ export function FootSignature({
         textAlign: "center",
       }}
     >
-      <div style={{ marginBottom: 6 }}>
-        <Fleuron size={13} />
-      </div>
+      {/* No fleuron (❦) — the 2026-10-11 refresh retired ornaments. */}
       <p
-        className="pq-caption font-serif"
+        className="pq-caption"
         style={{
           fontStyle: "normal",
           fontSize: "var(--pq-text-eyebrow)",

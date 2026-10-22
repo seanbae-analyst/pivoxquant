@@ -874,21 +874,26 @@ export default function SettingsPageV2() {
           </section>
 
           {/* DISCLAIMER — on a phone it sits under the list, not under a section. */}
+          {/* 2026-10-22: a hairline card like every other block on the page
+              (was a dashed box in 15px body — the only dashed border left). */}
           <div
             style={{
               marginTop: 32,
-              padding: "18px 24px",
-              border: "1px dashed rgba(245,240,232,0.14)",
-              fontSize: "var(--pq-text-body)",
-              lineHeight: 1.6,
+              padding: "16px 20px",
+              border: "1px solid var(--pq-ivory-line)",
+              borderRadius: "var(--pq-radius-card)",
+              background: "rgba(var(--pq-ivory-rgb), 0.02)",
+              fontSize: "var(--pq-text-body-sm)",
+              lineHeight: 1.65,
               color: "var(--pq-ivory-dim)",
             }}
-          className={`font-serif ${pane === null ? "" : "hidden md:block"}`} >
+          className={`[word-break:keep-all] ${pane === null ? "" : "hidden md:block"}`} >
             <strong
               style={{
                 color: "var(--pq-ivory-strong)",
+                fontWeight: 600,
               }}
-            className="font-serif" >
+            >
               {t("settingsV2.notice.title")}
             </strong>{" "}
             {t("settingsV2.notice.body")}

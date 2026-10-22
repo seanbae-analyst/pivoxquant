@@ -9,6 +9,7 @@
 
 import * as React from "react";
 import { useT } from "@/lib/locale";
+import { sectorLabel } from "@/lib/sector";
 import { Caption } from "@/components/ui/editorial";
 import type { Position } from "@/components/portfolio/types";
 
@@ -74,7 +75,8 @@ function buildSectors(
     } else {
       normalized = mv;
     }
-    const sector = p.sector || "미분류";
+    // Korean display name, so two spellings of one sector share a slice.
+    const sector = sectorLabel(p.sector) || "미분류";
     totals[sector] = (totals[sector] ?? 0) + normalized;
     total += normalized;
   }

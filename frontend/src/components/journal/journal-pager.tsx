@@ -384,10 +384,10 @@ export function JournalPager({
               role={isPhone ? "tabpanel" : undefined}
               aria-labelledby={isPhone ? `journal-tab-${p.id}` : undefined}
               inert={isPhone && !current}
-              // pb-12 (phone): the floating page dots sit 10px above the
-              // bottom nav; reserve their height so a page's last block
-              // scrolls clear of them instead of ending underneath.
-              className={`relative w-full shrink-0 snap-start snap-always px-4 pt-4 pb-12 md:contents ${current ? "" : "h-0"}`}
+              // pb-6 (phone): the page dots above the bottom nav fade out a
+              // moment after a page change, so a page's last block no longer
+              // needs room reserved under them.
+              className={`relative w-full shrink-0 snap-start snap-always px-4 pt-4 pb-6 md:contents ${current ? "" : "h-0"}`}
               data-testid={`journal-page-${p.id}`}
               data-active={current ? "true" : "false"}
             >
@@ -398,10 +398,14 @@ export function JournalPager({
       </div>
 
       {/* Page dots, iOS-style above the bottom nav. Decorative — the tab
-          strip carries the page state for assistive tech. */}
+          strip carries the page state for assistive tech.
+          2026-10-22: they show for a moment after each page change and then
+          fade (pq-page-dots-fade, re-keyed by page) — parked for good, the
+          pill sat on top of whatever line scrolled under it. */}
       <div
+        key={near}
         aria-hidden
-        className="pointer-events-none fixed left-1/2 z-40 flex -translate-x-1/2 items-center gap-1.5 rounded-full border px-2.5 py-1.5 md:hidden"
+        className="pq-page-dots-fade pointer-events-none fixed left-1/2 z-40 flex -translate-x-1/2 items-center gap-1.5 rounded-full border px-2.5 py-1.5 md:hidden"
         style={{
           bottom:
             "calc(var(--pq-bottomnav-height) + var(--pq-safe-bottom) + 10px)",

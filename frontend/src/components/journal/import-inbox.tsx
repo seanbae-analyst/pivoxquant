@@ -616,14 +616,10 @@ export function ImportInbox() {
 
   if (pending.length === 0) {
     return (
-      <div className="mb-8 flex items-baseline justify-between gap-3">
+      // One line, no link (2026-10-22): the journal's capture links sit right
+      // above it, so a third "체결 가져오기" here only repeated them.
+      <div className="mb-8">
         <Caption>{t("journal.import.emptyLine")}</Caption>
-        <Link
-          href="/journal/import"
-          className="font-mono text-pq-eyebrow text-[var(--pq-bronze-light)] underline-offset-4 hover:underline"
-        >
-          {t("journal.import.importLink")}
-        </Link>
       </div>
     );
   }

@@ -27,7 +27,7 @@ export function isDemoMode(): boolean {
 export const DEMO_USER: User = {
   id: 1,
   email: "demo@pivoxquant.com",
-  name: "데모 투자자",
+  name: "배상현",
   available_capital: 100_000,
   available_capital_krw: 50_000_000,
   oauth_provider: "google",
@@ -187,14 +187,15 @@ const DEMO_PROFILE = {
 
 
 /* ── Alerts ── */
+// Only what the bell really receives (CLAUDE.md §알림): with vendor-price
+// display off that is the sector-concentration alert. The 2026-06 sample
+// showed 52-week, "변동성 확대" and "주간 메모" items — two had no sender at
+// all and one linked to a deleted /reports page (2026-10-22).
 const DEMO_ALERTS = {
-  unread: 2,
+  unread: 1,
   alerts: [
-    { id: 1, kind: "observation", title: "NVDA 52주 고점 근접", body: "52주 범위 상단에 닿았습니다", ticker: "NVDA", name: "NVIDIA", is_read: false, created_at: "2026-06-18T06:50:00+09:00" },
-    { id: 2, kind: "risk", title: "집중도 주의", body: "기술 섹터 비중 48%", is_read: false, created_at: "2026-06-17T16:30:00+09:00" },
-    { id: 3, kind: "observation", title: "TSLA 변동성 확대", body: "일중 변동성 상위", ticker: "TSLA", name: "Tesla", is_read: true, read_at: "2026-06-17T10:00:00+09:00", created_at: "2026-06-17T09:30:00+09:00" },
-    { id: 4, kind: "system", title: "주간 메모 도착", body: "6월 3주 거울이 준비됐어요", link: "/reports", is_read: true, read_at: "2026-06-16T09:00:00+09:00", created_at: "2026-06-16T08:00:00+09:00" },
-    { id: 5, kind: "observation", title: "LLY 52주 저점 근접", body: "52주 범위 하단에 닿았습니다", ticker: "LLY", name: "Eli Lilly", is_read: true, read_at: "2026-06-15T11:00:00+09:00", created_at: "2026-06-15T07:00:00+09:00" },
+    { id: 1, kind: "concentration_alert", title: "섹터 집중도 · 기술 48.0%", body: "한 섹터가 취득가 기준으로 장부의 30% 이상이에요.", link: "/mirror", is_read: false, created_at: "2026-06-17T16:30:00+09:00" },
+    { id: 2, kind: "concentration_alert", title: "섹터 집중도 · 기술 46.2%", body: "한 섹터가 취득가 기준으로 장부의 30% 이상이에요.", link: "/mirror", is_read: true, read_at: "2026-06-10T10:00:00+09:00", created_at: "2026-06-10T09:30:00+09:00" },
   ],
 };
 

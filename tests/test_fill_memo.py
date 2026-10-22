@@ -214,3 +214,20 @@ def test_rule_note_after_an_earlier_adoption_counts_the_whole_month(client, auth
         assert rule_note(auth_user["id"], datetime(2026, 10, 14, 3, 0)) == (
             "이번 달 들어온 거래가 3번이에요 — 정해 둔 선은 2번."
         )
+
+
+def test_a_failed_rule_note_rolls_the_session_back(app):
+    """A DB error inside rule_note leaves a Postgres transaction aborted; the
+    push then runs on that session. sell_note rolls back, but only runs for a
+    single fill — rule_note must roll back itself."""
+    from services import fill_memo
+
+    with app.app_context():
+        from extensions import db
+        from models import InvestmentProfile
+
+        with patch.object(InvestmentProfile, "query") as q, \
+                patch.object(db.session, "rollback") as rb:
+            q.filter_by.side_effect = RuntimeError("aborted")
+            assert fill_memo.rule_note(1) == ""
+            assert rb.called

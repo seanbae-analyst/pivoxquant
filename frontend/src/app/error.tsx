@@ -33,6 +33,9 @@ export default function Error({
 
   const isProduction = process.env.NODE_ENV === "production";
 
+  // 2026-10-22: Korean, same voice and buttons as the 404 (not-found-view).
+  // The English "The desk hit a snag" with a tracked-capitals kicker was the
+  // one screen still written like the old website.
   return (
     <div
       className="min-h-[100dvh] flex items-center justify-center px-6"
@@ -40,48 +43,48 @@ export default function Error({
     >
       <div className="w-full max-w-md text-center">
         <AlertTriangle
-          className="mx-auto mb-6 h-8 w-8"
+          className="mx-auto mb-5 h-7 w-7"
           style={{ color: "var(--pq-bronze)" }}
+          aria-hidden
         />
 
         <div
-          className="text-pq-mono-sm tracking-[0.01em] uppercase mb-4"
-          style={{ color: "var(--pq-bronze)" }}
+          className="mb-3"
+          style={{ color: "var(--pq-bronze)", fontSize: "var(--pq-text-body-sm)", fontWeight: 500 }}
         >
-          Something interrupted the observation
+          화면을 그리다 멈췄어요
         </div>
 
         <h1
-          className="font-serif mb-6 leading-[1.05]"
-          style={{ fontSize: "clamp(1.75rem,4vw,2.5rem)" }}
+          className="mb-4 leading-[1.2] [word-break:keep-all]"
+          style={{ fontSize: "clamp(1.6rem,4vw,2.1rem)", fontWeight: 600 }}
         >
-          The desk hit a snag.
+          잠깐 문제가 생겼어요.
         </h1>
 
         <p
-          className="text-sm leading-relaxed mb-6"
-          style={{ color: "rgba(var(--pq-ivory-rgb),0.65)" }}
+          className="text-pq-body leading-relaxed mb-6 [word-break:keep-all]"
+          style={{ color: "var(--pq-ivory-mid)" }}
         >
-          An unexpected issue stopped the page from loading. Your data is safe.
-          Retry, or head back to the desk.
+          남긴 기록은 그대로예요. 다시 시도하거나 거울로 돌아가 주세요.
         </p>
 
         {isProduction ? (
           error.digest ? (
             <p
-              className="text-pq-mono-sm font-mono mb-6"
-              style={{ color: "rgba(var(--pq-ivory-rgb),0.3)" }}
+              className="text-pq-mono-sm mb-6 tabular-nums"
+              style={{ color: "rgba(var(--pq-ivory-rgb),0.35)" }}
             >
-              ref: {error.digest}
+              참조 번호 {error.digest}
             </p>
           ) : null
         ) : (
           <pre
-            className="text-left text-pq-mono-sm font-mono rounded p-3 mb-6 max-h-32 overflow-auto whitespace-pre-wrap break-words"
+            className="text-left text-pq-mono-sm font-mono rounded-[var(--pq-radius-cta)] p-3 mb-6 max-h-32 overflow-auto whitespace-pre-wrap break-words"
             style={{
               color: "rgba(var(--pq-ivory-rgb),0.55)",
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(var(--pq-ivory-rgb),0.08)",
+              background: "rgba(var(--pq-ivory-rgb),0.04)",
+              border: "1px solid var(--pq-ivory-line)",
             }}
           >
             {error.message || "Unknown error"}
@@ -92,31 +95,18 @@ export default function Error({
           <button
             type="button"
             onClick={() => reset()}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-sm border text-sm font-medium tracking-wide transition-colors"
-            style={{ borderColor: "var(--pq-bronze)", color: "var(--pq-bronze)" }}
+            className="pq-ink-btn-bronze inline-flex min-h-[44px] items-center gap-2"
           >
-            <RotateCw className="h-3.5 w-3.5" />
-            Try again
+            <RotateCw className="h-3.5 w-3.5" aria-hidden />
+            다시 시도
           </button>
           <Link
             href="/mirror"
-            className="inline-flex items-center px-5 py-2.5 rounded-sm border text-sm font-medium tracking-wide"
-            style={{
-              borderColor: "rgba(var(--pq-ivory-rgb),0.15)",
-              color: "rgba(var(--pq-ivory-rgb),0.6)",
-            }}
+            className="pq-ink-btn-ghost inline-flex min-h-[44px] items-center"
           >
-            Back to desk
+            거울로 돌아가기
           </Link>
         </div>
-
-        <p
-          className="text-pq-mono-sm mt-8 leading-relaxed"
-          style={{ color: "rgba(var(--pq-ivory-rgb),0.3)" }}
-        >
-          PivoxQuant does not lose data on errors. All positions and settings
-          are saved on the server.
-        </p>
       </div>
     </div>
   );

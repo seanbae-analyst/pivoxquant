@@ -497,3 +497,41 @@ def test_export_includes_doorway_checks(client, auth_user):
     body = client.get("/api/profile/export").get_json()
     assert body["counts"]["doorway_checks"] == 1
     assert body["doorway_checks"][0]["note"] == "반등 정리"
+
+
+def test_a_same_day_date_only_fill_is_not_a_trade_that_never_happened():
+    """'살 게 있음' at 10:00 KST, then a date-only BUY of that name the same KST
+    day: the user did buy — the 00:00 stamp is no time, so it is 'later', not
+    'never'."""
+    door = datetime(2026, 9, 1, 1, 0)  # 2026-09-01 10:00 KST
+    checks = [_check(1, door, "buy", "005930.KS")]
+    fills = [Fill(datetime(2026, 9, 1, 0, 0), "005930", "BUY", untimed=True)]
+    out = summarize(checks, fills, now=NOW, days=90, first_check_at=door)
+    assert out["said"]["buy"]["none"] == 1
+    assert out["not_happened"] == {"n": 1, "later": 1, "never": 0, "open": 0}
+
+
+def test_a_date_only_fill_the_day_before_is_not_later():
+    door = datetime(2026, 9, 1, 1, 0)  # 2026-09-01 10:00 KST
+    checks = [_check(1, door, "buy", "005930.KS")]
+    fills = [Fill(datetime(2026, 8, 31, 0, 0), "005930", "BUY", untimed=True)]
+    out = summarize(checks, fills, now=NOW, days=90, first_check_at=door)
+    assert out["not_happened"] == {"n": 1, "later": 0, "never": 1, "open": 0}
+
+
+def test_a_date_only_fill_on_the_first_doors_day_is_counted():
+    """The first door at 10:00 KST and a date-only fill the same KST day: the
+    fill is in the window (it was dropped — 00:00 compared as a time)."""
+    door = datetime(2026, 10, 14, 1, 0)  # 2026-10-14 10:00 KST
+    checks = [_check(1, door, "look")]
+    fills = [Fill(datetime(2026, 10, 14, 0, 0), "AAPL", "BUY", untimed=True)]
+    out = summarize(checks, fills, now=NOW, first_check_at=door)
+    assert out["fills"] == {"total": 1, "through_door": 0}
+
+
+def test_a_date_only_fill_the_day_before_the_first_door_is_not_counted():
+    door = datetime(2026, 10, 14, 1, 0)
+    checks = [_check(1, door, "look")]
+    fills = [Fill(datetime(2026, 10, 13, 0, 0), "AAPL", "BUY", untimed=True)]
+    out = summarize(checks, fills, now=NOW, first_check_at=door)
+    assert out["fills"] == {"total": 0, "through_door": 0}

@@ -364,6 +364,24 @@ def _attribute(checks: Sequence, fills: Sequence[Fill]) -> dict[int, list[Fill]]
     return out
 
 
+def _lands_between(f: Fill, after: datetime, until: datetime) -> bool:
+    """``after < 체결 <= until``. 날짜만 아는 체결은 그 KST 날짜로 본다: 열림과
+    같은 날이면 든다 — 00:00 을 시각으로 비교하면 그날 오전 10시 열림 뒤에 산
+    것이 '끝내 안 함'으로 셌다 (2026-10-22)."""
+    if f.untimed:
+        return (after + _KST).date() <= f.traded_at.date() <= (until + _KST).date()
+    return after < f.traded_at <= until
+
+
+def _fill_in_range(f: Fill, since: datetime, end: datetime | None) -> bool:
+    """``since <= 체결 < end``. 날짜만 아는 체결은 KST 날짜로 — 00:00 을 시각으로
+    비교하면 첫 열림(``since``)과 같은 날의 체결이 빠졌다 (2026-10-22)."""
+    if f.untimed:
+        day = f.traded_at.date()
+        return day >= (since + _KST).date() and (end is None or day < (end + _KST).date())
+    return f.traded_at >= since and (end is None or f.traded_at < end)
+
+
 def _same_ticker(a: str | None, b: str | None) -> bool:
     """.KS/.KQ/접미사 없는 코드는 같은 종목 — ``friction_outcome.ticker_key`` 한 벌."""
     return bool(a) and bool(b) and ticker_key(a) == ticker_key(b)
@@ -445,7 +463,7 @@ def summarize(
                 # 함수 인자 start/end 를 덮어쓰지 않는다 — in_window 와 체결 집계가
                 # 그 둘을 읽는다 (2026-10-21: 덮어써서 90일·연간 창이 잘렸다).
                 after, until = c.created_at + follow, c.created_at + later
-                if any(_same_ticker(f.ticker, c.ticker) and f.side == side and after < f.traded_at <= until
+                if any(_same_ticker(f.ticker, c.ticker) and f.side == side and _lands_between(f, after, until)
                        for f in all_fills):
                     not_happened["later"] += 1
                 elif now < until:
@@ -460,7 +478,7 @@ def summarize(
     fills_total = fills_door = 0
     if since is not None:
         for f in all_fills:
-            if f.traded_at >= since and (end is None or f.traded_at < end):
+            if _fill_in_range(f, since, end):
                 fills_total += 1
                 if id(f) in door_ids:
                     fills_door += 1

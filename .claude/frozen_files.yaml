@@ -4,7 +4,7 @@
 # 2026-05-19 v45.3 신규 작성 → 2026-09-21 전면 재작성 (services/quant · services/ai 는 삭제됐다)
 
 version: 1
-last_updated: "2026-10-22"  # 2026-10-22 rebuy_mirror.py 버그헌팅 수정(CEO "다 고칠래") · 2026-10-21 rebuy_mirror.py 추가(CEO 승인, PR #671) · 2026-09-21 quant/ai 동결 해제(코드 삭제), 살아있는 법적·기록 코어로 교체
+last_updated: "2026-10-22"  # 2026-10-22 rebuy_mirror.py 같은 날 순서 규칙(CEO "재매수 버그도 고쳐", PR #676) · 2026-10-22 rebuy_mirror.py 버그헌팅 수정(CEO "다 고칠래") · 2026-10-21 rebuy_mirror.py 추가(CEO 승인, PR #671) · 2026-09-21 quant/ai 동결 해제(코드 삭제), 살아있는 법적·기록 코어로 교체
 
 # 읽는 곳 (2026-09-21 grep): §verification 스니펫 · .githooks/post-checkout(파일명만) ·
 # agents/frozen-file-diff-guard.md. .githooks/pre-commit 의 FROZEN_PATHS 는 하드코딩(옛 quant 경로) — 별도 PR.

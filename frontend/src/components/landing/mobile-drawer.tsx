@@ -197,7 +197,7 @@ export default function MobileDrawer({
                                 key={item.href}
                                 href={item.href}
                                 onClick={onClose}
-                                className="flex items-center gap-3 rounded-sm px-3 py-3 transition-colors active:bg-white/5"
+                                className="flex items-center gap-3 rounded-[var(--pq-radius-cta)] px-3 py-3 transition-colors active:bg-white/5"
                               >
                                 <span
                                   className="flex h-8 w-8 flex-none items-center justify-center rounded-sm"

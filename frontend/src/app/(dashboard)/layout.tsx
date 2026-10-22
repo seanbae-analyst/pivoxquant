@@ -234,7 +234,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         contextual instances are intentional and live alongside this
         layout-level footer.
       */}
-      <div className="px-4 pb-6 md:px-10 md:pb-8">
+      {/* No side padding of its own: <main> already pads, and the double
+          gutter left the banner narrower than every card above it. The top
+          gap is wider than the phone pager's 16px bottom gutter, so on the
+          swipe screens (/mirror, /portfolio) its top edge no longer peeks
+          out above the bottom nav. */}
+      <div className="pt-8 md:pt-6">
         <DisclaimerBanner type={disclaimerType} alwaysExpanded={alwaysExpanded} />
       </div>
       <PushPermission />

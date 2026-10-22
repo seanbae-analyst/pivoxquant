@@ -84,8 +84,12 @@ export function SectionCurtain({
   );
 
   if (reduce) {
+    // Keep the ref attached: useScroll above still watches it, and an
+    // unattached target throws in development ("Target ref is defined but
+    // not hydrated") — the whole landing fell to the error page under
+    // prefers-reduced-motion.
     return (
-      <section id={id} className={className}>
+      <section id={id} ref={ref} className={className}>
         {children}
       </section>
     );
