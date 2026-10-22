@@ -48,18 +48,14 @@ export default function PersonasPreview() {
           whileInView={reduce ? undefined : "visible"}
           viewport={{ once: true, margin: "-80px" }}
           variants={fadeUp}
-          className="mb-6 inline-flex items-center gap-2.5"
+          className="mb-6 inline-flex items-center"
         >
+          {/* Same plain label as <Eyebrow/> (no rule, no capitals). */}
           <span
-            aria-hidden
-            className="h-px w-7"
-            style={{ backgroundColor: "rgba(184,149,106,0.7)" }}
-          />
-          <span
-            className="font-serif uppercase"
             style={{
               color: "var(--pq-bronze)",
-              fontSize: "var(--pq-text-eyebrow)",
+              fontSize: "var(--pq-text-body-sm)",
+              fontWeight: 500,
               letterSpacing: "0.01em",
             }}
           >

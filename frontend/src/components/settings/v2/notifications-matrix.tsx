@@ -392,9 +392,10 @@ export function NotificationsMatrix({
           <tr>
             <th
               scope="col"
-              className="font-mono"
+              // Phone: narrower side padding so the description column is not
+              // squeezed to four or five lines at 375px (2026-10-22).
+              className="py-3.5 pl-4 pr-2 font-mono md:pl-6 md:pr-3"
               style={{
-                padding: "14px 12px 14px 24px",
                 textAlign: "left",
                 borderBottom: "1px solid var(--pq-ivory-line)",
                 fontSize: "var(--pq-text-eyebrow)",
@@ -408,9 +409,8 @@ export function NotificationsMatrix({
               <th
                 key={c}
                 scope="col"
-                className="font-mono"
+                className="px-1.5 py-3.5 font-mono md:px-3"
                 style={{
-                  padding: "14px 12px",
                   textAlign: "center",
                   borderBottom: "1px solid var(--pq-ivory-line)",
                   fontSize: "var(--pq-text-eyebrow)",
@@ -435,8 +435,8 @@ export function NotificationsMatrix({
             return (
               <tr key={e.id}>
                 <td
+                  className="py-3.5 pl-4 pr-2 md:pl-6 md:pr-3"
                   style={{
-                    padding: "14px 12px 14px 24px",
                     borderBottom: isLast
                       ? "none"
                       : "1px solid var(--pq-ivory-line)",
@@ -482,8 +482,8 @@ export function NotificationsMatrix({
                 {(["email", "push", "inapp"] as const).map((ch) => (
                   <td
                     key={ch}
+                    className="px-1.5 py-3.5 md:px-3"
                     style={{
-                      padding: "14px 12px",
                       textAlign: "center",
                       borderBottom: isLast
                         ? "none"

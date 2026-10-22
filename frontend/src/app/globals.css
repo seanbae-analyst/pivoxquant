@@ -576,6 +576,12 @@
     @apply border-border outline-ring/50;
   }
   html {
+    /* The whole app is dark (2026-10-22). Without this, native controls drew
+       in light mode on the Vantablack floor: white checkboxes (/journal/import
+       consent), light date-picker and select sheets, a light scrollbar.
+       accent-color puts checked boxes, radios and range thumbs in bronze. */
+    color-scheme: dark;
+    accent-color: var(--pq-bronze);
     font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -1553,7 +1559,8 @@
   font-family: var(--font-sans), "Pretendard Variable", Pretendard, system-ui, sans-serif;
   font-size: 12px;
   letter-spacing: 0.01em;
-  text-transform: uppercase;
+  /* No text-transform (2026-10-22): tracked capitals were retired with the
+     2026-10-11 refresh; "Inbox" rendered as "INBOX". */
   color: var(--pq-bronze);
   font-weight: 500;
 }
@@ -5380,6 +5387,13 @@ html [data-sonner-toaster][data-sonner-theme="dark"] {
     box-shadow: 0 12px 32px rgba(var(--pq-ink-rgb), 0.7);
   }
   body:has([data-pq-bottom-nav]) .pq-cookie-banner {
+    bottom: calc(var(--pq-bottomnav-height) + var(--pq-safe-bottom) + 8px);
+  }
+  /* Install card (pwa/install-prompt.tsx) — same footing as the banner. */
+  .pq-install-prompt {
+    bottom: calc(12px + var(--pq-safe-bottom));
+  }
+  body:has([data-pq-bottom-nav]) .pq-install-prompt {
     bottom: calc(var(--pq-bottomnav-height) + var(--pq-safe-bottom) + 8px);
   }
 }

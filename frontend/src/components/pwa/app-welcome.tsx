@@ -132,7 +132,10 @@ export function AppWelcome() {
         style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 20px)" }}
         aria-hidden={onCover}
       >
-        <span className="font-serif text-[17px]">PivoxQuant</span>
+        {/* 44px tall like the skip button: the row was that button's height
+            on cards 1–2 and shorter on the last card, so the wordmark jumped
+            up 8px mid-swipe (2026-10-22). */}
+        <span className="inline-flex min-h-[44px] items-center font-serif text-[17px]">PivoxQuant</span>
         {!last && (
           <button
             type="button"

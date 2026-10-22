@@ -1,7 +1,19 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import { X, Download, Share } from "lucide-react";
+import { hasMadeConsentChoice } from "@/lib/consent";
+
+// The cookie banner and this card share the bottom of the screen. Wait for the
+// cookie decision so a first visit never stacks the two (2026-10-22).
+function subscribeConsent(cb: () => void) {
+  window.addEventListener("consent:change", cb);
+  window.addEventListener("storage", cb);
+  return () => {
+    window.removeEventListener("consent:change", cb);
+    window.removeEventListener("storage", cb);
+  };
+}
 
 // Chromium ships BeforeInstallPromptEvent; TS lib.dom doesn't type it yet.
 interface BeforeInstallPromptEvent extends Event {
@@ -44,6 +56,7 @@ export function InstallPrompt() {
   // Branch state — drives which body copy + CTA renders.
   const [variant, setVariant] = useState<"chromium" | "ios" | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const consentDecided = useSyncExternalStore(subscribeConsent, hasMadeConsentChoice, () => false);
 
   useEffect(() => {
     // Register the PWA service worker in production only (dev HMR conflicts).
@@ -140,20 +153,21 @@ export function InstallPrompt() {
   // Render guard: visible + at least one supported variant. iOS branch has
   // no deferredPrompt (Apple doesn't expose one); Chromium needs it.
   if (!visible) return null;
+  if (!consentDecided) return null;
   if (variant === "chromium" && !deferredPrompt) return null;
   if (!variant) return null;
 
   return (
-    // 2026-05-17 wave C-3 P1: mobile BottomNav is h-16 (64px) + safe-area
-    // and sits at z-50. Previous `bottom-4` placed this card directly under
-    // (or fully behind) the nav on every <md viewport — buttons untappable
-    // on phones. Lift the mobile variant clear with bottom-[80px] (64px
-    // nav + 16px gap). Desktop keeps md:bottom-6 (BottomNav hidden ≥md).
+    // Phone placement lives in globals.css (.pq-install-prompt), the same
+    // rule as the cookie banner: above the bottom nav + safe area when the
+    // screen has one, near the bottom edge when it does not. A fixed
+    // bottom-[80px] floated mid-air on the landing and sat under the nav on
+    // a notched iPhone (2026-10-22). Desktop keeps md:bottom-6.
     <div
       role="dialog"
       aria-labelledby="pq-install-title"
       aria-describedby="pq-install-body"
-      className="pointer-events-auto fixed bottom-[80px] left-4 right-4 z-50 md:bottom-6 md:left-auto md:right-6 md:w-[360px]"
+      className="pq-install-prompt pointer-events-auto fixed left-3 right-3 z-50 md:bottom-6 md:left-auto md:right-6 md:w-[360px]"
     >
       <div
         className="relative overflow-hidden p-5"
@@ -190,14 +204,14 @@ export function InstallPrompt() {
                 color: "var(--pq-ivory)",
               }}
             >
-              데스크에 PivoxQuant를 더하세요.
+              홈 화면에 PivoxQuant를 두세요.
             </h3>
           </div>
           <button
             type="button"
             onClick={dismiss}
-            aria-label="Dismiss install prompt"
-            className="-mr-1 -mt-1 p-1 transition-colors"
+            aria-label="설치 안내 닫기"
+            className="-mr-3 -mt-3 inline-flex h-11 w-11 items-center justify-center transition-colors"
             style={{ color: "var(--pq-ivory-faint)" }}
           >
             <X className="h-4 w-4" />
@@ -205,7 +219,7 @@ export function InstallPrompt() {
         </div>
         <p
           id="pq-install-body"
-          className="mb-5 font-serif"
+          className="mb-5 [word-break:keep-all]"
           style={{
             fontSize: "var(--pq-text-body)",
             lineHeight: 1.55,
@@ -215,14 +229,13 @@ export function InstallPrompt() {
         >
           {variant === "ios" ? (
             <>
-              어느 창에서든 포트폴리오를 관찰하세요. iOS Safari 에선
-              하단의 <Share className="inline h-3.5 w-3.5 align-text-bottom" />
-              {" "}공유 아이콘 → &ldquo;홈 화면에 추가&rdquo; 를 눌러주세요.
+              앱처럼 바로 열려요. Safari 아래의{" "}
+              <Share className="inline h-3.5 w-3.5 align-text-bottom" aria-hidden />
+              {" "}공유 → &ldquo;홈 화면에 추가&rdquo;를 눌러 주세요.
             </>
           ) : (
             <>
-              어느 창에서든 포트폴리오를 관찰하세요 — 설치형, 오프라인 지원,
-              중요한 변화 발생 시 푸시 알림.
+              앱처럼 바로 열리고, 체결이 들어오면 알림으로 받을 수 있어요.
             </>
           )}
         </p>

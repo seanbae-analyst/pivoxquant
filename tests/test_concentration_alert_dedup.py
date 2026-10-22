@@ -67,9 +67,10 @@ def test_two_sectors_over_limit_in_one_sweep_both_alert(app, two_sector_book):
 
     assert metrics["alerts_created"] == 2, metrics
     assert len(titles) == 2, titles
-    assert any(t.startswith("Portfolio concentration — Technology ") for t in titles)
-    assert any(t.startswith("Portfolio concentration — Communication Services ") for t in titles)
-    assert not any("Energy" in t for t in titles), titles
+    # Korean titles (2026-10-22) — the push on a Korean phone mirrors them.
+    assert any(t.startswith("섹터 집중도 · 기술 ") for t in titles)
+    assert any(t.startswith("섹터 집중도 · 커뮤니케이션 ") for t in titles)
+    assert not any("에너지" in t or "Energy" in t for t in titles), titles
     assert push.call_count == 2
 
 
@@ -181,3 +182,26 @@ def test_price_52w_after_window_alerts_again(app, make_user):
         _age_52w_alerts(user["id"],
                         timedelta(hours=alert_mod.PRICE_52W_DEDUP_HOURS + 1))
         assert alert_mod.alert_52w_low(user["id"], "XOM", name="Exxon") is not None
+
+
+def test_a_legacy_english_title_still_dedups_after_the_korean_switch(app, two_sector_book):
+    """Rows written before 2026-10-22 say "Portfolio concentration — Technology
+    48.0%". The sweep right after the deploy must not re-send every standing
+    sector because the new title no longer shares that prefix."""
+    from extensions import db
+    from models import Alert
+    from services import alert as alert_mod
+
+    uid = two_sector_book["id"]
+    with app.app_context(), patch("services.push_service.notify_bell_alert") as push:
+        for sector in ("Technology", "Communication Services"):
+            db.session.add(Alert(
+                user_id=uid, kind="concentration_alert",
+                title=f"Portfolio concentration — {sector} 41.0%",
+                message=f"Portfolio concentration — {sector} 41.0%",
+            ))
+        db.session.commit()
+        metrics = alert_mod.check_concentration_alerts()
+
+    assert metrics["alerts_created"] == 0, metrics
+    assert push.call_count == 0

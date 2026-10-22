@@ -228,7 +228,9 @@ export function PrivacyCardV2({
           gap: 12,
         }}
       >
-        <div>
+        {/* Desktop only: on a phone the app bar already titles this pane
+            "개인정보 · 데이터", and no other pane opens with a hero heading. */}
+        <div className="hidden md:block">
           <div
             className="font-mono"
             style={{

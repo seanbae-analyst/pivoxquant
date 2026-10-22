@@ -98,7 +98,7 @@ export default function SupportPage() {
       <div className="mx-auto w-full max-w-2xl px-4 py-10 sm:px-6 sm:py-14">
         {/* Header */}
         <header className="mb-8">
-          <RuledKicker>Support</RuledKicker>
+          <RuledKicker>도움말 · 문의</RuledKicker>
           <EditorialHead as="h1" size={36} className="mt-3">
             고객지원
           </EditorialHead>
