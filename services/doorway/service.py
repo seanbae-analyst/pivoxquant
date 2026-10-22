@@ -59,6 +59,7 @@ from models.doorway_check import (
     DoorwayCheck,
     offline_name,
 )
+from services.pre_trade.friction_outcome import ticker_key
 
 log = logging.getLogger(__name__)
 
@@ -334,6 +335,10 @@ class Fill:
     traded_at: datetime
     ticker: str | None
     side: str
+    # 시각 없이 날짜만 아는 체결(``services.imports.is_date_only`` — KST 날짜
+    # 00:00 으로 저장). 체결 수에는 들지만 어느 열림에도 잇지 않는다: 그 00:00
+    # 은 시각이 아니라서 09:00 KST 장 전 열림에 붙으면 안 된다.
+    untimed: bool = False
 
 
 def _iso(dt: datetime | None) -> str | None:
@@ -347,6 +352,8 @@ def _attribute(checks: Sequence, fills: Sequence[Fill]) -> dict[int, list[Fill]]
     grace = timedelta(seconds=EARLY_GRACE_SECONDS)
     out: dict[int, list[Fill]] = {}
     for f in fills:
+        if f.untimed:
+            continue
         # 체결 시각 + 유예 안쪽에서 가장 늦은 열림.
         i = bisect.bisect_right(times, f.traded_at + grace) - 1
         if i < 0:
@@ -357,6 +364,11 @@ def _attribute(checks: Sequence, fills: Sequence[Fill]) -> dict[int, list[Fill]]
     return out
 
 
+def _same_ticker(a: str | None, b: str | None) -> bool:
+    """.KS/.KQ/접미사 없는 코드는 같은 종목 — ``friction_outcome.ticker_key`` 한 벌."""
+    return bool(a) and bool(b) and ticker_key(a) == ticker_key(b)
+
+
 def _outcome(check, attributed: list[Fill]) -> str:
     """look → traded | none · buy/sell → as_said | other | none."""
     if not attributed:
@@ -365,7 +377,7 @@ def _outcome(check, attributed: list[Fill]) -> str:
         return "traded"
     side = _SIDE_FOR_INTENT.get(check.intent)
     for f in attributed:
-        if f.side == side and (check.ticker is None or f.ticker == check.ticker):
+        if f.side == side and (check.ticker is None or _same_ticker(f.ticker, check.ticker)):
             return "as_said"
     return "other"
 
@@ -430,11 +442,13 @@ def summarize(
             if outcome == "none" and c.ticker:
                 not_happened["n"] += 1
                 side = _SIDE_FOR_INTENT[c.intent]
-                start, end = c.created_at + follow, c.created_at + later
-                if any(f.ticker == c.ticker and f.side == side and start < f.traded_at <= end
+                # 함수 인자 start/end 를 덮어쓰지 않는다 — in_window 와 체결 집계가
+                # 그 둘을 읽는다 (2026-10-21: 덮어써서 90일·연간 창이 잘렸다).
+                after, until = c.created_at + follow, c.created_at + later
+                if any(_same_ticker(f.ticker, c.ticker) and f.side == side and after < f.traded_at <= until
                        for f in all_fills):
                     not_happened["later"] += 1
-                elif now < end:
+                elif now < until:
                     not_happened["open"] += 1
                 else:
                     not_happened["never"] += 1
@@ -517,6 +531,7 @@ def load_fills(user_id: int, since: datetime) -> list[Fill]:
     """``since`` 이후의 본인 체결 — 기록된 체결(등록 행 제외) + 대기 중 체결."""
     from models import TradeHistory
     from models.import_batch import STATUS_PENDING, PendingTrade
+    from services.imports import is_date_only
     from services.profile.fifo_util import is_registration_row
 
     out: list[Fill] = []
@@ -525,14 +540,14 @@ def load_fills(user_id: int, since: datetime) -> list[Fill]:
     ).all():
         if is_registration_row(t) or t.action not in ("BUY", "SELL"):  # // legal-ok — data values
             continue
-        out.append(Fill(t.traded_at, t.ticker, t.action))
+        out.append(Fill(t.traded_at, t.ticker, t.action, untimed=is_date_only(t.traded_at)))
     for p in PendingTrade.query.filter(
         PendingTrade.user_id == user_id,
         PendingTrade.status == STATUS_PENDING,
         PendingTrade.traded_at >= since,
     ).all():
         if p.action in ("BUY", "SELL"):  # // legal-ok — data values
-            out.append(Fill(p.traded_at, p.ticker, p.action))
+            out.append(Fill(p.traded_at, p.ticker, p.action, untimed=is_date_only(p.traded_at)))
     return out
 
 

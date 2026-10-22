@@ -35,8 +35,8 @@ export interface ShareCardText {
 export function shareCardLines(data: YearRecapResponse): ShareCardText {
   const { pauses, records, fills } = data;
   const lines: string[] = [];
-  if (pauses.started > 0) lines.push(`사기 전에 멈춘 ${pauses.started}번`);
-  if (pauses.never_bought > 0) lines.push(`그중 끝내 사지 않은 ${pauses.never_bought}번`);
+  if (pauses.started > 0) lines.push(`거래 전에 멈춘 ${pauses.started}번`);
+  if (pauses.never_bought > 0) lines.push(`그중 사려다 멈추고 끝내 사지 않은 ${pauses.never_bought}번`);
   if (records.reasoned_fills > 0) lines.push(`이유를 적은 체결 ${records.reasoned_fills}건`);
   if (records.research_written > 0) lines.push(`직접 쓴 리서치 ${records.research_written}편`);
   if (lines.length === 0 && fills.total > 0) lines.push(`기록한 체결 ${fills.total}건`);

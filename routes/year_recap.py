@@ -30,6 +30,7 @@ Legal posture
 from __future__ import annotations
 
 import logging
+import re
 from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, jsonify, request
@@ -68,26 +69,35 @@ def _parse_year(raw: str | None, now: datetime) -> int | None:
     this_year = kst_year(now)
     if raw is None or raw == "":
         return this_year
-    if not raw.isdigit() or len(raw) != 4:
+    # ASCII 숫자만 — "²" 는 isdigit() 를 통과하고 int() 에서 터졌다(500), "２０２６" 은 2026 으로 읽혔다.
+    if not (raw.isascii() and raw.isdigit()) or len(raw) != 4:
         return None
     year = int(raw)
     return year if _MIN_YEAR <= year <= this_year else None
 
 
 def _offline_name(ticker: str | None) -> str | None:
-    """종목명 — 오프라인 레지스트리만 (research_note / observation_note to_dict 와 같은 이유)."""
+    """종목명 — 오프라인 레지스트리만 (research_note / observation_note to_dict 와 같은 이유).
+
+    못 찾으면 None — 화면이 ``displayName`` 으로 코드를 접미사 없이 보인다.
+    티커를 이름 자리에 돌려주면 "· 123456.KS" 가 그대로 찍혔다(2026-10-22).
+    접미사 없는 6자리 코드도 한국 종목이다.
+    """
     if not ticker:
         return None
+    t = ticker.strip().upper()
     try:
-        if ticker.endswith((".KS", ".KQ")):
+        if t.endswith((".KS", ".KQ")) or re.fullmatch(r"\d{6}", t):
             from services import kr_stock_registry
 
-            return kr_stock_registry.get_name(ticker) or ticker
+            if t.endswith((".KS", ".KQ")):
+                return kr_stock_registry.get_name(t) or None
+            return kr_stock_registry.get_name(f"{t}.KS") or kr_stock_registry.get_name(f"{t}.KQ") or None
         from services import us_stock_registry
 
-        return us_stock_registry.get_name(ticker) or ticker
+        return us_stock_registry.get_name(t) or None
     except Exception:
-        return ticker
+        return None
 
 
 def _load_rows(uid: int) -> dict:
@@ -141,7 +151,8 @@ def year_recap():
     year = _parse_year(request.args.get("year"), now)
     if year is None:
         return api_error(
-            en=f"year must be a 4-digit year between {_MIN_YEAR} and this year.",
+            # "must be" 는 스크럽이 "is recorded as be" 로 바꾼다 — 그 표현을 피한다.
+            en=f"Invalid year: expected a 4-digit year from {_MIN_YEAR} to this year.",
             kr="연도가 올바르지 않습니다.", code=_BAD_YEAR, status=400,
         )
     rows = _load_rows(int(current_user.id))
@@ -152,7 +163,8 @@ def year_recap():
         "ok": True,
         "disclaimer": DISCLAIMER_MIRROR_RETROSPECTIVE_KR,
         "share_disclaimer": DISCLAIMER_BRAG_BILINGUAL,
-        "years": available_years(_row_times(rows), now),
+        # 고를 수 있는 해 = 요청이 받는 해. 2018년 체결이 있으면 버튼이 뜨고 400 이 났다.
+        "years": [y for y in available_years(_row_times(rows), now) if y >= _MIN_YEAR],
         **recap,
     }
     return jsonify(body), 200

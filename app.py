@@ -1378,7 +1378,14 @@ def _init_scheduler(app):
         from models import Position
         with app.app_context():
             try:
-                tickers = sorted({p.ticker for p in Position.query.all()})
+                from services.market_display import market_data_display_enabled
+
+                held = sorted({p.ticker for p in Position.query.all()})
+                # Display off: identity only, so a ticker is re-warmed once a
+                # day, not every 3 min (FMP budget — cache_service).
+                tickers = cache_service.tickers_due_for_refresh(
+                    held, display_on=market_data_display_enabled(),
+                )
                 # Release the connection before any external API work.
                 db.session.remove()
 

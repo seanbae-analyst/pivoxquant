@@ -216,6 +216,9 @@ def _build_positions_list():
             "change_pct": round(change_pct, 4) if display_on else None,
             "observed_at": observed_at,
             "price_source": price_source,
+            # Last-known price (provider outage / FMP budget low) — the same
+            # flag the SSE push sets, so the row can say 지연 (2026-10-22).
+            "stale": bool(o.get("stale")) if display_on else False,
             # Cost basis normalised to KRW by the shared fx_service helper —
             # the weight denominator the /risk aggregators fall back to when
             # market_value is withheld. Same helper as the journal

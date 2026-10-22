@@ -161,8 +161,8 @@ describe("share card", () => {
     const all = [text.title, ...text.lines, text.wordmark].join("\n");
     expect(text.title).toBe("2026년, 내 기록");
     expect(text.lines).toEqual([
-      "사기 전에 멈춘 14번",
-      "그중 끝내 사지 않은 4번",
+      "거래 전에 멈춘 14번",
+      "그중 사려다 멈추고 끝내 사지 않은 4번",
       "이유를 적은 체결 19건",
       "직접 쓴 리서치 3편",
     ]);
@@ -219,6 +219,20 @@ describe("/mirror/year page", () => {
     render(<YearRecapPage />);
     const group = screen.getByRole("group", { name: "연도" });
     expect(within(group).getAllByRole("button").map((b) => b.textContent)).toEqual(["2026년", "2025년"]);
+  });
+
+  it("an empty current year still offers the year that has records (January case)", () => {
+    recap = { data: { ...FULL, year: 2026, years: [2025], empty: true }, isLoading: false, error: undefined };
+    render(<YearRecapPage />);
+    const group = screen.getByRole("group", { name: "연도" });
+    expect(within(group).getAllByRole("button").map((b) => b.textContent)).toEqual(["2026년", "2025년"]);
+  });
+
+  it("names an unregistered KR stock by its code, never the .KS ticker", () => {
+    const quotes = [{ ...FULL.quotes[0], ticker: "123456.KS", name: null }];
+    render(<YearRecapView data={{ ...FULL, quotes }} />);
+    expect(document.body.textContent).not.toMatch(/\.KS|\.KQ/);
+    expect(document.body.textContent).toContain("123456");
   });
 
   it("an empty year shows no share button", () => {
