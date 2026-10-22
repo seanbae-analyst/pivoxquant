@@ -3,7 +3,7 @@
 /**
  * Friction-Outcome Mirror — what the *pause* actually led to.
  *
- * The other five mirrors read TradeHistory: what you did. This one reads
+ * The other six mirrors read TradeHistory: what you did. This one reads
  * PreTradeReflection alongside it, so it is the only surface in the product
  * that can see the trade that did **not** happen. Brokerages and MyData know
  * executions; nobody but this record knows what you almost bought.
