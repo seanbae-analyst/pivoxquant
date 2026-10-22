@@ -43,6 +43,7 @@ import TopNav from "./top-nav";
 import SplashPage from "./splash-page";
 import { Hero } from "./hero";
 import ThreeSteps from "./three-steps";
+import WhyRecord from "./why-record";
 import ImportInboxPreview from "./import-inbox-preview";
 import PersonasPreview from "./personas-preview";
 import { FilmGrain } from "./film-grain";
@@ -558,6 +559,9 @@ export default function LandingV2() {
       <SplashPage />
       <Hero />
       <SectionCurtain divider={false}>
+        <WhyRecord />
+      </SectionCurtain>
+      <SectionCurtain>
         <ThreeSteps />
       </SectionCurtain>
       <SectionCurtain>
