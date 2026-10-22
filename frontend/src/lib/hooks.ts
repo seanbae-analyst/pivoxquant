@@ -969,7 +969,10 @@ export interface PortfolioSummary {
   costBasisKrw?: number;
 }
 
-export const PORTFOLIO_DEDUPE_MS = 10_000;
+// Below the 5 s market-hours poll: the poll revalidates *with* dedupe, so a
+// 10 s window swallowed every other tick and the real cadence was ~10 s +
+// latency (2026-10-22 "현황가격 업데이트가 너무 느려").
+export const PORTFOLIO_DEDUPE_MS = 4_000;
 
 /**
  * Portfolio polling (2026-10-09 perf). The 5 s market-hours poll keeps vendor
