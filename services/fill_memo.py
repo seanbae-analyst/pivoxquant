@@ -111,6 +111,14 @@ def rule_note(user_id: int, now: datetime | None = None) -> str:
         return f"{lead} 들어온 거래가 {n}번이에요 — 정해 둔 선은 {ceiling}번."
     except Exception:
         log.warning("fill_memo rule note failed user_id=%s", user_id, exc_info=True)
+        # Same as sell_note: an aborted Postgres transaction would fail the
+        # push on this session. rule_note runs for any number of fills, so
+        # sell_note (one fill only) is no backstop for it.
+        try:
+            from extensions import db
+            db.session.rollback()
+        except Exception:
+            pass
         return ""
 
 
