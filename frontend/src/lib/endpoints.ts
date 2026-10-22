@@ -374,9 +374,12 @@ export const API = {
   // - POST   : record explicit opt-in (clears prior revocation)
   // - DELETE : record revocation
   //   Neither touches email_opt_out (2026-09-29) — that is profile.emailPreferences'.
+  //   categories GET → {categories:{information,marketing}} · POST {information?: bool, marketing?: bool}
+  //   (§50 ① split record; `information` gates the monthly report, 2026-10-22)
   consents: {
     marketing: "/api/consents/marketing",
     crossBorder: "/api/consents/cross-border",
+    categories: "/api/consents/categories",
   },
   // Import Inbox (2026-09-13, docs/product/IMPORT_INBOX_DESIGN.md §API).
   // The server receives only what the user uploads — a CSV/XLSX file or

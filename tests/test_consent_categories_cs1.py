@@ -347,3 +347,59 @@ def test_pending_deletion_blocks_every_non_transactional_send(monkeypatch, app):
             assert _send(EmailSender(), user, app=app, email_category=cat) is False
         assert _send(EmailSender(), user, app=app,
                      email_category=EmailCategory.TRANSACTIONAL) is True
+
+
+# ── 6. 정보성 mail reads only the 정보성 record (2026-10-22) ───────────
+#
+# The monthly report is INFORMATION. It used to need the legacy marketing
+# opt-in as well (baseline gate), and nothing ever wrote the INFORMATION
+# record, so it reached nobody.
+
+
+@pytest.mark.parametrize("flag", ["false", "true"])
+def test_information_send_needs_only_information_consent(monkeypatch, app, flag):
+    from services.email.sender import EmailSender, EmailCategory
+    monkeypatch.setenv("PIVOX_CS1_CONSENT_ENABLED", flag)
+    monkeypatch.setenv("SENDGRID_API_KEY", "test")
+    yesterday = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=1)
+    user = _FakeUser(
+        marketing_consent_at=None,
+        marketing_consent_information_at=yesterday,
+    )
+    with _patch_transport_always_succeed():
+        assert _send(EmailSender(), user, app=app,
+                     email_category=EmailCategory.INFORMATION) is True
+        # …and does not open the 광고성 path.
+        assert _send(EmailSender(), user, app=app,
+                     email_category=EmailCategory.MARKETING) is False
+
+
+@pytest.mark.parametrize("flag", ["false", "true"])
+def test_marketing_opt_in_does_not_open_information_mail(monkeypatch, app, flag):
+    from services.email.sender import EmailSender, EmailCategory
+    monkeypatch.setenv("PIVOX_CS1_CONSENT_ENABLED", flag)
+    monkeypatch.setenv("SENDGRID_API_KEY", "test")
+    user = _FakeUser()  # legacy marketing opt-in only
+    with _patch_transport_always_succeed():
+        assert _send(EmailSender(), user, app=app,
+                     email_category=EmailCategory.INFORMATION) is False
+
+
+def test_marketing_toggle_writes_the_marketing_category(client, auth_user):
+    """POST/DELETE /marketing is the 광고성 consent — the category record
+    follows it, or the CS1 gate would block a user who just opted in."""
+    client.post("/api/consents/marketing")
+    cats = client.get("/api/consents/categories").get_json()["categories"]
+    assert cats["marketing"]["opted_in"] is True
+    assert cats["information"]["opted_in"] is False  # not cross-granted
+
+    client.delete("/api/consents/marketing")
+    cats = client.get("/api/consents/categories").get_json()["categories"]
+    assert cats["marketing"]["opted_in"] is False
+
+
+def test_categories_marketing_writes_the_legacy_record(client, auth_user):
+    client.post("/api/consents/categories", json={"marketing": True})
+    assert client.get("/api/consents/marketing").get_json()["opted_in"] is True
+    client.post("/api/consents/categories", json={"marketing": False})
+    assert client.get("/api/consents/marketing").get_json()["opted_in"] is False

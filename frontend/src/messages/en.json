@@ -908,9 +908,9 @@
       "monthly_mirror": {
         "name": "Monthly mirror report",
         "help": "A PDF of what you recorded last month, mailed on the 1st. Your own record only — no scores, no prices.",
-        "blockedByConsent": "Not being sent — Marketing emails consent below is off.",
+        "blockedByConsent": "Not being sent — Informational emails consent below is off.",
         "blockedByDelivery": "Not being sent — Email delivery below is off.",
-        "blockedByBoth": "Not being sent — Email delivery and Marketing emails consent below are off."
+        "blockedByBoth": "Not being sent — Email delivery and Informational emails consent below are off."
       },
       "fill_memo": {
         "name": "A fill just arrived — note why",
@@ -930,7 +930,7 @@
       "contents": "What it holds: fills you recorded · acquiring more of a position you already had · round trips closed in the period · concentration at average cost · how each pause ended. No quotes and no scores, and the reasons you wrote in a pause are not copied in.",
       "gateCell": "Monthly mirror report · email, in the table above",
       "gateDelivery": "Email delivery",
-      "gateConsent": "Marketing information consent",
+      "gateConsent": "Informational emails consent",
       "on": "On",
       "off": "Off",
       "checking": "Checking…",
