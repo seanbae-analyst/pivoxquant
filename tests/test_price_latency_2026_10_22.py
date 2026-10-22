@@ -109,6 +109,41 @@ def test_concurrent_callers_share_one_kis_fetch(monkeypatch):
     assert [o["005930.KS"]["price"] for o in outs] == [70000] * 3
 
 
+def test_concurrent_caller_gets_the_alpaca_batch_answer(monkeypatch):
+    # The waiting caller reads the fetching caller's answer from the shared
+    # cache — the Alpaca batch never wrote it there, so the second caller
+    # got {} for every US ticker.
+    rt = _svc(monkeypatch, kis=False)
+    rt.alpaca_available = True
+
+    class _Trade:
+        price = 190.0
+        timestamp = None
+
+    class _Client:
+        def get_stock_latest_trade(self, req):
+            time.sleep(0.3)
+            return {"AAPL": _Trade()}
+
+        def get_stock_latest_bar(self, req):
+            return {}
+
+    rt.alpaca_client = _Client()
+    monkeypatch.setattr(rt, "_get_fmp_price", lambda t: None)
+    outs = []
+
+    def caller():
+        outs.append(rt.get_prices_batch(["AAPL"]))
+
+    threads = [threading.Thread(target=caller) for _ in range(2)]
+    for th in threads:
+        th.start()
+    for th in threads:
+        th.join()
+    assert [o["AAPL"]["price"] for o in outs] == [190.0, 190.0]
+    assert not any(o["AAPL"].get("stale") for o in outs)
+
+
 # ── B3: deadlines are real ──────────────────────────────────────────────
 
 def test_kr_deadline_bounds_the_batch_and_late_answer_is_cached(monkeypatch):
@@ -206,6 +241,44 @@ def test_refresh_job_with_display_off_only_warms_missing_or_day_old(app):
         held = ["AAA", "BBB", "CCC"]
         assert tickers_due_for_refresh(held, display_on=False, now=now) == ["BBB", "CCC"]
         assert tickers_due_for_refresh(held, display_on=True, now=now) == held
+
+
+# ── B1f: the daily budget window rolls over ────────────────────────────
+
+def test_hard_stop_lifts_when_the_daily_window_ends(monkeypatch):
+    # Past the hard stop _fmp_get returned before _track_call — the only
+    # place the counter reset — so FMP stayed blocked until a restart.
+    monkeypatch.setattr(fmp_service, "FMP_KEY", "k")
+    monkeypatch.setattr(fmp_service, "_daily_calls", fmp_service._BUDGET_HARD_STOP)
+    monkeypatch.setattr(fmp_service, "_daily_calls_reset", time.time() - 2 * 86400)
+    seen = []
+
+    class _Resp:
+        status_code = 200
+
+        def json(self):
+            return [{"symbol": "AAPL"}]
+
+    def fake_get(url, params=None, timeout=None):
+        seen.append(url)
+        return _Resp()
+
+    monkeypatch.setattr(fmp_service.requests, "get", fake_get)
+    assert fmp_service._fmp_get("/search-symbol", {"query": "AAPL"}) == [{"symbol": "AAPL"}]
+    assert len(seen) == 1
+    assert fmp_service._daily_calls == 1
+
+
+def test_budget_stale_ends_with_the_daily_window(monkeypatch):
+    monkeypatch.setattr(fmp_service, "_daily_calls", fmp_service._BUDGET_STALE_THRESHOLD)
+    monkeypatch.setattr(fmp_service, "_daily_calls_reset", time.time() - 86400 - 1)
+    assert fmp_service._is_budget_stale() is False
+
+
+def test_budget_stale_holds_inside_the_daily_window(monkeypatch):
+    monkeypatch.setattr(fmp_service, "_daily_calls", fmp_service._BUDGET_STALE_THRESHOLD)
+    monkeypatch.setattr(fmp_service, "_daily_calls_reset", time.time() - 3600)
+    assert fmp_service._is_budget_stale() is True
 
 
 # ── B1d: FX spares the FMP budget ───────────────────────────────────────

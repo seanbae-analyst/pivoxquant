@@ -337,7 +337,18 @@ class RealtimeService:
                         "currency": "USD",
                         "source": "alpaca",
                         "timestamp": ts,
+                        "_ts": time.time(),
                     }
+                # Seed the shared cache like the KIS / FMP paths do: a
+                # concurrent caller waiting on this fetch (single-flight)
+                # reads its answer from the cache, and found nothing — US
+                # rows came back empty on the second of /summary +
+                # /positions (2026-10-22).
+                with self._price_cache_lock:
+                    for t in us_tickers:
+                        hit = results.get(t)
+                        if hit is not None:
+                            self._price_cache[t.upper().strip()] = hit
             except Exception as e:
                 logger.warning("Alpaca batch failed: %s", e)
 

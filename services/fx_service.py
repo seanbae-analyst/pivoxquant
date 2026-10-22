@@ -174,7 +174,7 @@ FX_REFETCH_SECONDS = 300
 def _fmp_fx_allowed() -> bool:
     try:
         from services.data import fmp
-        return fmp._daily_calls < fmp._BUDGET_STALE_THRESHOLD // 2
+        return fmp.daily_calls_used() < fmp._BUDGET_STALE_THRESHOLD // 2
     except Exception:
         return True
 
