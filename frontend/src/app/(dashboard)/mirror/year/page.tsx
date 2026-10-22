@@ -72,6 +72,7 @@ export default function YearRecapPage() {
   };
 
   const shownYear = data?.year ?? year;
+  const pickable = data ? Array.from(new Set([data.year, ...data.years])).sort((a, b) => b - a) : [];
   return (
     <div className="mx-auto w-full max-w-2xl px-0 pb-8 md:px-6 md:py-8" data-testid="year-recap-page">
       <header className="mb-8">
@@ -83,8 +84,9 @@ export default function YearRecapPage() {
             {researchDate(data.range.start)}부터 {researchDate(data.range.end)}까지, 여기에 남긴 기록만 셌어요.
           </Caption>
         )}
-        {data && data.years.length > 1 && (
-          <YearSelector years={data.years} year={data.year} onPick={(y) => { setStatus(null); setYear(y); }} />
+        {/* 보고 있는 해도 버튼에 넣는다 — 1월에 작년 기록만 있으면 years 는 [작년] 하나라 선택기가 숨어 갈 길이 없었다. */}
+        {data && pickable.length > 1 && (
+          <YearSelector years={pickable} year={data.year} onPick={(y) => { setStatus(null); setYear(y); }} />
         )}
         <Link
           href="/mirror"

@@ -21,6 +21,7 @@
 import * as React from "react";
 
 import type { YearRecapDoorway, YearRecapQuote, YearRecapResponse } from "@/lib/types";
+import { displayName, normalizeTicker } from "@/lib/format";
 import { VERDICT_LABEL, researchDate } from "@/lib/research";
 
 const IVORY = "var(--pq-ivory)";
@@ -94,7 +95,7 @@ function NumbersSection({ data }: { data: YearRecapResponse }) {
     <Section id="numbers" title="숫자">
       <div className="grid grid-cols-2 gap-x-4 gap-y-6">
         <BigNumber value={fills.total} unit="건" label="기록한 체결" sub={`매수 ${fills.buys} · 매도 ${fills.sells}`} />
-        <BigNumber value={pauses.started} unit="번" label="사기 전에 멈춤" />
+        <BigNumber value={pauses.started} unit="번" label="거래 전에 멈춤" />
         <BigNumber value={records.reasoned_fills} unit="건" label="이유를 적은 체결" />
         {holding.median_days !== null ? (
           <BigNumber value={holding.median_days} unit="일" label="판 것의 보유 기간 중앙값" sub={`매도 ${holding.sells}번`} />
@@ -162,7 +163,8 @@ const QUOTE_LABEL: Record<YearRecapQuote["kind"], string> = {
 };
 
 function QuoteCard({ q }: { q: YearRecapQuote }) {
-  const who = q.name || q.ticker;
+  // 접미사 없는 코드로 — 이름이 없을 때 화면에 ".KS" 가 남지 않게.
+  const who = q.ticker ? displayName(normalizeTicker(q.ticker), q.name) : q.name;
   return (
     <figure className="m-0 rounded-[var(--pq-radius-card)] px-4 py-4" style={{ border: LINE }} data-testid={`year-quote-${q.kind}`}>
       <p className="text-[12.5px]" style={{ color: BRONZE }}>{QUOTE_LABEL[q.kind]}</p>

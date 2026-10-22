@@ -33,16 +33,28 @@ Pairing rule
 ------------
 Per ticker, walking the user's fills in chronological order:
 
-* A recorded 매도 becomes the ticker's *pending sale* (a later 매도 replaces
-  it — the comparison is always with the **most recent** sale before the
-  buy).
+* A recorded 매도 that **leaves no shares** becomes the ticker's *pending
+  sale* (a later one replaces it — the comparison is always with the **most
+  recent** exit before the buy). A partial 매도 is a trim, not leaving the
+  name: the buy that follows it is an add, not a return (2026-10-22 — same
+  running position as ``averaging_down_mirror``). A 매도 with no recorded
+  holding before it (history that starts after the buy) counts as an exit —
+  there is nothing to say it was partial.
+* Fills of one name under ``.KS`` / ``.KQ`` / the bare code are one ticker
+  (``friction_outcome.ticker_key``), and a sale pairs only with a buy in the
+  same currency.
+* Order is by instant, except a date-only fill (stored as its KST date at
+  00:00) sits at the **end of its KST day** — the calendar-day rule of
+  ``friction_outcome._at_or_after``. A same-day timed sale and date-only
+  buy read as sale → buy, not the other way round.
 * The first recorded 매수 after a pending sale closes the pair **if** it
   lands within :data:`REBUY_WINDOW_DAYS` of that sale. A 매수 after the
   window does not pair (it reads as a new decision, not a return to the
   name) and clears the pending sale. Either way one sale pairs with at most
   one buy.
 * Holding-registration rows are not fills: a ``holding_seed`` 매수 never
-  closes a pair, a ``holding_adjust`` 매도 never opens one
+  closes a pair, a ``holding_adjust`` 매도 never opens one (both still move
+  the running share count)
   (:func:`services.profile.fifo_util.is_registration_row`).
 * Rows with a non-positive share count or price are ignored entirely — they
   neither open nor close a pair.
@@ -74,6 +86,8 @@ from statistics import median
 from typing import Iterable, NamedTuple
 
 from models import TradeHistory
+from services.imports import is_date_only
+from services.pre_trade.friction_outcome import ticker_key
 from services.profile.fifo_util import is_registration_row
 
 
@@ -94,6 +108,20 @@ _PRICE_EPSILON: float = 1e-9
 
 # How many tickers to surface in the neutral per-ticker breakdown.
 _MAX_TICKERS: int = 5
+
+# A position at or below this share count is closed. Matches
+# services.profile.fifo_util._SHARE_EPSILON.
+_SHARE_EPSILON: float = 1e-9
+
+_KST = timedelta(hours=9)
+
+
+def _order_at(traded_at: datetime) -> datetime:
+    """The instant a fill is ordered by — a date-only fill (its KST date at
+    00:00) at the end of that KST day, a timed fill at its own instant."""
+    if is_date_only(traded_at):
+        return traded_at + timedelta(days=1) - _KST
+    return traded_at
 
 
 class _Pair(NamedTuple):
@@ -118,49 +146,71 @@ def _pair_rebuys(
     trades: list[TradeHistory],
     *,
     window_days: int,
-) -> tuple[list[_Pair], dict[str, str]]:
+) -> tuple[list[_Pair], dict[str, tuple[str | None, str]]]:
     """Walk every ticker's fills and return ``(pairs, names)``.
 
-    ``names`` maps ticker → freshest non-empty display name seen. The walk is
-    deterministic: fills are sorted by ``(traded_at, id)`` so out-of-order
-    ingestion (backfill) and same-day date-grain fills give one answer.
+    ``names`` maps ticker key → (freshest non-empty display name, latest
+    ticker spelling). The walk is deterministic: fills are sorted by
+    ``(order instant, id)`` so out-of-order ingestion (backfill) and
+    same-day date-grain fills give one answer.
     """
     ordered = sorted(
         (t for t in trades if t.traded_at and t.ticker),
-        key=lambda t: (t.traded_at, t.id or 0),
+        # A date-only fill and a timed fill at the same instant: the date-only
+        # one belongs to the earlier KST day, so it goes first.
+        key=lambda t: (_order_at(t.traded_at), 0 if is_date_only(t.traded_at) else 1, t.id or 0),
     )
     window = timedelta(days=window_days)
 
-    pending: dict[str, tuple[datetime, float]] = {}
+    held: dict[str, float] = {}
+    pending: dict[str, tuple[datetime, float, str]] = {}
     names: dict[str, str] = {}
+    shown: dict[str, str] = {}
     pairs: list[_Pair] = []
 
     for t in ordered:
-        key = t.ticker.upper()
+        key = ticker_key(t.ticker)
+        shown[key] = t.ticker.upper()
         name = (t.name or "").strip()
         if name:
             names[key] = name
 
-        if is_registration_row(t):
-            continue
         shares = float(t.shares or 0.0)
         price = float(t.price_per_share or 0.0)
+        action = (t.action or "").upper()
+        before = held.get(key, 0.0)
+
+        if is_registration_row(t):
+            # Not a fill — but the shares it seeds or adjusts are held.
+            if shares > 0 and action == "BUY":
+                held[key] = before + shares
+            elif shares > 0 and action == "SELL":
+                held[key] = max(0.0, before - shares)
+            continue
         if shares <= 0 or price <= 0:
             continue
 
-        action = (t.action or "").upper()
+        at = _order_at(t.traded_at)
+        currency = (t.currency or "").upper()
         if action == "SELL":
-            pending[key] = (t.traded_at, price)
+            left = before - shares
+            held[key] = max(0.0, left)
+            if before <= _SHARE_EPSILON or left <= _SHARE_EPSILON:
+                pending[key] = (at, price, currency)
         elif action == "BUY":
+            held[key] = before + shares
             sale = pending.pop(key, None)
             if sale is None:
                 continue
-            sell_at, sell_price = sale
-            if t.traded_at - sell_at <= window:
-                pairs.append(_Pair(key, sell_at, sell_price, t.traded_at, price))
+            sell_at, sell_price, sell_currency = sale
+            if sell_currency != currency:
+                continue
+            if at - sell_at <= window:
+                pairs.append(_Pair(key, sell_at, sell_price, at, price))
         # Unknown action types are ignored entirely.
 
-    return pairs, names
+    # One display spelling per name: the latest one the user's fills used.
+    return pairs, {k: (names.get(k), shown[k]) for k in shown}
 
 
 def _bucket(pair: _Pair) -> str:
@@ -171,7 +221,7 @@ def _bucket(pair: _Pair) -> str:
     return "flat"
 
 
-def _by_ticker(pairs: list[_Pair], names: dict[str, str]) -> list[dict]:
+def _by_ticker(pairs: list[_Pair], names: dict[str, tuple[str | None, str]]) -> list[dict]:
     """Neutral per-ticker breakdown — top ``_MAX_TICKERS`` by pair count.
 
     Each entry: ``{ticker, name, rebuy_count, higher_count, lower_count}``,
@@ -185,8 +235,8 @@ def _by_ticker(pairs: list[_Pair], names: dict[str, str]) -> list[dict]:
     ordered = sorted(tally.items(), key=lambda kv: (-kv[1]["rebuy"], kv[0]))
     return [
         {
-            "ticker": ticker,
-            "name": names.get(ticker),
+            "ticker": names[ticker][1],
+            "name": names[ticker][0],
             "rebuy_count": rec["rebuy"],
             "higher_count": rec["higher"],
             "lower_count": rec["lower"],
@@ -201,6 +251,7 @@ def compute_rebuy_mirror(
     period_days: int | None = None,
     min_pairs: int = _DEFAULT_MIN_PAIRS,
     window_days: int = REBUY_WINDOW_DAYS,
+    now: datetime | None = None,
 ) -> dict:
     """Compute the retrospective sell → later-buy mirror for one user.
 
@@ -210,12 +261,15 @@ def compute_rebuy_mirror(
         All trade rows for a single user (full history; order-independent).
     period_days : int | None
         When set, only pairs whose 매수 falls within the last ``period_days``
-        days (relative to the latest recorded fill in the input, for
-        determinism) are counted. ``None`` → all history.
+        days are counted — relative to ``now`` when given (the route), else
+        to the latest recorded fill in the input. ``None`` → all history.
     min_pairs : int
         Minimum pairs in the window before numbers are reported.
     window_days : int
         Maximum days from a sale to the buy that pairs with it.
+    now : datetime | None
+        Naive-UTC anchor for ``period_days``. Anchored to the latest fill,
+        one unrelated later buy moved the window off every pair (2026-10-22).
 
     Returns
     -------
@@ -232,7 +286,9 @@ def compute_rebuy_mirror(
     if period_days is not None and period_days > 0:
         # 창의 기준점은 마지막 *체결* — 보유 등록 시드·조정은 체결이 아니다.
         dated = [t for t in materialised if t.traded_at and not is_registration_row(t)]
-        if dated:
+        if now is not None:
+            cutoff = now - timedelta(days=period_days)
+        elif dated:
             cutoff = max(t.traded_at for t in dated) - timedelta(days=period_days)
         else:
             materialised = []
