@@ -278,7 +278,9 @@ export function YearRecapView({ data }: { data: YearRecapResponse }) {
       {data.pauses.started > 0 && <NotTakenSection pauses={data.pauses} />}
       {data.quotes.length > 0 && (
         <Section id="words" title="내 말">
-          <div className="space-y-3">
+          {/* gap, not space-y: the figure's own m-0 out-ranks space-y's
+              :where() margin, and the cards sat edge to edge. */}
+          <div className="flex flex-col gap-3">
             {data.quotes.map((q) => <QuoteCard key={q.kind} q={q} />)}
           </div>
         </Section>

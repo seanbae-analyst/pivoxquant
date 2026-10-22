@@ -7,7 +7,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { render } from "@testing-library/react";
-import { SelfObservedRadar } from "@/components/mirror/self-observed-radar";
+import { SelfObservedRadar, splitAxisLabel } from "@/components/mirror/self-observed-radar";
 
 const LABELS = ["a", "b", "c", "d", "e", "f", "g", "h", "i"];
 const DECLARED = new Array(9).fill(0.6);
@@ -49,5 +49,31 @@ describe("SelfObservedRadar measured mask", () => {
     );
     expect(container.querySelectorAll("polygon")).toHaveLength(5);
     expect(container.querySelectorAll("circle")).toHaveLength(0);
+  });
+});
+
+// 2026-10-22 — side labels wrap so the plot can take the phone card's width.
+describe("splitAxisLabel", () => {
+  it("keeps short labels on one line", () => {
+    expect(splitAxisLabel("손절 규율")).toEqual(["손절 규율"]);
+    expect(splitAxisLabel("회전율")).toEqual(["회전율"]);
+  });
+  it("splits at the space nearest the middle", () => {
+    expect(splitAxisLabel("평균 보유기간")).toEqual(["평균", "보유기간"]);
+    expect(splitAxisLabel("선언한 위험 감내")).toEqual(["선언한", "위험 감내"]);
+  });
+  it("leaves a long label without a space alone", () => {
+    expect(splitAxisLabel("보유기간편차값")).toEqual(["보유기간편차값"]);
+  });
+  it("wraps side labels in the SVG but not the top one", () => {
+    const labels = ["평균 보유기간", "매매 회전율", "b", "c", "d", "e", "f", "g", "h"];
+    const { container } = render(
+      <SelfObservedRadar labels={labels} declared={DECLARED} observed={OBSERVED} />,
+    );
+    const texts = container.querySelectorAll("text");
+    // top axis: one label line + value
+    expect(texts[0].querySelectorAll("tspan")).toHaveLength(2);
+    // upper-right axis: two label lines + value
+    expect(texts[1].querySelectorAll("tspan")).toHaveLength(3);
   });
 });

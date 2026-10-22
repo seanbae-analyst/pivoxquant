@@ -101,7 +101,7 @@ export function ObservationNoteModalV2({
             id={headlineId}
             className="font-display"
             style={{
-              fontSize: "var(--pq-text-h3)",
+              fontSize: "clamp(24px, 4vw + 8px, 32px)" /* 24px in a phone sheet, 32px from ~600px */,
               lineHeight: 1.15,
               fontWeight: 500,
               letterSpacing: "-0.015em",

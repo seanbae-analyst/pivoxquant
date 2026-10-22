@@ -289,7 +289,7 @@ export function ResearchForm({ defaultTicker, surface = "journal", onSaved, onCa
           {submitting ? "저장하는 중" : "저장"}
         </button>
         {onCancel && (
-          <button type="button" onClick={onCancel} className="text-pq-caption text-[var(--pq-ivory-dim)] hover:text-[var(--pq-ivory)]">
+          <button type="button" onClick={onCancel} className="pq-hit text-pq-caption text-[var(--pq-ivory-dim)] hover:text-[var(--pq-ivory)]">
             취소
           </button>
         )}
