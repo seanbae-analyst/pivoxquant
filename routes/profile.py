@@ -1551,6 +1551,18 @@ def _iso_or_none(value):
         return None
 
 
+def _onboarding_draft(user) -> dict:
+    """``users.onboarding_draft_json`` parsed, ``{}`` when absent or corrupt."""
+    raw = getattr(user, "onboarding_draft_json", None)
+    if not raw:
+        return {}
+    try:
+        data = json.loads(raw)
+    except (TypeError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
 def _serialize_user(user) -> dict:
     """Serialize User row, excluding sensitive secrets per PIPA minimization.
 
@@ -2193,6 +2205,11 @@ def _xlsx_cell(value):
     import math
     from decimal import Decimal
 
+    # Strip openpyxl-illegal control characters BEFORE the injection guard:
+    # "\x01=HYPERLINK(...)" passed the guard (first char not a leader) and
+    # then became a live "=" formula once stripped (2026-10-22).
+    if isinstance(value, str):
+        value = _XLSX_ILLEGAL_RE.sub("", value)
     v = _safe_cell(value)
     if isinstance(v, Decimal):
         # Decimal('Infinity')/('NaN') are valid Decimals but become non-finite
@@ -2864,6 +2881,14 @@ def export_profile():
         "investment_profile": (
             investment_profile.to_dict() if investment_profile else None
         ),
+        # PIPA §35 (2026-10-22): the user's own onboarding answers, verbatim —
+        # the profile above carried only the vector derived from them, and
+        # both deletion paths purge these as personal data. The unfinished
+        # draft goes with them.
+        "onboarding_answers": (
+            investment_profile.onboarding_answers() if investment_profile else {}
+        ),
+        "onboarding_draft": _onboarding_draft(user),
         "behavioral_scores": [b.to_dict() for b in behavioral_scores],
         "weekly_pulse": [p.to_dict() for p in weekly_pulse],
         "persona_snapshots": [s.to_dict() for s in persona_snapshots],

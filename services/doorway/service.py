@@ -44,7 +44,7 @@ import bisect
 import logging
 import re
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time as dt_time, timedelta, timezone
 from typing import Iterable, Sequence
 
 from extensions import db
@@ -378,7 +378,17 @@ def _fill_in_range(f: Fill, since: datetime, end: datetime | None) -> bool:
     비교하면 첫 열림(``since``)과 같은 날의 체결이 빠졌다 (2026-10-22)."""
     if f.untimed:
         day = f.traded_at.date()
-        return day >= (since + _KST).date() and (end is None or day < (end + _KST).date())
+        if day < (since + _KST).date():
+            return False
+        if end is None:
+            return True
+        # ``end`` is a KST midnight (a year's end) or ``now`` (this year, so
+        # far). Exclusive at a midnight; at ``now`` today's date-only fills
+        # are in — "day < today" dropped them (2026-10-22 regression).
+        end_kst = end + _KST
+        if end_kst.time() == dt_time.min:
+            return day < end_kst.date()
+        return day <= end_kst.date()
     return f.traded_at >= since and (end is None or f.traded_at < end)
 
 
@@ -552,6 +562,12 @@ def load_fills(user_id: int, since: datetime) -> list[Fill]:
     from services.imports import is_date_only
     from services.profile.fifo_util import is_registration_row
 
+    # A date-only fill is stored as its KST date at 00:00, which can sit
+    # before ``since`` (a UTC instant) on the very KST day ``since`` falls
+    # on — the DB filter dropped it before the KST-date rules
+    # (_lands_between / _fill_in_range) could count it (2026-10-22). Load
+    # from that KST date's 00:00 too; extra timed rows are filtered later.
+    since = min(since, datetime.combine((since + _KST).date(), dt_time.min))
     out: list[Fill] = []
     for t in TradeHistory.query.filter(
         TradeHistory.user_id == user_id, TradeHistory.traded_at >= since,

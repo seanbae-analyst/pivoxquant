@@ -208,7 +208,9 @@ function sortRows(
       case "weight":
         return (a.weight - b.weight) * m;
       case "sector":
-        return a.raw.sector.localeCompare(b.raw.sector) * m;
+        // Sort by the label the cell shows (Korean), so the column reads in
+        // order and two vendor spellings of one sector sit together.
+        return sectorLabel(a.raw.sector).localeCompare(sectorLabel(b.raw.sector), "ko") * m;
     }
   });
   return copy;

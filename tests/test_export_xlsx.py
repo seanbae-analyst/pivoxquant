@@ -264,6 +264,9 @@ def test_xlsx_cell_guards_every_hazard():
     # XML-illegal control chars stripped; surrounding text kept
     assert _xlsx_cell("a\x00\x07b") == "ab"
     assert _xlsx_cell("\x01\x02\x03") == ""          # all stripped → empty, no crash
+    # a control char in front of a formula must not slip past the guard
+    # (stripped first, then quoted — 2026-10-22)
+    assert _xlsx_cell("\x01=HYPERLINK(\"http://x\")") == "'=HYPERLINK(\"http://x\")"
     # tab/newline/CR are allowed
     assert _xlsx_cell("a\tb\nc\rd") == "a\tb\nc\rd"
     # length cap at Excel's per-cell maximum

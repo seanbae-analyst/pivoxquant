@@ -458,6 +458,9 @@ def _send_one(row: Any, *, now: Any = None) -> bool:
     user = db.session.get(User, row.user_id)
     if user is None or not getattr(user, "email", None):
         return False
+    # PIPA §21 grace window — no retention mail to a user who asked to leave.
+    if getattr(user, "deletion_requested_at", None) is not None:
+        return False
 
     # Dispatch-time consent re-check (guardrail #6). A revoke between
     # enqueue and dispatch must short-circuit even when the EmailSender's

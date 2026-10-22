@@ -205,3 +205,25 @@ def test_a_legacy_english_title_still_dedups_after_the_korean_switch(app, two_se
 
     assert metrics["alerts_created"] == 0, metrics
     assert push.call_count == 0
+
+
+def test_two_spellings_of_one_sector_alert_together(app, make_user, add_position):
+    """"Consumer Cyclical" 20% + "Consumer Discretionary" 15% is one sector
+    (경기소비재, 35%) — the donut already merges them, so the alert must too."""
+    import json
+    from extensions import db
+    from models import SignalCache
+    from services import alert as alert_mod
+
+    user = make_user()
+    book = (("TSLA", "Consumer Cyclical", 20), ("HMC", "Consumer Discretionary", 15),
+            ("AAPL", "Technology", 29), ("JPM", "Financials", 18), ("XOM", "Energy", 18))
+    for tk, _sector, cost in book:
+        add_position(user["id"], ticker=tk, shares=1, avg_cost=cost, buy_fx=1300.0)
+    with app.app_context(), patch("services.push_service.notify_bell_alert"):
+        for tk, sector, _cost in book:
+            db.session.merge(SignalCache(ticker=tk, data_json=json.dumps({"sector": sector})))
+        db.session.commit()
+        alert_mod.check_concentration_alerts()
+        titles = _conc_titles(user["id"])
+    assert any(t.startswith("섹터 집중도 · 경기소비재 35.0%") for t in titles), titles

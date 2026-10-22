@@ -324,3 +324,26 @@ def test_transactional_ignores_revocation(monkeypatch, app):
     with _patch_transport_always_succeed():
         assert _send(EmailSender(), user, app=app,
                      email_category=EmailCategory.TRANSACTIONAL) is True
+
+
+# ── 5. Pending account deletion (PIPA §21 grace window, 2026-10-22) ────
+
+
+def test_pending_deletion_blocks_every_non_transactional_send(monkeypatch, app):
+    """A user who asked to delete the account gets no sequence / report /
+    nudge mail even with every consent in place — only transactional
+    notices (the deletion and cancel mails) still go."""
+    from services.email.sender import EmailSender, EmailCategory
+    monkeypatch.setenv("PIVOX_CS1_CONSENT_ENABLED", "true")
+    monkeypatch.setenv("SENDGRID_API_KEY", "test")
+    yesterday = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=1)
+    user = _FakeUser(
+        marketing_consent_information_at=yesterday,
+        marketing_consent_marketing_at=yesterday,
+    )
+    user.deletion_requested_at = yesterday
+    with _patch_transport_always_succeed():
+        for cat in (None, EmailCategory.INFORMATION, EmailCategory.MARKETING):
+            assert _send(EmailSender(), user, app=app, email_category=cat) is False
+        assert _send(EmailSender(), user, app=app,
+                     email_category=EmailCategory.TRANSACTIONAL) is True

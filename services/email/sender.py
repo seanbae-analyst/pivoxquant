@@ -299,6 +299,18 @@ class EmailSender:
         # 호출되므로 자연히 영향받지 않으며 그대로 둔다.
         is_transactional = email_category is EmailCategory.TRANSACTIONAL
 
+        # ── 1a'. pending account deletion (PIPA §21 grace window) ──────
+        # A user who asked to delete the account gets transactional mail only
+        # (the deletion / cancel notices). Every queue already had to remember
+        # this on its own and three did not (onboarding · retention ·
+        # inactive nudge, 2026-10-22) — one gate here backs them all.
+        if not is_transactional and getattr(user, "deletion_requested_at", None) is not None:
+            logger.info(
+                "skipping email for user %s — account deletion pending",
+                getattr(user, "id", "?"),
+            )
+            return False
+
         if not is_transactional:
             # ── 1b. opt-out gate ───────────────────────────────────────────
             # Wave G-1 Bug #8 (2026-05-18): consents.py spec —

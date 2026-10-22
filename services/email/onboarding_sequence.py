@@ -427,6 +427,11 @@ def _send_one(row: Any) -> bool:
     user = db.session.get(User, row.user_id)
     if user is None or not getattr(user, "email", None):
         return False
+    # PIPA §21 grace window: a user who asked to leave gets no sequence mail
+    # (permanent skip — the row was queued before the request). Same guard as
+    # alerts / fill_memo / the monthly report (2026-10-22).
+    if getattr(user, "deletion_requested_at", None) is not None:
+        return False
 
     try:
         from services.email_token import build_unsubscribe_url
