@@ -74,6 +74,27 @@
       "sub": "Closed beta — everything is free. No payment details are collected. Start with a Google or Kakao account.",
       "eyebrow": "Ready?"
     },
+    "why": {
+      "eyebrow": "Why record",
+      "heading": "Looking is not the same as looking back.",
+      "deck": "Three figures from public surveys. This is not a claim that keeping a record improves returns. It only shows that most people are left with nothing to look back on.",
+      "financeFigure": "43.4",
+      "financeLabel": "Regularly check their own finances (score out of 100)",
+      "financeBody": "From 2,400 adults surveyed. People in their 20s scored 33.2, down sharply from 55.8 in 2022.",
+      "financeSource": "Financial Supervisory Service & Bank of Korea, 2024 National Financial Literacy Survey",
+      "financeHere": "What you bought and what you almost bought stay in the same place, with your reasons.",
+      "reportFigure": "65.3%",
+      "reportLabel": "Receive their fund's management report and do not read it",
+      "reportBody": "Up for a third year, from 57.7% in 2023 and 60.0% in 2024. The top reason: there is too much in it (41.9%).",
+      "reportSource": "Korea Financial Consumer Protection Foundation, 2025 Fund Investor Survey",
+      "reportHere": "Your last 30 days of trades on one screen, next to the investor you said you were.",
+      "sellsFigure": "Over 2×",
+      "sellsLabel": "Chance of selling a stock above its purchase price, versus one below it",
+      "sellsBody": "From the March–October 2020 trades of about 200,000 individual investors.",
+      "sellsSource": "Korea Capital Market Institute, Behavioral Biases and Trading of Korean Individual Investors (2022)",
+      "sellsHere": "Hold time and return of your profit-taking sells beside your loss-taking sells. It does not say which side was right.",
+      "note": "Figures are copied from each institution's public release (checked October 2026). We found no public survey that asks investors directly whether they keep a trading record."
+    },
     "steps": {
       "eyebrow": "The loop",
       "heading": "Upload. Pause. Record. Look back.",
