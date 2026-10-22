@@ -201,18 +201,20 @@ interface Props {
   onChange?: (state: MatrixState) => void;
   /** B2 email-delivery toggle (`!email_opt_out`). `undefined` = not known yet. */
   emailDeliveryOn?: boolean;
-  /** B3 marketing-consent card (effective opt-in). `undefined` = not known yet. */
-  marketingConsentOn?: boolean;
+  /** 정보성 consent card (effective opt-in). `undefined` = not known yet. */
+  informationConsentOn?: boolean;
 }
 
 /** Anchor ids of the two cards the monthly-report email also depends on.
  *  The settings page puts them on the B2 card / MarketingConsentCardV2. */
 export const EMAIL_DELIVERY_ANCHOR = "settings-email-delivery";
 export const MARKETING_CONSENT_ANCHOR = "settings-marketing-consent";
+/** 정보성 consent card — the one the monthly report actually needs (2026-10-22). */
+export const INFORMATION_CONSENT_ANCHOR = "settings-information-consent";
 
 /**
  * 2026-09-29 — the monthly report goes out only when THREE switches are on:
- * this row's email cell, B2 email delivery (`email_opt_out`) and B3 marketing
+ * this row's email cell, B2 email delivery (`email_opt_out`) and the 정보성
  * consent (services/email/sender.py checks all three). They are owned by
  * different cards, so an "on" cell here could silently send nothing. When the
  * cell is on and another switch blocks it, name that switch. Unknown (still
@@ -221,11 +223,11 @@ export const MARKETING_CONSENT_ANCHOR = "settings-marketing-consent";
 function monthlyMirrorBlocker(
   cellOn: boolean,
   emailDeliveryOn: boolean | undefined,
-  marketingConsentOn: boolean | undefined,
+  informationConsentOn: boolean | undefined,
 ): { key: string; href: string } | null {
   if (!cellOn) return null;
   const delivery = emailDeliveryOn === false;
-  const consent = marketingConsentOn === false;
+  const consent = informationConsentOn === false;
   if (delivery && consent) {
     return { key: "blockedByBoth", href: `#${EMAIL_DELIVERY_ANCHOR}` };
   }
@@ -233,7 +235,7 @@ function monthlyMirrorBlocker(
     return { key: "blockedByDelivery", href: `#${EMAIL_DELIVERY_ANCHOR}` };
   }
   if (consent) {
-    return { key: "blockedByConsent", href: `#${MARKETING_CONSENT_ANCHOR}` };
+    return { key: "blockedByConsent", href: `#${INFORMATION_CONSENT_ANCHOR}` };
   }
   return null;
 }
@@ -242,7 +244,7 @@ export function NotificationsMatrix({
   initial,
   onChange,
   emailDeliveryOn,
-  marketingConsentOn,
+  informationConsentOn,
 }: Props) {
   const t = useT();
   /** Event copy lives in settingsV2.notifications.<id>.{name,help}. */
@@ -430,7 +432,7 @@ export function NotificationsMatrix({
             const isLast = i === rows.length - 1;
             const blocker =
               e.id === "monthly_mirror"
-                ? monthlyMirrorBlocker(row.email, emailDeliveryOn, marketingConsentOn)
+                ? monthlyMirrorBlocker(row.email, emailDeliveryOn, informationConsentOn)
                 : null;
             return (
               <tr key={e.id}>

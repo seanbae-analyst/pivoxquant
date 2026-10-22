@@ -298,7 +298,7 @@ def alert_52w_low(user_id: int, ticker: str, name: Optional[str] = None):
     )
 
 
-def alert_concentration(user_id: int, sector: str, pct: float):
+def alert_concentration(user_id: int, sector: str, pct: float, *, legacy_sectors=None):
     """One alert per (user, sector) per ``CONCENTRATION_DEDUP_HOURS``.
 
     Dedup is keyed on the sector via the title prefix — the pct suffix moves
@@ -310,7 +310,11 @@ def alert_concentration(user_id: int, sector: str, pct: float):
     """
     # Trailing space: "Tech " must not match "Technology 41.0%".
     sector_prefix = f"{CONCENTRATION_TITLE_PREFIX}{_sector_label(sector)} "
-    legacy_prefix = f"{LEGACY_CONCENTRATION_TITLE_PREFIX}{sector} "
+    # ``legacy_sectors``: the vendor spellings merged into this label — each
+    # one's old English title still counts for the dedup.
+    legacy_prefixes = tuple(
+        f"{LEGACY_CONCENTRATION_TITLE_PREFIX}{s} " for s in (legacy_sectors or (sector,))
+    )
     return create_alert(
         user_id,
         kind="concentration_alert",
@@ -318,7 +322,7 @@ def alert_concentration(user_id: int, sector: str, pct: float):
         body="한 섹터가 취득가 기준으로 장부의 30% 이상이에요.",
         link="/mirror",
         dedup_window_hours=CONCENTRATION_DEDUP_HOURS,
-        dedup_title_prefix=(sector_prefix, legacy_prefix),
+        dedup_title_prefix=(sector_prefix, *legacy_prefixes),
     )
 
 
@@ -431,6 +435,7 @@ def check_concentration_alerts(soft_limit_pct: float = 30.0) -> dict:
 
         # Build sector totals from KRW cost basis.
         totals: dict[str, float] = {}
+        spellings: dict[str, set[str]] = {}
         book_total = 0.0
         for p in positions:
             # None = 0/None shares-or-cost, or a USD row with no usable FX →
@@ -447,7 +452,12 @@ def check_concentration_alerts(soft_limit_pct: float = 30.0) -> dict:
             except Exception:
                 metrics["errors"] += 1
             book_total += mv
-            totals[sector] = totals.get(sector, 0.0) + mv
+            # Group by the label the user sees (2026-10-22): the donut merges
+            # "Consumer Cyclical" and "Consumer Discretionary" into 경기소비재,
+            # so the alert must weigh them together too.
+            label = sector if sector == "Unknown" else _sector_label(sector)
+            totals[label] = totals.get(label, 0.0) + mv
+            spellings.setdefault(label, set()).add(sector)
 
         if book_total <= 0:
             continue
@@ -457,7 +467,9 @@ def check_concentration_alerts(soft_limit_pct: float = 30.0) -> dict:
                 continue
             pct = (mv / book_total) * 100.0
             if pct >= soft_limit_pct:
-                a = alert_concentration(uid, sector, pct)
+                a = alert_concentration(
+                    uid, sector, pct, legacy_sectors=sorted(spellings.get(sector, ())),
+                )
                 if a is not None:
                     metrics["alerts_created"] += 1
 

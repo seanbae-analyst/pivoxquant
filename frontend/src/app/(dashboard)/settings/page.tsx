@@ -71,7 +71,10 @@ import {
   EMAIL_DELIVERY_ANCHOR,
   NotificationsMatrix,
 } from "@/components/settings/v2/notifications-matrix";
-import { MarketingConsentCardV2 } from "@/components/settings/v2/marketing-consent-card";
+import {
+  InformationConsentCardV2,
+  MarketingConsentCardV2,
+} from "@/components/settings/v2/marketing-consent-card";
 import { MonthlyReportCard } from "@/components/settings/v2/monthly-report-card";
 import { PrivacyCardV2, type CsvDataset } from "@/components/settings/v2/privacy-card-v2";
 import { ImportTokensSection } from "@/components/settings/import-tokens-section";
@@ -98,9 +101,10 @@ export default function SettingsPageV2() {
   /* Whether `emailEnabled` reflects the server yet — until then the matrix
      must not claim the delivery toggle is blocking the monthly report. */
   const [emailKnown, setEmailKnown] = React.useState(false);
-  /* B3 marketing consent, reported by MarketingConsentCardV2 (undefined until
-     it has hydrated). Feeds the monthly-report note in the matrix. */
-  const [marketingConsentOn, setMarketingConsentOn] = React.useState<
+  /* 정보성 consent, reported by InformationConsentCardV2 (undefined until it
+     has hydrated). The monthly report needs this one, not the marketing
+     toggle — feeds the note in the matrix and the monthly-report card. */
+  const [informationConsentOn, setInformationConsentOn] = React.useState<
     boolean | undefined
   >(undefined);
 
@@ -594,7 +598,7 @@ export default function SettingsPageV2() {
 
             <NotificationsMatrix
               emailDeliveryOn={emailKnown ? emailEnabled : undefined}
-              marketingConsentOn={marketingConsentOn}
+              informationConsentOn={informationConsentOn}
             />
 
             <div
@@ -828,7 +832,13 @@ export default function SettingsPageV2() {
                 is wider than 2 columns and the timestamp line needs the
                 full row for legibility on mobile. */}
             <div style={{ marginTop: 12 }}>
-              <MarketingConsentCardV2 onConsentChange={setMarketingConsentOn} />
+              <MarketingConsentCardV2 />
+            </div>
+
+            {/* B3' · 정보성 consent (§50 ① 분리 동의, 2026-10-22) — the record
+                the monthly report below is sent on. */}
+            <div style={{ marginTop: 12 }}>
+              <InformationConsentCardV2 onConsentChange={setInformationConsentOn} />
             </div>
 
             {/* B4 · Monthly mirror report — what it carries, whether the next
@@ -837,7 +847,7 @@ export default function SettingsPageV2() {
             <div style={{ marginTop: 12 }}>
               <MonthlyReportCard
                 emailDeliveryOn={emailKnown ? emailEnabled : undefined}
-                marketingConsentOn={marketingConsentOn}
+                informationConsentOn={informationConsentOn}
               />
             </div>
           </section>

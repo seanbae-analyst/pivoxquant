@@ -276,7 +276,7 @@ function ImportPageInner() {
             maxLength={64}
             value={pdfPassword}
             onChange={(e) => setPdfPassword(e.target.value)}
-            className="pq-input-noom-mono mt-2 block w-full max-w-xs bg-transparent px-3 py-2 font-mono outline-none"
+            className="pq-input-noom-mono mt-2 block w-full max-w-xs bg-transparent px-3 py-2 font-mono outline-none focus:border-[var(--pq-bronze)]!"
             style={{
               color: "var(--pq-ivory)",
               border: "0.5px solid var(--pq-ivory-line)",

@@ -535,3 +535,38 @@ def test_a_date_only_fill_the_day_before_the_first_door_is_not_counted():
     fills = [Fill(datetime(2026, 10, 13, 0, 0), "AAPL", "BUY", untimed=True)]
     out = summarize(checks, fills, now=NOW, first_check_at=door)
     assert out["fills"] == {"total": 0, "through_door": 0}
+
+
+def test_today_date_only_fill_counts_in_this_years_section():
+    """This year's section ends at ``now``; a date-only fill dated today is in
+    it (2026-10-22 regression: "day < today" dropped it)."""
+    now = datetime(2026, 10, 22, 6, 0)  # 15:00 KST
+    start = datetime(2025, 12, 31, 15, 0)
+    checks = [_check(1, datetime(2026, 10, 1, 1, 0), "look")]
+    fills = [Fill(datetime(2026, 10, 22, 0, 0), "AAPL", "BUY", untimed=True)]
+    out = year_section(checks, fills, start=start, end=now, now=now, first_check_at=checks[0].created_at)
+    assert out["fills"]["total"] == 1
+
+
+def test_a_past_years_section_still_ends_at_its_kst_midnight():
+    start, end = datetime(2024, 12, 31, 15, 0), datetime(2025, 12, 31, 15, 0)
+    checks = [_check(1, datetime(2025, 3, 1, 1, 0), "look")]
+    fills = [Fill(datetime(2026, 1, 1, 0, 0), "AAPL", "BUY", untimed=True)]  # next year
+    out = year_section(checks, fills, start=start, end=end, now=NOW, first_check_at=checks[0].created_at)
+    assert out["fills"]["total"] == 0
+
+
+def test_load_fills_keeps_a_date_only_fill_on_the_since_kst_day(app, auth_user):
+    """The loader filtered on the stored 00:00, so a date-only fill on the
+    KST day of the first door (after 09:00 KST) never reached the KST-date
+    rules in the year-recap path."""
+    from services.doorway.service import load_fills
+
+    with app.app_context():
+        db.session.add(TradeHistory(
+            user_id=auth_user["id"], ticker="005930.KS", action="BUY", shares=1.0,
+            price_per_share=70000.0, traded_at=datetime(2026, 10, 14, 0, 0),
+        ))
+        db.session.commit()
+        fills = load_fills(auth_user["id"], datetime(2026, 10, 14, 4, 0))  # 13:00 KST
+    assert [f.untimed for f in fills] == [True]

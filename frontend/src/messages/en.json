@@ -720,7 +720,7 @@
       },
       "deleteAccount": {
         "q": "How do I delete my account?",
-        "a": "Settings → Danger zone → Delete account. By default the request starts a 30-day grace period: you are signed out and sign-in is blocked, and the confirmation email carries a link to cancel. After 30 days every record is permanently purged (PIPA §21). The same dialog also offers an immediate, irreversible deletion. If you run into a problem, contact us via the 1:1 inquiry form."
+        "a": "Settings → 개인정보 · 데이터 (privacy & data) → 계정 삭제 (delete account). By default the request starts a 30-day grace period: you are signed out and sign-in is blocked, and the confirmation email carries a link to cancel. After 30 days every record is permanently purged (PIPA §21). The same dialog also offers an immediate, irreversible deletion. If you run into a problem, contact us via the 1:1 inquiry form."
       },
       "pwa": {
         "q": "Can I install PivoxQuant as an app? (PWA)",
@@ -908,9 +908,9 @@
       "monthly_mirror": {
         "name": "Monthly mirror report",
         "help": "A PDF of what you recorded last month, mailed on the 1st. Your own record only — no scores, no prices.",
-        "blockedByConsent": "Not being sent — Marketing emails consent below is off.",
+        "blockedByConsent": "Not being sent — Informational emails consent below is off.",
         "blockedByDelivery": "Not being sent — Email delivery below is off.",
-        "blockedByBoth": "Not being sent — Email delivery and Marketing emails consent below are off."
+        "blockedByBoth": "Not being sent — Email delivery and Informational emails consent below are off."
       },
       "fill_memo": {
         "name": "A fill just arrived — note why",
@@ -926,11 +926,11 @@
     },
     "monthlyReport": {
       "eyebrow": "Monthly Mirror · Report",
-      "what": "On the 1st of each month at 08:30 KST, we email a PDF of the fills and pauses you recorded over the last 30 days. If you recorded nothing in that period, nothing is sent.",
+      "what": "On the 1st of each month at 08:30 KST, we email a PDF of the fills and pauses you recorded last month (the 1st to the last day). If you recorded nothing in that period, nothing is sent.",
       "contents": "What it holds: fills you recorded · acquiring more of a position you already had · round trips closed in the period · concentration at average cost · how each pause ended. No quotes and no scores, and the reasons you wrote in a pause are not copied in.",
       "gateCell": "Monthly mirror report · email, in the table above",
       "gateDelivery": "Email delivery",
-      "gateConsent": "Marketing information consent",
+      "gateConsent": "Informational emails consent",
       "on": "On",
       "off": "Off",
       "checking": "Checking…",
@@ -938,7 +938,7 @@
       "wontSend": "With the current settings nothing will be sent. Turn on what is off and it starts from the next 1st.",
       "download": "Get my report now",
       "downloading": "Building…",
-      "downloadNote": "The same PDF as the email, built for the last 30 days as of now.",
+      "downloadNote": "The same layout as the emailed PDF, built for the last 30 days as of now rather than last month.",
       "empty": "No fills or pauses were recorded in the last 30 days, so there is no report to build yet.",
       "tooMany": "Please try again in a moment. Reports can be built 5 times a minute.",
       "failed": "The report could not be built. Please try again in a moment."

@@ -1999,6 +1999,21 @@ def _compute_purge_at(requested_at):
     return (requested_at + timedelta(days=30)).isoformat()
 
 
+def _purge_run_date_kst(requested_at) -> str | None:
+    """The KST date the purge actually runs: the first 03:30 KST sweep
+    (scripts.nightly.pipa_purge, cron "30 3 * * *") at or after
+    ``requested_at + 30 days``. The email used to print the UTC date of the
+    threshold, up to two days before the row is really purged (2026-10-22)."""
+    if requested_at is None:
+        return None
+    from datetime import time as _t, timedelta
+    due_kst = requested_at + timedelta(days=30) + timedelta(hours=9)
+    day = due_kst.date()
+    if due_kst.time() > _t(3, 30):
+        day = day + timedelta(days=1)
+    return day.isoformat()
+
+
 def _cancel_stripe_subscription(user) -> None:
     """Cancel the user's live Stripe subscription, if any. Never raises.
 
@@ -2105,8 +2120,8 @@ def _send_deletion_request_email(user, *, scheduled_purge_at) -> bool:
     from services.email.sender import EmailCategory
     from html import escape
 
-    purge_iso = _compute_purge_at(scheduled_purge_at) or ""
-    purge_display = purge_iso[:10] if purge_iso else "30일 후"
+    # ``scheduled_purge_at`` is the request instant (the caller's snapshot).
+    purge_display = _purge_run_date_kst(scheduled_purge_at) or "30일 후"
     user_name = escape((getattr(user, "name", "") or "").strip() or "고객")
     cancel_url = escape(_delete_cancel_url(
         getattr(user, "id", None), getattr(user, "deletion_requested_at", None)

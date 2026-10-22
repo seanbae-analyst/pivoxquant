@@ -299,7 +299,7 @@ function PaydayPicker({
           aria-label="월급날"
           value={day}
           onChange={(e) => setDay(Number(e.target.value))}
-          className="bg-transparent text-[15px] font-semibold tabular-nums outline-none"
+          className="rounded-[6px] bg-transparent text-[15px] font-semibold tabular-nums focus:outline-none focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[var(--pq-bronze)]"
           style={{ color: IVORY }}
         >
           {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
@@ -411,7 +411,7 @@ function AmountRow({
             label={label}
             value={value}
             onChange={onChange}
-            className="w-36 bg-transparent text-right text-[17px] font-semibold tabular-nums outline-none placeholder:font-normal"
+            className="w-36 rounded-[6px] bg-transparent text-right text-[17px] font-semibold tabular-nums placeholder:font-normal focus:outline-none focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[var(--pq-bronze)]"
           />
           <span className="text-[13px]" style={{ color: DIM }}>
             원
@@ -760,7 +760,7 @@ function ReviewBlock({
                       label={`${PART_LABEL[k]} ${ACTUAL_LABEL[k]}`}
                       value={typed[k] ?? ""}
                       onChange={(v) => type(k, v)}
-                      className="w-28 bg-transparent py-1 text-right text-[15px] font-semibold tabular-nums outline-none placeholder:font-normal"
+                      className="w-28 rounded-[6px] bg-transparent py-1 text-right text-[15px] font-semibold tabular-nums placeholder:font-normal focus:outline-none focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[var(--pq-bronze)]"
                     />
                     <span className="text-[12.5px]" style={{ color: DIM }}>
                       원

@@ -175,6 +175,52 @@ export async function revokeMarketingConsent(): Promise<MarketingConsentState> {
 }
 
 
+// ── 정보성 수신 동의 (정통망법 §50 ① 분리 동의, 2026-10-22) ─────────────────
+//
+// The monthly mirror report is 정보성 mail and the sender reads only this
+// record for it (services/email/sender.py) — the marketing toggle above is
+// the 광고성 one. Backend: GET/POST /api/consents/categories.
+
+export interface InformationConsentState {
+  opted_in: boolean;
+  consent_at: string | null;
+  revoked_at: string | null;
+}
+
+interface CategoriesResponse {
+  ok: boolean;
+  categories: {
+    information: { opted_in: boolean; consent_at: string | null; revoked_at: string | null };
+  };
+}
+
+function toInformationState(res: CategoriesResponse): InformationConsentState {
+  const info = res.categories?.information;
+  return {
+    opted_in: !!info?.opted_in,
+    consent_at: info?.consent_at ?? null,
+    revoked_at: info?.revoked_at ?? null,
+  };
+}
+
+/** GET the 정보성 record. `null` when unauthenticated / unreachable. */
+export async function fetchInformationConsent(): Promise<InformationConsentState | null> {
+  try {
+    return toInformationState(await apiFetch<CategoriesResponse>(API.consents.categories));
+  } catch {
+    return null;
+  }
+}
+
+/** POST an opt-in (true) or revocation (false). Throws on backend failure. */
+export async function setInformationConsent(next: boolean): Promise<InformationConsentState> {
+  const res = await apiFetch<CategoriesResponse>(API.consents.categories, {
+    method: "POST",
+    body: JSON.stringify({ information: next }),
+  });
+  return toInformationState(res);
+}
+
 // ── Cross-border data-transfer consent (PIPA §28-8) ──────────────────────
 //
 // 개인정보보호법 §28-8 (2024-09 시행): 개인정보 국외 이전 시 별도로 알리고
