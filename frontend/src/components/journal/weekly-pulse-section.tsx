@@ -154,8 +154,11 @@ export function WeeklyPulseSection() {
       aria-label="주간 회고"
       style={{ scrollMarginTop: "calc(var(--pq-aux-sticky-top, 56px) + 16px)" }}
     >
-      <RuledKicker>주간 회고</RuledKicker>
-      <EditorialHead as="h2" size={26} tone="ivory" className="mt-3">
+      {/* Phone: the pager tab right above already reads 주간 회고. */}
+      <div className="hidden md:block">
+        <RuledKicker>주간 회고</RuledKicker>
+      </div>
+      <EditorialHead as="h2" size={26} tone="ivory" className="md:mt-3">
         이번 주를 스스로 적어 두기
       </EditorialHead>
       <Caption className="mt-2 max-w-lg">

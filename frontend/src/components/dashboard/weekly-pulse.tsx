@@ -121,7 +121,7 @@ function PulseForm({
         <div className="text-pq-eyebrow text-[var(--pq-bronze)] mb-2">
           지켜보는 주제
         </div>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-2">
           {TOPICS.map(([t, label]) => {
             const active = topics.includes(t);
             return (
@@ -130,7 +130,7 @@ function PulseForm({
                 aria-pressed={active}
                 type="button"
                 onClick={() => toggleTopic(t)}
-                className="text-pq-mono-sm px-2.5 py-1 rounded-[var(--pq-radius-card)] border transition-colors"
+                className="text-pq-mono-sm min-h-[34px] px-3 py-1 rounded-[var(--pq-radius-card)] border transition-colors"
                 style={{
                   borderColor: active
                     ? "var(--pq-bronze)"

@@ -42,7 +42,7 @@ export function OneThingNudge({ data }: { data: MirrorHomeResponse }) {
       </p>
       <Link
         href="/pre-trade"
-        className="mt-2 inline-block text-[12.5px] underline underline-offset-2"
+        className="pq-hit mt-2 inline-block text-[12.5px] underline underline-offset-2"
         style={{ color: "var(--pq-bronze)" }}
       >
         멈춤으로 가기 →

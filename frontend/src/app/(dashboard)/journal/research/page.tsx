@@ -94,8 +94,11 @@ function ResearchPageInner() {
   return (
     <div className="mx-auto w-full max-w-2xl px-0 pb-8 md:px-6 md:py-8" data-testid="research-page">
       <header className="mb-6">
-        <RuledKicker>리서치</RuledKicker>
-        <EditorialHead as="h1" size={26} className="mt-3">
+        {/* Phone: the app bar already says 리서치. */}
+        <div className="hidden md:block">
+          <RuledKicker>리서치</RuledKicker>
+        </div>
+        <EditorialHead as="h1" size={26} className="md:mt-3">
           사기 전에, 직접 확인한 것
         </EditorialHead>
         <Caption className="mt-2 max-w-lg">

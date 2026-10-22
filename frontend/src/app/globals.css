@@ -5450,3 +5450,20 @@ code, pre, kbd, samp {
 .pq-page-dots-fade {
   animation: pq-page-dots-fade 2s ease forwards;
 }
+
+/* ── Touch targets (2026-10-22) ──────────────────────────────────────────
+   The 36×20 switches and the small text buttons keep their look; on a touch
+   screen a transparent ::after widens what a thumb can hit to ~44px tall.
+   Unlayered on purpose — it must not lose to a utility's `position`. */
+@media (pointer: coarse) {
+  button[role="switch"],
+  .pq-hit {
+    position: relative;
+  }
+  button[role="switch"]::after,
+  .pq-hit::after {
+    content: "";
+    position: absolute;
+    inset: -12px -6px;
+  }
+}
