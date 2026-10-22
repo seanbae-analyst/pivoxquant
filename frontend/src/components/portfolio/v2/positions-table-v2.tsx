@@ -15,6 +15,7 @@
 
 import * as React from "react";
 import { useT } from "@/lib/locale";
+import { sectorLabel } from "@/lib/sector";
 import { useIsPhone } from "@/lib/use-phone";
 import { Sheet } from "@/components/ui/sheet";
 import { Caption, EditorialHead } from "@/components/ui/editorial";
@@ -732,19 +733,22 @@ function PositionRow({
       {/* 8 · Sector tag */}
       <td style={{ ...cellStyle, textAlign: "left" }}>
         <span
-          className="sector-tag font-mono uppercase"
+          className="sector-tag"
           style={{
             display: "inline-block",
             fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.01em",
-            padding: "4px 8px",
-            border: "1px solid var(--pq-bronze)",
-            borderRadius: "var(--pq-radius-cta, 2px)",
-            color: "var(--pq-bronze)",
-            textTransform: "uppercase",
+            padding: "3px 10px",
+            border: "1px solid var(--pq-ivory-line)",
+            borderRadius: "9999px",
+            color: "var(--pq-ivory-mid)",
+            whiteSpace: "nowrap",
           }}
         >
-          {p.sector || "—"}
+          {/* Korean label, quiet pill (2026-10-22): a bronze-outlined
+              "CONSUMER DISCRETIONARY" in tracked capitals on every row
+              out-shouted the name and the weight. */}
+          {sectorLabel(p.sector) || "—"}
         </span>
       </td>
     </tr>
@@ -822,7 +826,7 @@ function PhoneHoldings({
           <button
             type="button"
             onClick={onAddPosition}
-            className="pq-cta-bronze mt-6 inline-flex min-h-[48px] items-center rounded-sm bg-[var(--pq-bronze)] px-6 text-pq-body font-medium text-[var(--pq-ink)] transition-opacity active:opacity-80"
+            className="pq-cta-bronze mt-6 inline-flex min-h-[48px] items-center rounded-[var(--pq-radius-cta)] bg-[var(--pq-bronze)] px-6 text-pq-body font-medium text-[var(--pq-ink)] transition-opacity active:opacity-80"
           >
             보유종목 추가
           </button>
@@ -1007,7 +1011,7 @@ function PositionCard({
               </div>
               <div className="mt-0.5 truncate font-mono text-pq-caption text-[var(--pq-ivory-dim)]">
                 {name}
-                {p.sector ? ` · ${p.sector}` : ""}
+                {p.sector ? ` · ${sectorLabel(p.sector)}` : ""}
               </div>
             </div>
           </div>

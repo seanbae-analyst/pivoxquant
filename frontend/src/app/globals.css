@@ -634,6 +634,13 @@
   .font-serif, h1.font-serif, h2.font-serif, h3.font-serif {
     font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, sans-serif;
     letter-spacing: -0.015em;
+  }
+  /* 600 is for headings only. Until 2026-10-22 it sat on every .font-serif
+     — a class that, since the refresh made it sans, mostly marks body copy
+     (captions, note bodies, text areas, landing paragraphs) — so paragraphs
+     across the app rendered semi-bold and nothing read as emphasis. */
+  .report-surface h1, .report-surface h2, .report-surface h3,
+  h1.font-serif, h2.font-serif, h3.font-serif {
     font-weight: 600;
   }
   /* Numbers — always tabular for financial UI */
@@ -1721,8 +1728,17 @@ button:hover > .pq-ink-pill,
    normal text. Fix is ink text on bronze (7.32:1 ✓), and a LIGHTER bronze
    on hover (ink on bronze-light = 5.84:1 ✓) instead of bronze-deep (ink on
    bronze-deep was only 2.97:1). Both states now pass AA. */
+/* `display` lives in @layer components below, not here: unlayered CSS
+   beats Tailwind's utilities layer, so a `hidden md:inline-flex` on one of
+   these buttons stayed visible on phones (/pre-trade showed its desktop
+   "다음" button above the pinned phone one — 2026-10-22). */
+@layer components {
+  .pq-ink-btn-bronze,
+  .pq-ink-btn-ghost {
+    display: inline-flex;
+  }
+}
 .pq-ink-btn-bronze {
-  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
@@ -1731,12 +1747,13 @@ button:hover > .pq-ink-pill,
   background: var(--pq-bronze);
   color: var(--pq-ink);
   font-family: var(--font-sans), "Pretendard Variable", Pretendard, system-ui, sans-serif;
-  font-size: 11px;
+  /* 2026-10-22: was 11px tracked capitals — the pre-refresh label style.
+     Button text at the button token, sentence case, CTA radius (10px). */
+  font-size: var(--pq-text-button);
   letter-spacing: 0.01em;
-  text-transform: uppercase;
-  font-weight: 500;
+  font-weight: 600;
   border: 0;
-  border-radius: var(--pq-radius-card);
+  border-radius: var(--pq-radius-cta);
   cursor: pointer;
   transition: background-color 180ms cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -1746,6 +1763,19 @@ button:hover > .pq-ink-pill,
 .pq-ink-btn-bronze:focus-visible {
   outline: 1px solid var(--pq-bronze-light);
   outline-offset: 2px;
+}
+/* Disabled: a neutral, readable "not yet" (2026-10-22). The callers'
+   `disabled:opacity-30` dimmed the bronze fill into a muddy brown slab with
+   ink text at ~2:1 — it read as broken rather than waiting. Unlayered, so it
+   wins over those utilities without !important. */
+.pq-ink-btn-bronze:disabled,
+.pq-ink-btn-bronze[aria-disabled="true"] {
+  background: rgba(var(--pq-ivory-rgb), 0.07);
+  color: rgba(var(--pq-ivory-rgb), 0.42);
+  opacity: 1;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
 }
 /* Mobile: 44px touch target (WCAG 2.5.5 / Apple HIG) */
 @media (max-width: 767px) {
@@ -1757,7 +1787,6 @@ button:hover > .pq-ink-pill,
 
 /* Ghost button on ink — ivory hairline border */
 .pq-ink-btn-ghost {
-  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
@@ -1765,12 +1794,11 @@ button:hover > .pq-ink-pill,
   padding: 0 16px;
   background: transparent;
   color: var(--pq-ivory);
-  border: 0.5px solid rgba(245, 240, 232, 0.2);
-  border-radius: var(--pq-radius-card);
+  border: 1px solid rgba(245, 240, 232, 0.2);
+  border-radius: var(--pq-radius-cta);
   font-family: var(--font-sans), "Pretendard Variable", Pretendard, system-ui, sans-serif;
-  font-size: 11px;
+  font-size: var(--pq-text-button);
   letter-spacing: 0.01em;
-  text-transform: uppercase;
   font-weight: 500;
   cursor: pointer;
   transition: border-color 180ms, background-color 180ms;
@@ -2173,11 +2201,17 @@ i.italic,
 
 /* 8. Focus-visible accessibility default.
    :where() keeps specificity (0,0,0) so existing outline:none rules
-   (.pq-model-item, .pq-ink-tab) still win. */
-:where(a, button, [role="button"], input, select, textarea, summary):focus-visible {
-  outline: 1px solid var(--pq-bronze);
-  outline-offset: 2px;
-  border-radius: 1px;
+   (.pq-model-item, .pq-ink-tab) still win.
+   2026-10-22: in @layer base, and no border-radius. Unlayered, it beat every
+   Tailwind utility — `outline-none focus:border-[bronze]` fields drew a
+   second bronze box around their own bronze border, and `border-radius: 1px`
+   squared off any rounded field or button the moment it took focus (the
+   outline follows the element's own radius without it). */
+@layer base {
+  :where(a, button, [role="button"], input, select, textarea, summary):focus-visible {
+    outline: 1px solid var(--pq-bronze);
+    outline-offset: 2px;
+  }
 }
 
 /* 9. Text selection — brand on-brand */
@@ -5390,4 +5424,15 @@ code, pre, kbd, samp {
   button {
     border-radius: var(--pq-radius-cta);
   }
+}
+
+/* Journal page dots (journal-pager.tsx): visible for a beat after a page
+   change, then gone, so the floating pill never sits on top of content while
+   reading. Opacity only — not motion — so it applies under reduced motion. */
+@keyframes pq-page-dots-fade {
+  0%, 60% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.pq-page-dots-fade {
+  animation: pq-page-dots-fade 2s ease forwards;
 }

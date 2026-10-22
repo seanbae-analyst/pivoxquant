@@ -370,7 +370,7 @@ export default function TopNav() {
                   visit), but they can no longer land on different copy. */}
               <Link
                 href={user ? "/mirror" : "/login"}
-                className="group relative inline-flex items-center gap-2 overflow-hidden rounded-sm px-4 font-serif text-pq-body transition-transform duration-200 active:scale-[0.98]"
+                className="group relative inline-flex items-center gap-2 overflow-hidden rounded-[var(--pq-radius-cta)] px-4 font-serif text-pq-body transition-transform duration-200 active:scale-[0.98]"
                 style={{
                   // WCAG 2.5.5 AA — 44x44 minimum tap target. Was 36 (failed
                   // mobile guideline + Apple HIG). Padding/letter-spacing
@@ -545,7 +545,7 @@ export default function TopNav() {
                                   ? "page"
                                   : undefined
                               }
-                              className="group relative flex items-start gap-3.5 rounded-sm p-4 transition-colors duration-300"
+                              className="group relative flex items-start gap-3.5 rounded-[var(--pq-radius-cta)] p-4 transition-colors duration-300"
                               style={{
                                 border: "0.5px solid transparent",
                               }}

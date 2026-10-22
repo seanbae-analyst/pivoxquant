@@ -84,20 +84,13 @@ export function Hero() {
           reads as the page's masthead, not a centered marketing splash. */}
       <div className="mx-auto max-w-7xl px-5 pb-32 pt-24 sm:px-8 sm:pb-40 sm:pt-32 lg:px-10 lg:pb-48 lg:pt-40">
         <div className="max-w-4xl">
-          {/* Eyebrow — bronze rule + uppercase Playfair italic.
-              Identical pattern across all /features pages. */}
-          <div className="mb-10 inline-flex items-center gap-2.5">
+          {/* Eyebrow — plain bronze label, same as <Eyebrow/> (no rule,
+              no capitals since the 2026-10-11 refresh). */}
+          <div className="mb-10 inline-flex items-center">
             <span
-              aria-hidden
-              className="h-px"
               style={{
-                backgroundColor: "rgba(var(--pq-bronze-wash-rgb), 0.7)",
-                width: 28,
-              }}
-            />
-            <span
-              className="font-serif text-[11px] uppercase"
-              style={{
+                fontSize: "var(--pq-text-body-sm)",
+                fontWeight: 500,
                 letterSpacing: "0.01em",
                 color: "var(--pq-bronze)",
               }}

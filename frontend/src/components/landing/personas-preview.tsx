@@ -114,7 +114,7 @@ export default function PersonasPreview() {
             <motion.article
               key={side}
               variants={fadeUp}
-              className="pq-persona-card-v2 group relative flex flex-col overflow-hidden rounded-sm p-6 md:p-7 transition-all duration-500 hover:-translate-y-1"
+              className="pq-persona-card-v2 group relative flex flex-col overflow-hidden rounded-[var(--pq-radius-card)] p-6 md:p-7 transition-all duration-500 hover:-translate-y-1"
               style={{
                 minHeight: 180,
                 backgroundColor: "var(--pq-card-veil)",
@@ -192,7 +192,7 @@ export default function PersonasPreview() {
               Signed-out visitors go to /login, the unified auth entry. */}
           <Link
             href={user ? "/mirror" : "/login"}
-            className="group inline-flex items-center gap-2 rounded-sm px-5 py-3 font-serif transition-colors"
+            className="group inline-flex items-center gap-2 rounded-[var(--pq-radius-cta)] px-5 py-3 font-serif transition-colors"
             style={{
               backgroundColor: "transparent",
               border: "0.5pt solid rgba(184,149,106,0.5)",

@@ -21,30 +21,30 @@ describe("ErrorBoundary page", () => {
     render(<ErrorBoundary error={error} reset={reset} />);
 
     expect(
-      screen.getByText(/Something interrupted the observation/i),
+      screen.getByText(/화면을 그리다 멈췄어요/),
     ).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /Try again/i }),
+      screen.getByRole("button", { name: /다시 시도/ }),
     ).toBeInTheDocument();
   });
 
-  it("invokes reset() when the Try again button is clicked", async () => {
+  it("invokes reset() when the 다시 시도 button is clicked", async () => {
     const reset = vi.fn();
     const user = userEvent.setup();
     const error = new Error("synthetic test failure");
     render(<ErrorBoundary error={error} reset={reset} />);
 
-    await user.click(screen.getByRole("button", { name: /Try again/i }));
+    await user.click(screen.getByRole("button", { name: /다시 시도/ }));
     expect(reset).toHaveBeenCalledTimes(1);
   });
 
-  it("renders a 'Back to desk' link pointing at /mirror", () => {
+  it("renders a '거울로 돌아가기' link pointing at /mirror", () => {
     const reset = vi.fn();
     const error = new Error("synthetic test failure");
     render(<ErrorBoundary error={error} reset={reset} />);
 
-    const back = screen.getByRole("link", { name: /Back to desk/i });
+    const back = screen.getByRole("link", { name: /거울로 돌아가기/ });
     expect(back).toBeInTheDocument();
     expect(back).toHaveAttribute("href", "/mirror");
   });

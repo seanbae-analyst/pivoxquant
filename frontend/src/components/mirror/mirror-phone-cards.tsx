@@ -55,7 +55,7 @@ const DIM = "rgba(var(--pq-ivory-rgb), 0.55)";
 function StoryCard({ wide = false, children }: { wide?: boolean; children: React.ReactNode }) {
   return (
     <div
-      className={`flex min-h-full flex-col rounded-[4px] pb-6 pt-5 ${wide ? "px-3" : "px-5"}`}
+      className={`flex min-h-full flex-col rounded-[var(--pq-radius-card)] pb-6 pt-5 ${wide ? "px-3" : "px-5"}`}
       style={{ border: "1px solid var(--pq-ivory-line)" }}
     >
       {children}
@@ -96,7 +96,7 @@ function GapCard({ data }: { data: MirrorHomeResponse }) {
   return (
     <section aria-label="간극">
       <div
-        className="text-[10.5px] uppercase tracking-[0.01em]"
+        className="text-[12px] font-medium tracking-[0.01em]"
         style={{ color: "var(--pq-bronze)" }}
       >
         간극

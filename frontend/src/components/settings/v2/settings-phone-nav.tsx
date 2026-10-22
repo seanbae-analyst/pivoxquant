@@ -82,7 +82,7 @@ export function closePane() {
 export function SettingsPhoneList() {
   return (
     <nav aria-label="설정 항목" className="md:hidden" data-testid="settings-phone-list">
-      <ul className="overflow-hidden rounded-[4px] border border-[var(--pq-ivory-line)]">
+      <ul className="overflow-hidden rounded-[var(--pq-radius-card)] border border-[var(--pq-ivory-line)]">
         {SETTINGS_PANES.map((p, i) => (
           <li key={p.id} className={i > 0 ? "border-t border-[var(--pq-ivory-line)]" : ""}>
             <button
