@@ -373,6 +373,15 @@ def _lands_between(f: Fill, after: datetime, until: datetime) -> bool:
     return after < f.traded_at <= until
 
 
+def _fill_in_range(f: Fill, since: datetime, end: datetime | None) -> bool:
+    """``since <= 체결 < end``. 날짜만 아는 체결은 KST 날짜로 — 00:00 을 시각으로
+    비교하면 첫 열림(``since``)과 같은 날의 체결이 빠졌다 (2026-10-22)."""
+    if f.untimed:
+        day = f.traded_at.date()
+        return day >= (since + _KST).date() and (end is None or day < (end + _KST).date())
+    return f.traded_at >= since and (end is None or f.traded_at < end)
+
+
 def _same_ticker(a: str | None, b: str | None) -> bool:
     """.KS/.KQ/접미사 없는 코드는 같은 종목 — ``friction_outcome.ticker_key`` 한 벌."""
     return bool(a) and bool(b) and ticker_key(a) == ticker_key(b)
@@ -469,7 +478,7 @@ def summarize(
     fills_total = fills_door = 0
     if since is not None:
         for f in all_fills:
-            if f.traded_at >= since and (end is None or f.traded_at < end):
+            if _fill_in_range(f, since, end):
                 fills_total += 1
                 if id(f) in door_ids:
                     fills_door += 1

@@ -158,6 +158,24 @@ def test_kr_deadline_bounds_the_batch_and_late_answer_is_cached(monkeypatch):
     assert rt._price_cache["000660.KS"]["price"] == 71000
 
 
+def test_a_fetch_past_the_deadline_is_not_queued_again(monkeypatch):
+    # The claim on a ticker is held until its fetch lands, not dropped at the
+    # deadline: the next round waits on it and reads the late answer instead
+    # of queueing a second KIS call behind the first.
+    rt = _svc(monkeypatch)
+    monkeypatch.setattr(rt, "_KR_BATCH_DEADLINE", 0.2)
+    calls = []
+    monkeypatch.setattr(rt, "_get_kis_price", _kis_writer(rt, 72000, delay=0.35, calls=calls))
+    first = rt.get_prices_batch(["000660.KS"])
+    assert "000660.KS" not in first or first["000660.KS"].get("stale")
+    second = rt.get_prices_batch(["000660.KS"])
+    assert calls == ["000660.KS"]
+    assert second["000660.KS"]["price"] == 72000
+    time.sleep(0.1)
+    with rt._price_cache_lock:
+        assert not rt.__dict__.get("_inflight")
+
+
 # ── B1a: KR never falls back to FMP ─────────────────────────────────────
 
 def test_kr_miss_does_not_spend_fmp(monkeypatch):

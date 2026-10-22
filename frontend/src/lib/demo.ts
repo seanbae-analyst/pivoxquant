@@ -27,7 +27,7 @@ export function isDemoMode(): boolean {
 export const DEMO_USER: User = {
   id: 1,
   email: "demo@pivoxquant.com",
-  name: "데모 투자자",
+  name: "배상현",
   available_capital: 100_000,
   available_capital_krw: 50_000_000,
   oauth_provider: "google",
