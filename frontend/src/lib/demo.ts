@@ -563,6 +563,56 @@ function _demoSellMoment(query: string) {
   return { ok: true, ticker, words, held_days: 41, vs_cost_pct: null, matched_shares: 0 };
 }
 
+/* ── 종목별 내 기록 (/api/stock-record/<t>, 2026-10-25) — composed from the
+ *    same demo trades, pauses, research and notes so every screen agrees. ── */
+function _demoStockRecord(base: string) {
+  const raw = decodeURIComponent(base.slice("/api/stock-record/".length)).trim().toUpperCase();
+  const key = demoNoteTickerKey(raw);
+  const pos = DEMO_POSITION_ROWS.find((p) => demoNoteTickerKey(p.ticker) === key);
+  const fills = DEMO_TRADES.trades
+    .filter((t) => demoNoteTickerKey(t.symbol) === key)
+    .map((t) => ({
+      kind: "fill" as const, at: t.date, side: t.side as "buy" | "sell",
+      shares: t.shares, price: t.price, currency: t.currency, after_pause: false,
+    }));
+  const pauses = DEMO_PRETRADE_LIST.reflections
+    .filter((r) => demoNoteTickerKey(r.intended_ticker) === key)
+    .map((r) => {
+      const entry = r.intended_side === "BUY"; // // legal-ok — stored side code, compared only
+      const at = r.proceeded_at ?? r.cancelled_at ?? "2026-06-15T09:00:00+09:00";
+      return {
+        kind: "pause" as const, at, side: entry ? ("entry" as const) : ("exit" as const),
+        rationale: r.rationale, status: r.status,
+        bought_after: entry ? fills.some((f) => f.side === "buy" && f.at >= at) : null,
+      };
+    });
+  const research = DEMO_RESEARCH_NOTES.filter((n) => demoNoteTickerKey(n.ticker) === key).map((n) => ({
+    kind: "research" as const, at: n.created_at, id: n.id, theses: n.theses,
+    invalidation: n.invalidation, verdicts: n.verdicts, review_on: n.review_on,
+    reviewed_at: n.reviewed_at, due: n.due,
+  }));
+  const notes = DEMO_OBSERVATION_NOTES.filter((n) => n.tickers.some((t) => demoNoteTickerKey(t.ticker) === key)).map((n) => ({
+    kind: "note" as const, at: n.created_at, id: n.id, body: n.body, tags: n.tags,
+  }));
+  const events = [...fills, ...pauses, ...research, ...notes].sort((a, b) => (b.at ?? "").localeCompare(a.at ?? ""));
+  return {
+    ok: true,
+    ticker: pos?.ticker ?? raw,
+    name: pos?.name ?? DEMO_SEARCH_UNIVERSE.find((u) => demoNoteTickerKey(u.ticker) === key)?.name ?? null,
+    holding: pos ? { shares: pos.shares, avg_cost: pos.avg_cost, currency: pos.currency } : null,
+    counts: {
+      fills: fills.length,
+      buys: fills.filter((f) => f.side === "buy").length,
+      sells: fills.filter((f) => f.side === "sell").length,
+      pauses: pauses.length,
+      not_taken: pauses.filter((p) => p.bought_after === false).length,
+      research: research.length,
+      notes: notes.length,
+    },
+    events,
+  };
+}
+
 /** Canned GET response for a path, or undefined if not registered yet. */
 function matchDemoGet(path: string): unknown | undefined {
   const qIdx = path.indexOf("?");
@@ -576,6 +626,7 @@ function matchDemoGet(path: string): unknown | undefined {
   if (base.startsWith("/api/research-notes/by-ticker/"))
     return _demoResearchByTicker(base);
   if (base === "/api/research-notes/overview") return DEMO_RESEARCH_OVERVIEW;
+  if (base.startsWith("/api/stock-record/")) return _demoStockRecord(base);
   if (base === "/api/doorway/summary") return DEMO_DOORWAY_SUMMARY;
 
   if (base === "/api/sell-moment") return _demoSellMoment(query);

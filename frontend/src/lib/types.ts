@@ -1381,3 +1381,59 @@ export interface YearRecapResponse {
   doorway: null | YearRecapDoorway;
   empty: boolean;
 }
+
+/* ── 종목별 내 기록 (GET /api/stock-record/<ticker>, 2026-10-25) ───────── */
+
+export type StockRecordEvent =
+  | {
+      kind: "fill";
+      at: string | null;
+      side: "buy" | "sell";
+      shares: number;
+      price: number;
+      currency: string | null;
+      /** The fill was linked to a pause (TradeHistory.reflection_id). */
+      after_pause: boolean;
+    }
+  | { kind: "registered"; at: string | null; shares: number; price: number; currency: string | null }
+  | {
+      kind: "pause";
+      at: string | null;
+      side: "entry" | "exit" | null;
+      rationale: string;
+      status: string | null;
+      /** Entry pauses: a buy of this name followed. null for exit pauses. */
+      bought_after: boolean | null;
+    }
+  | {
+      kind: "research";
+      at: string | null;
+      id: number;
+      theses: string[];
+      invalidation: string | null;
+      verdicts: string[];
+      review_on: string | null;
+      reviewed_at: string | null;
+      due: boolean | null;
+    }
+  | { kind: "note"; at: string | null; id: number; body: string; tags: string[] };
+
+export interface StockRecordResponse {
+  ok: boolean;
+  disclaimer?: string;
+  ticker: string;
+  name: string | null;
+  holding: { shares: number; avg_cost: number | null; currency: string } | null;
+  counts: {
+    fills: number;
+    buys: number;
+    sells: number;
+    pauses: number;
+    /** Pauses before buying that no buy of this name followed. */
+    not_taken: number;
+    research: number;
+    notes: number;
+  };
+  /** Newest first. */
+  events: StockRecordEvent[];
+}

@@ -37,6 +37,7 @@ import type {
   DoorwayIntent,
   DoorwaySummaryResponse,
   ResearchByTickerResponse,
+  StockRecordResponse,
   ResearchInfoSource,
   ResearchNoteResponse,
   ResearchNotesResponse,
@@ -434,6 +435,15 @@ export function useResearchNotes(limit = 50) {
  * picked, so the cold reasoning sits next to the seven questions. `null`
  * ticker disables the fetch. Read-only: the 멈춤 screen never writes one.
  */
+/** 종목별 내 기록 — one stock's own records on one timeline (2026-10-25). */
+export function useStockRecord(ticker: string | null) {
+  const swr = useSWR<StockRecordResponse>(ticker ? API.stockRecord(ticker) : null, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30_000,
+  });
+  return { data: swr.data ?? null, error: swr.error as Error | undefined, isLoading: swr.isLoading, mutate: swr.mutate };
+}
+
 export function useResearchByTicker(ticker: string | null) {
   const swr = useSWR<ResearchByTickerResponse>(ticker ? API.research.byTicker(ticker) : null, fetcher, {
     revalidateOnFocus: false,

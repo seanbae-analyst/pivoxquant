@@ -81,6 +81,9 @@ export function subScreen(pathname: string | null, pane: SettingsPane | null): S
   if (pathname === "/journal/research" || pathname.startsWith("/journal/research/")) {
     return { title: "리서치", parent: "/journal", parentLabel: "기록" };
   }
+  if (pathname.startsWith("/journal/stock/")) {
+    return { title: "종목 기록", parent: "/portfolio", parentLabel: "포트폴리오" };
+  }
   if (pathname === "/mirror/year") {
     return { title: "올해의 기록", parent: "/mirror", parentLabel: "거울" };
   }
