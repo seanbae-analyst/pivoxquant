@@ -162,8 +162,8 @@ export function WeeklyPulseSection() {
         이번 주를 스스로 적어 두기
       </EditorialHead>
       <Caption className="mt-2 max-w-lg">
-        투자 기분과 자신감(1–5), 마음에 걸리는 것 하나, 지켜보는 주제, 배우고
-        싶은 것 — 다섯 칸입니다. 남긴 답은 여기에 쌓입니다.
+        기분과 자신감, 두 번만 누르면 돼요. 주제와 한 줄은 선택이에요. 남긴
+        답은 여기에 쌓입니다.
       </Caption>
 
       <div role="list" aria-label="최근 회고" className="mt-5">

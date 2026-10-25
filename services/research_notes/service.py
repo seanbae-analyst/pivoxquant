@@ -94,7 +94,10 @@ def create_research(user_id: int, data) -> dict:
     if not isinstance(data, dict):
         raise ValueError("body must be a JSON object")
     ticker = _validate_ticker(data.get("ticker"))
-    business = _validate_text(data.get("business"), "business", MAX_BUSINESS_CHARS, required=True)
+    # Optional since 2026-10-25 (CEO "적어야 할게 너무 많다"): the form opens on
+    # the reason and the wrong-signal; this one is folded. The column is NOT
+    # NULL, so an unanswered field is stored as "".
+    business = _validate_text(data.get("business"), "business", MAX_BUSINESS_CHARS) or ""
     theses = _validate_theses(data.get("theses"))
     invalidation = _validate_text(data.get("invalidation"), "invalidation", MAX_INVALIDATION_CHARS)
     risk = _validate_text(data.get("risk"), "risk", MAX_RISK_CHARS)
