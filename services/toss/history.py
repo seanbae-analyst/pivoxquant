@@ -62,6 +62,11 @@ class BuyOutcome:
     follow_on: bool              # the position already held shares at this instant
     relation: str | None         # "below" / "above" / "flat" vs the average just before — None when not a follow-on
     avg_cost_before: Decimal | None
+    # Where the running average landed once this fill was applied. The pair
+    # (before, after) is the whole averaging story for one fill, and the only
+    # place it can be recorded without a second walk of the book is here, where
+    # the average is already being kept.
+    avg_cost_after: Decimal | None = None
 
 
 @dataclass
@@ -72,6 +77,11 @@ class SellOutcome:
     realised_net: Decimal        # gross − commission − tax
     pnl_pct: float               # (price − avg) / avg × 100
     held_days: float             # from the day the current holding opened to this sell
+    # Unchanged by a sale under average cost — except the sale that empties the
+    # position, where there is no average left. That ``None`` is what marks the
+    # end of one holding, so a later buy on the same symbol is a re-entry and
+    # not a follow-on.
+    avg_cost_after: Decimal | None = None
 
 
 @dataclass
@@ -158,6 +168,7 @@ def reconstruct(fills: list[Fill]) -> dict[str, PositionHistory]:
             p.quantity += f.quantity
             p.cost += f.quantity * f.price
             p.buys += 1
+            p.buy_outcomes[-1].avg_cost_after = p.cost / p.quantity
         elif f.side == _SIDE_OUT:
             p.sells += 1
             if p.quantity <= _QTY_EPS:
@@ -187,6 +198,7 @@ def reconstruct(fills: list[Fill]) -> dict[str, PositionHistory]:
             if p.quantity <= _QTY_EPS:
                 p.quantity = ZERO
                 p.opened_at = None
+            p.sell_outcomes[-1].avg_cost_after = avg if p.quantity > _QTY_EPS else None
     return book
 
 
