@@ -18,7 +18,10 @@
  * the trade before any real fill.
  *
  * Flow (route):
- *   1. Setup — ticker / side / shares / rationale (≥ MIN_RATIONALE_CHARS = 10 chars)
+ *   1. Setup — ticker / side / shares / reason. 2026-10-25 (CEO "적어야 할게
+ *      너무 많다"): the reason is chips (REASON_CHIPS) + an optional line;
+ *      either is enough (≥ MIN_RATIONALE_CHARS = 2). Each of the seven
+ *      questions has one-tap answers too (data/pre-trade-questions.ts).
  *   2. Devil's Advocate — 7 reflective questions (shared)
  *   3. Cooldown — REMOVED 2026-05-22 (CEO "2분 없애"): backend cooldown is 0,
  *      so the cycle goes straight from the 7 questions to Ready/Proceed (shared)
@@ -57,6 +60,7 @@ import { type Side, SIDE_LABEL_KO, isHeldTicker } from "@/lib/pre-trade";
 import {
   MIN_RATIONALE_CHARS,
   QUESTIONS,
+  composeRationale,
   Field,
   SectionLabel,
   QuestionsStep,
@@ -79,13 +83,20 @@ import { useIsPhone } from "@/lib/use-phone";
 import { useHistorySteps } from "@/lib/use-history-steps";
 import { hapticTick } from "@/lib/haptics";
 import { preTradeStepAllowed, preTradeLinearStep } from "@/lib/pre-trade-steps";
+import { REASON_CHIPS } from "@/data/pre-trade-questions";
 
 export default function PreTradePage() {
   // Step 1 — setup (owned by this route page)
   const [ticker, setTicker] = useState("");
   const [side, setSide] = useState<Side>("ENTRY");
   const [sharesText, setSharesText] = useState("");
-  const [rationale, setRationale] = useState("");
+  // The reason: picked chips + an optional line, sent as one rationale.
+  const [reasonPicks, setReasonPicks] = useState<string[]>([]);
+  const [reasonLine, setReasonLine] = useState("");
+  const rationale = useMemo(
+    () => composeRationale(reasonPicks, reasonLine),
+    [reasonPicks, reasonLine],
+  );
   // 2026-10-15 — 문 앞의 한 줄 hands over the ticker it read from the user's
   // line (`pause_url` → /pre-trade?ticker=005930.KS). Read once on mount from
   // window.location — no useSearchParams, so no Suspense boundary is needed.
@@ -142,7 +153,8 @@ export default function PreTradePage() {
     setTicker("");
     setSide("ENTRY");
     setSharesText("");
-    setRationale("");
+    setReasonPicks([]);
+    setReasonLine("");
     setAcks({});
     setAnswers({});
     setSetupFromBack(false);
@@ -219,7 +231,8 @@ export default function PreTradePage() {
             ticker={ticker} setTicker={setTicker}
             side={side} setSide={setSide}
             sharesText={sharesText} setSharesText={setSharesText}
-            rationale={rationale} setRationale={setRationale}
+            reasonPicks={reasonPicks} setReasonPicks={setReasonPicks}
+            reasonLine={reasonLine} setReasonLine={setReasonLine}
             rationaleOk={rationaleOk}
             canAdvance={setupOk}
             onNext={advanceToQuestions}
@@ -314,16 +327,19 @@ function SetupStep(props: {
   ticker: string; setTicker: (s: string) => void;
   side: Side; setSide: (s: Side) => void;
   sharesText: string; setSharesText: (s: string) => void;
-  rationale: string; setRationale: (s: string) => void;
+  reasonPicks: string[]; setReasonPicks: (f: (prev: string[]) => string[]) => void;
+  reasonLine: string; setReasonLine: (s: string) => void;
   rationaleOk: boolean;
   canAdvance: boolean;
   onNext: () => void;
   /** Phone pager: slide in from the left (came back from question 1). */
   enterFromBack: boolean;
 }) {
-  const { ticker, setTicker, side, setSide, sharesText, setSharesText, rationale, setRationale, rationaleOk, canAdvance, onNext, enterFromBack } = props;
-  const remaining = Math.max(0, MIN_RATIONALE_CHARS - rationale.trim().length);
-  const t = useT();
+  const { ticker, setTicker, side, setSide, sharesText, setSharesText, reasonPicks, setReasonPicks, reasonLine, setReasonLine, rationaleOk, canAdvance, onNext, enterFromBack } = props;
+  const togglePick = (chip: string) =>
+    setReasonPicks((prev) =>
+      prev.includes(chip) ? prev.filter((c) => c !== chip) : [...prev, chip],
+    );
   // Phone: swipe left = "다음 · 질문 7개", refused (springs back) until the
   // setup is complete — the same gate as the button. Nothing lies before it.
   const screenRef = useRef<HTMLDivElement>(null);
@@ -402,33 +418,43 @@ function SetupStep(props: {
 
         {side === "EXIT" && <HeldPicker ticker={ticker} setTicker={setTicker} />}
 
-        <Field label={`이유 · 한 문단 (${MIN_RATIONALE_CHARS}자 이상)`} htmlFor="pre-trade-thesis">
+        {/* 2026-10-25 (CEO "적어야 할게 너무 많다"): pick where the idea came
+            from; the line is optional. Either one is enough to go on. */}
+        <Field label="이유 · 고르거나 한 줄로" htmlFor="pre-trade-thesis">
+          <div
+            role="group"
+            aria-label="어디서 나온 생각인지 고르기"
+            className="mb-3 flex flex-wrap gap-2"
+            data-testid="pre-trade-reason-chips"
+          >
+            {REASON_CHIPS.map((chip) => {
+              const on = reasonPicks.includes(chip);
+              return (
+                <button
+                  key={chip}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => togglePick(chip)}
+                  className={`min-h-[40px] rounded-[var(--pq-radius-cta)] border px-3.5 text-pq-body-sm transition-colors ${
+                    on
+                      ? "border-[var(--pq-bronze)] bg-[rgba(var(--pq-bronze-rgb),0.14)] text-[var(--pq-ivory)]"
+                      : "border-[rgba(245,240,232,0.15)] text-[var(--pq-ivory-mid)] hover:border-[rgba(245,240,232,0.45)]"
+                  }`}
+                >
+                  {chip}
+                </button>
+              );
+            })}
+          </div>
           <textarea
             id="pre-trade-thesis"
-            value={rationale}
-            onChange={(e) => setRationale(e.target.value)}
-            rows={5}
-            placeholder="왜 지금 이 종목을 이 방향으로 들어가는가? 한 문단으로 정직하게."
+            value={reasonLine}
+            onChange={(e) => setReasonLine(e.target.value)}
+            rows={2}
+            placeholder="(선택) 한 줄 더 — 왜 지금인가?"
             className="w-full bg-transparent border border-[rgba(245,240,232,0.15)] rounded-[var(--pq-radius-card)] p-3 text-sm leading-relaxed outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)] font-serif"
             style={{ resize: "vertical" }}
           />
-          <div className="mt-1 text-pq-mono-sm text-[var(--pq-ivory-faint)] tracking-[0.01em]">
-            {rationaleOk
-              ? (
-                <span className="text-[var(--pq-bronze)]">
-                  {t("preTrade.charsOk", { n: String(rationale.trim().length) })}
-                </span>
-              )
-              : (
-                <span>
-                  {t("preTrade.charsMore", {
-                    remaining: String(remaining),
-                    n: String(rationale.trim().length),
-                    min: String(MIN_RATIONALE_CHARS),
-                  })}
-                </span>
-              )}
-          </div>
         </Field>
       </div>
 
@@ -443,7 +469,7 @@ function SetupStep(props: {
               ? "종목과 이유를 채워야 진행합니다."
               : ticker.trim().length === 0
                 ? "종목을 입력해야 진행합니다."
-                : `이유를 ${MIN_RATIONALE_CHARS}자 이상 적어야 진행합니다.`}
+                : "이유를 하나 고르거나 한 줄 적어야 진행합니다."}
           </p>
         )}
         <button
