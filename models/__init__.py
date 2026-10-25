@@ -52,6 +52,8 @@ from .doorway_check import DoorwayCheck
 from .company_filing import CompanyFiling
 # 회사 연간 숫자 (SEC companyfacts · DART 주요계정) — 내가 고른 회사들 카드, 공개 사실.
 from .company_annual_fact import CompanyAnnualFact
+# 월간 거울 리포트 발송 기록 — 잠든 서버가 놓친 1일 발송을 매시 다시 시도할 때 중복 방지.
+from .monthly_report_send import MonthlyReportSend
 # Feature 5 — AI Twin (paper portfolio simulator). 100% paper / no broker.
 from .ai_twin_portfolio import AITwinPortfolio, DEFAULT_STARTING_CASH
 from .ai_twin_position import AITwinPosition
@@ -120,4 +122,4 @@ __all__ = ["User", "Position", "Alert", "SignalCache", "TradeHistory",
            "Inquiry", "INQUIRY_VALID_STATUSES", "INQUIRY_VALID_CATEGORIES",
            "ImportBatch", "PendingTrade", "ImportToken",
            "ObservationNote", "OBSERVATION_NOTE_SOURCES",
-           "ResearchNote", "DoorwayCheck", "CompanyFiling", "CompanyAnnualFact"]
+           "ResearchNote", "DoorwayCheck", "CompanyFiling", "CompanyAnnualFact", "MonthlyReportSend"]
