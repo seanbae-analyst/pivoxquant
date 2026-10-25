@@ -14,6 +14,7 @@
  */
 
 import * as React from "react";
+import Link from "next/link";
 import { useT } from "@/lib/locale";
 import { sectorLabel } from "@/lib/sector";
 import { useIsPhone } from "@/lib/use-phone";
@@ -1050,6 +1051,8 @@ function PositionCard({
             {onObservationNote && (
               <SheetActionRow label="관찰 노트" hint="이 종목에 대해 적어 두기" ariaLabel={`${name} 관찰 노트 작성`} onClick={() => run(() => onObservationNote(p))} />
             )}
+            {/* 2026-10-25 — 종목별 내 기록: the fills, pauses, research and notes on this name. */}
+            <SheetLinkRow label="내 기록" hint="이 종목에 남긴 것 모아 보기" ariaLabel={`${name} 기록 모아 보기`} href={`/journal/stock/${encodeURIComponent(p.symbol)}`} />
           </ul>
         </Sheet>
       )}
@@ -1091,6 +1094,23 @@ function SheetActionRow({
         <span className="text-pq-caption text-[var(--pq-ivory-dim)]">{hint}</span>
         <ChevronRight aria-hidden className="h-4 w-4 shrink-0 text-[var(--pq-ivory-dim)]" />
       </button>
+    </li>
+  );
+}
+
+/** SheetActionRow's look, as a link — a row that opens another screen. */
+function SheetLinkRow({ label, hint, ariaLabel, href }: { label: string; hint: string; ariaLabel: string; href: string }) {
+  return (
+    <li className="border-b border-[var(--pq-ivory-line)]">
+      <Link
+        href={href}
+        aria-label={ariaLabel}
+        className="flex min-h-[52px] w-full items-center gap-3 px-5 py-3 text-left transition-colors active:bg-[var(--pq-ivory-line-faint)] [-webkit-tap-highlight-color:transparent]"
+      >
+        <span className="flex-1 text-pq-h6 text-[var(--pq-ivory)]">{label}</span>
+        <span className="text-pq-caption text-[var(--pq-ivory-dim)]">{hint}</span>
+        <ChevronRight aria-hidden className="h-4 w-4 shrink-0 text-[var(--pq-ivory-dim)]" />
+      </Link>
     </li>
   );
 }

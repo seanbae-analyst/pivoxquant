@@ -227,6 +227,23 @@ def research_for_ticker(user_id: int, ticker: str) -> dict:
     }
 
 
+def research_list_for_ticker(user_id: int, ticker: str) -> list[dict]:
+    """Every note the caller wrote on one ticker, newest first — the 종목별
+    내 기록 timeline (services/stock_record) reads them all, not just the
+    latest one /pre-trade shows."""
+    normalized = normalize_ticker(str(ticker or ""))
+    if not normalized:
+        raise ValueError("ticker is required")
+    rows = (
+        ResearchNote.query.filter(
+            ResearchNote.user_id == int(user_id), ResearchNote.ticker == normalized
+        )
+        .order_by(ResearchNote.id.desc())
+        .all()
+    )
+    return _dicts(int(user_id), rows, kst_today())
+
+
 def get_research(note_id: int, user_id: int) -> dict:
     row = _load_owned(note_id, user_id)
     return _dicts(int(user_id), [row], kst_today())[0]

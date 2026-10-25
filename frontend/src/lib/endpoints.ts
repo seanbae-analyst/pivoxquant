@@ -349,6 +349,10 @@ export const API = {
     check: (id: number | string) => `/api/doorway/checks/${id}`,
     summary: "/api/doorway/summary",
   },
+  // 종목별 내 기록 (2026-10-25) — one stock's fills, pauses, research and
+  // notes on one timeline. GET only; the user's own records, no quote.
+  //   GET /<ticker> → {ticker, name, holding, counts, events}
+  stockRecord: (ticker: string) => `/api/stock-record/${encodeURIComponent(ticker)}`,
   research: {
     create: "/api/research-notes",
     list: "/api/research-notes/list",
