@@ -659,6 +659,17 @@ def _job_specs() -> list[tuple[str, CronTrigger | IntervalTrigger, Callable[[], 
                 job_id="ops_monthly_mirror_report",
             ),
         ),
+        # 가설 다시 보기 (2026-10-25) — 매일 08:20 KST. 채점 전 리서치가 있는
+        # 종목의 공시를 받아(종목당 하루 1번) 리서치를 쓴 뒤 나온 정기보고서·
+        # 실적 발표를 벨 알림으로 (services/filing_timeline/research_check).
+        (
+            "ops_research_filing_check",
+            CronTrigger(hour=8, minute=20, timezone=KST),
+            _wrap_python_main(
+                "services.filing_timeline.research_check",
+                job_id="ops_research_filing_check",
+            ),
+        ),
     ]
 
 

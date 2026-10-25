@@ -915,6 +915,10 @@
       "fill_memo": {
         "name": "A fill just arrived — note why",
         "help": "When your phone automation (import token) forwards a fill, a push is sent right away. Tapping it opens that fill's reason box."
+      },
+      "research_filing": {
+        "name": "Revisit a thesis",
+        "help": "When a company you wrote an unscored research note on files a new periodic report or earnings release, you hear about it. No reading of the filing — it takes you to that stock's record to look at your note again."
       }
     },
     "signin": {

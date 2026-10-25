@@ -87,6 +87,14 @@ const EVENTS: EventRow[] = [
     defaults: { email: false, push: true, inapp: false },
     channels: ["push"],
   },
+  // 2026-10-25 (CEO "푸시도 켜"): 가설 다시 보기 — a new periodic report or
+  // earnings release on a name with an unscored research note
+  // (services/filing_timeline/research_check.py, 매일 08:20 KST). Bell + push.
+  {
+    id: "research_filing",
+    defaults: { email: false, push: true, inapp: true },
+    channels: ["push", "inapp"],
+  },
 ];
 type MatrixState = NotificationPrefsMap;
 

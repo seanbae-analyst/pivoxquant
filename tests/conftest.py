@@ -525,6 +525,16 @@ def market_display_on(app):
 
 
 @pytest.fixture
+def filings_on(app):
+    """FILINGS_ENABLED on — company filings (SEC / DART) are a live producer
+    (e.g. the research_filing notification row). Tests stub the sources."""
+    previous = app.config.get("FILINGS_ENABLED")
+    app.config["FILINGS_ENABLED"] = True
+    yield app
+    app.config["FILINGS_ENABLED"] = previous
+
+
+@pytest.fixture
 def market_display_off(app):
     """Vendor-quote display DISABLED — the production default."""
     previous = _set_market_display(app, False)
