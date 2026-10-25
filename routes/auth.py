@@ -393,24 +393,27 @@ def _send_oauth_link_alert(user, *, provider: str) -> bool:
     safe_provider = escape(provider_label)
 
     html_body = f"""<!doctype html>
-<html lang="ko"><body style="margin:0;padding:24px;background:#F6F3EC;
-font-family:'Source Serif 4',Georgia,serif;color:#0A0A0A;">
-  <div style="max-width:560px;margin:0 auto;background:#FBFAF6;padding:32px;">
-    <p style="margin:0;font-size:11px;letter-spacing:0.28em;
-      text-transform:uppercase;color:#B8956A;">PIVOXQUANT &middot; 보안 안내</p>
-    <h1 style="margin:16px 0 8px 0;font-size:20px;line-height:1.32;
-      font-weight:600;letter-spacing:-0.01em;">
+<html lang="ko"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="color-scheme" content="dark"/><meta name="supported-color-schemes" content="dark"/></head>
+<body style="margin:0;padding:32px 16px;background:#050505;
+font-family:Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#F5F0E8;word-break:keep-all;">
+  <div style="max-width:560px;margin:0 auto;background:#0E0E0E;border:1px solid #262420;border-radius:14px;padding:36px 32px;">
+    <p style="margin:0 0 28px 0;font-size:18px;font-weight:700;letter-spacing:-0.02em;color:#F5F0E8;">Pivox<span style="color:#B8956A;">Quant</span></p>
+    <p style="margin:0;font-size:13px;font-weight:600;color:#B8956A;">보안 안내</p>
+    <h1 style="margin:12px 0 16px 0;font-size:22px;line-height:1.4;
+      font-weight:700;letter-spacing:-0.02em;color:#F5F0E8;">
       {user_name}님, 새 로그인 수단이 연결되었습니다.
     </h1>
-    <p style="margin:12px 0;line-height:1.6;color:#202020;font-size:15px;">
+    <p style="margin:12px 0;line-height:1.75;color:#C9C4BC;font-size:15px;">
       회원님의 계정에 <strong>{safe_provider}</strong> 로그인이 연결되었습니다.
       직접 진행하신 것이라면 별도 조치가 필요하지 않습니다.
     </p>
-    <p style="margin:12px 0;line-height:1.6;color:#202020;font-size:15px;">
+    <p style="margin:12px 0;line-height:1.75;color:#C9C4BC;font-size:15px;">
       본인이 하지 않은 경우 즉시 고객센터(support@pivoxquant.com)로
       연락해주세요.
     </p>
-    <p style="margin:24px 0 0 0;font-size:11px;color:#888;">
+    <p style="margin:28px 0 0 0;font-size:12px;color:#8C877F;line-height:1.6;">
       본 메일은 보안/계정 관련(transactional) 정보로 §50 광고성 정보 발신에
       해당하지 않습니다.
     </p>
@@ -2128,36 +2131,39 @@ def _send_deletion_request_email(user, *, scheduled_purge_at) -> bool:
     ))
 
     html_body = f"""<!doctype html>
-<html lang="ko"><body style="margin:0;padding:24px;background:#F6F3EC;
-font-family:'Source Serif 4',Georgia,serif;color:#0A0A0A;">
-  <div style="max-width:560px;margin:0 auto;background:#FBFAF6;padding:32px;">
-    <p style="margin:0;font-size:11px;letter-spacing:0.28em;
-      text-transform:uppercase;color:#B8956A;">PIVOXQUANT &middot; 계정 안내</p>
-    <h1 style="margin:16px 0 8px 0;font-size:20px;line-height:1.32;
-      font-weight:600;letter-spacing:-0.01em;">
+<html lang="ko"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="color-scheme" content="dark"/><meta name="supported-color-schemes" content="dark"/></head>
+<body style="margin:0;padding:32px 16px;background:#050505;
+font-family:Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#F5F0E8;word-break:keep-all;">
+  <div style="max-width:560px;margin:0 auto;background:#0E0E0E;border:1px solid #262420;border-radius:14px;padding:36px 32px;">
+    <p style="margin:0 0 28px 0;font-size:18px;font-weight:700;letter-spacing:-0.02em;color:#F5F0E8;">Pivox<span style="color:#B8956A;">Quant</span></p>
+    <p style="margin:0;font-size:13px;font-weight:600;color:#B8956A;">계정 안내</p>
+    <h1 style="margin:12px 0 16px 0;font-size:22px;line-height:1.4;
+      font-weight:700;letter-spacing:-0.02em;color:#F5F0E8;">
       {user_name}님, 탈퇴 요청을 접수했습니다.
     </h1>
-    <p style="margin:12px 0;line-height:1.6;color:#202020;font-size:15px;">
+    <p style="margin:12px 0;line-height:1.75;color:#C9C4BC;font-size:15px;">
       개인정보보호법 §21 ① 및 시행령 §16 ① 에 따라 30일 grace period 동안
       계정 데이터를 보관합니다. 이 기간이 지나면 모든 데이터가 영구 파기되며,
       파기 완료 시 별도로 안내해드립니다.
     </p>
-    <p style="margin:12px 0;line-height:1.6;color:#202020;font-size:15px;">
+    <p style="margin:12px 0;line-height:1.75;color:#C9C4BC;font-size:15px;">
       예정 파기일: <strong>{escape(purge_display)}</strong>
     </p>
-    <p style="margin:24px 0 12px 0;line-height:1.5;color:#5A5A5A;font-size:13px;">
+    <p style="margin:28px 0 12px 0;line-height:1.7;color:#8C877F;font-size:13px;">
       실수로 요청하셨거나 마음이 바뀌셨나요? 파기 전까지 아래 버튼으로 직접
       탈퇴를 철회하실 수 있습니다. (이 기간 동안에는 로그인이 차단됩니다.)
     </p>
     <p style="margin:0 0 8px 0;">
-      <a href="{cancel_url}" style="display:inline-block;padding:11px 22px;
-        background:#B8956A;color:#0A0A0A;text-decoration:none;font-size:13px;
-        letter-spacing:0.04em;font-weight:600;border-radius:2px;">탈퇴 철회하기</a>
+      <a href="{cancel_url}" style="display:inline-block;padding:14px 24px;
+        background:#B8956A;color:#050505;text-decoration:none;font-family:Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+        font-size:15px;font-weight:700;border-radius:10px;">탈퇴 철회하기</a>
     </p>
-    <p style="margin:8px 0 0 0;font-size:11px;color:#999;word-break:break-all;">
+    <p style="margin:8px 0 0 0;font-size:12px;color:#8C877F;line-height:1.6;word-break:break-all;">
       버튼이 작동하지 않으면 다음 주소를 브라우저에 붙여넣어 주세요:<br>{cancel_url}
     </p>
-    <p style="margin:24px 0 0 0;font-size:11px;color:#888;">
+    <p style="margin:28px 0 0 0;font-size:12px;color:#8C877F;line-height:1.6;">
       본 메일은 거래 관련(transactional) 정보로 §50 광고성 정보 발신에
       해당하지 않습니다.
     </p>
