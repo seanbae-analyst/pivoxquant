@@ -114,7 +114,7 @@ export function DriftChip({
   if (!data.drift.available || !data.drift.descriptor) return null;
   return (
     <div
-      className={`${className} inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px]`}
+      className={`${className} inline-flex items-center gap-2 rounded-full px-3 py-1 text-[12px]`}
       style={{
         color: "rgba(var(--pq-ivory-rgb), 0.78)",
         border: "1px solid rgba(var(--pq-bronze-rgb), 0.4)",
@@ -136,7 +136,7 @@ export function MirrorHeadline({ data }: { data: MirrorHomeResponse }) {
       {gap.length > 0 && (
         <div className="mt-5">
           <div
-            className="text-[11px] tracking-wide"
+            className="text-[12px] tracking-wide"
             style={{ color: "rgba(var(--pq-ivory-rgb), 0.55)" }}
           >
             선언 대비 최근 30일

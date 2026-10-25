@@ -61,7 +61,7 @@ export function StorageProofToggle({ reflectionId }: { reflectionId: number }) {
       <button
         type="button"
         onClick={() => void toggle()}
-        className="flex w-full items-center gap-2 text-left"
+        className="pq-hit flex w-full items-center gap-2 text-left"
         aria-expanded={open}
       >
         <Lock

@@ -79,7 +79,7 @@ function MonthBars({ months }: { months: YearRecapResponse["fills"]["by_month"] 
       </div>
       <div className="mt-1.5 flex gap-[6px]" aria-hidden>
         {months.map((m) => (
-          <span key={m.month} className="flex-1 text-center text-[11px] tabular-nums" style={{ color: DIM }}>
+          <span key={m.month} className="flex-1 text-center text-[12px] tabular-nums" style={{ color: DIM }}>
             {Number(m.month.slice(5))}
           </span>
         ))}

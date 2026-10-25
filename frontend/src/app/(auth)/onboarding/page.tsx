@@ -166,7 +166,7 @@ function ProgressBar({ current, total, category }: { current: number; total: num
         </div>
         <span
           className="text-xs tabular-nums font-medium"
-          style={{ color: "rgba(var(--pq-ivory-rgb), 0.45)" }}
+          style={{ color: "var(--pq-ivory-faint)" }}
         >
           {current} of {total}
         </span>

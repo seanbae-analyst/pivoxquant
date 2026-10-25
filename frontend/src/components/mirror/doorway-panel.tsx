@@ -170,7 +170,7 @@ function HourStrip({ hours }: { hours: number[] }) {
         ))}
       </div>
       <div
-        className="mt-1 flex justify-between text-[10.5px] tabular-nums"
+        className="mt-1 flex justify-between text-[12px] tabular-nums"
         style={{ color: DIM, borderTop: "1px solid var(--pq-ivory-line)", paddingTop: 2 }}
         aria-hidden
       >
@@ -180,7 +180,7 @@ function HourStrip({ hours }: { hours: number[] }) {
         <span>18시</span>
         <span>24시</span>
       </div>
-      <figcaption className="mt-1 text-[11.5px]" style={{ color: DIM }}>
+      <figcaption className="mt-1 text-[12px]" style={{ color: DIM }}>
         언제 열었나 · 한국 시간
         <span className="sr-only">
           {hours.map((n, h) => (n > 0 ? `${h}시 ${n}번. ` : "")).join("")}
@@ -199,7 +199,7 @@ function RecentRow({ r }: { r: DoorwayRecent }) {
           {kstStamp(r.at)} · {INTENT_LABEL[r.intent] ?? r.intent}
         </span>
         <span
-          className="shrink-0 rounded-full px-2 py-0.5 text-[11px]"
+          className="shrink-0 rounded-full px-2 py-0.5 text-[12px]"
           style={{
             color: r.outcome === "none" ? DIM : "var(--pq-bronze)",
             border: `1px solid ${r.outcome === "none" ? "var(--pq-ivory-line)" : "var(--pq-bronze)"}`,
@@ -277,7 +277,7 @@ export function DoorwayPanelView({
         <div className="text-[12.5px]" style={{ color: "var(--pq-ivory)" }}>
           문 앞
         </div>
-        <span className="text-[11px]" style={{ color: DIM }}>
+        <span className="text-[12px]" style={{ color: DIM }}>
           최근 {data.window_days}일
         </span>
       </div>
@@ -326,12 +326,12 @@ export function DoorwayPanelView({
 
           {data.caveats.length > 0 && (
             <details className="mt-3">
-              <summary className="cursor-pointer text-[11.5px]" style={{ color: DIM }}>
+              <summary className="pq-hit cursor-pointer text-[12px]" style={{ color: DIM }}>
                 이렇게 셉니다
               </summary>
               <ul className="mt-1.5 space-y-1">
                 {data.caveats.map((c) => (
-                  <li key={c} className="text-[11.5px] leading-relaxed" style={{ color: DIM }}>
+                  <li key={c} className="text-[12px] leading-relaxed" style={{ color: DIM }}>
                     {c}
                   </li>
                 ))}

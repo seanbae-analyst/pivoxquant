@@ -1814,6 +1814,13 @@ button:hover > .pq-ink-pill,
   border-color: var(--pq-bronze);
   background: rgba(var(--pq-bronze-wash-rgb), 0.08);
 }
+/* Mobile: 44px like the bronze button (2026-10-25: the ghost stayed 36px,
+   e.g. 캡처 "읽기"). After the base rule so it wins at equal specificity. */
+@media (max-width: 767px) {
+  .pq-ink-btn-ghost {
+    height: 44px;
+  }
+}
 
 /* Hairline divider (ink) */
 .pq-ink-rule {
@@ -5454,7 +5461,9 @@ code, pre, kbd, samp {
 /* ── Touch targets (2026-10-22) ──────────────────────────────────────────
    The 36×20 switches and the small text buttons keep their look; on a touch
    screen a transparent ::after widens what a thumb can hit to ~44px tall.
-   Unlayered on purpose — it must not lose to a utility's `position`. */
+   Unlayered on purpose — it must not lose to a utility's `position`.
+   13px (was 12): an 18–19px label + 2×12 measured 42–43px, not 44
+   (2026-10-25). */
 @media (pointer: coarse) {
   button[role="switch"],
   .pq-hit {
@@ -5464,6 +5473,18 @@ code, pre, kbd, samp {
   .pq-hit::after {
     content: "";
     position: absolute;
-    inset: -12px -6px;
+    inset: -13px -6px;
+  }
+}
+
+/* ── Phone reading floor (2026-10-25) ────────────────────────────────────
+   mono-sm 11px (tags, row meta, chips — ~100 uses) and eyebrow-sm 10.5px were
+   the smallest text on most phone screens (measured: 60+ distinct sub-12px
+   labels on /mirror alone). On a phone they read at 12px; desktop keeps the
+   calibrated steps. */
+@media (max-width: 767px) {
+  :root {
+    --pq-text-mono-sm: 12px;
+    --pq-text-eyebrow-sm: 12px;
   }
 }

@@ -520,7 +520,7 @@ function ImportPageInner() {
       {/* Automation pointer — the webhook token lives in /settings. */}
       <Link
         href="/settings#import-tokens"
-        className="mt-6 inline-flex items-center gap-2 font-mono text-pq-eyebrow uppercase tracking-[0.01em] text-[var(--pq-bronze-light)] underline-offset-4 hover:underline"
+        className="pq-hit mt-6 inline-flex items-center gap-2 font-mono text-pq-eyebrow uppercase tracking-[0.01em] text-[var(--pq-bronze-light)] underline-offset-4 hover:underline"
       >
         {t("journal.import.page.tokensLink")}
       </Link>
