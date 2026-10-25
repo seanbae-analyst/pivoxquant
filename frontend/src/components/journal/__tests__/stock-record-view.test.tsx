@@ -84,4 +84,46 @@ describe("StockRecordView", () => {
       expect(text).not.toContain(w);
     }
   });
+
+  it("lays SEC filings in as facts with a link, the source and the after-release counts", () => {
+    const data: StockRecordResponse = {
+      ...DATA,
+      ticker: "AAPL",
+      name: "Apple",
+      holding: null,
+      counts: { ...DATA.counts, filings: 1 },
+      filing_reaction: {
+        earnings: 2, window_days: 3, buys_after: 1, sells_after: 0, timed_fills: 3, untimed_fills: 1,
+      },
+      events: [
+        {
+          kind: "filing", at: "2026-07-30T00:00:00", filed_on: "2026-07-30", form: "8-K", label: "실적 발표",
+          earnings: true, source: "SEC EDGAR",
+          url: "https://www.sec.gov/Archives/edgar/data/320193/000032019326000018/aapl-20260730.htm",
+        },
+        ...DATA.events,
+      ],
+    };
+    render(<StockRecordView data={data} />);
+    const row = document.querySelector('li[data-kind="filing"]') as HTMLElement;
+    expect(within(row).getByText("실적 발표")).toBeTruthy();
+    expect(within(row).getByText(/7월 30일/)).toBeTruthy();
+    expect(within(row).getByText("공시")).toBeTruthy();
+    const link = within(row).getByRole("link", { name: /8-K · 원문 보기/ });
+    expect(link.getAttribute("href")).toContain("sec.gov/Archives");
+    expect(link.getAttribute("target")).toBe("_blank");
+    expect(link.getAttribute("rel")).toContain("noopener");
+    expect(screen.getByTestId("filing-source").textContent).toContain("SEC EDGAR");
+    const reaction = screen.getByTestId("filing-reaction").textContent ?? "";
+    expect(reaction).toContain("실적 발표 2번");
+    expect(reaction).toContain("산 것 1번");
+    expect(reaction).toContain("판 것 0번");
+    expect(reaction).toContain("날짜만 있는 체결 1건");
+  });
+
+  it("shows no filing lines when the record has none", () => {
+    render(<StockRecordView data={DATA} />);
+    expect(screen.queryByTestId("filing-source")).toBeNull();
+    expect(screen.queryByTestId("filing-reaction")).toBeNull();
+  });
 });

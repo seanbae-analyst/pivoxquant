@@ -19,8 +19,11 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-# SEC requires User-Agent with contact info
-_USER_AGENT = "PivoxQuant/1.0 (sanghyun0115@naver.com)"
+# SEC requires User-Agent "<Company> <contact email>".
+# 2026-10-06: the previous value "PivoxQuant/1.0 (sanghyun0115@naver.com)" got
+# 403 on every request (measured with curl — the naver address is refused even
+# in the plain "Name email" form), so every EDGAR call silently returned None.
+_USER_AGENT = "PivoxQuant support@pivoxquant.com"
 _HEADERS = {
     "User-Agent": _USER_AGENT,
     "Accept": "application/json",
@@ -29,10 +32,12 @@ _HEADERS = {
 
 _CACHE: dict[str, tuple] = {}  # {key: (data, expiry_ts)}
 _TICKER_TO_CIK: dict[str, str] | None = None  # loaded once
+_CIK_MAP_FAILED_AT: float = 0.0  # last failed ticker-map load (retry after _CIK_MAP_RETRY_SECONDS)
 _LAST_REQUEST_TS: float = 0.0  # for rate-limit self-throttle
 
 TTL_FUNDAMENTALS = 86400   # 24h — SEC data changes quarterly
 TTL_CIK_MAP = 604800       # 7 days
+_CIK_MAP_RETRY_SECONDS = 600  # a failed map load is retried after 10 min, not 7 days
 TTL_INSIDER = 3600          # 1h
 _MIN_REQUEST_INTERVAL = 0.12  # ~8 req/s ceiling (SEC allows 10)
 
@@ -40,7 +45,7 @@ _MIN_REQUEST_INTERVAL = 0.12  # ~8 req/s ceiling (SEC allows 10)
 class EdgarService:
 
     @staticmethod
-    def _get(url: str, retries: int = 2) -> dict | list | None:
+    def _get(url: str, retries: int = 2, timeout: float = 15) -> dict | list | None:
         """Fetch JSON from SEC EDGAR with rate-limiting and retries.
 
         Returns parsed JSON on success, None on any failure.
@@ -58,7 +63,7 @@ class EdgarService:
 
             try:
                 if _requests is not None:
-                    resp = _requests.get(url, headers=_HEADERS, timeout=15)
+                    resp = _requests.get(url, headers=_HEADERS, timeout=timeout)
                     if resp.status_code == 200:
                         return resp.json()
                     logger.warning(
@@ -83,7 +88,7 @@ class EdgarService:
                     # Previously disabled both — that was a downgrade attack vector.
                     ctx = ssl.create_default_context()
                     req = urllib.request.Request(url, headers=_HEADERS)
-                    with urllib.request.urlopen(req, timeout=15, context=ctx) as resp:
+                    with urllib.request.urlopen(req, timeout=timeout, context=ctx) as resp:
                         return json.loads(resp.read())
             except Exception as exc:
                 logger.warning(
@@ -108,26 +113,36 @@ class EdgarService:
 
     @classmethod
     def _load_cik_map(cls) -> dict:
-        """Load ticker -> CIK mapping (all US public companies)."""
-        global _TICKER_TO_CIK
+        """Load ticker -> CIK mapping (all US public companies).
+
+        A failed load is not kept for the 7-day TTL. It used to be: the fetch
+        returned ``{}``, which ``_cached`` stores like any value, so one SEC
+        hiccup blanked every CIK lookup in the process for a week. It is now
+        retried after ``_CIK_MAP_RETRY_SECONDS``.
+        """
+        global _TICKER_TO_CIK, _CIK_MAP_FAILED_AT
         if _TICKER_TO_CIK:
             return _TICKER_TO_CIK
+        if time.time() - _CIK_MAP_FAILED_AT < _CIK_MAP_RETRY_SECONDS:
+            return {}
 
         def fetch():
             data = cls._get("https://www.sec.gov/files/company_tickers.json")
             if not data:
-                return {}
+                return None
             mapping = {}
             for entry in data.values():
                 ticker = entry.get("ticker", "").upper()
                 cik = str(entry.get("cik_str", "")).zfill(10)
                 if ticker:
                     mapping[ticker] = cik
-            return mapping
+            return mapping or None
 
         result = cls._cached("cik_map", TTL_CIK_MAP, fetch)
         if result:
             _TICKER_TO_CIK = result
+        else:
+            _CIK_MAP_FAILED_AT = time.time()
         return _TICKER_TO_CIK or {}
 
     @classmethod
@@ -136,6 +151,31 @@ class EdgarService:
         cik_map = cls._load_cik_map()
         clean = ticker.upper().replace(".KS", "").replace(".KQ", "")
         return cik_map.get(clean)
+
+    @classmethod
+    def get_submissions(
+        cls, ticker: str, *, timeout: float = 8, retries: int = 1,
+    ) -> tuple[str | None, dict | None]:
+        """The company's filing list (``data.sec.gov/submissions``) → ``(cik, payload)``.
+
+        Not cached here: the payload runs to megabytes for heavy filers (JPM's
+        ``filings.recent`` block held ~26k rows on 2026-10-25) and the caller
+        keeps only the rows it shows. A class-share ticker is also tried with a
+        dash, the way SEC lists it (``BRK.B`` → ``BRK-B``). Short timeout and a
+        single try by default — this runs inside a page load.
+        """
+        clean = (ticker or "").strip().upper()
+        if not clean:
+            return None, None
+        cik = cls.get_cik(clean)
+        if not cik and "." in clean:
+            cik = cls.get_cik(clean.replace(".", "-"))
+        if not cik:
+            return None, None
+        data = cls._get(
+            f"https://data.sec.gov/submissions/CIK{cik}.json", retries=retries, timeout=timeout,
+        )
+        return cik, data if isinstance(data, dict) else None
 
     @classmethod
     def get_fundamentals(cls, ticker: str) -> dict | None:

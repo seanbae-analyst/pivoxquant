@@ -23,15 +23,23 @@ Rules
 * **Counts, never rates.** The summary is how many of each — and how many
   pauses ended without a buy of the same name afterwards (the 일어나지 않은
   거래, read straight from ``reflection_id`` links and later fills).
+* **One outside source, behind a flag.** With ``FILINGS_ENABLED`` on, a US
+  name's SEC filings (annual · quarterly · current reports, 실적 발표) are
+  laid between the user's records by their official filing date, with a link
+  to the original — facts, not a reading (services/filing_timeline). Off by
+  default; never for KR names here.
 
-Pure read; the route wraps it in the legal scrub, keeping the user's own
-words verbatim.
+The route wraps it in the legal scrub, keeping the user's own words verbatim.
+Reads only — except that an enabled filing sync may store new public filing
+rows (no user data).
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import logging
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
+from extensions import db
 from models import Position, PreTradeReflection, TradeHistory
 from services.observation_notes.service import MAX_TICKER_DAYS, MAX_TICKER_LIMIT, notes_for_ticker
 from services.pre_trade.friction_outcome import ticker_key
@@ -39,8 +47,12 @@ from services.profile.fifo_util import is_holding_seed, is_registration_row
 from services.research_notes.service import research_list_for_ticker
 from services.ticker_normalizer import normalize_ticker
 
+logger = logging.getLogger(__name__)
+
 _KR_SUFFIXES = (".KS", ".KQ", ".KRX")
 _SHARE_EPSILON = 1e-9
+# Filings start a month before the user's first record on the name.
+FILING_LEAD_DAYS = 30
 
 
 def _iso(dt: datetime | None) -> str | None:
@@ -72,12 +84,46 @@ def _pause_side(raw: str | None) -> str | None:
     return None
 
 
+def _first_day(events: list[dict[str, Any]]) -> date | None:
+    days = []
+    for e in events:
+        try:
+            days.append(datetime.fromisoformat(str(e.get("at") or "")[:19]).date())
+        except ValueError:
+            continue
+    return min(days) if days else None
+
+
+def _filing_block(key: str, normalized: str, fills: list, events: list[dict[str, Any]]) -> dict | None:
+    """SEC filings for a US name, when the flag is on and the user has records."""
+    from services.filing_timeline import FillPoint, filing_timeline, filings_enabled, is_us_ticker
+    from services.imports import is_date_only
+
+    if not filings_enabled() or not is_us_ticker(normalized):
+        return None
+    first = _first_day(events)
+    if first is None:
+        return None
+    points = [
+        FillPoint(t.traded_at, _side(t.action) or "", untimed=is_date_only(t.traded_at))
+        for t in fills
+    ]
+    try:
+        return filing_timeline(key, fills=points, since=first - timedelta(days=FILING_LEAD_DAYS))
+    except Exception as exc:  # the page shows without filings rather than failing
+        db.session.rollback()
+        logger.warning("stock_record: filings unavailable for %s: %s", key, exc)
+        return None
+
+
 def stock_record(user_id: int, ticker: str, now: datetime | None = None) -> dict[str, Any]:
     """Everything the caller recorded on one stock → summary + timeline.
 
     Raises ``ValueError`` on an empty ticker. ``events`` are newest first;
-    each has ``kind`` (fill · registered · pause · research · note), ``at``
-    (naive-UTC ISO) and the fields of its kind.
+    each has ``kind`` (fill · registered · pause · research · note · filing),
+    ``at`` (naive-UTC ISO; a date-only value is that date's 00:00) and the
+    fields of its kind. ``filing_reaction`` is None unless filings are on and
+    an earnings release fell in the record's span.
     """
     normalized = normalize_ticker(str(ticker or "").strip())
     if not normalized:
@@ -190,6 +236,10 @@ def stock_record(user_id: int, ticker: str, now: datetime | None = None) -> dict
             "tags": n.get("tags") or [],
         })
 
+    filings = _filing_block(key, normalized, fills, events)
+    if filings:
+        events.extend(filings["events"])
+
     events.sort(key=lambda e: e.get("at") or "", reverse=True)
 
     return {
@@ -204,7 +254,9 @@ def stock_record(user_id: int, ticker: str, now: datetime | None = None) -> dict
             "not_taken": not_taken,
             "research": len(research),
             "notes": len(notes),
+            "filings": len(filings["events"]) if filings else 0,
         },
+        "filing_reaction": filings["reaction"] if filings else None,
         "events": events,
     }
 

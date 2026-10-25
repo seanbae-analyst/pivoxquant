@@ -130,6 +130,14 @@ PASSWORD_REGISTRATION_ENABLED = (
 # 읽는 곳은 services/ai_read.py::ai_read_enabled() 하나.
 AI_READ_ENABLED = os.environ.get("AI_READ_ENABLED", "0").strip() in _TRUTHY_ENV
 
+# FILINGS_ENABLED — 종목 기록(/journal/stock/<ticker>)에 미국 회사 공시 목록
+# (SEC EDGAR: 연간·분기·수시 보고, 실적 발표)을 끼운다. 기본 꺼짐 (2026-10-25).
+# 시세가 아니라 공개 공시(양식 · 공식 공시일 · 원문 링크)라 MARKET_DATA_DISPLAY
+# 와 무관하다. SEC 원문: sec.gov 정보는 허락 없이 복사·재배포 가능, 초당 10회,
+# User-Agent 선언. 켜는 건 대표가 정한다. 읽는 곳은
+# services/filing_timeline/__init__.py::filings_enabled() 하나.
+FILINGS_ENABLED = os.environ.get("FILINGS_ENABLED", "0").strip() in _TRUTHY_ENV
+
 
 class Config:
     SECRET_KEY = _secret
@@ -149,6 +157,9 @@ class Config:
 
     # services/ai_read.py::ai_read_enabled() 가 읽는다. 테스트가 덮어쓴다.
     AI_READ_ENABLED = AI_READ_ENABLED
+
+    # services/filing_timeline::filings_enabled() 가 읽는다. 테스트가 덮어쓴다.
+    FILINGS_ENABLED = FILINGS_ENABLED
 
     # Connection pool settings (only effective for PostgreSQL; SQLite ignores them)
     if IS_POSTGRES:
