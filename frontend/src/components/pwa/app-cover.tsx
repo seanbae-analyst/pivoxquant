@@ -40,7 +40,7 @@ export function AppCover({ hint }: { hint?: string }) {
           textAlign: "center",
         }}
       >
-        PIVOXQUANT
+        PIVOX<span style={{ color: "var(--pq-bronze)" }}>QUANT</span>
       </span>
       {hint && (
         <span

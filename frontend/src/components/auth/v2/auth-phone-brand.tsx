@@ -53,7 +53,7 @@ export function AuthPhoneBrand({ tagline, size = "cover" }: AuthPhoneBrandProps)
           animation: "none",
         }}
       >
-        PIVOXQUANT
+        PIVOX<span style={{ color: "var(--pq-bronze)" }}>QUANT</span>
       </span>
       {tagline ? (
         <span
