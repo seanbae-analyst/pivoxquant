@@ -33,6 +33,9 @@ ALLOWED_KINDS = {
     "price_52w_high",
     "price_52w_low",
     "concentration_alert",
+    # 2026-10-25 — 가설 다시 보기 (services/filing_timeline/research_check):
+    # 채점 전 리서치가 있는 종목에 새 정기보고서·실적 발표. 벨만 (push=False).
+    "research_filing",
 }
 
 
@@ -126,6 +129,7 @@ def create_alert(
     link: Optional[str] = None,
     dedup_window_hours: Optional[int] = None,
     dedup_title_prefix: Optional[Union[str, tuple]] = None,
+    push: bool = True,
 ) -> Optional[Alert]:
     """Insert a new notification-bell alert.
 
@@ -234,7 +238,11 @@ def create_alert(
 
     # Fan out to PWA Web Push. Silent fallback — push delivery must never
     # cause the bell-alert insert to fail. Routed through push_service so
-    # the opt-out gate (정통망법 §50) is honoured uniformly.
+    # the opt-out gate (정통망법 §50) is honoured uniformly. ``push=False``
+    # (2026-10-25) keeps a kind bell-only — one with no off switch in the
+    # notification settings yet (research_filing).
+    if not push:
+        return a if inapp_enabled else None
     try:
         from services.push_service import notify_bell_alert
         notify_bell_alert(
