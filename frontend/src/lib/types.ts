@@ -1049,11 +1049,17 @@ export interface MyRuleItem {
   title: string;
   /** The line in the user's own terms, e.g. "한 달에 매수·매도 5번 이하". */
   line: string;
-  /** False for the −10% answer — no prices, so it is shown but never counted. */
+  /** Whether the line is counted (all four are since 2026-10-25). */
   measurable: boolean;
   status: MyRuleStatus;
   /** The observed fact, ready to print, e.g. "이번 달 6번 · 선 5번". */
   observed: string;
+  /** A caveat printed under the count (drawdown: holding leaves no fill). */
+  note?: string;
+  /* drawdown — fills 10%+ under the ticker's running average cost */
+  sold_under?: number;
+  added_under?: number;
+  pct?: number;
   /* frequency */
   ceiling?: number | null;
   this_month?: number;

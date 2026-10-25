@@ -165,6 +165,11 @@ function RuleRow({ rule, adopted }: { rule: MyRuleItem; adopted: boolean }) {
       <p className="mt-1 text-[12.5px] leading-relaxed" style={{ color: DIM }}>
         {rule.observed}
       </p>
+      {rule.note && (
+        <p className="mt-1 text-[11.5px] leading-relaxed" style={{ color: "rgba(var(--pq-ivory-rgb), 0.42)" }}>
+          {rule.note}
+        </p>
+      )}
       {rule.id === "frequency" && rule.months && (
         <MonthBars months={rule.months} ceiling={rule.ceiling ?? null} adopted={adopted} />
       )}

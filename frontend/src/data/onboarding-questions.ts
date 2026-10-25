@@ -112,8 +112,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
     category: "B",
     category_label: "When it drops",
     category_label_kr: "하락 대응",
-    question: "Imagine your portfolio falls 10% in one week. What do you actually do?",
-    question_kr: "포트폴리오가 한 주에 10% 빠졌다고 상상해 보세요. 실제로 무엇을 하나요?",
+    question: "When a stock you hold falls 10% below your average cost, what do you actually do?",
+    question_kr: "가진 종목이 내 평단보다 10% 아래로 내려가면, 실제로 무엇을 하나요?",
     type: "single",
     mirror_axis: "declared_risk",
     options: [

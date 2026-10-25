@@ -64,8 +64,8 @@ const DEMO_MIRROR_HOME: MirrorHomeResponse = {
     confirmed: true,
     confirmed_at: "2026-09-02T01:00:00",
     confirmed_on: "2026-09-02",
-    counted: 3,
-    outside: 2,
+    counted: 4,
+    outside: 3,
     items: [
       {
         id: "frequency", title: "매매 횟수", line: "한 달에 매수·매도 5번 이하",
@@ -91,9 +91,11 @@ const DEMO_MIRROR_HOME: MirrorHomeResponse = {
         open_positions: 7, min_positions: 4,
       },
       {
-        id: "drawdown", title: "하락 대응", line: "한 주에 10% 빠지면 그냥 둔다",
-        measurable: false, status: "not_counted",
-        observed: "시세를 쓰지 않아 10% 빠진 주를 알 수 없어요 — 세지 않아요",
+        id: "drawdown", title: "하락 대응", line: "평단보다 10% 아래로 내려가면 그냥 둔다",
+        measurable: true, status: "outside",
+        observed: "선을 정한 뒤 평단보다 10% 아래에서 판 것 1번 · 더 산 것 0번",
+        note: "그냥 둔 것은 체결이 남지 않아 셀 수 없어요. 평단은 내가 기록한 체결가로 계산해요.",
+        sold_under: 1, added_under: 0, pct: 10,
       },
     ],
   },

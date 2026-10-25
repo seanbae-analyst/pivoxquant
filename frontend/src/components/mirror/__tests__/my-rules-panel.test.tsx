@@ -5,8 +5,9 @@
  * lines and facts, no 선 안/밖 status, and one explicit choice (adopt via
  * POST /api/profile/rules/confirm, then re-read the mirror; or change the
  * answers through the retake). After adopting: "내 규칙", each line with a
- * 선 안 / 선 밖 status, never a score, grade, streak or directive; the −10%
- * answer reads "세지 않음". No onboarding answers → the way to answer them.
+ * 선 안 / 선 밖 status, never a score, grade, streak or directive; a
+ * "not_counted" line reads "세지 않음" (the −10% line was one until
+ * 2026-10-25 — now counted from the user's own fills, with a note). No onboarding answers → the way to answer them.
  * No `rules` block → nothing. Month bars only with two months to compare.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -185,5 +186,35 @@ describe("MyRulesPanel — nothing to show", () => {
     cleanup();
     const { container: b } = render(<MyRulesPanel data={payload(undefined)} />);
     expect(b).toBeEmptyDOMElement();
+  });
+});
+
+// 2026-10-25 — the −10% line is counted from the user's own fill prices
+// (fills 10%+ under 평단); the caveat that holding leaves no fill is printed.
+describe("MyRulesPanel — the −10% line, counted", () => {
+  it("prints the count, its status and the note", () => {
+    const rules: MyRules = {
+      ...ADOPTED,
+      items: ADOPTED.items.map((i) =>
+        i.id === "drawdown"
+          ? {
+              ...i,
+              line: "평단보다 10% 아래로 내려가면 그냥 둔다",
+              measurable: true,
+              status: "outside",
+              observed: "선을 정한 뒤 평단보다 10% 아래에서 판 것 1번 · 더 산 것 0번",
+              note: "그냥 둔 것은 체결이 남지 않아 셀 수 없어요. 평단은 내가 기록한 체결가로 계산해요.",
+              sold_under: 1,
+              added_under: 0,
+              pct: 10,
+            }
+          : i,
+      ),
+    };
+    render(<MyRulesPanel data={payload(rules)} />);
+    const row = screen.getByTestId("my-rule-drawdown");
+    expect(row).toHaveTextContent("판 것 1번 · 더 산 것 0번");
+    expect(row).toHaveTextContent("그냥 둔 것은 체결이 남지 않아 셀 수 없어요");
+    expect(within(row).getByTestId("my-rule-status")).toHaveTextContent("선 밖");
   });
 });

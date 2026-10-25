@@ -80,7 +80,7 @@ def test_rationale_too_short_rejects(app, make_user):
                 ticker="AAPL",
                 side="BUY",
                 shares=1,
-                rationale="too short",
+                rationale="a",
             )
 
 
@@ -406,10 +406,12 @@ def test_route_error_message_truncated_to_200(client, app, make_user, auth_user)
 def test_rationale_min_chars_constant_holds():
     """Pin the rationale floor — any change must come with explicit migration.
 
-    2026-05-22: lowered 50 → 10 per CEO ("50자 너무 많아 10자"). Frontend
-    pre-trade-friction-core.tsx MIN_RATIONALE_CHARS must match.
+    2026-05-22: lowered 50 → 10 per CEO ("50자 너무 많아 10자").
+    2026-10-25: 10 → 2 — the reason is picked from chips (shortest is two
+    characters) with an optional line. Frontend pre-trade-friction-core.tsx
+    MIN_RATIONALE_CHARS must match.
     """
-    assert MIN_RATIONALE_CHARS == 10
+    assert MIN_RATIONALE_CHARS == 2
 
 
 # ─────────────────────────────────────────────────────────────────────
