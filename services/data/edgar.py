@@ -153,6 +153,22 @@ class EdgarService:
         return cik_map.get(clean)
 
     @classmethod
+    def get_companyfacts(cls, ticker: str, *, timeout: float = 10, retries: int = 1) -> tuple[str | None, dict | None]:
+        """XBRL ``companyfacts`` → ``(cik, payload)``. Not cached — the caller keeps
+        only the annual rows it needs (services/pick_facts). Same dash fallback
+        as :meth:`get_submissions`."""
+        clean = (ticker or "").strip().upper()
+        cik = cls.get_cik(clean) if clean else None
+        if not cik and "." in clean:
+            cik = cls.get_cik(clean.replace(".", "-"))
+        if not cik:
+            return None, None
+        data = cls._get(
+            f"https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json", retries=retries, timeout=timeout,
+        )
+        return cik, data if isinstance(data, dict) else None
+
+    @classmethod
     def get_submissions(
         cls, ticker: str, *, timeout: float = 8, retries: int = 1,
     ) -> tuple[str | None, dict | None]:

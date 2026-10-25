@@ -32,6 +32,7 @@ vi.mock("@/lib/auth", () => ({ useAuth: () => ({ loading: false }) }));
 vi.mock("@/lib/hooks", () => ({
   useMirrorHome: () => state.swr,
   useDoorwaySummary: () => ({ data: state.doorway, isLoading: false, error: undefined, mutate: vi.fn() }),
+  usePickFacts: () => ({ data: null, isLoading: false, error: undefined }),
 }));
 vi.mock("@/lib/use-phone", () => ({ useIsPhone: () => state.phone }));
 vi.mock("motion/react", () => ({ useReducedMotion: () => false }));

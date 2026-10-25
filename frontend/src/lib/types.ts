@@ -1470,3 +1470,35 @@ export interface StockRecordResponse {
   /** Newest first. */
   events: StockRecordEvent[];
 }
+
+/** GET /api/pick-facts — 내가 고른 회사들 (services/pick_facts). Counts only. */
+export interface PickFactsPick {
+  ticker: string;
+  name: string | null;
+  /** KST date of the first buy in the window. */
+  bought_on: string;
+  /** Fiscal year end of the annual numbers used — filed before `bought_on`. */
+  fiscal_end: string;
+  filed_on: string;
+  net_loss: boolean;
+  revenue_down: boolean;
+  liabilities_over_equity: boolean;
+  source: string;
+}
+
+export interface PickFactsResponse {
+  ok: boolean;
+  disclaimer?: string;
+  window_days: number;
+  /** Stocks first bought in the window. */
+  picked: number;
+  /** Of those, with annual numbers filed before the buy. */
+  with_facts: number;
+  /** Not fetched yet (next visit fills them). */
+  pending: number;
+  /** No source, or nothing filed before the buy. */
+  no_facts: number;
+  counts: { net_loss: number; revenue_down: number; liabilities_over_equity: number };
+  sources: string[];
+  picks: PickFactsPick[];
+}

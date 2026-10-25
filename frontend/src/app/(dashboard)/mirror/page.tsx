@@ -43,6 +43,7 @@ import { MirrorHeadline } from "@/components/mirror/mirror-headline";
 import { MirrorRadarPanel } from "@/components/mirror/mirror-radar-panel";
 import { MyRulesPanel } from "@/components/mirror/my-rules-panel";
 import { DoorwayPanel } from "@/components/mirror/doorway-panel";
+import { PickFactsPanel } from "@/components/mirror/pick-facts-panel";
 import { MirrorPhoneCards } from "@/components/mirror/mirror-phone-cards";
 import { OneThingNudge } from "@/components/mirror/one-thing-nudge";
 import { PullToRefresh } from "@/components/layout/pull-to-refresh";
@@ -155,6 +156,9 @@ export default function MirrorPage() {
 
                 {/* 2026-10-15 — the door: why the broker app was opened. */}
                 <DoorwayPanel invite />
+
+                {/* 2026-10-25 — the year's picks, by numbers filed before each buy. */}
+                <PickFactsPanel />
 
                 <MirrorRadarPanel data={data} />
 
