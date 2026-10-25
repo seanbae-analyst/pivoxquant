@@ -90,8 +90,10 @@ LEGAL_BLOCK: dict[str, Any] = {
 #   (DECISIONS: AI 점수화 폐기; the competitor research found self-report
 #   risk questionnaires explain ≤ R²≈0.28 of behaviour and regulators found
 #   9/11 profiling tools defective — a grade would be theatre.)
-# * Not predictive. The −10% scenario answer is kept as the user's own
-#   sentence to be shown back after a real drawdown, not as a forecast.
+# * Not predictive. The −10% answer is kept as the user's own sentence and
+#   read against their own fills — a 매도 or added 매수 10% or more under the
+#   ticker's 평단 (services/profile/my_rules.fills_under_average). Asked
+#   against 평단 since 2026-10-25; it was "한 주에 10%", which needs prices.
 # * Not a replacement for the observed classifier. ``investor_type`` is still
 #   an 8-code persona so group benchmarks and drift keep working; the code
 #   is derived by a readable rule table (§ below) rather than centroid
@@ -154,8 +156,8 @@ QUESTIONNAIRE_V3: list[dict[str, Any]] = [
         "category": "B",
         "category_label": "When it drops",
         "category_label_kr": "하락 대응",
-        "question": "Imagine your portfolio falls 10% in one week. What do you actually do?",
-        "question_kr": "포트폴리오가 한 주에 10% 빠졌다고 상상해 보세요. 실제로 무엇을 하나요?",
+        "question": "When a stock you hold falls 10% below your average cost, what do you actually do?",
+        "question_kr": "가진 종목이 내 평단보다 10% 아래로 내려가면, 실제로 무엇을 하나요?",
         "type": "single",
         "options": [
             {"value": "sell_all",  "label": "Sell everything",       "label_kr": "다 팔아요"},
