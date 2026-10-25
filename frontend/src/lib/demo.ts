@@ -649,6 +649,19 @@ function _demoStockRecord(base: string) {
   };
 }
 
+// 내가 고른 회사들 (/api/pick-facts) — demo picks over the demo buys.
+const DEMO_PICK_FACTS = {
+  ok: true, window_days: 365, picked: 5, with_facts: 4, pending: 0, no_facts: 1,
+  counts: { net_loss: 1, revenue_down: 1, liabilities_over_equity: 2 },
+  sources: ["DART", "SEC EDGAR"],
+  picks: [
+    { ticker: "NVDA", name: "NVIDIA", bought_on: "2026-06-15", fiscal_end: "2026-01-25", filed_on: "2026-02-26", net_loss: false, revenue_down: false, liabilities_over_equity: false, source: "SEC EDGAR" },
+    { ticker: "AAPL", name: "Apple", bought_on: "2026-05-12", fiscal_end: "2025-09-27", filed_on: "2025-10-31", net_loss: false, revenue_down: false, liabilities_over_equity: true, source: "SEC EDGAR" },
+    { ticker: "TSLA", name: "Tesla", bought_on: "2026-05-20", fiscal_end: "2025-12-31", filed_on: "2026-01-29", net_loss: false, revenue_down: true, liabilities_over_equity: false, source: "SEC EDGAR" },
+    { ticker: "JOBY", name: "Joby Aviation", bought_on: "2026-06-02", fiscal_end: "2025-12-31", filed_on: "2026-02-25", net_loss: true, revenue_down: false, liabilities_over_equity: true, source: "SEC EDGAR" },
+  ],
+};
+
 /** Canned GET response for a path, or undefined if not registered yet. */
 function matchDemoGet(path: string): unknown | undefined {
   const qIdx = path.indexOf("?");
@@ -664,6 +677,7 @@ function matchDemoGet(path: string): unknown | undefined {
   if (base === "/api/research-notes/overview") return DEMO_RESEARCH_OVERVIEW;
   if (base.startsWith("/api/stock-record/")) return _demoStockRecord(base);
   if (base === "/api/doorway/summary") return DEMO_DOORWAY_SUMMARY;
+  if (base === "/api/pick-facts") return DEMO_PICK_FACTS;
 
   if (base === "/api/sell-moment") return _demoSellMoment(query);
   if (base === "/api/research-notes/list")

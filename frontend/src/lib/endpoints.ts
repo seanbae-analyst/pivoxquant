@@ -353,6 +353,8 @@ export const API = {
   // notes on one timeline. GET only; the user's own records, no quote.
   //   GET /<ticker> → {ticker, name, holding, counts, events}
   stockRecord: (ticker: string) => `/api/stock-record/${encodeURIComponent(ticker)}`,
+  // 내가 고른 회사들 — 산 날 직전 공시 연간 숫자로 센 개수 (2026-10-25).
+  pickFacts: "/api/pick-facts",
   research: {
     create: "/api/research-notes",
     list: "/api/research-notes/list",

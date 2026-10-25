@@ -50,6 +50,8 @@ from .research_note import ResearchNote
 from .doorway_check import DoorwayCheck
 # 미국 회사 공시 목록 (SEC EDGAR) — 종목 기록 타임라인용 공개 사실, 유저 데이터 아님.
 from .company_filing import CompanyFiling
+# 회사 연간 숫자 (SEC companyfacts · DART 주요계정) — 내가 고른 회사들 카드, 공개 사실.
+from .company_annual_fact import CompanyAnnualFact
 # Feature 5 — AI Twin (paper portfolio simulator). 100% paper / no broker.
 from .ai_twin_portfolio import AITwinPortfolio, DEFAULT_STARTING_CASH
 from .ai_twin_position import AITwinPosition
@@ -118,4 +120,4 @@ __all__ = ["User", "Position", "Alert", "SignalCache", "TradeHistory",
            "Inquiry", "INQUIRY_VALID_STATUSES", "INQUIRY_VALID_CATEGORIES",
            "ImportBatch", "PendingTrade", "ImportToken",
            "ObservationNote", "OBSERVATION_NOTE_SOURCES",
-           "ResearchNote", "DoorwayCheck", "CompanyFiling"]
+           "ResearchNote", "DoorwayCheck", "CompanyFiling", "CompanyAnnualFact"]

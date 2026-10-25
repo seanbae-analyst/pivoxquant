@@ -19,6 +19,7 @@ def register_blueprints(app):
     from .observation_notes import observation_notes_bp  # 관찰 노트 — 거래 없이 적는 기록
     from .research_notes import research_notes_bp  # 리서치 양식 + 정한 날 다시 채점
     from .stock_record import stock_record_bp  # 종목별 내 기록 — 한 종목의 체결·멈춤·리서치·노트
+    from .pick_facts import pick_facts_bp  # 내가 고른 회사들 — 산 날 직전 공시 연간 숫자 개수
     from .doorway import doorway_bp  # 문 앞의 한 줄 — 증권 앱을 여는 순간의 답
     from .sell_moment import sell_moment_bp  # 매도 순간의 거울 — 먼저 적어 둔 말 + 보유 일수
     from .email_preferences import email_pref_bp  # 정통망법 §50 unsubscribe
@@ -45,6 +46,7 @@ def register_blueprints(app):
         observation_notes_bp,
         research_notes_bp,
         stock_record_bp,
+        pick_facts_bp,
         doorway_bp,
         sell_moment_bp,
         email_pref_bp,

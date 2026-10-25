@@ -36,6 +36,7 @@ import type {
   DoorwayCreateResponse,
   DoorwayIntent,
   DoorwaySummaryResponse,
+  PickFactsResponse,
   ResearchByTickerResponse,
   StockRecordResponse,
   ResearchInfoSource,
@@ -352,6 +353,17 @@ export function useYearRecap(year: number | null) {
 }
 
 /* ── Research notes (리서치 양식) ───────────────────────────────────────── */
+
+/* ── 내가 고른 회사들 (pick facts) ─────────────────────────────────────────── */
+
+/** Counts over the year's first buys, from numbers filed before each buy — the /mirror card. */
+export function usePickFacts() {
+  const swr = useSWR<PickFactsResponse>(API.pickFacts, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 60_000,
+  });
+  return { data: swr.data ?? null, isLoading: swr.isLoading, error: swr.error as Error | undefined };
+}
 
 /* ── 문 앞의 한 줄 (doorway pause) ──────────────────────────────────────── */
 
