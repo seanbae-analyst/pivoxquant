@@ -26,8 +26,8 @@ Rules
 * **One outside source, behind a flag.** With ``FILINGS_ENABLED`` on, a US
   name's SEC filings (annual · quarterly · current reports, 실적 발표) are
   laid between the user's records by their official filing date, with a link
-  to the original — facts, not a reading (services/filing_timeline). Off by
-  default; never for KR names here.
+  to the original — facts, not a reading (services/filing_timeline). On by
+  default since 2026-10-25 (CEO); never for KR names here.
 
 The route wraps it in the legal scrub, keeping the user's own words verbatim.
 Reads only — except that an enabled filing sync may store new public filing

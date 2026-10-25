@@ -110,6 +110,9 @@ os.environ["LAUNCH_FREE_ALL_TIERS"] = "0"
 # 스위트 곳곳이 /register 로 유저를 만들므로 테스트에선 켠다. 꺼진 상태는
 # tests/test_auth.py::TestRegisterDisabledByDefault 가 monkeypatch 로 잰다.
 os.environ["PASSWORD_REGISTRATION_ENABLED"] = "1"
+# 종목 기록의 SEC 공시(config.FILINGS_ENABLED, prod 기본 켜짐)는 테스트에서 끈다 —
+# SEC 를 부르지 않게. 공시를 보는 테스트는 app.config 로 켜고 SEC 를 스텁한다.
+os.environ["FILINGS_ENABLED"] = "0"
 
 # Eagerly import the app module NOW. ``app.py`` runs
 # ``load_dotenv(..., override=True)`` at module import, which RE-injects every

@@ -131,12 +131,14 @@ PASSWORD_REGISTRATION_ENABLED = (
 AI_READ_ENABLED = os.environ.get("AI_READ_ENABLED", "0").strip() in _TRUTHY_ENV
 
 # FILINGS_ENABLED — 종목 기록(/journal/stock/<ticker>)에 미국 회사 공시 목록
-# (SEC EDGAR: 연간·분기·수시 보고, 실적 발표)을 끼운다. 기본 꺼짐 (2026-10-25).
+# (SEC EDGAR: 연간·분기·수시 보고, 실적 발표)을 끼운다. 기본 켜짐 — 2026-10-25
+# 대표 지시("너가 해줘라")로 켰다. 끄려면 Render 에 FILINGS_ENABLED=0.
 # 시세가 아니라 공개 공시(양식 · 공식 공시일 · 원문 링크)라 MARKET_DATA_DISPLAY
 # 와 무관하다. SEC 원문: sec.gov 정보는 허락 없이 복사·재배포 가능, 초당 10회,
-# User-Agent 선언. 켜는 건 대표가 정한다. 읽는 곳은
+# User-Agent 선언. SEC 가 막혀도 페이지는 공시 없이 뜬다. 테스트는
+# tests/conftest.py 가 끈다(네트워크 없음). 읽는 곳은
 # services/filing_timeline/__init__.py::filings_enabled() 하나.
-FILINGS_ENABLED = os.environ.get("FILINGS_ENABLED", "0").strip() in _TRUTHY_ENV
+FILINGS_ENABLED = os.environ.get("FILINGS_ENABLED", "1").strip() in _TRUTHY_ENV
 
 
 class Config:
