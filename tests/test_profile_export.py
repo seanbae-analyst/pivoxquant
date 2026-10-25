@@ -198,7 +198,28 @@ def test_export_empty_user_returns_valid_payload(client, auth_user):
     for section in body["counts"]:
         assert body[section] == [], f"{section} should be [] for empty user"
     assert body["investment_profile"] is None
+    assert body["onboarding_answers"] == {}
+    assert body["onboarding_draft"] == {}
     assert body["user"]["email"] == auth_user["email"]
+
+
+def test_export_includes_own_onboarding_answers_and_draft(app, client, auth_user):
+    """PIPA §35 (2026-10-22): the answers themselves, not only the vector."""
+    from extensions import db
+    from models import InvestmentProfile, User
+
+    with app.app_context():
+        db.session.add(InvestmentProfile(
+            user_id=auth_user["id"],
+            onboarding_answers_json=json.dumps({"q_hold": "weeks"}),
+        ))
+        u = db.session.get(User, auth_user["id"])
+        u.onboarding_draft_json = json.dumps({"q_hold": "months"})
+        db.session.commit()
+
+    body = json.loads(client.get("/api/profile/export").data)
+    assert body["onboarding_answers"] == {"q_hold": "weeks"}
+    assert body["onboarding_draft"] == {"q_hold": "months"}
 
 
 # ─────────────────────────────────────────────────────────────────────

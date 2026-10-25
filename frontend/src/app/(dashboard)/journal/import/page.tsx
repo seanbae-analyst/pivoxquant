@@ -276,7 +276,7 @@ function ImportPageInner() {
             maxLength={64}
             value={pdfPassword}
             onChange={(e) => setPdfPassword(e.target.value)}
-            className="pq-input-noom-mono mt-2 block w-full max-w-xs bg-transparent px-3 py-2 font-mono outline-none"
+            className="pq-input-noom-mono mt-2 block w-full max-w-xs bg-transparent px-3 py-2 font-mono outline-none focus:border-[var(--pq-bronze)]!"
             style={{
               color: "var(--pq-ivory)",
               border: "0.5px solid var(--pq-ivory-line)",
@@ -347,11 +347,16 @@ function ImportPageInner() {
   return (
     <div className="mx-auto w-full max-w-2xl px-0 pb-2 md:px-6 md:py-8">
       <header className="mb-6">
-        <RuledKicker>{t("journal.import.page.kicker")}</RuledKicker>
-        <EditorialHead as="h1" size={32} className="mt-3">
+        {/* Phone: the app bar already reads "체결 가져오기" — the kicker and
+            the same words again as a 32px head pushed the form below the fold.
+            The h1 stays for screen readers. */}
+        <div className="hidden md:block">
+          <RuledKicker>{t("journal.import.page.kicker")}</RuledKicker>
+        </div>
+        <EditorialHead as="h1" size={32} className="sr-only md:not-sr-only md:mt-3">
           {t("journal.import.page.heading")}
         </EditorialHead>
-        <Caption className="mt-2 max-w-lg">{t("journal.import.page.headingDesc")}</Caption>
+        <Caption className="max-w-lg md:mt-2">{t("journal.import.page.headingDesc")}</Caption>
         <Link
           href="/journal"
           // Phone: the app bar's ‹ carries back (top-bar.tsx subScreen).

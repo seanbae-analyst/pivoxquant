@@ -332,6 +332,7 @@ export interface ResearchNote {
   id: number;
   ticker: string;
   name: string;
+  /** "" when not written (optional since 2026-10-25). */
   business: string;
   /** 1~3 assumptions, in the order written. */
   theses: string[];
@@ -1049,11 +1050,17 @@ export interface MyRuleItem {
   title: string;
   /** The line in the user's own terms, e.g. "한 달에 매수·매도 5번 이하". */
   line: string;
-  /** False for the −10% answer — no prices, so it is shown but never counted. */
+  /** Whether the line is counted (all four are since 2026-10-25). */
   measurable: boolean;
   status: MyRuleStatus;
   /** The observed fact, ready to print, e.g. "이번 달 6번 · 선 5번". */
   observed: string;
+  /** A caveat printed under the count (drawdown: holding leaves no fill). */
+  note?: string;
+  /* drawdown — fills 10%+ under the ticker's running average cost */
+  sold_under?: number;
+  added_under?: number;
+  pct?: number;
   /* frequency */
   ceiling?: number | null;
   this_month?: number;
@@ -1374,4 +1381,125 @@ export interface YearRecapResponse {
    *  null when there was no door answer that year. Counts only, no lines. */
   doorway: null | YearRecapDoorway;
   empty: boolean;
+}
+
+/* ── 종목별 내 기록 (GET /api/stock-record/<ticker>, 2026-10-25) ───────── */
+
+export type StockRecordEvent =
+  | {
+      kind: "fill";
+      at: string | null;
+      side: "buy" | "sell";
+      shares: number;
+      price: number;
+      currency: string | null;
+      /** The fill was linked to a pause (TradeHistory.reflection_id). */
+      after_pause: boolean;
+    }
+  | { kind: "registered"; at: string | null; shares: number; price: number; currency: string | null }
+  | {
+      kind: "pause";
+      at: string | null;
+      side: "entry" | "exit" | null;
+      rationale: string;
+      status: string | null;
+      /** Entry pauses: a buy of this name followed. null for exit pauses. */
+      bought_after: boolean | null;
+    }
+  | {
+      kind: "research";
+      at: string | null;
+      id: number;
+      theses: string[];
+      invalidation: string | null;
+      verdicts: string[];
+      review_on: string | null;
+      reviewed_at: string | null;
+      due: boolean | null;
+    }
+  | { kind: "note"; at: string | null; id: number; body: string; tags: string[] }
+  | {
+      /** A company filing — SEC EDGAR (US) or DART (KR). `at` is the filing date's 00:00. */
+      kind: "filing";
+      at: string | null;
+      /** Official filing date, "YYYY-MM-DD" — US (Eastern) date for SEC, KST for DART. */
+      filed_on: string;
+      /** SEC form code ("8-K") or DART type name ("정기공시"). */
+      form: string;
+      /** SEC: fixed Korean name ("분기보고서", "실적 발표"); DART: the official report name. Never a reading. */
+      label: string;
+      /** SEC 8-K item 2.02 / DART 잠정실적 original (a correction is not a second release). */
+      earnings: boolean;
+      url: string;
+      source: string;
+    };
+
+/** "Did I trade right after an earnings release?" — counts only (FILINGS_ENABLED). */
+export interface StockRecordFilingReaction {
+  /** Earnings releases (8-K 2.02) in the record's span. */
+  earnings: number;
+  /** Counted: the fill's market date is the day after through `window_days` after a release. */
+  window_days: number;
+  /** Which calendar the dates are on — "us" (SEC) or "kr" (DART). */
+  date_basis?: "us" | "kr";
+  buys_after: number;
+  sells_after: number;
+  timed_fills: number;
+  /** Date-only fills — not countable, set aside. */
+  untimed_fills: number;
+}
+
+export interface StockRecordResponse {
+  ok: boolean;
+  disclaimer?: string;
+  ticker: string;
+  name: string | null;
+  holding: { shares: number; avg_cost: number | null; currency: string } | null;
+  counts: {
+    fills: number;
+    buys: number;
+    sells: number;
+    pauses: number;
+    /** Pauses before buying that no buy of this name followed. */
+    not_taken: number;
+    research: number;
+    notes: number;
+    /** SEC filings laid on the timeline (0 when filings are off). */
+    filings?: number;
+  };
+  filing_reaction?: StockRecordFilingReaction | null;
+  /** Newest first. */
+  events: StockRecordEvent[];
+}
+
+/** GET /api/pick-facts — 내가 고른 회사들 (services/pick_facts). Counts only. */
+export interface PickFactsPick {
+  ticker: string;
+  name: string | null;
+  /** KST date of the first buy in the window. */
+  bought_on: string;
+  /** Fiscal year end of the annual numbers used — filed before `bought_on`. */
+  fiscal_end: string;
+  filed_on: string;
+  net_loss: boolean;
+  revenue_down: boolean;
+  liabilities_over_equity: boolean;
+  source: string;
+}
+
+export interface PickFactsResponse {
+  ok: boolean;
+  disclaimer?: string;
+  window_days: number;
+  /** Stocks first bought in the window. */
+  picked: number;
+  /** Of those, with annual numbers filed before the buy. */
+  with_facts: number;
+  /** Not fetched yet (next visit fills them). */
+  pending: number;
+  /** No source, or nothing filed before the buy. */
+  no_facts: number;
+  counts: { net_loss: number; revenue_down: number; liabilities_over_equity: number };
+  sources: string[];
+  picks: PickFactsPick[];
 }

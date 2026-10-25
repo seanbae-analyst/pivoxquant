@@ -94,7 +94,10 @@ def create_research(user_id: int, data) -> dict:
     if not isinstance(data, dict):
         raise ValueError("body must be a JSON object")
     ticker = _validate_ticker(data.get("ticker"))
-    business = _validate_text(data.get("business"), "business", MAX_BUSINESS_CHARS, required=True)
+    # Optional since 2026-10-25 (CEO "적어야 할게 너무 많다"): the form opens on
+    # the reason and the wrong-signal; this one is folded. The column is NOT
+    # NULL, so an unanswered field is stored as "".
+    business = _validate_text(data.get("business"), "business", MAX_BUSINESS_CHARS) or ""
     theses = _validate_theses(data.get("theses"))
     invalidation = _validate_text(data.get("invalidation"), "invalidation", MAX_INVALIDATION_CHARS)
     risk = _validate_text(data.get("risk"), "risk", MAX_RISK_CHARS)
@@ -222,6 +225,23 @@ def research_for_ticker(user_id: int, ticker: str) -> dict:
         "count": int(count),
         "note": _dicts(int(user_id), [latest], kst_today())[0] if latest else None,
     }
+
+
+def research_list_for_ticker(user_id: int, ticker: str) -> list[dict]:
+    """Every note the caller wrote on one ticker, newest first — the 종목별
+    내 기록 timeline (services/stock_record) reads them all, not just the
+    latest one /pre-trade shows."""
+    normalized = normalize_ticker(str(ticker or ""))
+    if not normalized:
+        raise ValueError("ticker is required")
+    rows = (
+        ResearchNote.query.filter(
+            ResearchNote.user_id == int(user_id), ResearchNote.ticker == normalized
+        )
+        .order_by(ResearchNote.id.desc())
+        .all()
+    )
+    return _dicts(int(user_id), rows, kst_today())
 
 
 def get_research(note_id: int, user_id: int) -> dict:

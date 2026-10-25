@@ -150,7 +150,7 @@ export function ResearchReview({
           {saving ? "저장하는 중" : "채점 저장"}
         </button>
         {onCancel && (
-          <button type="button" onClick={onCancel} className="text-pq-caption text-[var(--pq-ivory-dim)] hover:text-[var(--pq-ivory)]">
+          <button type="button" onClick={onCancel} className="pq-hit text-pq-caption text-[var(--pq-ivory-dim)] hover:text-[var(--pq-ivory)]">
             취소
           </button>
         )}
@@ -211,7 +211,8 @@ export function ResearchCard({
         {written}에 씀{note.info_source ? ` · ${INFO_SOURCE_LABEL[note.info_source]}에서 알게 됨` : ""}
       </Caption>
 
-      <Field label="뭘로 돈을 버나">{note.business}</Field>
+      {/* 2026-10-25: the reason and the wrong-signal are the two fields the
+          form opens on, so they are the two the card leads with. */}
       <div className="mt-3">
         <div className="text-pq-caption text-[var(--pq-ivory-faint)]">내가 본 이유</div>
         <ol className="mt-1 list-none space-y-1.5 p-0">
@@ -225,11 +226,13 @@ export function ResearchCard({
           ))}
         </ol>
       </div>
+      {note.invalidation && <Field label="이게 보이면 틀린 것">{note.invalidation}</Field>}
       {scored && note.review_note && <Field label="채점 한 줄">{note.review_note}</Field>}
 
       <details className="mt-3">
         <summary className="cursor-pointer select-none text-pq-caption text-[var(--pq-ivory-dim)]">나머지 칸</summary>
-        <Field label="이게 보이면 틀린 것">{note.invalidation ?? "적지 않음"}</Field>
+        {!note.invalidation && <Field label="이게 보이면 틀린 것">적지 않음</Field>}
+        <Field label="뭘로 돈을 버나">{note.business || "적지 않음"}</Field>
         <Field label="가장 큰 위험">{note.risk ?? "적지 않음"}</Field>
         <Field label="직접 확인한 숫자">{note.numbers ?? "안 봄"}</Field>
       </details>
@@ -254,13 +257,13 @@ export function ResearchCard({
               className={
                 note.due
                   ? "pq-ink-btn-bronze inline-flex items-center px-4 py-1.5 text-pq-mono-sm"
-                  : "text-pq-caption text-[var(--pq-bronze-light)] underline-offset-4 hover:underline"
+                  : "pq-hit text-pq-caption text-[var(--pq-bronze-light)] underline-offset-4 hover:underline"
               }
             >
               {note.due ? "채점하기" : "지금 채점하기"}
             </button>
           )}
-          <button type="button" onClick={remove} className="text-pq-caption text-[var(--pq-ivory-faint)] hover:text-[var(--pq-ivory)]">
+          <button type="button" onClick={remove} className="pq-hit text-pq-caption text-[var(--pq-ivory-faint)] hover:text-[var(--pq-ivory)]">
             지우기
           </button>
         </div>

@@ -120,19 +120,18 @@ def webhook_check():
                "설정 → 체결 자동 기록에서 새 열쇠를 만들어 바꿔 주세요.",
             code="DOORWAY_TOKEN_RECONSENT", status=403,
         )
-    resp = _created(g.import_user_id, SOURCE_AUTOMATION)
-    if isinstance(resp, tuple) and resp[1] == 201:
-        # 설정의 "마지막 사용"이 문 앞 답에도 갱신돼야 한다 — 문 앞에만 쓰는
-        # 열쇠가 "쓴 적 없음"으로 보이면 지워도 되는 열쇠로 읽힌다
-        # (routes/imports.py 웹훅과 같은 처리).
-        token = g.import_token
-        token.last_used_at = utcnow_naive()
-        try:
-            db.session.commit()
-        except Exception:
-            db.session.rollback()
-            logger.warning("doorway.webhook last_used_at update failed token_id=%s", token.id)
-    return resp
+    result = _created(g.import_user_id, SOURCE_AUTOMATION)
+    if result[1] != 201:
+        return result
+    # 설정의 "마지막 사용"이 문 앞으로만 쓰는 열쇠에도 맞게 — imports.webhook 과 같다.
+    token = g.import_token
+    token.last_used_at = utcnow_naive()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.warning("doorway.webhook last_used_at update failed token_id=%s", token.id)
+    return result
 
 
 @doorway_bp.route("/checks", methods=["POST"])

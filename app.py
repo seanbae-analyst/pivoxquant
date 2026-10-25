@@ -1037,6 +1037,10 @@ def _do_migrations():
     # consent text that names 문 앞의 한 줄 answers. NULL (older tokens) →
     # routes/doorway.py refuses door answers sent with it.
     _add_column_if_missing("import_tokens", "doorway_consent_at", "TIMESTAMP")
+    # company_filings.title — 2026-10-25. Alembic twin: 066_company_filing_title.
+    # Nullable VARCHAR(200): the DART report name (한국 공시). A box whose table
+    # was created by 065 / create_all before this column existed gets it here.
+    _add_column_if_missing("company_filings", "title", "VARCHAR(200)")
 
     # pending_trades.currency_stated — 2026-09-29. Alembic twin:
     # 057_pending_currency_stated. Nullable BOOLEAN: did the input state the
@@ -1388,7 +1392,14 @@ def _init_scheduler(app):
         from models import Position
         with app.app_context():
             try:
-                tickers = sorted({p.ticker for p in Position.query.all()})
+                from services.market_display import market_data_display_enabled
+
+                held = sorted({p.ticker for p in Position.query.all()})
+                # Display off: identity only, so a ticker is re-warmed once a
+                # day, not every 3 min (FMP budget — cache_service).
+                tickers = cache_service.tickers_due_for_refresh(
+                    held, display_on=market_data_display_enabled(),
+                )
                 # Release the connection before any external API work.
                 db.session.remove()
 

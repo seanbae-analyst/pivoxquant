@@ -264,7 +264,7 @@ def test_date_only_fills_join_no_open_but_count_by_kst_day():
     day = datetime(2026, 9, 1)                     # stored date-only fill of 9/1 (KST)
     look = _check(1, datetime(2026, 8, 31, 23, 30), "look")       # 9/1 08:30 KST
     buy = _check(2, datetime(2026, 9, 1, 11, 0), "buy", "TSLA")   # 9/1 20:00 KST
-    fills = [Fill(day, "TSLA", "BUY")]
+    fills = [Fill(day, "TSLA", "BUY", untimed=True)]
     out = summarize([look, buy], fills, now=NOW, days=90, first_check_at=look.created_at)
     assert {r["id"]: r["outcome"] for r in out["recent"]} == {1: "none", 2: "none"}
     assert out["look"] == {"n": 1, "traded": 0}
@@ -324,6 +324,75 @@ def test_year_section_counts_only_that_year():
                         first_check_at=checks[0].created_at) is None
 
 
+def test_a_not_happened_open_does_not_shrink_the_window():
+    """2026-10-21: the 30-day follow-up rebound ``summarize``'s ``start``/``end``,
+    so the first unfilled buy/sell open with a ticker cut every later open and
+    fill out of a 90-day window and out of the year."""
+    old = NOW - timedelta(days=80)
+    checks = [_check(1, old, "buy", "005930.KS")] + [
+        _check(i, NOW - timedelta(days=11 - i), "look") for i in range(2, 7)
+    ]
+    fills = [Fill(NOW - timedelta(days=5, minutes=-10), "TSLA", "BUY")]
+    out = summarize(checks, fills, now=NOW, days=90, first_check_at=old)
+    assert out["total"] == 6
+    assert out["intents"] == {"look": 5, "buy": 1, "sell": 0}
+    assert out["not_happened"] == {"n": 1, "later": 0, "never": 1, "open": 0}
+    assert out["fills"] == {"total": 1, "through_door": 1}
+    assert len(out["recent"]) == 6
+
+    start, end = datetime(2025, 12, 31, 15, 0), datetime(2026, 12, 31, 15, 0)
+    year = [
+        _check(1, datetime(2026, 1, 10, 1, 0), "buy", "AAPL"),
+        _check(2, datetime(2026, 8, 1, 1, 0), "look"),
+        _check(3, datetime(2026, 8, 2, 1, 0), "look"),
+        _check(4, datetime(2026, 8, 3, 1, 0), "look"),
+    ]
+    out = year_section(year, [Fill(datetime(2026, 8, 3, 1, 20), "TSLA", "BUY")],
+                       start=start, end=end, now=NOW, first_check_at=year[0].created_at)
+    assert out["total"] == 4
+    assert out["fills"] == {"total": 1, "through_door": 1}
+
+
+@pytest.mark.parametrize("fill_ticker", ["035720.KS", "035720", "035720.KQ"])
+def test_suffix_variants_are_the_same_name(fill_ticker):
+    """.KS / .KQ / bare code are one name — friction_outcome.ticker_key."""
+    t0 = NOW - timedelta(days=40)
+    checks = [_check(1, t0, "buy", "035720.KQ"), _check(2, t0 + timedelta(days=1), "buy", "035720.KQ")]
+    fills = [
+        Fill(t0 + timedelta(minutes=5), fill_ticker, "BUY"),
+        # check 2 has no fill of its own; a later fill of the same name is "later".
+        Fill(t0 + timedelta(days=3), fill_ticker, "BUY"),
+    ]
+    out = summarize(checks, fills, now=NOW, days=90, first_check_at=t0)
+    assert out["said"]["buy"] == {"n": 2, "as_said": 1, "other": 0, "none": 1}
+    assert out["not_happened"] == {"n": 1, "later": 1, "never": 0, "open": 0}
+
+
+def test_a_date_only_fill_is_counted_but_never_follows_an_open():
+    """A date-only fill is stored as its KST date at 00:00 (= 09:00 KST): it
+    has no time, so it must not read as the fill right after a pre-open door."""
+    door = datetime(2026, 10, 13, 23, 30)  # 2026-10-14 08:30 KST
+    checks = [_check(1, door, "look")]
+    fills = [Fill(datetime(2026, 10, 14, 0, 0), "AAPL", "BUY", untimed=True)]
+    out = summarize(checks, fills, now=NOW, first_check_at=door)
+    assert out["look"] == {"n": 1, "traded": 0}
+    assert out["fills"] == {"total": 1, "through_door": 0}
+
+
+def test_load_fills_marks_date_only_rows(app, auth_user):
+    from services.doorway.service import load_fills
+
+    with app.app_context():
+        for at in (datetime(2026, 10, 14, 0, 0), datetime(2026, 10, 14, 5, 0)):
+            db.session.add(TradeHistory(
+                user_id=auth_user["id"], ticker="AAPL", action="BUY", shares=1.0,
+                price_per_share=100.0, total_value=100.0, currency="USD", traded_at=at,
+            ))
+        db.session.commit()
+        got = sorted((f.traded_at.hour, f.untimed) for f in load_fills(auth_user["id"], datetime(2026, 10, 1)))
+    assert got == [(0, True), (5, False)]
+
+
 # ─────────────────────────────────────────────────────────────────────
 # Routes
 # ─────────────────────────────────────────────────────────────────────
@@ -368,10 +437,8 @@ def test_webhook_records_with_the_import_token(client, bearer_client, auth_user)
     assert plain.status_code == 201
     assert plain.get_json()["check"]["intent"] == "look"
     assert plain.get_json()["pause_url"] is None
-
-    # Settings shows when a key was last used — door answers count as use.
-    listed = client.get(TOKENS).get_json()["tokens"]
-    assert listed[0]["last_used_at"]
+    # A token used only at the door still shows as used in Settings.
+    assert client.get(TOKENS).get_json()["tokens"][0]["last_used_at"]
 
 
 def test_token_issued_before_door_consent_is_refused(client, bearer_client, auth_user, app):
@@ -498,3 +565,76 @@ def test_export_includes_doorway_checks(client, auth_user):
     body = client.get("/api/profile/export").get_json()
     assert body["counts"]["doorway_checks"] == 1
     assert body["doorway_checks"][0]["note"] == "반등 정리"
+
+
+def test_a_same_day_date_only_fill_is_not_a_trade_that_never_happened():
+    """'살 게 있음' at 10:00 KST, then a date-only BUY of that name the same KST
+    day: the user did buy — the 00:00 stamp is no time, so it is 'later', not
+    'never'."""
+    door = datetime(2026, 9, 1, 1, 0)  # 2026-09-01 10:00 KST
+    checks = [_check(1, door, "buy", "005930.KS")]
+    fills = [Fill(datetime(2026, 9, 1, 0, 0), "005930", "BUY", untimed=True)]
+    out = summarize(checks, fills, now=NOW, days=90, first_check_at=door)
+    assert out["said"]["buy"]["none"] == 1
+    assert out["not_happened"] == {"n": 1, "later": 1, "never": 0, "open": 0}
+
+
+def test_a_date_only_fill_the_day_before_is_not_later():
+    door = datetime(2026, 9, 1, 1, 0)  # 2026-09-01 10:00 KST
+    checks = [_check(1, door, "buy", "005930.KS")]
+    fills = [Fill(datetime(2026, 8, 31, 0, 0), "005930", "BUY", untimed=True)]
+    out = summarize(checks, fills, now=NOW, days=90, first_check_at=door)
+    assert out["not_happened"] == {"n": 1, "later": 0, "never": 1, "open": 0}
+
+
+def test_a_date_only_fill_on_the_first_doors_day_is_counted():
+    """The first door at 10:00 KST and a date-only fill the same KST day: the
+    fill is in the window (it was dropped — 00:00 compared as a time)."""
+    door = datetime(2026, 10, 14, 1, 0)  # 2026-10-14 10:00 KST
+    checks = [_check(1, door, "look")]
+    fills = [Fill(datetime(2026, 10, 14, 0, 0), "AAPL", "BUY", untimed=True)]
+    out = summarize(checks, fills, now=NOW, first_check_at=door)
+    assert out["fills"] == {"total": 1, "through_door": 0}
+
+
+def test_a_date_only_fill_the_day_before_the_first_door_is_not_counted():
+    door = datetime(2026, 10, 14, 1, 0)
+    checks = [_check(1, door, "look")]
+    fills = [Fill(datetime(2026, 10, 13, 0, 0), "AAPL", "BUY", untimed=True)]
+    out = summarize(checks, fills, now=NOW, first_check_at=door)
+    assert out["fills"] == {"total": 0, "through_door": 0}
+
+
+def test_today_date_only_fill_counts_in_this_years_section():
+    """This year's section ends at ``now``; a date-only fill dated today is in
+    it (2026-10-22 regression: "day < today" dropped it)."""
+    now = datetime(2026, 10, 22, 6, 0)  # 15:00 KST
+    start = datetime(2025, 12, 31, 15, 0)
+    checks = [_check(1, datetime(2026, 10, 1, 1, 0), "look")]
+    fills = [Fill(datetime(2026, 10, 22, 0, 0), "AAPL", "BUY", untimed=True)]
+    out = year_section(checks, fills, start=start, end=now, now=now, first_check_at=checks[0].created_at)
+    assert out["fills"]["total"] == 1
+
+
+def test_a_past_years_section_still_ends_at_its_kst_midnight():
+    start, end = datetime(2024, 12, 31, 15, 0), datetime(2025, 12, 31, 15, 0)
+    checks = [_check(1, datetime(2025, 3, 1, 1, 0), "look")]
+    fills = [Fill(datetime(2026, 1, 1, 0, 0), "AAPL", "BUY", untimed=True)]  # next year
+    out = year_section(checks, fills, start=start, end=end, now=NOW, first_check_at=checks[0].created_at)
+    assert out["fills"]["total"] == 0
+
+
+def test_load_fills_keeps_a_date_only_fill_on_the_since_kst_day(app, auth_user):
+    """The loader filtered on the stored 00:00, so a date-only fill on the
+    KST day of the first door (after 09:00 KST) never reached the KST-date
+    rules in the year-recap path."""
+    from services.doorway.service import load_fills
+
+    with app.app_context():
+        db.session.add(TradeHistory(
+            user_id=auth_user["id"], ticker="005930.KS", action="BUY", shares=1.0,
+            price_per_share=70000.0, traded_at=datetime(2026, 10, 14, 0, 0),
+        ))
+        db.session.commit()
+        fills = load_fills(auth_user["id"], datetime(2026, 10, 14, 4, 0))  # 13:00 KST
+    assert [f.untimed for f in fills] == [True]

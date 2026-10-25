@@ -360,3 +360,37 @@ def test_route_defaults_to_this_year_and_reads_rules(client, app, auth_user):
     assert body["year"] == kst_year(datetime.now(timezone.utc).replace(tzinfo=None))
     assert body["empty"] is True and body["years"] == []
     assert body["rules"]["frequency"]["ceiling"] == 2
+
+
+# ── 2026-10-22 버그헌팅 ──────────────────────────────────────────────────
+
+def test_route_rejects_non_ascii_digits_with_400(client, auth_user):
+    # "²" 는 isdigit() 를 통과하고 int() 에서 터졌다 (500). 전각 숫자도 받지 않는다.
+    for bad in ("²²²²", "２０２６"):
+        resp = client.get("/api/mirror-home/year", query_string={"year": bad})
+        assert resp.status_code == 400, bad
+        body = resp.get_json()
+        assert body["code"] == "YEAR_RECAP_BAD_YEAR"
+        assert "recorded as" not in body["error"]  # 영문 문구가 스크럽에 망가지지 않는다
+
+
+def test_route_years_offer_only_years_the_route_accepts(client, app, auth_user):
+    with app.app_context():
+        db.session.add(TradeHistory(user_id=auth_user["id"], ticker="OLD", action="BUY", shares=1.0,
+                                    price_per_share=1.0, total_value=1.0, traded_at=datetime(2018, 5, 5)))
+        db.session.add(TradeHistory(user_id=auth_user["id"], ticker="NEW", action="BUY", shares=1.0,
+                                    price_per_share=1.0, total_value=1.0, traded_at=datetime(2025, 5, 5)))
+        db.session.commit()
+    body = client.get("/api/mirror-home/year").get_json()
+    assert 2018 not in body["years"] and 2025 in body["years"]
+    for y in body["years"]:
+        assert client.get(f"/api/mirror-home/year?year={y}").status_code == 200
+
+
+def test_offline_name_never_echoes_the_ticker():
+    from routes.year_recap import _offline_name
+
+    assert _offline_name("005930.KS") == "삼성전자"
+    assert _offline_name("005930") == "삼성전자"  # 접미사 없는 6자리도 한국 종목
+    assert _offline_name("123456.KS") is None
+    assert _offline_name("ZZZZQ") is None

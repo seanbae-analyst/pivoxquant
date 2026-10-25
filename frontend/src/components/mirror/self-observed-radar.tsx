@@ -29,13 +29,31 @@ interface SelfObservedRadarProps {
   className?: string;
 }
 
-// viewBox carries horizontal padding (x from -55 to 345) so the long left/right
-// axis labels (e.g. "선언한 위험 감내") never clip outside the canvas.
-const VIEWBOX = "-55 0 410 300";
+// 2026-10-22 (phone polish): the old 410-wide viewBox spent a third of its
+// width on single-line labels, so on a phone the plot drew ~150px across with
+// 8px text. Long labels now wrap onto two lines and each label block grows
+// away from the plot, which lets the canvas hug the shape: same card, ~35%
+// larger plot, ~11px labels.
+const VIEWBOX = "-20 -12 340 330";
 const CX = 150;
-const CY = 148;
-const R = 92;
-const LABEL_R = 110;
+const CY = 158;
+const R = 100;
+const LABEL_R = 114;
+const LABEL_SIZE = 11;
+const VALUE_SIZE = 10;
+const LINE = 13;
+
+/** "선언한 위험 감내" → ["선언한", "위험 감내"]: split at the space nearest
+ *  the middle; short labels stay on one line. */
+export function splitAxisLabel(label: string): string[] {
+  if (label.length <= 5) return [label];
+  const mid = label.length / 2;
+  let best = -1;
+  for (let i = 0; i < label.length; i++) {
+    if (label[i] === " " && (best < 0 || Math.abs(i - mid) < Math.abs(best - mid))) best = i;
+  }
+  return best < 0 ? [label] : [label.slice(0, best), label.slice(best + 1)];
+}
 
 function axisAngle(i: number, n: number): number {
   return -Math.PI / 2 + (2 * Math.PI * i) / n;
@@ -122,7 +140,10 @@ export function SelfObservedRadar({
           );
         })}
 
-      {/* axis labels + the observed value (%) for each behavioural dimension */}
+      {/* axis labels + the observed value (%) for each behavioural dimension.
+          Each label is a block of rows (1–2 label lines, then the value) that
+          sits above the point on the upper axes, below it on the lower ones
+          and centred on the sides — never back over the plot. */}
       {labels.slice(0, n).map((label, i) => {
         const a = axisAngle(i, n);
         const lx = CX + LABEL_R * Math.cos(a);
@@ -130,28 +151,37 @@ export function SelfObservedRadar({
         const anchor = lx < CX - 4 ? "end" : lx > CX + 4 ? "start" : "middle";
         const obs = hasObserved ? (observed as number[])[i] : null;
         const obsText = obs == null ? null : isMeasured(i) ? `${Math.round(obs * 100)}%` : "—";
+        // The top/bottom-centred labels have the width; only the side ones wrap.
+        const lines = anchor === "middle" ? [label] : splitAxisLabel(label);
+        const rows = lines.length + (showValues && obsText != null ? 1 : 0);
+        const sin = Math.sin(a);
+        const firstY =
+          sin < -0.5 ? ly - (rows - 1) * LINE : sin > 0.5 ? ly : ly - ((rows - 1) * LINE) / 2;
+        const x = lx.toFixed(1);
         return (
           <text
             key={label}
-            x={lx.toFixed(1)}
-            y={ly.toFixed(1)}
             textAnchor={anchor}
             dominantBaseline="middle"
-            fontSize={10}
+            fontSize={LABEL_SIZE}
             style={{
-              fill: "rgba(var(--pq-ivory-rgb), 0.55)",
+              fill: "rgba(var(--pq-ivory-rgb), 0.62)",
               fontFamily: "var(--pq-font-sans)",
             }}
           >
-            <tspan x={lx.toFixed(1)}>{label}</tspan>
+            {lines.map((line, k) => (
+              <tspan key={k} x={x} y={(firstY + k * LINE).toFixed(1)}>
+                {line}
+              </tspan>
+            ))}
             {showValues && obsText != null && (
               <tspan
-                x={lx.toFixed(1)}
-                dy="1.3em"
-                fontSize={8.5}
+                x={x}
+                y={(firstY + lines.length * LINE).toFixed(1)}
+                fontSize={VALUE_SIZE}
                 style={{
                   fill: "var(--pq-bronze)",
-                  fontFamily: "var(--pq-font-mono)",
+                  fontVariantNumeric: "tabular-nums",
                 }}
               >
                 {obsText}

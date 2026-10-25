@@ -263,7 +263,8 @@ def compose_email(user: Any, *, period_label: str) -> tuple[str, str]:
             "<div style=\"font-family:-apple-system,BlinkMacSystemFont,"
             "'Segoe UI',sans-serif;line-height:1.7;color:#1a1a1a\">"
             f"<p>{name},</p>"
-            "<p>The attached PDF looks back over the last 30 days of your "
+            "<p>The attached PDF looks back over last month (the 1st to the "
+            "last day) of your "
             "own record — the fills you entered and the pauses you took "
             "before a trade, and how each pause ended. The reasons you "
             "wrote in a pause are not copied into the attachment; they stay "
@@ -283,7 +284,7 @@ def compose_email(user: Any, *, period_label: str) -> tuple[str, str]:
         "<div style=\"font-family:-apple-system,BlinkMacSystemFont,"
         "'Segoe UI',sans-serif;line-height:1.7;color:#1a1a1a\">"
         f"<p>{name} 님,</p>"
-        "<p>지난 30일 동안 직접 기록한 체결과, 거래 전에 멈춘 기록이 각각 "
+        "<p>지난달 1일부터 말일까지 직접 기록한 체결과, 거래 전에 멈춘 기록이 각각 "
         "무엇으로 끝났는지를 한 장으로 정리해 첨부했습니다. 멈춤에 적어 둔 "
         "이유의 본문은 첨부에 옮기지 않았습니다 — 그 글은 PivoxQuant 안에서만 "
         "보입니다.</p>"
@@ -305,6 +306,8 @@ RESULT_SKIPPED_PREF = "skipped_pref"
 RESULT_SKIPPED_CONSENT = "skipped_consent"
 RESULT_SKIPPED_EMPTY = "skipped_empty"
 RESULT_SKIPPED_SEND = "skipped_send"
+# 2026-10-25 — 그 달 몫을 이미 보냈다 (1일 매시 재시도, models/monthly_report_send.py).
+RESULT_SKIPPED_ALREADY = "skipped_already"
 
 
 def send_report_to_user(user: Any, *, now: datetime | None = None) -> str:
@@ -336,6 +339,14 @@ def send_report_to_user(user: Any, *, now: datetime | None = None) -> str:
     filename = mirror_report_filename(label_ref)
     period_label = f"{_to_kst(label_ref):%Y-%m}"
 
+    # 1일 08:30–23:30 매시 다시 도는 잡이다(잠든 서버가 놓친 발송을 되찾으려고).
+    # 이미 보낸 달은 PDF 를 만들기 전에 건너뛴다.
+    from extensions import db
+    from models import MonthlyReportSend
+
+    if MonthlyReportSend.query.filter_by(user_id=user.id, period=period_label).first():
+        return RESULT_SKIPPED_ALREADY
+
     built = build_mirror_pdf(
         user.id, locale=locale, period_days=period_days, as_of=as_of
     )
@@ -358,7 +369,11 @@ def send_report_to_user(user: Any, *, now: datetime | None = None) -> str:
         email_category=EmailCategory.INFORMATION,
         event_id=REPORT_EVENT_ID,
     )
-    return RESULT_SENT if ok else RESULT_SKIPPED_SEND
+    if not ok:
+        return RESULT_SKIPPED_SEND
+    db.session.add(MonthlyReportSend(user_id=user.id, period=period_label))
+    db.session.commit()
+    return RESULT_SENT
 
 
 # ── 전체 발송 ───────────────────────────────────────────────────────────────
@@ -384,6 +399,7 @@ def dispatch_monthly_reports(
         RESULT_SKIPPED_CONSENT: 0,
         RESULT_SKIPPED_EMPTY:   0,
         RESULT_SKIPPED_SEND:    0,
+        RESULT_SKIPPED_ALREADY: 0,
         "errors":               0,
     }
 

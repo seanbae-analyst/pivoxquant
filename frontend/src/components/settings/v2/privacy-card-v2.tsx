@@ -228,7 +228,9 @@ export function PrivacyCardV2({
           gap: 12,
         }}
       >
-        <div>
+        {/* Desktop only: on a phone the app bar already titles this pane
+            "개인정보 · 데이터", and no other pane opens with a hero heading. */}
+        <div className="hidden md:block">
           <div
             className="font-mono"
             style={{
@@ -664,10 +666,9 @@ export function PrivacyCardV2({
         >
           <div>
             <div
-              className="font-display"
+              className="font-display text-[19px] md:text-pq-quote"
               style={{
                 fontWeight: 500,
-                fontSize: "var(--pq-text-quote)",
                 lineHeight: 1.2,
                 color: "var(--pq-ivory)",
                 marginBottom: 12,
@@ -712,10 +713,9 @@ export function PrivacyCardV2({
 
           <div>
             <div
-              className="font-display"
+              className="font-display text-[19px] md:text-pq-quote"
               style={{
                 fontWeight: 500,
-                fontSize: "var(--pq-text-quote)",
                 lineHeight: 1.2,
                 color: "var(--pq-ivory)",
                 marginBottom: 12,
@@ -739,7 +739,7 @@ export function PrivacyCardV2({
             <button
               type="button"
               onClick={() => setShowDelete(true)}
-              className="font-mono"
+              className="pq-hit font-mono"
               style={{
                 fontSize: "var(--pq-text-eyebrow)",
                 color: ERROR_COLOR,

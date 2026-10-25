@@ -21,6 +21,7 @@ import { ChevronLeft } from "lucide-react";
 
 import { NotificationDropdown } from "@/components/ui/notification-dropdown";
 import { ProfileDropdown } from "@/components/ui/profile-dropdown";
+import { josa } from "@/lib/josa";
 import {
   SETTINGS_PANES,
   closePane,
@@ -80,6 +81,9 @@ export function subScreen(pathname: string | null, pane: SettingsPane | null): S
   if (pathname === "/journal/research" || pathname.startsWith("/journal/research/")) {
     return { title: "리서치", parent: "/journal", parentLabel: "기록" };
   }
+  if (pathname.startsWith("/journal/stock/")) {
+    return { title: "종목 기록", parent: "/portfolio", parentLabel: "포트폴리오" };
+  }
   if (pathname === "/mirror/year") {
     return { title: "올해의 기록", parent: "/mirror", parentLabel: "거울" };
   }
@@ -134,7 +138,7 @@ export function TopBar() {
         <button
           type="button"
           onClick={goBack}
-          aria-label={`${sub.parentLabel}(으)로 돌아가기`}
+          aria-label={`${josa(sub.parentLabel, "으로/로")} 돌아가기`}
           className="-ml-3 -mr-3 flex h-12 w-12 shrink-0 items-center justify-center text-[var(--pq-bronze-light)] md:hidden"
           data-testid="topbar-back"
         >
@@ -143,7 +147,7 @@ export function TopBar() {
       )}
       {title && (
         <div
-          className="mr-auto min-w-0 truncate font-serif text-[19px] leading-none text-[var(--pq-ivory)] md:hidden"
+          className="mr-auto min-w-0 truncate font-serif text-[19px] font-semibold leading-none text-[var(--pq-ivory)] md:hidden"
           data-testid="topbar-title"
         >
           {title}

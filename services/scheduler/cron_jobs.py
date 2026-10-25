@@ -653,10 +653,26 @@ def _job_specs() -> list[tuple[str, CronTrigger | IntervalTrigger, Callable[[], 
         # 점검이 아니라 제품 발송이고, 온디맨드 라우트와 같은 코드를 쓴다.
         (
             "ops_monthly_mirror_report",
-            CronTrigger(day=1, hour=8, minute=30, timezone=KST),
+            # 2026-10-25: 1일 08:30–23:30 매시. Render Free 가 08:30 에 자고 있으면
+            # 그 발화는 복구되지 않는다(keep-warm.yml §0-c) — 깨어 있는 다음 정각에
+            # 보낸다. 같은 달은 monthly_report_sends 가 막는다.
+            CronTrigger(day=1, hour="8-23", minute=30, timezone=KST),
             _wrap_python_main(
                 "services.reports_delivery",
                 job_id="ops_monthly_mirror_report",
+            ),
+        ),
+        # 가설 다시 보기 (2026-10-25) — 매일 08:20–23:20 KST 매시. 채점 전
+        # 리서치가 있는 종목의 공시를 받아(종목당 하루 1번) 리서치를 쓴 뒤 나온
+        # 정기보고서·실적 발표를 벨 + 푸시로 (services/filing_timeline/research_check).
+        # 매시인 이유: 서버가 08:20 에 자고 있어도 깨어 있는 다음 정각에 돈다.
+        # 같은 공시는 다시 알리지 않는다(제목 dedup) — 여러 번 돌아도 한 번.
+        (
+            "ops_research_filing_check",
+            CronTrigger(hour="8-23", minute=20, timezone=KST),
+            _wrap_python_main(
+                "services.filing_timeline.research_check",
+                job_id="ops_research_filing_check",
             ),
         ),
     ]

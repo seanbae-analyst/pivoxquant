@@ -74,7 +74,39 @@ const getServerPersonaId = () => null;
 // 2026-05-22 (CEO "50자 너무 많아 10자"): lowered 50 → 10. Keep in lock-step
 // with models/pre_trade_reflection.py MIN_RATIONALE_CHARS — the backend
 // rejects a shorter rationale, so both constants must match.
-export const MIN_RATIONALE_CHARS = 10;
+// 2026-10-25 (CEO "적어야 할게 너무 많다"): 10 → 2 — the reason is picked from
+// REASON_CHIPS (each ≥ 2 chars) with an optional line.
+export const MIN_RATIONALE_CHARS = 2;
+
+/** The rationale sent to /start: picked chips joined with " · ", then the
+ *  optional line after " — ". Either part alone is enough. */
+export function composeRationale(picks: readonly string[], line: string): string {
+  const head = picks.join(" · ");
+  const tail = line.trim();
+  if (head && tail) return `${head} — ${tail}`;
+  return head || tail;
+}
+
+const QUICK_SEP = " — ";
+
+/** Split a stored question answer into its one-tap pick (if it starts with
+ *  one of `quick`) and the free line after it. */
+export function splitQuickAnswer(
+  answer: string,
+  quick: readonly string[],
+): { pick: string | null; extra: string } {
+  for (const q of quick) {
+    if (answer === q) return { pick: q, extra: "" };
+    if (answer.startsWith(q + QUICK_SEP)) return { pick: q, extra: answer.slice(q.length + QUICK_SEP.length) };
+  }
+  return { pick: null, extra: answer };
+}
+
+/** The inverse of splitQuickAnswer — what goes into the audit blob. */
+export function joinQuickAnswer(pick: string | null, extra: string): string {
+  if (pick && extra.trim()) return `${pick}${QUICK_SEP}${extra}`;
+  return pick ?? extra;
+}
 
 // The seven reflective questions live in a single SoT shared with the landing
 // teaser — see `@/data/pre-trade-questions`. Re-exported here under the
@@ -490,6 +522,21 @@ export function QuestionsStep(props: {
   });
   const { cur } = pager;
   const onReview = pagedOnPhone && cur === REVIEW_IDX;
+  // Phone: a quick-answer tap moves to the next screen after a beat, so the
+  // pick is seen landing. One pending move at a time; none after unmount.
+  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (advanceTimer.current) clearTimeout(advanceTimer.current);
+  }, []);
+  const advanceAfterPick = () => {
+    if (advanceTimer.current) clearTimeout(advanceTimer.current);
+    advanceTimer.current = setTimeout(() => {
+      advanceTimer.current = null;
+      pager.ackAndNext();
+    }, 180);
+  };
+  const curPicked =
+    cur < REVIEW_IDX && splitQuickAnswer(answers[QUESTIONS[cur].n] ?? "", QUESTIONS[cur].quick).pick !== null;
   const ackCount = QUESTIONS.filter((q) => acks[q.n]).length;
 
   // Persona-aware hint lines (record-as-spine §7, 2026-06-10). Resolved
@@ -535,6 +582,7 @@ export function QuestionsStep(props: {
               q={q}
               hint={hints?.[q.n]}
               hiddenOnPhone={pagedOnPhone && i !== cur}
+              onPicked={pagedOnPhone && i === cur ? advanceAfterPick : undefined}
               paged={pagedOnPhone}
               acked={!!acks[q.n]}
               answer={answers[q.n] ?? ""}
@@ -639,7 +687,7 @@ export function QuestionsStep(props: {
               className="pq-ink-btn-bronze flex min-h-[48px] flex-1 items-center justify-center text-[15px]"
               data-testid="questions-next"
             >
-              검토했음 · 다음
+              {curPicked ? "다음" : "검토했음 · 다음"}
             </button>
           )}
         </PhoneActionBar>
@@ -652,6 +700,8 @@ function QuestionItem(props: {
   q: (typeof QUESTIONS)[number];
   hint: string | undefined;
   hiddenOnPhone: boolean;
+  /** Phone pager: a tap on a quick answer moves on (the tap is the tick). */
+  onPicked?: () => void;
   /** Phone pager: "질문 n / 7" above already numbers the question and the
    *  action bar's "검토했음 · 다음" ticks it, so the number and the checkbox
    *  are md+ only (2026-10-13 — the same tick sat on screen twice). */
@@ -661,7 +711,17 @@ function QuestionItem(props: {
   setAcks: (f: (prev: Record<number, boolean>) => Record<number, boolean>) => void;
   setAnswers: (f: (prev: Record<number, string>) => Record<number, string>) => void;
 }) {
-  const { q, hint, hiddenOnPhone, paged = false, acked, answer, setAcks, setAnswers } = props;
+  const { q, hint, hiddenOnPhone, paged = false, acked, answer, setAcks, setAnswers, onPicked } = props;
+  const { pick, extra } = splitQuickAnswer(answer, q.quick);
+  const choose = (option: string) => {
+    // Tapping the picked answer again clears it (the line stays).
+    const next = pick === option ? null : option;
+    setAnswers((prev) => ({ ...prev, [q.n]: joinQuickAnswer(next, extra) }));
+    if (next) {
+      setAcks((prev) => ({ ...prev, [q.n]: true }));
+      onPicked?.();
+    }
+  };
   return (
     <li
       className={`border-l-2 border-[var(--pq-ivory-line)] pl-5 hover:border-[var(--pq-bronze)] transition-colors ${
@@ -700,12 +760,41 @@ function QuestionItem(props: {
         </div>
       </div>
       <div className={`mt-3 ml-[34px] flex flex-col gap-2 ${paged ? "max-md:ml-0" : ""}`}>
+        {/* 2026-10-25 — one tap answers; the line below is optional. */}
+        <div
+          role="radiogroup"
+          aria-label={`질문 ${q.n} 빠른 답`}
+          className={`flex flex-wrap gap-2 ${paged ? "max-md:flex-col" : ""}`}
+          data-testid={`question-${q.n}-quick`}
+        >
+          {q.quick.map((option) => {
+            const on = pick === option;
+            return (
+              <button
+                key={option}
+                type="button"
+                role="radio"
+                aria-checked={on}
+                onClick={() => choose(option)}
+                className={`min-h-[40px] rounded-[var(--pq-radius-cta)] border px-3.5 text-left text-pq-body-sm transition-colors ${
+                  paged ? "max-md:min-h-[48px] max-md:px-4 max-md:text-[15px]" : ""
+                } ${
+                  on
+                    ? "border-[var(--pq-bronze)] bg-[rgba(var(--pq-bronze-rgb),0.14)] text-[var(--pq-ivory)]"
+                    : "border-[rgba(245,240,232,0.15)] text-[var(--pq-ivory-mid)] hover:border-[rgba(245,240,232,0.45)]"
+                }`}
+              >
+                {option}
+              </button>
+            );
+          })}
+        </div>
         <input
-          value={answer}
+          value={extra}
           onChange={(e) =>
-            setAnswers((prev) => ({ ...prev, [q.n]: e.target.value }))
+            setAnswers((prev) => ({ ...prev, [q.n]: joinQuickAnswer(pick, e.target.value) }))
           }
-          placeholder="(선택) 한 줄로 답해보라"
+          placeholder="(선택) 한 줄 더"
           aria-label={`질문 ${q.n} 답: ${q.ko}`}
           className="w-full bg-transparent border-b border-[rgba(245,240,232,0.1)] py-1.5 text-pq-body-sm font-serif outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)]"
         />
@@ -1094,15 +1183,20 @@ export function sideLabelKo(wireOrSide: string | null | undefined): string {
 export function SectionLabel({ n, title }: { n: number; title: string }) {
   return (
     <div
-      className="flex items-baseline gap-4 border-t pt-5"
+      className="flex items-center gap-3 border-t pt-5"
       style={{ borderTopColor: "rgba(184,149,106,0.32)", borderTopWidth: 0.5 }}
     >
+      {/* A step badge, not a loose digit — on a phone the bare "1" read as a
+          stray character beside the heading (2026-10-22). */}
       <span
-        className="font-mono uppercase"
+        aria-hidden
+        className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full tabular-nums"
         style={{
-          fontSize: "var(--pq-text-eyebrow)",
-          letterSpacing: "0.01em",
+          fontSize: 12,
+          fontWeight: 600,
           color: "var(--pq-bronze)",
+          border: "1px solid rgba(var(--pq-bronze-rgb), 0.55)",
+          background: "rgba(var(--pq-bronze-rgb), 0.08)",
         }}
       >
         {n}

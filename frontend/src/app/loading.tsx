@@ -5,6 +5,8 @@
  * render, loading.js fallback chain, data-fetching boundaries). Matches the
  * PivoxQuant Vantablack Luxe palette — no gradient buttons, warm-gold accent.
  */
+
+import { QuantMark } from "@/components/ui/quant-mark";
 export default function Loading() {
   return (
     <div
@@ -24,12 +26,12 @@ export default function Loading() {
         }}
       />
 
-      {/* Wordmark */}
+      {/* Wordmark — the header logo (components/ui/quant-mark.tsx) */}
       <div
-        className="font-serif text-lg tracking-tight mb-8"
-        style={{ color: "rgba(245,240,232,0.6)" }}
+        className="mb-8 text-pq-h5 font-bold tracking-[-0.02em]"
+        style={{ color: "var(--pq-ivory)" }}
       >
-        PivoxQuant
+        <QuantMark />
       </div>
 
       {/* Shimmer skeleton bar */}

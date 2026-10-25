@@ -64,7 +64,28 @@ export interface PreTradeQuestion {
   readonly n: number;
   readonly en: string;
   readonly ko: string;
+  /**
+   * One-tap answers (2026-10-25, CEO "적어야 할게 너무 많다"). The user's own
+   * self-report about their own decision — never a direction, a price or a
+   * target from us. A tap is the answer; the line under it stays optional.
+   */
+  readonly quick: readonly string[];
 }
+
+/**
+ * Setup-step reason chips (2026-10-25). Multi-select; the rationale sent to
+ * /start is the picks joined with " · ", plus the optional line. Every chip
+ * is at least MIN_RATIONALE_CHARS (2) long — models/pre_trade_reflection.py.
+ * Where the idea came from, in the user's words; none of them is a verdict.
+ */
+export const REASON_CHIPS: readonly string[] = [
+  "실적·숫자",
+  "차트 자리",
+  "뉴스·이슈",
+  "주변 이야기",
+  "싸 보여서",
+  "원래 계획",
+] as const;
 
 /**
  * Persona codes — mirrors `PersonaId` in `lib/cfo/hooks.ts` (canonical
@@ -86,36 +107,43 @@ export const PRE_TRADE_QUESTIONS: readonly PreTradeQuestion[] = [
     n: 1,
     en: "Write your reason in one sentence — what did you see that others missed?",
     ko: "한 문장으로 진입 이유를 적어보라 — 남들이 놓친 무엇을 당신은 봤나?",
+    quick: ["숫자·실적에서 봤다", "차트 자리에서 봤다", "뉴스·이슈에서 봤다", "딱히 없다"],
   },
   {
     n: 2,
     en: "How far down before this idea is wrong? Is that line one the chart supports — or just a number you picked?",
     ko: "어디까지 내려가면 이 생각이 틀린 건가? 그 선은 차트가 받쳐주는 자리인가, 그냥 정한 숫자인가?",
+    quick: ["차트가 받쳐주는 자리", "그냥 정한 숫자", "아직 안 정했다"],
   },
   {
     n: 3,
     en: "Where's your target? Is it at least 2× the distance to your stop?",
     ko: "목표가는 어디까지 보나? 손절까지의 거리 대비 적어도 2배인가?",
+    quick: ["2배 이상", "2배가 안 된다", "목표를 안 정했다"],
   },
   {
     n: 4,
     en: "How worked up are you right now, 1–10? Over 7 — is this really the moment?",
     ko: "지금 얼마나 들떠 있나, 1–10 중? 7을 넘으면 — 지금이 정말 그 때인가?",
+    quick: ["1–3 차분하다", "4–6", "7–8 들떠 있다", "9–10 많이 들떠 있다"],
   },
   {
     n: 5,
     en: "If your last trade had been a winner, would you still take this one?",
     ko: "직전 거래가 만약 수익이었어도, 지금 이걸 똑같이 들어갔을까?",
+    quick: ["똑같이 들어간다", "아마 안 들어간다", "모르겠다"],
   },
   {
     n: 6,
     en: "Is this your usual size? Picture the stop getting hit tomorrow — could you accept that loss right now?",
     ko: "평소 크기인가? 내일 손절에 닿는 장면을 그려보라 — 그 손실 금액을, 지금, 받아들일 수 있나?",
+    quick: ["평소 크기 · 받아들일 수 있다", "평소보다 크다", "그 손실은 부담된다"],
   },
   {
     n: 7,
     en: "Was this in your plan to begin with — or an exception you're making now? And last time you entered one like it, how did it end?",
     ko: "이건 원래 계획에 있던 자리인가, 지금 만드는 예외인가? 지난번 비슷한 진입은 어떻게 끝났나?",
+    quick: ["원래 계획에 있던 자리", "지금 만드는 예외", "정해 둔 계획이 없다"],
   },
 ] as const;
 

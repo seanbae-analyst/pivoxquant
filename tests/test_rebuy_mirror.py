@@ -203,6 +203,118 @@ class TestNonFillRows:
         assert r["median_price_change_pct"] == -20.0
 
 
+class TestPositionAndCalendar:
+    """2026-10-22 bug hunt — trims, suffixes, currency, date-only order."""
+
+    def test_trim_then_add_is_not_a_rebuy(self):
+        trades = [
+            _buy("AAPL", 100.0, days_ago=30, shares=100),
+            _sell("AAPL", 120.0, days_ago=20, shares=1),   # trim, still holds 99
+            _buy("AAPL", 110.0, days_ago=17, shares=50),
+        ]
+        r = compute_rebuy_mirror(trades, min_pairs=1)
+        assert r["sufficient_data"] is False
+
+    def test_trims_down_to_zero_open_the_sale(self):
+        trades = [
+            _buy("AAPL", 100.0, days_ago=30, shares=10),
+            _sell("AAPL", 120.0, days_ago=20, shares=4),
+            _sell("AAPL", 125.0, days_ago=19, shares=6),   # now out of the name
+            _buy("AAPL", 110.0, days_ago=10, shares=5),
+        ]
+        r = compute_rebuy_mirror(trades, min_pairs=1)
+        assert r["rebuy_count"] == 1
+        assert r["median_price_change_pct"] == -12.0
+
+    def test_holding_seed_counts_as_held(self):
+        trades = [
+            _buy("AAPL", 100.0, days_ago=40, shares=10, source=HOLDING_SEED_SOURCE),
+            _sell("AAPL", 120.0, days_ago=20, shares=3),
+            _buy("AAPL", 110.0, days_ago=10, shares=3),
+        ]
+        assert compute_rebuy_mirror(trades, min_pairs=1)["sufficient_data"] is False
+
+    def test_kr_suffix_variants_are_one_name(self):
+        trades = [
+            _sell("035720.KQ", 50000.0, days_ago=20),
+            _buy("035720.KS", 45000.0, days_ago=10, name="카카오"),
+        ]
+        r = compute_rebuy_mirror(trades, min_pairs=1)
+        assert r["rebuy_count"] == 1
+        assert r["by_ticker"][0]["ticker"] == "035720.KS"
+        assert r["by_ticker"][0]["name"] == "카카오"
+
+    def test_other_currency_does_not_pair(self):
+        sell = _sell("AAPL", 100.0, days_ago=20)
+        buy = _buy("AAPL", 130000.0, days_ago=10)
+        buy.currency = "KRW"
+        assert compute_rebuy_mirror([sell, buy], min_pairs=1)["sufficient_data"] is False
+
+    def test_timed_sale_and_date_only_buy_same_kst_day_is_not_a_rebuy(self):
+        # 2026-10-22 (CEO "재매수 버그도 고쳐"): on a day whose order is unknown
+        # the buy goes first — the sale then closes that buy, and only a later
+        # buy is a return to the name. The end-of-day rule paired them as a
+        # sale and a rebuy 0.4 days later.
+        day = datetime(2026, 3, 2)
+        sell = _sell("AAPL", 100.0, days_ago=0)
+        sell.traded_at = day + timedelta(hours=5)          # 14:00 KST
+        same_day = _buy("AAPL", 95.0, days_ago=0)
+        same_day.traded_at = day                           # date-only 3/2
+        later = _buy("AAPL", 150.0, days_ago=0)
+        later.traded_at = day + timedelta(days=49, hours=3)
+        r = compute_rebuy_mirror([sell, same_day, later], min_pairs=1)
+        assert r["rebuy_count"] == 1
+        assert r["median_price_change_pct"] == 50.0
+        assert r["median_gap_days"] > 48
+
+    def test_day_trade_with_a_date_only_buy_is_not_a_rebuy(self):
+        # A manual date-only BUY 10 and a webhook SELL 10 the same KST day,
+        # nothing before: a day trade, not "sold and bought back lower".
+        buy = _buy("005930.KS", 70000.0, days_ago=0)
+        buy.traded_at = datetime(2026, 10, 1)              # date-only 10/1
+        sell = _sell("005930.KS", 71000.0, days_ago=0)
+        sell.traded_at = datetime(2026, 10, 1, 5, 0)       # 14:00 KST
+        assert compute_rebuy_mirror([buy, sell], min_pairs=1)["sufficient_data"] is False
+
+    def test_date_only_sale_and_timed_buy_same_kst_day_is_not_a_rebuy(self):
+        sell = _sell("AAPL", 100.0, days_ago=0)
+        sell.traded_at = datetime(2026, 3, 2)              # date-only 3/2
+        buy = _buy("AAPL", 90.0, days_ago=0)
+        buy.traded_at = datetime(2026, 3, 2, 1, 0)         # 10:00 KST
+        assert compute_rebuy_mirror([sell, buy], min_pairs=1)["sufficient_data"] is False
+
+    def test_timed_sale_then_timed_buy_same_day_still_pairs(self):
+        sell = _sell("AAPL", 100.0, days_ago=0)
+        sell.traded_at = datetime(2026, 3, 2, 1, 0)        # 10:00 KST
+        buy = _buy("AAPL", 90.0, days_ago=0)
+        buy.traded_at = datetime(2026, 3, 2, 5, 0)         # 14:00 KST
+        r = compute_rebuy_mirror([sell, buy], min_pairs=1)
+        assert r["rebuy_count"] == 1
+        assert r["median_price_change_pct"] == -10.0
+
+    def test_sale_yesterday_then_date_only_buy_today_pairs(self):
+        sell = _sell("AAPL", 100.0, days_ago=0)
+        sell.traded_at = datetime(2026, 3, 1, 14, 0)       # 3/1 23:00 KST
+        buy = _buy("AAPL", 110.0, days_ago=0)
+        buy.traded_at = datetime(2026, 3, 2)               # date-only 3/2
+        r = compute_rebuy_mirror([sell, buy], min_pairs=1)
+        assert r["rebuy_count"] == 1
+        assert r["higher_count"] == 1
+
+    def test_period_anchors_to_now(self):
+        trades = _three_pairs()
+        for t in trades:
+            t.traded_at -= timedelta(days=100)
+        # Without ``now`` the window hangs off the latest fill (105 days ago)
+        # and still holds the pairs; anchored to now, "the last 30 days" has
+        # none of them — and a later unrelated buy cannot move it.
+        assert compute_rebuy_mirror(trades, period_days=30, min_pairs=1)["rebuy_count"] == 2
+        r = compute_rebuy_mirror(trades, period_days=30, min_pairs=1, now=_BASE)
+        assert r["sufficient_data"] is False
+        r = compute_rebuy_mirror(trades, period_days=200, min_pairs=1, now=_BASE)
+        assert r["rebuy_count"] == 3
+
+
 # ═════════════════════════════════════════════════════════════════════
 # Window, threshold, determinism
 # ═════════════════════════════════════════════════════════════════════

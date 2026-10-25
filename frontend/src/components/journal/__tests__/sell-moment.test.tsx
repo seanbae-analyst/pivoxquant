@@ -103,6 +103,9 @@ describe("<SellMomentBlock />", () => {
   it("formats sign and dates plainly", () => {
     expect(signedPct(12.34)).toBe("+12.3%");
     expect(signedPct(0)).toBe("0.0%");
+    // The sign follows the shown value (2026-10-21).
+    expect(signedPct(-0.04)).toBe("0.0%");
+    expect(signedPct(-0.06)).toBe("−0.1%");
     // 2026-09-30 16:00 UTC is 10월 1일 in KST.
     expect(quoteDate("2026-09-30T16:00:00", 2026)).toBe("10월 1일");
   });

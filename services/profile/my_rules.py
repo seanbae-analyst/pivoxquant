@@ -34,9 +34,12 @@ What it is (and is not)
 * **A fact, not a verdict.** 선 안 / 선 밖 with the raw counts. No score, no
   grade, no streak, no "지키세요".
 * **No market data.** Trade rows and the open-position count only — the same
-  rule as ``services/behavior/*`` (CLAUDE.md §핵심 3축). That is also why the
-  −10% answer is shown but never counted: without prices there is no way to
-  know which week fell 10%.
+  rule as ``services/behavior/*`` (CLAUDE.md §핵심 3축). The −10% answer is
+  read against the user's OWN fill prices (2026-10-25, CEO "팔 때 시세를
+  적으니까 그걸로 측정"): a 매도 or an added 매수 at a price 10% or more under
+  that ticker's running average cost (평단) is a fill made in the drop the
+  question is about. Holding through a drop leaves no fill, so "그냥 둔다" can
+  only ever be contradicted, never confirmed — the payload says so.
 
 Pure functions. The route reads the rows and passes ``now``; nothing here
 touches the DB, the network or the clock, so every branch is testable.
@@ -60,7 +63,9 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 from typing import Iterable
 
+from services.behavior.rebuy_mirror import _walk_key
 from services.imports import is_date_only
+from services.pre_trade.friction_outcome import ticker_key
 from services.profile.fifo_util import (
     collapse_pairs_by_sell,
     fifo_match_closed_trades_with_pnl,
@@ -144,13 +149,31 @@ POSITION_MIN: dict[str, int | None] = {
 }
 
 # ── declared_drawdown_response → the user's own sentence ─────────────────
+# Stated against 평단 since 2026-10-25 (the question was "한 주에 10% 빠지면";
+# a week's fall needs market prices, a fall under one's own average cost is
+# in the fills the user already writes down).
 _DRAWDOWN_LINE: dict[str, str] = {
-    "sell_all": "한 주에 10% 빠지면 다 판다",
-    "sell_half": "한 주에 10% 빠지면 일부 판다",
-    "hold": "한 주에 10% 빠지면 그냥 둔다",
-    "buy_some": "한 주에 10% 빠지면 조금 더 산다",
-    "buy_heavy": "한 주에 10% 빠지면 크게 더 산다",
+    "sell_all": "평단보다 10% 아래로 내려가면 다 판다",
+    "sell_half": "평단보다 10% 아래로 내려가면 일부 판다",
+    "hold": "평단보다 10% 아래로 내려가면 그냥 둔다",
+    "buy_some": "평단보다 10% 아래로 내려가면 조금 더 산다",
+    "buy_heavy": "평단보다 10% 아래로 내려가면 크게 더 산다",
 }
+
+# Which act the answer said the user would take in the drop: a 매도, a 매수,
+# or neither. The opposite act — or, for "그냥 둔다", any act — is 선 밖.
+_DRAWDOWN_ACT: dict[str, str | None] = {
+    "sell_all": "sell",
+    "sell_half": "sell",
+    "hold": None,
+    "buy_some": "buy",
+    "buy_heavy": "buy",
+}
+
+# "10% 아래" — a fill at or below avg × (1 − 0.10).
+DRAWDOWN_PCT = 10
+_SHARE_EPSILON = 1e-9
+_PRICE_EPSILON = 1e-9
 
 
 def frequency_ceiling(answers: dict | None) -> int | None:
@@ -374,17 +397,79 @@ def _positions_rule(answer: str, open_positions: int) -> dict:
     }
 
 
-def _drawdown_rule(answer: str) -> dict:
+def fills_under_average(
+    trades: Iterable, now: datetime, since: datetime | None = None,
+    pct: int = DRAWDOWN_PCT,
+) -> tuple[int, int]:
+    """``(sold, added)`` — recorded 매도 and follow-on 매수 whose price was
+    ``pct``% or more under the ticker's running average cost at that moment.
+
+    The average is walked over the FULL record per ticker, in the walk order
+    the 판 뒤 재매수 mirror uses (KST day; date-only 매수 → timed fills →
+    date-only 매도). Registration rows set the average (a seed's cost) or cut
+    the shares (an adjust) but are never counted as an act; ``since`` and
+    ``now`` only decide which fills are counted. A partial 매도 leaves the
+    average unchanged; selling out resets it. Same ticker, same currency —
+    no FX. Prices come from the user's own fills only.
+    """
+    factor = 1 - pct / 100.0
+    ordered = sorted((t for t in trades if t.traded_at and t.ticker), key=_walk_key)
+    held: dict[str, tuple[float, float]] = {}  # ticker → (shares, total cost)
+    sold = added = 0
+    for t in ordered:
+        # 005930 / 005930.KS are one holding — the rebuy mirror's key.
+        key = ticker_key(t.ticker)
+        action = (t.action or "").upper()
+        shares = float(t.shares or 0.0)
+        price = float(t.price_per_share or 0.0)
+        n, cost = held.get(key, (0.0, 0.0))
+        if shares <= 0:
+            continue
+        counts = is_recorded_fill(t) and t.traded_at <= now and _at_or_after(t.traded_at, since)
+        if action == "BUY":  # // legal-ok — TradeHistory.action value, compared only
+            if price <= 0:
+                continue
+            if counts and n > _SHARE_EPSILON and price <= cost / n * factor + _PRICE_EPSILON:
+                added += 1
+            held[key] = (n + shares, cost + shares * price)
+        elif action == "SELL":  # // legal-ok — TradeHistory.action value, compared only
+            if n <= _SHARE_EPSILON:
+                continue
+            avg = cost / n
+            if counts and price > 0 and price <= avg * factor + _PRICE_EPSILON:
+                sold += 1
+            left = n - shares
+            held[key] = (0.0, 0.0) if left <= _SHARE_EPSILON else (left, left * avg)
+    return sold, added
+
+
+def _drawdown_rule(
+    answer: str, trades: list, now: datetime, since: datetime | None = None,
+) -> dict:
+    sold, added = fills_under_average(trades, now, since)
+    act = _DRAWDOWN_ACT[answer]
+    scope = "선을 정한 뒤" if since is not None else "지금까지 기록에서"
+    if sold + added == 0:
+        status = "no_data"
+        observed = f"{scope} 평단보다 {DRAWDOWN_PCT}% 아래에서 사고판 기록 없음"
+    else:
+        opposite = added if act == "sell" else sold if act == "buy" else sold + added
+        status = "outside" if opposite else "within"
+        observed = (
+            f"{scope} 평단보다 {DRAWDOWN_PCT}% 아래에서 판 것 {sold}번 · 더 산 것 {added}번"
+        )
     return {
         "id": "drawdown",
         "title": "하락 대응",
         "line": _DRAWDOWN_LINE[answer],
-        # Prices are never read here, so the week that fell 10% cannot be
-        # found. The line is shown back as the user's own words; it is not
-        # counted. (Adds below the running average are on /journal.)
-        "measurable": False,
-        "status": "not_counted",
-        "observed": "시세를 쓰지 않아 10% 빠진 주를 알 수 없어요 — 세지 않아요",
+        "measurable": True,
+        "status": status,
+        "observed": observed,
+        # The half no fill can show — said once, under the count.
+        "note": "그냥 둔 것은 체결이 남지 않아 셀 수 없어요. 평단은 내가 기록한 체결가로 계산해요.",
+        "sold_under": sold,
+        "added_under": added,
+        "pct": DRAWDOWN_PCT,
     }
 
 
@@ -432,7 +517,7 @@ def compute_my_rules(
         items.append(_positions_rule(pos, int(open_positions or 0)))
     dd = str(answers.get("declared_drawdown_response"))
     if dd in _DRAWDOWN_LINE:
-        items.append(_drawdown_rule(dd))
+        items.append(_drawdown_rule(dd, rows, now, since=confirmed_at))
 
     counted = [i for i in items if i["status"] in ("within", "outside")]
     available = bool(items)

@@ -34,10 +34,6 @@ docs/design/doorway-pause_2026-10-15.md · models/doorway_check.py.
   ``FOLLOW_MINUTES`` 안에서 가장 늦게 연 열림. 같은 체결을 두 열림이 나눠 갖지
   않는다. 체결 문자는 분 단위라 열기 직전으로 찍힐 수 있어
   ``EARLY_GRACE_SECONDS`` 만큼 앞선 체결도 그 열림에 잇는다.
-* 시각 없이 날짜만 남은 체결(``services.imports.is_date_only``)은 어느 열림에도
-  잇지 않는다 — 60분 창을 잴 시각이 없다. "결국 체결했나"(30일)와 체결 수는
-  KST 날짜로 센다 (my_rules · research_notes 와 같은 규약).
-* 같은 종목 = ``friction_outcome.ticker_key`` (``005930`` · ``.KS`` · ``.KQ`` 는 하나).
 * 체결 = 본인 기록 체결(등록 경로가 쓴 행 제외, ``fifo_util.is_registration_row``)
   + 가져오기 대기 목록에 아직 있는 체결. 승인된 대기 행은 이미 trade_history 에
   있으므로 다시 세지 않는다 — my_rules.month_fill_count 와 같은 단위.
@@ -48,7 +44,7 @@ import bisect
 import logging
 import re
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time as dt_time, timedelta, timezone
 from typing import Iterable, Sequence
 
 from extensions import db
@@ -63,7 +59,6 @@ from models.doorway_check import (
     DoorwayCheck,
     offline_name,
 )
-from services.imports import is_date_only
 from services.pre_trade.friction_outcome import ticker_key
 
 log = logging.getLogger(__name__)
@@ -89,7 +84,6 @@ CAVEATS = (
     "한 체결은 바로 앞의 열림 하나에만 이어집니다.",
     "자동화가 꺼져 있던 때나 다른 기기·PC에서 한 거래는 '문을 거치지 않은 체결'로 셉니다.",
     "기록 대기 목록에 아직 있는 체결도 함께 셉니다.",
-    "시각 없이 날짜만 적은 체결은 어느 열림에도 잇지 않습니다 — 문을 거치지 않은 체결로 셉니다.",
     "누가 언제 앱을 열지는 무작위가 아니므로, 이 숫자로 질문의 효과를 말할 수는 없습니다.",
 )
 
@@ -344,38 +338,24 @@ class Fill:
     traded_at: datetime
     ticker: str | None
     side: str
+    # 시각 없이 날짜만 아는 체결(``services.imports.is_date_only`` — KST 날짜
+    # 00:00 으로 저장). 체결 수에는 들지만 어느 열림에도 잇지 않는다: 그 00:00
+    # 은 시각이 아니라서 09:00 KST 장 전 열림에 붙으면 안 된다.
+    untimed: bool = False
 
 
 def _iso(dt: datetime | None) -> str | None:
     return dt.isoformat() if dt else None
 
 
-def _kst_day(dt: datetime):
-    """저장된 시각의 KST 날짜 — 시각 있는 체결은 UTC, 날짜만 있는 체결은 그 KST
-    날짜 00:00 이라 +9h 가 둘 다 맞다 (``my_rules.kst_day``)."""
-    return (dt + _KST).date()
-
-
-def _at_or_after(ts: datetime, since: datetime) -> bool:
-    """날짜만 있는 체결은 날짜로 비교한다 — 시각이 없으니 그날이면 그 뒤로 본다."""
-    return _kst_day(ts) >= _kst_day(since) if is_date_only(ts) else ts >= since
-
-
-def _before(ts: datetime, end: datetime) -> bool:
-    """``end`` 는 배타 — 날짜만 있는 체결은 ``end`` 바로 앞 순간의 KST 날짜까지."""
-    return _kst_day(ts) <= _kst_day(end - timedelta(microseconds=1)) if is_date_only(ts) else ts < end
-
-
 def _attribute(checks: Sequence, fills: Sequence[Fill]) -> dict[int, list[Fill]]:
-    """체결마다 바로 앞의 열림 하나를 찾는다 → ``{check index: [fills]}``.
-
-    날짜만 있는 체결은 넘기지 않는다 — 60분 창을 잴 시각이 없다."""
+    """체결마다 바로 앞의 열림 하나를 찾는다 → ``{check index: [fills]}``."""
     times = [c.created_at for c in checks]
     follow = timedelta(minutes=FOLLOW_MINUTES)
     grace = timedelta(seconds=EARLY_GRACE_SECONDS)
     out: dict[int, list[Fill]] = {}
     for f in fills:
-        if is_date_only(f.traded_at):
+        if f.untimed:
             continue
         # 체결 시각 + 유예 안쪽에서 가장 늦은 열림.
         i = bisect.bisect_right(times, f.traded_at + grace) - 1
@@ -387,11 +367,37 @@ def _attribute(checks: Sequence, fills: Sequence[Fill]) -> dict[int, list[Fill]]
     return out
 
 
-def _later_fill(ts: datetime, opened: datetime, upto: datetime) -> bool:
-    """열림 뒤 ``(opened, upto]`` 의 체결인가 — 날짜만 있는 체결은 KST 날짜로."""
-    if is_date_only(ts):
-        return _kst_day(opened) <= _kst_day(ts) <= _kst_day(upto)
-    return opened < ts <= upto
+def _lands_between(f: Fill, after: datetime, until: datetime) -> bool:
+    """``after < 체결 <= until``. 날짜만 아는 체결은 그 KST 날짜로 본다: 열림과
+    같은 날이면 든다 — 00:00 을 시각으로 비교하면 그날 오전 10시 열림 뒤에 산
+    것이 '끝내 안 함'으로 셌다 (2026-10-22)."""
+    if f.untimed:
+        return (after + _KST).date() <= f.traded_at.date() <= (until + _KST).date()
+    return after < f.traded_at <= until
+
+
+def _fill_in_range(f: Fill, since: datetime, end: datetime | None) -> bool:
+    """``since <= 체결 < end``. 날짜만 아는 체결은 KST 날짜로 — 00:00 을 시각으로
+    비교하면 첫 열림(``since``)과 같은 날의 체결이 빠졌다 (2026-10-22)."""
+    if f.untimed:
+        day = f.traded_at.date()
+        if day < (since + _KST).date():
+            return False
+        if end is None:
+            return True
+        # ``end`` is a KST midnight (a year's end) or ``now`` (this year, so
+        # far). Exclusive at a midnight; at ``now`` today's date-only fills
+        # are in — "day < today" dropped them (2026-10-22 regression).
+        end_kst = end + _KST
+        if end_kst.time() == dt_time.min:
+            return day < end_kst.date()
+        return day <= end_kst.date()
+    return f.traded_at >= since and (end is None or f.traded_at < end)
+
+
+def _same_ticker(a: str | None, b: str | None) -> bool:
+    """.KS/.KQ/접미사 없는 코드는 같은 종목 — ``friction_outcome.ticker_key`` 한 벌."""
+    return bool(a) and bool(b) and ticker_key(a) == ticker_key(b)
 
 
 def _outcome(check, attributed: list[Fill]) -> str:
@@ -402,7 +408,7 @@ def _outcome(check, attributed: list[Fill]) -> str:
         return "traded"
     side = _SIDE_FOR_INTENT.get(check.intent)
     for f in attributed:
-        if f.side == side and (check.ticker is None or ticker_key(f.ticker) == ticker_key(check.ticker)):
+        if f.side == side and (check.ticker is None or _same_ticker(f.ticker, check.ticker)):
             return "as_said"
     return "other"
 
@@ -465,18 +471,16 @@ def summarize(
             # 같은 종목을 같은 방향으로 체결했나.
             if outcome == "none" and c.ticker:
                 not_happened["n"] += 1
+                side = _SIDE_FOR_INTENT[c.intent]
+                # 함수 인자 start/end 를 덮어쓰지 않는다 — in_window 와 체결 집계가
+                # 그 둘을 읽는다 (2026-10-21: 덮어써서 90일·연간 창이 잘렸다).
                 # 창은 열림 바로 뒤부터 — 60분 안의 체결이 그 뒤 다시 연 열림에
                 # 이어졌어도(앱을 다시 열고 "그냥 보기") 그 종목을 산 것은 맞다.
-                # 지역 변수 이름이 ``start``/``end`` 면 위 ``in_window`` 가 보는
-                # 창 끝을 덮어쓴다 (2026-10-21 수정).
-                side = _SIDE_FOR_INTENT[c.intent]
-                upto = c.created_at + later
-                key = ticker_key(c.ticker)
-                if any(ticker_key(f.ticker) == key and f.side == side
-                       and _later_fill(f.traded_at, c.created_at, upto)
+                after, until = c.created_at, c.created_at + later
+                if any(_same_ticker(f.ticker, c.ticker) and f.side == side and _lands_between(f, after, until)
                        for f in all_fills):
                     not_happened["later"] += 1
-                elif now < upto:
+                elif now < until:
                     not_happened["open"] += 1
                 else:
                     not_happened["never"] += 1
@@ -490,7 +494,7 @@ def summarize(
     fills_total = fills_door = 0
     if since is not None:
         for f in all_fills:
-            if _at_or_after(f.traded_at, since) and (end is None or _before(f.traded_at, end)):
+            if _fill_in_range(f, since, end):
                 fills_total += 1
                 if id(f) in door_ids:
                     fills_door += 1
@@ -561,22 +565,29 @@ def load_fills(user_id: int, since: datetime) -> list[Fill]:
     """``since`` 이후의 본인 체결 — 기록된 체결(등록 행 제외) + 대기 중 체결."""
     from models import TradeHistory
     from models.import_batch import STATUS_PENDING, PendingTrade
+    from services.imports import is_date_only
     from services.profile.fifo_util import is_registration_row
 
+    # A date-only fill is stored as its KST date at 00:00, which can sit
+    # before ``since`` (a UTC instant) on the very KST day ``since`` falls
+    # on — the DB filter dropped it before the KST-date rules
+    # (_lands_between / _fill_in_range) could count it (2026-10-22). Load
+    # from that KST date's 00:00 too; extra timed rows are filtered later.
+    since = min(since, datetime.combine((since + _KST).date(), dt_time.min))
     out: list[Fill] = []
     for t in TradeHistory.query.filter(
         TradeHistory.user_id == user_id, TradeHistory.traded_at >= since,
     ).all():
         if is_registration_row(t) or t.action not in ("BUY", "SELL"):  # // legal-ok — data values
             continue
-        out.append(Fill(t.traded_at, t.ticker, t.action))
+        out.append(Fill(t.traded_at, t.ticker, t.action, untimed=is_date_only(t.traded_at)))
     for p in PendingTrade.query.filter(
         PendingTrade.user_id == user_id,
         PendingTrade.status == STATUS_PENDING,
         PendingTrade.traded_at >= since,
     ).all():
         if p.action in ("BUY", "SELL"):  # // legal-ok — data values
-            out.append(Fill(p.traded_at, p.ticker, p.action))
+            out.append(Fill(p.traded_at, p.ticker, p.action, untimed=is_date_only(p.traded_at)))
     return out
 
 

@@ -344,7 +344,7 @@ export default function PortfolioPageV2() {
 
   async function refreshAll() {
     // An add/edit/sell just changed the book. A bare mutate(key) can be
-    // swallowed by the 10s dedupingInterval (PORTFOLIO_DEDUPE_MS) when a
+    // swallowed by the dedupingInterval (PORTFOLIO_DEDUPE_MS) when a
     // background refreshInterval fetch fired moments earlier — leaving the
     // holdings table and hero count showing pre-mutation data until the next
     // poll (the "I added it but it's not there" wart). Fetch fresh data

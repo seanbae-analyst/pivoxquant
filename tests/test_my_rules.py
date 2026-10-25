@@ -5,7 +5,9 @@ crossed in ONE direction only (more trades, sooner sells, fewer names — doing
 less is never 선 밖); counts come from their own rows only (registration rows
 and seed lots never count); "this month" is the KST calendar month; fills
 waiting in the import inbox count toward the month and are named as such; the
-−10% answer is shown but never counted; ``confirmed`` follows
+−10% answer is counted from the user's own fill prices — a 매도 or added 매수
+10% or more under the ticker's running 평단 — and says that holding leaves no
+fill (2026-10-25); ``confirmed`` follows
 ``rules_confirmed_at`` and, once set, only records from then on are counted;
 holds are KST calendar days; the payload carries no score / grade / label
 words and is a no-op for the legal scrub.
@@ -64,7 +66,7 @@ def test_lines_come_from_the_users_own_buckets():
     assert _item(out, "frequency")["line"] == "한 달에 매수·매도 5번 이하"
     assert _item(out, "holding")["line"] == "7일 이상 들고 있다가 판다"
     assert _item(out, "positions")["line"] == "4종목 이상 나눠 담는다"
-    assert _item(out, "drawdown")["line"] == "한 주에 10% 빠지면 그냥 둔다"
+    assert _item(out, "drawdown")["line"] == "평단보다 10% 아래로 내려가면 그냥 둔다"
 
 
 def test_confirmed_follows_rules_confirmed_at():
@@ -294,9 +296,109 @@ def test_ultra_focused_has_no_minimum():
 
 # ── drawdown ─────────────────────────────────────────────────────────────
 
-def test_drawdown_line_is_shown_but_never_counted():
-    d = _item(compute_my_rules(ANSWERS, [], 6, NOW), "drawdown")
-    assert d["measurable"] is False and d["status"] == "not_counted"
+# 2026-10-25 (CEO "팔 때 시세를 적으니까 그걸로 측정"): fills 10%+ under the
+# ticker's running average cost, from the user's own fill prices.
+
+def _dd(answer, rows, since=None):
+    answers = dict(ANSWERS, declared_drawdown_response=answer)
+    return _item(compute_my_rules(answers, rows, 6, NOW, confirmed_at=since), "drawdown")
+
+
+def test_drawdown_without_fills_under_the_average_is_no_data_with_the_note():
+    d = _dd("hold", [_t("BUY", NOW - timedelta(days=9), price=100.0)])
+    assert d["measurable"] is True and d["status"] == "no_data"
+    assert d["observed"] == "지금까지 기록에서 평단보다 10% 아래에서 사고판 기록 없음"
+    assert "그냥 둔 것은 체결이 남지 않아" in d["note"]
+
+
+def test_a_sale_ten_percent_under_the_average_counts_nine_does_not():
+    rows = [
+        _t("BUY", NOW - timedelta(days=30), ticker="A", shares=10, price=100.0),
+        _t("SELL", NOW - timedelta(days=20), ticker="A", shares=2, price=91.0),  # −9%
+        _t("SELL", NOW - timedelta(days=10), ticker="A", shares=2, price=90.0),  # −10% exactly
+    ]
+    d = _dd("hold", rows)
+    assert (d["sold_under"], d["added_under"]) == (1, 0)
+    assert d["status"] == "outside"   # said 그냥 둔다, sold in the drop
+    assert d["observed"] == "지금까지 기록에서 평단보다 10% 아래에서 판 것 1번 · 더 산 것 0번"
+
+
+def test_the_act_the_answer_named_is_within_the_opposite_is_outside():
+    sold = [
+        _t("BUY", NOW - timedelta(days=30), ticker="A", shares=10, price=100.0),
+        _t("SELL", NOW - timedelta(days=5), ticker="A", shares=10, price=80.0),
+    ]
+    added = [
+        _t("BUY", NOW - timedelta(days=30), ticker="B", shares=10, price=100.0),
+        _t("BUY", NOW - timedelta(days=5), ticker="B", shares=5, price=85.0),
+    ]
+    assert _dd("sell_all", sold)["status"] == "within"
+    assert _dd("buy_some", added)["status"] == "within"
+    assert _dd("sell_half", added)["status"] == "outside"
+    assert _dd("buy_heavy", sold)["status"] == "outside"
+    assert _dd("sell_all", sold + added)["status"] == "outside"
+
+
+def test_the_average_is_running_and_per_ticker():
+    rows = [
+        _t("BUY", NOW - timedelta(days=40), ticker="A", shares=1, price=100.0),
+        _t("BUY", NOW - timedelta(days=30), ticker="A", shares=1, price=60.0),   # −40%: added
+        # avg now 80 → 75 is −6.25%: not under
+        _t("SELL", NOW - timedelta(days=20), ticker="A", shares=1, price=75.0),
+        # partial sale keeps avg 80 → 72 is −10%: under
+        _t("SELL", NOW - timedelta(days=10), ticker="A", shares=1, price=72.0),
+        # sold out → reset: this opens a fresh position, not an add
+        _t("BUY", NOW - timedelta(days=5), ticker="A", shares=1, price=10.0),
+        # another ticker's price never mixes in
+        _t("BUY", NOW - timedelta(days=5), ticker="B", shares=1, price=500.0),
+    ]
+    d = _dd("hold", rows)
+    assert (d["sold_under"], d["added_under"]) == (1, 1)
+
+
+def test_registration_rows_set_the_average_but_are_never_counted():
+    rows = [
+        # registered 10 shares at 100 — the seed is not an act
+        _t("BUY", NOW - timedelta(days=60), ticker="A", shares=10, price=100.0, source="holding_seed"),
+        # an adjust 매도 below the average is bookkeeping, not a sale
+        _t("SELL", NOW - timedelta(days=50), ticker="A", shares=2, price=50.0, source="holding_adjust"),
+        # a real add under the seeded average counts
+        _t("BUY", NOW - timedelta(days=5), ticker="A", shares=1, price=88.0),
+    ]
+    d = _dd("buy_some", rows)
+    assert (d["sold_under"], d["added_under"]) == (0, 1)
+    assert d["status"] == "within"
+
+
+def test_exchange_suffixes_are_one_holding():
+    rows = [
+        _t("BUY", NOW - timedelta(days=30), ticker="005930.KS", shares=10, price=70000.0),
+        _t("SELL", NOW - timedelta(days=5), ticker="005930", shares=10, price=60000.0),
+    ]
+    assert _dd("sell_all", rows)["sold_under"] == 1
+
+
+def test_adopted_lines_count_from_adoption_but_average_over_the_whole_record():
+    adopted = NOW - timedelta(days=15)
+    rows = [
+        _t("BUY", NOW - timedelta(days=60), ticker="A", shares=10, price=100.0),
+        _t("SELL", NOW - timedelta(days=30), ticker="A", shares=1, price=80.0),   # before: not counted
+        _t("SELL", NOW - timedelta(days=5), ticker="A", shares=1, price=85.0),    # after: avg still 100
+    ]
+    d = _dd("hold", rows, since=adopted)
+    assert (d["sold_under"], d["added_under"]) == (1, 0)
+    assert d["observed"].startswith("선을 정한 뒤 ")
+
+
+def test_a_same_day_date_only_buy_comes_before_the_sale():
+    day = datetime(2026, 10, 10)  # date-only: KST date at 00:00
+    rows = [
+        _t("SELL", day, ticker="A", shares=1, price=80.0),
+        _t("BUY", day - timedelta(days=3), ticker="A", shares=1, price=100.0),
+        _t("BUY", day, ticker="A", shares=1, price=100.0),
+    ]
+    # avg 100 before the sale either way; the walk must not drop the sale
+    assert _dd("sell_all", rows)["sold_under"] == 1
 
 
 # ── summary + legal posture ──────────────────────────────────────────────
@@ -304,7 +406,8 @@ def test_drawdown_line_is_shown_but_never_counted():
 def test_summary_counts_only_lines_with_something_to_count():
     fills = [_t("BUY", NOW - timedelta(days=d), ticker=f"T{d}") for d in range(7)]   # over 5
     out = compute_my_rules(ANSWERS, fills, 6, NOW)
-    # frequency (outside) + positions (within); holding has no sells, drawdown not counted.
+    # frequency (outside) + positions (within); holding has no sells, drawdown
+    # has no fill under the average (no_data).
     assert out["counted"] == 2 and out["outside"] == 1
 
 

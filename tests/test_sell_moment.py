@@ -429,3 +429,118 @@ def test_sell_note_never_raises_and_needs_exactly_one_row(app, make_user):
             assert fill_memo.sell_note(u["id"], one) == ""
         # Someone else's pending id reads as nothing.
         assert fill_memo.sell_note(u["id"] + 1000, one) == ""
+
+
+# ── 2026-10-21 버그헌팅 ──────────────────────────────────────────────
+
+def test_suffix_variants_are_one_stock_for_lots_and_words():
+    """.KQ 로 적힌 매수·멈춤·노트·리서치가 .KS(또는 접미사 없는) 매도에 붙는다."""
+    bought = T0
+    kw = dict(
+        trades=[_trade(1, "BUY", 10, 100.0, bought, ticker="035720.KQ", currency="KRW")],
+        reflections=[_refl("본업 회복을 기다렸다", bought - timedelta(hours=1), ticker="035720.KQ")],
+        research=[_research(["광고 매출 반등"], bought + timedelta(days=1), ticker="035720")],
+        notes=[_note("실적 발표를 봤다", bought + timedelta(days=2), tickers=("035720.KQ",))],
+        now=NOW,
+    )
+    for sold in ("035720.KS", "035720"):
+        m = build_sell_moment(_sell(shares=4, price=125.0, ticker=sold, currency="KRW"), **kw)
+        assert m["held_days"] == 30 and m["vs_cost_pct"] == pytest.approx(25.0)
+        assert m["matched_shares"] == 4
+        assert {w["source"] for w in m["words"]} == {SOURCE_PAUSE, SOURCE_RESEARCH, SOURCE_NOTE}
+
+
+def test_end_of_day_is_the_end_of_the_kst_day():
+    from services.sell_moment import end_of_day
+    # 2026-10-16 (KST) 의 끝 = 10-16 15:00 UTC.
+    assert end_of_day(datetime(2026, 10, 16)) == datetime(2026, 10, 16, 15, 0)
+
+
+def test_date_only_sell_takes_words_from_that_kst_day_only():
+    day = datetime(2026, 10, 16)  # 날짜만 — KST 10-16
+    notes = [
+        _note("D 오후 4시(KST)에 쓴 노트", datetime(2026, 10, 16, 7, 0)),
+        _note("D+1 새벽 2시(KST)에 쓴 노트", datetime(2026, 10, 16, 17, 0)),
+    ]
+    # 날짜만 있는 매도(가져오기·대기 체결)는 words_before 없이도 그날 끝까지.
+    m = build_sell_moment(_sell(at=day), notes=notes, now=datetime(2026, 10, 20))
+    assert [w["text"] for w in m["words"]] == ["D 오후 4시(KST)에 쓴 노트"]
+
+
+def test_route_typed_date_excludes_next_kst_morning(client, app, auth_user):
+    from extensions import db
+    from models import ObservationNote
+    with app.app_context():
+        for body, at in (("그날 쓴 노트", datetime(2026, 10, 16, 7, 0)),
+                         ("다음날 새벽 노트", datetime(2026, 10, 16, 17, 0))):
+            db.session.add(ObservationNote(user_id=auth_user["id"], body=body,
+                                           tickers_json='["AAPL"]', created_at=at))
+        db.session.commit()
+    body = client.get("/api/sell-moment?ticker=AAPL&shares=1&price=10&date=2026-10-16").get_json()
+    assert [w["text"] for w in body["words"]] == ["그날 쓴 노트"]
+
+
+def test_route_pending_date_only_sell_keeps_that_days_words(client, app, auth_user):
+    from extensions import db
+    from models import ObservationNote
+    from models.import_batch import ImportBatch, PendingTrade
+    with app.app_context():
+        batch = ImportBatch(user_id=auth_user["id"], source="csv")
+        db.session.add(batch)
+        db.session.flush()
+        row = PendingTrade(
+            batch_id=batch.id, user_id=auth_user["id"], ticker="AAPL", name="Apple", action="SELL",
+            shares=1.0, price=10.0, currency="USD", traded_at=datetime(2026, 10, 16),
+            status="pending", dedupe_key="s-date-only",
+        )
+        db.session.add(row)
+        db.session.add(ObservationNote(user_id=auth_user["id"], body="그날 낮에 쓴 노트",
+                                       tickers_json='["AAPL"]', created_at=datetime(2026, 10, 16, 3, 0)))
+        db.session.commit()
+        pid = row.id
+    body = client.get(f"/api/sell-moment/pending/{pid}").get_json()
+    assert [w["text"] for w in body["words"]] == ["그날 낮에 쓴 노트"]
+
+
+def test_buy_time_reasons_are_not_pushed_out_by_newer_notes_and_research():
+    m = build_sell_moment(
+        _sell(),
+        reflections=[_refl("멈춰서 적은 이유", T0 - timedelta(days=1))],
+        fill_reasons=[Written("체결 때 적은 이유", T0)],
+        research=[_research([f"가정{i}"], T0 + timedelta(days=5 + i)) for i in range(2)],
+        notes=[_note(f"노트{i}", T0 + timedelta(days=10 + i)) for i in range(3)],
+        now=NOW,
+    )
+    sources = [w["source"] for w in m["words"]]
+    assert len(sources) == MAX_WORDS
+    assert set(sources) == {SOURCE_PAUSE, SOURCE_FILL_REASON, SOURCE_RESEARCH, SOURCE_NOTE}
+    ats = [w["at"] for w in m["words"]]
+    assert ats == sorted(ats, reverse=True)
+
+
+def test_same_kst_day_round_trip_is_under_a_day():
+    # 날짜만 매수(KST 10-01) → 같은 KST 날 23:30 매도(= 14:30 UTC).
+    buy = _trade(1, "BUY", 1, 100.0, datetime(2026, 10, 1))
+    m = build_sell_moment(_sell(shares=1, at=datetime(2026, 10, 1, 14, 30)), trades=[buy], now=NOW)
+    assert m["held_days"] == 0
+    # 09:00 KST 매수(전날 UTC 자정 바로 뒤가 아니라 그날 00:00 UTC +1µs) → 다음 KST 날 매도 = 1일.
+    buy = _trade(1, "BUY", 1, 100.0, datetime(2026, 10, 1, 0, 0, 0, 1))
+    m = build_sell_moment(_sell(shares=1, at=datetime(2026, 10, 1, 16, 0)), trades=[buy], now=NOW)
+    assert m["held_days"] == 1
+
+
+def test_tiny_negative_percent_has_no_minus_sign():
+    assert push_sentence({"words": [], "held_days": 3, "vs_cost_pct": -0.04}) == "3일 보유 · 산 값 대비 0.0%."
+    assert push_sentence({"words": [], "held_days": 3, "vs_cost_pct": -0.05001}) == "3일 보유 · 산 값 대비 −0.1%."
+
+
+def test_sell_note_rolls_back_after_a_failed_statement(app, make_user):
+    from services import fill_memo
+    u = make_user(email="sm-rollback@test.com")
+    with app.app_context():
+        batch = _seed_user_rows(u["id"])
+        pid = _pending_sell(u["id"], batch)
+        with patch("services.sell_moment.load_sell_moment", side_effect=RuntimeError("db")), \
+                patch("extensions.db.session.rollback") as rollback:
+            assert fill_memo.sell_note(u["id"], [{"id": pid, "status": "pending"}]) == ""
+        assert rollback.called

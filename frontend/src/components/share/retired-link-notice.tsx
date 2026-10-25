@@ -19,6 +19,7 @@
  * No CTA to create a card: that flow was deleted too.
  */
 import Link from "next/link";
+import { QuantMark } from "@/components/ui/quant-mark";
 
 export function RetiredLinkNotice() {
   return (
@@ -28,14 +29,10 @@ export function RetiredLinkNotice() {
     >
       <div className="flex w-full max-w-md flex-col items-center gap-4">
         <span
-          className="font-mono uppercase"
-          style={{
-            fontSize: "var(--pq-text-eyebrow)",
-            letterSpacing: "0.01em",
-            color: "var(--pq-bronze)",
-          }}
+          className="text-pq-h5 font-bold tracking-[-0.02em]"
+          style={{ color: "var(--pq-ivory)" }}
         >
-          PivoxQuant
+          <QuantMark />
         </span>
 
         <h1

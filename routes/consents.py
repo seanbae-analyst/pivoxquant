@@ -129,6 +129,11 @@ def record_marketing_consent():
     now = _utcnow_naive()
     current_user.marketing_consent_at = now
     current_user.marketing_consent_revoked_at = None
+    # This toggle is the 광고성 consent — keep the §50 category record in
+    # step, or the category gate (PIVOX_CS1_CONSENT_ENABLED) would block a
+    # user who opted in here (2026-10-22: nothing ever wrote these columns).
+    current_user.marketing_consent_marketing_at = now
+    current_user.marketing_consent_marketing_revoked_at = None
 
     try:
         db.session.commit()
@@ -306,11 +311,16 @@ def record_consent_categories():
     elif info is False:
         current_user.marketing_consent_information_revoked_at = now
 
+    # The 광고성 category and the /marketing record are one consent — write
+    # both so neither gate disagrees with the other.
     if mkt is True:
         current_user.marketing_consent_marketing_at = now
         current_user.marketing_consent_marketing_revoked_at = None
+        current_user.marketing_consent_at = now
+        current_user.marketing_consent_revoked_at = None
     elif mkt is False:
         current_user.marketing_consent_marketing_revoked_at = now
+        current_user.marketing_consent_revoked_at = now
 
     try:
         db.session.commit()
@@ -339,6 +349,7 @@ def revoke_marketing_consent():
     """
     now = _utcnow_naive()
     current_user.marketing_consent_revoked_at = now
+    current_user.marketing_consent_marketing_revoked_at = now
 
     try:
         db.session.commit()

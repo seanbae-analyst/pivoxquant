@@ -1,7 +1,8 @@
 /**
  * 리서치 양식 — form, scoring, summary, and the read-only /pre-trade block.
  *
- * Pins: the form needs a stock, "뭘로 돈을 버나" and at least one reason, and
+ * Pins: the form needs a stock and at least one reason ("뭘로 돈을 버나" is
+ * optional and folded since 2026-10-25, with 위험 · 숫자), and
  * sends exactly what was typed (blank optional fields omitted, 다시 볼 날
  * chip → review_months); scoring needs a verdict for every reason and does
  * NOT show the result on the user's fills until it is saved; the summary is
@@ -68,7 +69,7 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 describe("ResearchForm", () => {
-  it("needs a stock, the business line and one reason, then sends exactly what was typed", async () => {
+  it("sends exactly what was typed, folded fields included", async () => {
     createResearchNote.mockResolvedValue({ ok: true, note: { ...NOTE, id: 99 } });
     const onSaved = vi.fn();
     render(<ResearchForm defaultTicker={{ ticker: "AAPL", name: "Apple" }} onSaved={onSaved} />);
@@ -76,7 +77,7 @@ describe("ResearchForm", () => {
     expect(save).toBeDisabled();
 
     fireEvent.change(screen.getByLabelText("이 회사는 뭘로 돈을 버나"), { target: { value: " 구독료로 번다 " } });
-    expect(save).toBeDisabled();
+    expect(save).toBeDisabled(); // a business line alone is not a reason
     fireEvent.change(screen.getByLabelText("이유 1"), { target: { value: "마진이 회복된다" } });
     fireEvent.click(screen.getByRole("button", { name: /이유 하나 더/ }));
     fireEvent.change(screen.getByLabelText("이유 2"), { target: { value: "   " } });
@@ -97,6 +98,25 @@ describe("ResearchForm", () => {
       info_source: "youtube",
       review_months: 6,
       surface: "journal",
+    });
+  });
+
+  // 2026-10-25 (CEO "적어야 할게 너무 많다"): two fields open, three folded.
+  it("saves with a reason alone; 뭘로 돈을 버나 · 위험 · 숫자 start folded", async () => {
+    createResearchNote.mockResolvedValue({ ok: true, note: { ...NOTE, id: 100, business: "" } });
+    const onSaved = vi.fn();
+    render(<ResearchForm defaultTicker={{ ticker: "AAPL", name: "Apple" }} onSaved={onSaved} />);
+    const more = screen.getByTestId("research-more") as HTMLDetailsElement;
+    expect(more.open).toBe(false);
+    expect(within(more).getByLabelText("이 회사는 뭘로 돈을 버나")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("이유 1"), { target: { value: "마진이 회복된다" } });
+    const save = screen.getByRole("button", { name: "저장" });
+    expect(save).toBeEnabled();
+    fireEvent.click(save);
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(createResearchNote.mock.calls.at(-1)?.[0]).toMatchObject({
+      business: undefined,
+      theses: ["마진이 회복된다"],
     });
   });
 

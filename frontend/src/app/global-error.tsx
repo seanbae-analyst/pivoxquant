@@ -30,10 +30,10 @@ export default function GlobalError({
           padding: "24px",
           background: "#050505",
           color: "#F5F0E8",
-          // Pretendard for Hangul — Source Serif 4 is Latin-only. This page
+          // Pretendard only (2026-10-11 refresh: one typeface). This page
           // renders outside the app tree, so it cannot use the CSS tokens.
           fontFamily:
-            '"Source Serif 4", "Pretendard Variable", Pretendard, Georgia, "Times New Roman", serif',
+            '"Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
           WebkitFontSmoothing: "antialiased",
         }}
       >
@@ -44,7 +44,7 @@ export default function GlobalError({
             padding: "40px 32px",
             background: "rgba(255,255,255,0.03)",
             border: "1px solid rgba(245,240,232,0.1)",
-            borderRadius: "2px",
+            borderRadius: "14px",
             textAlign: "center",
           }}
         >
@@ -61,14 +61,14 @@ export default function GlobalError({
 
           <div
             style={{
-              fontSize: "10px",
+              fontSize: "13px",
+              fontWeight: 500,
               letterSpacing: "0.01em",
-              textTransform: "uppercase",
               color: "#B8956A",
-              marginBottom: "16px",
+              marginBottom: "12px",
             }}
           >
-            Critical error
+            화면을 열지 못했어요
           </div>
 
           <h1
@@ -80,7 +80,7 @@ export default function GlobalError({
               lineHeight: 1.1,
             }}
           >
-            The observation went dark.
+            잠깐 문제가 생겼어요.
           </h1>
 
           <p
@@ -91,8 +91,7 @@ export default function GlobalError({
               lineHeight: 1.6,
             }}
           >
-            A critical error occurred. Reload to reconnect to the desk. Your
-            data is safe on the server.
+            남긴 기록은 그대로예요. 새로고침해 주세요.
           </p>
 
           {isProduction ? (
@@ -105,7 +104,7 @@ export default function GlobalError({
                   margin: "0 0 24px",
                 }}
               >
-                ref: {error.digest}
+                참조 번호 {error.digest}
               </p>
             ) : null
           ) : (
@@ -116,7 +115,7 @@ export default function GlobalError({
                 color: "var(--pq-ivory-faint)",
                 background: "rgba(255,255,255,0.04)",
                 border: "1px solid rgba(245,240,232,0.08)",
-                borderRadius: "2px",
+                borderRadius: "10px",
                 padding: "12px",
                 margin: "0 0 24px",
                 maxHeight: "128px",
@@ -137,18 +136,18 @@ export default function GlobalError({
               display: "block",
               width: "100%",
               padding: "10px 20px",
-              border: "1px solid #B8956A",
-              borderRadius: "2px",
-              background: "transparent",
-              color: "#B8956A",
-              fontSize: "11px",
+              border: 0,
+              borderRadius: "10px",
+              background: "#B8956A",
+              color: "#050505",
+              fontSize: "14px",
               letterSpacing: "0.01em",
-              textTransform: "uppercase",
-              fontWeight: 500,
+              fontWeight: 600,
+              minHeight: "44px",
               cursor: "pointer",
             }}
           >
-            Reload
+            새로고침
           </button>
 
           <p
@@ -159,7 +158,7 @@ export default function GlobalError({
               lineHeight: 1.5,
             }}
           >
-            PivoxQuant · Observational research only
+            Pivox<span style={{ color: "rgba(184,149,106,0.5)" }}>Quant</span>
           </p>
         </div>
       </body>

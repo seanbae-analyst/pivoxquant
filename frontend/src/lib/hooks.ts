@@ -1,4 +1,4 @@
-import useSWR from "swr";
+import useSWR, { mutate as globalMutate } from "swr";
 import { apiFetch } from "./api";
 import { isDemoMode, demoResponseFor } from "./demo";
 import {
@@ -36,7 +36,9 @@ import type {
   DoorwayCreateResponse,
   DoorwayIntent,
   DoorwaySummaryResponse,
+  PickFactsResponse,
   ResearchByTickerResponse,
+  StockRecordResponse,
   ResearchInfoSource,
   ResearchNoteResponse,
   ResearchNotesResponse,
@@ -352,6 +354,17 @@ export function useYearRecap(year: number | null) {
 
 /* ── Research notes (리서치 양식) ───────────────────────────────────────── */
 
+/* ── 내가 고른 회사들 (pick facts) ─────────────────────────────────────────── */
+
+/** Counts over the year's first buys, from numbers filed before each buy — the /mirror card. */
+export function usePickFacts() {
+  const swr = useSWR<PickFactsResponse>(API.pickFacts, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 60_000,
+  });
+  return { data: swr.data ?? null, isLoading: swr.isLoading, error: swr.error as Error | undefined };
+}
+
 /* ── 문 앞의 한 줄 (doorway pause) ──────────────────────────────────────── */
 
 /** Opens × own fills over the last `days` — the /mirror card. */
@@ -363,16 +376,27 @@ export function useDoorwaySummary(days: 7 | 30 | 90 = 30) {
   return { data: swr.data ?? null, isLoading: swr.isLoading, error: swr.error as Error | undefined, mutate: swr.mutate };
 }
 
+/**
+ * The /mirror door card (`useDoorwaySummary`, 30 s dedupe) shows counts and
+ * recent lines — re-read it after a create or delete so a deleted line does
+ * not linger there (2026-10-21).
+ */
+function revalidateDoorwaySummary(): void {
+  void globalMutate((key) => typeof key === "string" && key.startsWith(API.doorway.summary));
+}
+
 /** The web door (/pre-trade/door) — the same record the phone automation makes. */
 export async function createDoorwayCheck(body: {
   intent: DoorwayIntent;
   note?: string;
   app?: string;
 }): Promise<DoorwayCreateResponse> {
-  return apiFetch<DoorwayCreateResponse>(API.doorway.checks, {
+  const res = await apiFetch<DoorwayCreateResponse>(API.doorway.checks, {
     method: "POST",
     body: JSON.stringify(body),
   });
+  revalidateDoorwaySummary();
+  return res;
 }
 
 /** The user's own door answers, newest first — the list under the web door. */
@@ -390,7 +414,9 @@ export function useDoorwayChecks(limit = 20) {
 }
 
 export async function deleteDoorwayCheck(id: number): Promise<{ ok: boolean; deleted: number }> {
-  return apiFetch<{ ok: boolean; deleted: number }>(API.doorway.check(id), { method: "DELETE" });
+  const res = await apiFetch<{ ok: boolean; deleted: number }>(API.doorway.check(id), { method: "DELETE" });
+  revalidateDoorwaySummary();
+  return res;
 }
 
 /** Due notes + judgment × outcome counts — what /journal/research opens on. */
@@ -421,6 +447,15 @@ export function useResearchNotes(limit = 50) {
  * picked, so the cold reasoning sits next to the seven questions. `null`
  * ticker disables the fetch. Read-only: the 멈춤 screen never writes one.
  */
+/** 종목별 내 기록 — one stock's own records on one timeline (2026-10-25). */
+export function useStockRecord(ticker: string | null) {
+  const swr = useSWR<StockRecordResponse>(ticker ? API.stockRecord(ticker) : null, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30_000,
+  });
+  return { data: swr.data ?? null, error: swr.error as Error | undefined, isLoading: swr.isLoading, mutate: swr.mutate };
+}
+
 export function useResearchByTicker(ticker: string | null) {
   const swr = useSWR<ResearchByTickerResponse>(ticker ? API.research.byTicker(ticker) : null, fetcher, {
     revalidateOnFocus: false,
@@ -432,7 +467,8 @@ export function useResearchByTicker(ticker: string | null) {
 /** Body of `POST /api/research-notes`. */
 export interface CreateResearchNoteBody {
   ticker: string;
-  business: string;
+  /** Optional since 2026-10-25 — stored as "" when left out. */
+  business?: string;
   theses: string[];
   invalidation?: string;
   risk?: string;
@@ -496,7 +532,10 @@ export function useSellMomentForTyped(sell: TypedSell | null) {
     shouldRetryOnError: false,
     keepPreviousData: true,
   });
-  return { data: swr.data ?? null, isLoading: swr.isLoading };
+  // keepPreviousData keeps the last input's answer while the new one loads —
+  // but on an error for the new input it would keep it for good, next to
+  // numbers it was not computed for (2026-10-21). An error shows nothing.
+  return { data: swr.error ? null : swr.data ?? null, isLoading: swr.isLoading };
 }
 
 /** A waiting 매도 fill in the import inbox (`/journal?pending=<id>`). */
@@ -953,7 +992,10 @@ export interface PortfolioSummary {
   costBasisKrw?: number;
 }
 
-export const PORTFOLIO_DEDUPE_MS = 10_000;
+// Below the 5 s market-hours poll: the poll revalidates *with* dedupe, so a
+// 10 s window swallowed every other tick and the real cadence was ~10 s +
+// latency (2026-10-22 "현황가격 업데이트가 너무 느려").
+export const PORTFOLIO_DEDUPE_MS = 4_000;
 
 /**
  * Portfolio polling (2026-10-09 perf). The 5 s market-hours poll keeps vendor

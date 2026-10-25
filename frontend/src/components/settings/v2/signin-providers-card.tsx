@@ -117,7 +117,7 @@ function ProviderRow({
         <button
           type="button"
           onClick={onConnect}
-          className="font-mono"
+          className="pq-hit font-mono"
           style={{
             fontSize: "var(--pq-text-eyebrow)",
             color: "var(--pq-bronze)",

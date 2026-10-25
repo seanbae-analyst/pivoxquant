@@ -32,8 +32,10 @@ const TYPED_DEBOUNCE_MS = 400;
 
 /** "−4.0%" / "+12.3%" / "0.0%" — a typographic minus, one decimal. */
 export function signedPct(pct: number): string {
-  const sign = pct > 0 ? "+" : pct < 0 ? "−" : "";
-  return `${sign}${Math.abs(pct).toFixed(1)}%`;
+  // Sign from the shown value — −0.04 is "0.0%", not "−0.0%".
+  const shown = Number(pct.toFixed(1));
+  const sign = shown > 0 ? "+" : shown < 0 ? "−" : "";
+  return `${sign}${Math.abs(shown).toFixed(1)}%`;
 }
 
 /** "9월 1일", or "2025년 9월 1일" when it was not this year. */

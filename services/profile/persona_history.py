@@ -36,7 +36,7 @@ from typing import Iterable
 from sqlalchemy.exc import IntegrityError
 
 from extensions import db
-from models import PersonaSnapshot, TradeHistory
+from models import PersonaSnapshot, TradeHistory, User
 from services.profile.common_util import utc_now as _utc_now
 from services.profile.persona_classifier_v2 import (
     FEATURE_KEYS,
@@ -373,9 +373,12 @@ def iter_active_user_ids(
     """
     when = _utc_now() if now is None else now
     cutoff = when - timedelta(days=max(1, int(lookback_days)))
+    # PIPA §21 grace window: no new snapshot rows for a user who asked to
+    # leave — the purge would only have to delete them (2026-10-22).
     rows = (
         db.session.query(TradeHistory.user_id)
-        .filter(TradeHistory.traded_at >= cutoff)
+        .join(User, User.id == TradeHistory.user_id)
+        .filter(TradeHistory.traded_at >= cutoff, User.deletion_requested_at.is_(None))
         .distinct()
         .all()
     )

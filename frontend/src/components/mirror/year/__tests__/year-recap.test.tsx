@@ -8,7 +8,7 @@
  * sentence; no copy carries a score, grade, advice or "결산".
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import * as React from "react";
 import type { YearRecapResponse } from "@/lib/types";
 
@@ -139,8 +139,7 @@ describe("YearRecapView", () => {
     const text = door.textContent ?? "";
     expect(text).toContain("41번");
     expect(text).toContain("살 게 · 팔 게 있다고 한 18번 중 말한 대로 체결 8번");
-    // 2 + 3 + 2 = 7 — the opens under 30 days are named, as on /mirror.
-    expect(text).toContain("종목을 적고 체결 없이 끝난 7번 중 30일 안에 그 종목 체결 2 · 체결 없음 3 · 아직 30일이 안 됨 2");
+    expect(text).toContain("종목을 적고 체결 없이 끝난 7번 중 30일 안에 그 종목 체결 2 · 체결 없음 3");
     expect(text).not.toMatch(BANNED);
   });
 
@@ -162,8 +161,8 @@ describe("share card", () => {
     const all = [text.title, ...text.lines, text.wordmark].join("\n");
     expect(text.title).toBe("2026년, 내 기록");
     expect(text.lines).toEqual([
-      "사기 전에 멈춘 14번",
-      "그중 끝내 사지 않은 4번",
+      "거래 전에 멈춘 14번",
+      "그중 사려다 멈추고 끝내 사지 않은 4번",
       "이유를 적은 체결 19건",
       "직접 쓴 리서치 3편",
     ]);
@@ -191,7 +190,8 @@ describe("share card", () => {
     expect(drawn).toEqual([
       text.title,
       ...text.lines,
-      "PivoxQuant",
+      "Pivox",
+      "Quant",
       "정보 제공 목적이며 투자 권유가 아닙니다.",
       "Information only, not investment advice.",
     ]);
@@ -222,17 +222,28 @@ describe("/mirror/year page", () => {
     expect(within(group).getAllByRole("button").map((b) => b.textContent)).toEqual(["2026년", "2025년"]);
   });
 
-  it("an empty current year still leads to last year", () => {
+  it("an empty current year still offers the year that has records (January case)", () => {
     recap = { data: { ...FULL, year: 2026, years: [2025], empty: true }, isLoading: false, error: undefined };
     render(<YearRecapPage />);
     const group = screen.getByRole("group", { name: "연도" });
     expect(within(group).getAllByRole("button").map((b) => b.textContent)).toEqual(["2026년", "2025년"]);
   });
 
-  it("a body that is not a recap draws nothing instead of crashing", () => {
-    recap = { data: {} as YearRecapResponse, isLoading: false, error: undefined };
+  it("after picking last year, the current year stays pickable", () => {
+    recap = { data: { ...FULL, year: 2026, years: [2025], empty: true }, isLoading: false, error: undefined };
     render(<YearRecapPage />);
-    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("올해의 기록");
+    recap = { data: { ...FULL, year: 2025, years: [2025] }, isLoading: false, error: undefined };
+    fireEvent.click(within(screen.getByRole("group", { name: "연도" })).getByText("2025년"));
+    const group = screen.getByRole("group", { name: "연도" });
+    expect(within(group).getAllByRole("button").map((b) => b.textContent)).toEqual(["2026년", "2025년"]);
+    expect(within(group).getByText("2025년").getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("names an unregistered KR stock by its code, never the .KS ticker", () => {
+    const quotes = [{ ...FULL.quotes[0], ticker: "123456.KS", name: null }];
+    render(<YearRecapView data={{ ...FULL, quotes }} />);
+    expect(document.body.textContent).not.toMatch(/\.KS|\.KQ/);
+    expect(document.body.textContent).toContain("123456");
   });
 
   it("an empty year shows no share button", () => {

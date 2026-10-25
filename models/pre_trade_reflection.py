@@ -32,7 +32,10 @@ from services.crypto_service import EncryptedText
 # — see ``services.pre_trade.friction.start_cooldown``.
 # 2026-05-22 (CEO "50자 너무 많아 10자"): lowered 50 → 10. Must match the
 # frontend MIN_RATIONALE_CHARS (pre-trade-friction-core.tsx).
-MIN_RATIONALE_CHARS = 10
+# 2026-10-25 (CEO "적어야 할게 너무 많다" → 탭 위주): 10 → 2. The reason is now
+# picked from chips ("실적·숫자" …) with an optional line; the shortest chip is
+# two characters, and one stray key still does not pass.
+MIN_RATIONALE_CHARS = 2
 
 # Default cooldown duration. The service layer extends this when the
 # market environment trips one of the auto-extend triggers.

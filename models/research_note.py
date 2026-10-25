@@ -3,7 +3,7 @@
 docs/design/research-notes_2026-10-15.md. 관찰 노트(``observation_note.py``)가
 자유 텍스트의 앞단이라면, 리서치 노트는 **모든 종목에 같은 다섯 칸 양식**이다:
 
-    1. 이 회사는 뭘로 돈을 버나            (business, 필수)
+    1. 이 회사는 뭘로 돈을 버나            (business, 선택 — 2026-10-25 부터, 비우면 "")
     2. 내가 보는 이유 — 가정 1~3개          (theses, 필수)
     3. 이게 보이면 틀린 것                 (invalidation, 선택)
     4. 가장 큰 위험 하나                   (risk, 선택)

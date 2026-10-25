@@ -165,6 +165,11 @@ function RuleRow({ rule, adopted }: { rule: MyRuleItem; adopted: boolean }) {
       <p className="mt-1 text-[12.5px] leading-relaxed" style={{ color: DIM }}>
         {rule.observed}
       </p>
+      {rule.note && (
+        <p className="mt-1 text-[11.5px] leading-relaxed" style={{ color: "rgba(var(--pq-ivory-rgb), 0.42)" }}>
+          {rule.note}
+        </p>
+      )}
       {rule.id === "frequency" && rule.months && (
         <MonthBars months={rule.months} ceiling={rule.ceiling ?? null} adopted={adopted} />
       )}
@@ -301,7 +306,7 @@ export function MyRulesPanel({
           바꾸면 새 선을 다시 확정해요.{" "}
           <Link
             href={RETAKE_HREF}
-            className="underline underline-offset-2"
+            className="pq-hit underline underline-offset-2"
             style={{ color: "var(--pq-bronze)" }}
           >
             선 다시 정하기

@@ -299,6 +299,18 @@ class EmailSender:
         # 호출되므로 자연히 영향받지 않으며 그대로 둔다.
         is_transactional = email_category is EmailCategory.TRANSACTIONAL
 
+        # ── 1a'. pending account deletion (PIPA §21 grace window) ──────
+        # A user who asked to delete the account gets transactional mail only
+        # (the deletion / cancel notices). Every queue already had to remember
+        # this on its own and three did not (onboarding · retention ·
+        # inactive nudge, 2026-10-22) — one gate here backs them all.
+        if not is_transactional and getattr(user, "deletion_requested_at", None) is not None:
+            logger.info(
+                "skipping email for user %s — account deletion pending",
+                getattr(user, "id", "?"),
+            )
+            return False
+
         if not is_transactional:
             # ── 1b. opt-out gate ───────────────────────────────────────────
             # Wave G-1 Bug #8 (2026-05-18): consents.py spec —
@@ -308,30 +320,44 @@ class EmailSender:
             # set 된 적 없는 (회원가입 직후 settings 미방문) 유저에게도 마케팅성
             # 이메일이 발송될 수 있었다. 정통망법 §50 ① default-deny 원칙으로
             # marketing_consent_at NULL = 발송 차단.
-            if not getattr(user, "marketing_consent_at", None):
-                # 2026-06-01: debug→info (silent-drop 비-silent화). The baseline
-                # default-deny gate is Q-S1-INDEPENDENT (the category gate below
-                # is the Q-S1-flagged layer), so making suppressed marketing
-                # sends observable in prod logs does not wait on the lawyer.
-                logger.info(
-                    "skipping email for user %s — marketing_consent_at NULL "
-                    "(정통망법 §50 default-deny, baseline marketing-consent gate)",
-                    getattr(user, "id", "?"),
-                )
-                return False
-            # The comment above states the spec as "consent_at set AND
-            # (revoked_at IS NULL OR revoked_at < consent_at)"; the code only
-            # checked the first half. 2026-09-10: a user who revoked and then
-            # flipped the Settings delivery toggle back on (email_opt_out=false)
-            # was mailed again. Same rule as routes/consents._consent_state.
-            _revoked_at = getattr(user, "marketing_consent_revoked_at", None)
-            if _revoked_at is not None and _revoked_at >= user.marketing_consent_at:
-                logger.info(
-                    "skipping email for user %s — marketing consent revoked "
-                    "(정통망법 §50, revoked_at >= consent_at)",
-                    getattr(user, "id", "?"),
-                )
-                return False
+            # 정보성 mail (the monthly report) answers to its own consent, not
+            # to the 광고성 one: requiring an ad opt-in to receive a report of
+            # one's own records would bundle the two §50 ① keeps apart. The
+            # INFORMATION record is checked regardless of the CS1 flag, so this
+            # never gets looser than the baseline — it swaps which record it reads.
+            if email_category is EmailCategory.INFORMATION:
+                if not _has_category_consent(user, EmailCategory.INFORMATION):
+                    logger.info(
+                        "skipping information email for user %s — 정보성 수신 "
+                        "동의 없음 (정통망법 §50 default-deny)",
+                        getattr(user, "id", "?"),
+                    )
+                    return False
+            else:
+                if not getattr(user, "marketing_consent_at", None):
+                    # 2026-06-01: debug→info (silent-drop 비-silent화). The baseline
+                    # default-deny gate is Q-S1-INDEPENDENT (the category gate below
+                    # is the Q-S1-flagged layer), so making suppressed marketing
+                    # sends observable in prod logs does not wait on the lawyer.
+                    logger.info(
+                        "skipping email for user %s — marketing_consent_at NULL "
+                        "(정통망법 §50 default-deny, baseline marketing-consent gate)",
+                        getattr(user, "id", "?"),
+                    )
+                    return False
+                # The comment above states the spec as "consent_at set AND
+                # (revoked_at IS NULL OR revoked_at < consent_at)"; the code only
+                # checked the first half. 2026-09-10: a user who revoked and then
+                # flipped the Settings delivery toggle back on (email_opt_out=false)
+                # was mailed again. Same rule as routes/consents._consent_state.
+                _revoked_at = getattr(user, "marketing_consent_revoked_at", None)
+                if _revoked_at is not None and _revoked_at >= user.marketing_consent_at:
+                    logger.info(
+                        "skipping email for user %s — marketing consent revoked "
+                        "(정통망법 §50, revoked_at >= consent_at)",
+                        getattr(user, "id", "?"),
+                    )
+                    return False
 
             # ── 1c. category-split consent gate (Wave D Sub-wave 1, C-S1) ──
             # Feature-flagged behind ``PIVOX_CS1_CONSENT_ENABLED`` (default false)

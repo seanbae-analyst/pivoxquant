@@ -34,6 +34,7 @@ import type {
   OnboardingOption,
   OnboardingQuestion,
 } from "@/data/onboarding-questions";
+import { QuantMark } from "@/components/ui/quant-mark";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -70,20 +71,28 @@ function getIcon(key?: string): string {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function loadSavedAnswers(): Record<string, string | string[] | number> {
-  if (typeof window === "undefined") return {};
+// The device copy is tagged with its owner's id (2026-10-22). One shared key
+// with no owner handed user A's half-finished answers — legal confirmations
+// ticked — to the next account that signed up in the same browser, and the
+// debounced PUT then copied them into that user's server draft. An untagged
+// copy (written before this) or another user's copy reads as empty.
+function loadSavedAnswers(uid: number | null | undefined): Record<string, string | string[] | number> {
+  if (typeof window === "undefined" || uid == null) return {};
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as Record<string, string | string[] | number>) : {};
+    if (!raw) return {};
+    const saved = JSON.parse(raw) as { uid?: unknown; answers?: unknown };
+    if (saved?.uid !== uid || !saved.answers || typeof saved.answers !== "object") return {};
+    return saved.answers as Record<string, string | string[] | number>;
   } catch {
     return {};
   }
 }
 
-function saveAnswers(answers: Record<string, string | string[] | number>) {
-  if (typeof window === "undefined") return;
+function saveAnswers(answers: Record<string, string | string[] | number>, uid: number | null | undefined) {
+  if (typeof window === "undefined" || uid == null) return;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(answers));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ uid, answers }));
   } catch {
     // storage full -- silent fail
   }
@@ -697,7 +706,8 @@ function OnboardingWizard() {
 
   // Steps: 0..4 = wizard questions, 5 = legal, 6 = result screen
   const [step, setStep] = useState(0);
-  const [answers, setAnswers] = useState<Answers>(loadSavedAnswers);
+  const uid = user?.id;
+  const [answers, setAnswers] = useState<Answers>(() => loadSavedAnswers(uid));
   const [direction, setDirection] = useState<PagerDir>(1); // 1 = forward, -1 = back
   const [submitting, setSubmitting] = useState(false);
   // The backend's echo of the user's own answers (v3). Set once the POST
@@ -727,7 +737,8 @@ function OnboardingWizard() {
       setAnswers({});
       return;
     }
-    const local = loadSavedAnswers();
+    if (uid == null) return; // wait for the signed-in user — the copy is theirs only
+    const local = loadSavedAnswers(uid);
     if (Object.keys(local).length > 0) {
       setAnswers(local);
     }
@@ -744,7 +755,7 @@ function OnboardingWizard() {
       .catch(() => {
         // Best-effort hydrate. localStorage already populated above.
       });
-  }, [retake]);
+  }, [retake, uid]);
 
   // Save answers to localStorage + server draft whenever they change.
   // 2026-05-17 wave 12 UX P0 (PR #427): localStorage stays as the hot
@@ -754,7 +765,7 @@ function OnboardingWizard() {
   // tolerate (≤2s, well under the wizard's per-question rhythm).
   useEffect(() => {
     if (retake) return;
-    saveAnswers(answers);
+    saveAnswers(answers, uid);
     if (Object.keys(answers).length === 0) return;
     const t = setTimeout(() => {
       apiFetch(API.profile.onboardingDraft, {
@@ -766,7 +777,7 @@ function OnboardingWizard() {
       });
     }, 2_000);
     return () => clearTimeout(t);
-  }, [answers, retake]);
+  }, [answers, retake, uid]);
 
   // 2026-05-17 wave 12 UX P1 (PR #428): beforeunload guard. The wizard
   // has localStorage + server-side draft (PR #427) but those sync 2s
@@ -1173,13 +1184,10 @@ function OnboardingWizard() {
         <div className="mx-auto max-w-lg">
           <div className="mb-3 flex items-center justify-between">
             <span
-              className="text-base font-bold font-display"
-              style={{
-                color: "var(--pq-ivory)",
-                letterSpacing: "var(--pq-track-wordmark)",
-              }}
+              className="text-pq-h5 font-bold tracking-[-0.02em]"
+              style={{ color: "var(--pq-ivory)" }}
             >
-              PivoxQuant
+              <QuantMark />
             </span>
             {/* P1-6 (2026-05-20 ux-flow fix): Skip was opacity-0.5 plain text
                 — easy to miss, hurting first-run completion for users who

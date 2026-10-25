@@ -37,6 +37,16 @@ INTERVAL_OPEN = 5
 INTERVAL_CLOSED = 30
 
 
+_MIN_STREAM_GAP = 1.0
+
+
+def _next_sleep(tick_start: float, interval: float) -> float:
+    """Seconds left of ``interval`` since ``tick_start`` (monotonic). Never
+    below ``_MIN_STREAM_GAP`` — a batch slower than the interval must not
+    turn the stream into back-to-back upstream fetches."""
+    return max(_MIN_STREAM_GAP, interval - (time.monotonic() - tick_start))
+
+
 def _stream_interval() -> int:
     """Pick push cadence based on live market status.
 
@@ -190,6 +200,7 @@ def portfolio_stream():
         last_refresh = time.monotonic()
         try:
             while True:
+                tick_start = time.monotonic()
                 try:
                     if time.monotonic() - last_refresh >= _TICKER_REFRESH_EVERY_PORTFOLIO:
                         try:
@@ -284,7 +295,10 @@ def portfolio_stream():
                     logger.exception("SSE portfolio stream error user=%s", user_id)
                     yield f"data: {json.dumps({'error': 'Portfolio update failed'})}\n\n"
                 yield ": heartbeat\n\n"
-                time.sleep(_stream_interval())
+                # Fixed cadence: the interval counts from the start of the
+                # tick, so a slow batch no longer adds its own duration to
+                # every push (5s + batch time, 2026-10-22).
+                time.sleep(_next_sleep(tick_start, _stream_interval()))
         except GeneratorExit:
             # Client closed the connection — expected, not an error.
             logger.debug("SSE portfolio stream closed user=%s", user_id)

@@ -71,7 +71,10 @@ import {
   EMAIL_DELIVERY_ANCHOR,
   NotificationsMatrix,
 } from "@/components/settings/v2/notifications-matrix";
-import { MarketingConsentCardV2 } from "@/components/settings/v2/marketing-consent-card";
+import {
+  InformationConsentCardV2,
+  MarketingConsentCardV2,
+} from "@/components/settings/v2/marketing-consent-card";
 import { MonthlyReportCard } from "@/components/settings/v2/monthly-report-card";
 import { PrivacyCardV2, type CsvDataset } from "@/components/settings/v2/privacy-card-v2";
 import { ImportTokensSection } from "@/components/settings/import-tokens-section";
@@ -98,9 +101,10 @@ export default function SettingsPageV2() {
   /* Whether `emailEnabled` reflects the server yet — until then the matrix
      must not claim the delivery toggle is blocking the monthly report. */
   const [emailKnown, setEmailKnown] = React.useState(false);
-  /* B3 marketing consent, reported by MarketingConsentCardV2 (undefined until
-     it has hydrated). Feeds the monthly-report note in the matrix. */
-  const [marketingConsentOn, setMarketingConsentOn] = React.useState<
+  /* 정보성 consent, reported by InformationConsentCardV2 (undefined until it
+     has hydrated). The monthly report needs this one, not the marketing
+     toggle — feeds the note in the matrix and the monthly-report card. */
+  const [informationConsentOn, setInformationConsentOn] = React.useState<
     boolean | undefined
   >(undefined);
 
@@ -363,13 +367,6 @@ export default function SettingsPageV2() {
 
   return (
     <ErrorBoundary>
-      {/* TOP TICKER */}
-      <div
-        className="-mx-4 md:-ml-10 md:-mr-10 mb-4"
-        style={{ maxWidth: "100vw" }}
-      >
-      </div>
-
       {/* CFO STATUS — sticky hairline.
        * z-10 (2026-05-13 thorough-fix sweep): was z-40, clipped the
        * NotificationDropdown panel by stacking above the TopBar wrapper
@@ -415,14 +412,10 @@ export default function SettingsPageV2() {
           <AnchorRail />
         </div>
 
-        <div
-          className="pq-settings-body md:[grid-column:span_10]"
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 64,
-          }}
-        >
+        {/* Phone shows one pane (or the list) at a time — 64px between
+            sections is desktop rhythm; on a phone it opened a 96px hole
+            between the list and the notice under it (2026-10-22). */}
+        <div className="pq-settings-body flex flex-col gap-6 md:gap-16 md:[grid-column:span_10]">
           {/* Phone: an open pane's ‹ back + title live in the app bar
               (top-bar.tsx subScreen), like a native settings stack. */}
           {pane === null && <SettingsPhoneList />}
@@ -594,7 +587,7 @@ export default function SettingsPageV2() {
 
             <NotificationsMatrix
               emailDeliveryOn={emailKnown ? emailEnabled : undefined}
-              marketingConsentOn={marketingConsentOn}
+              informationConsentOn={informationConsentOn}
             />
 
             <div
@@ -828,7 +821,13 @@ export default function SettingsPageV2() {
                 is wider than 2 columns and the timestamp line needs the
                 full row for legibility on mobile. */}
             <div style={{ marginTop: 12 }}>
-              <MarketingConsentCardV2 onConsentChange={setMarketingConsentOn} />
+              <MarketingConsentCardV2 />
+            </div>
+
+            {/* B3' · 정보성 consent (§50 ① 분리 동의, 2026-10-22) — the record
+                the monthly report below is sent on. */}
+            <div style={{ marginTop: 12 }}>
+              <InformationConsentCardV2 onConsentChange={setInformationConsentOn} />
             </div>
 
             {/* B4 · Monthly mirror report — what it carries, whether the next
@@ -837,7 +836,7 @@ export default function SettingsPageV2() {
             <div style={{ marginTop: 12 }}>
               <MonthlyReportCard
                 emailDeliveryOn={emailKnown ? emailEnabled : undefined}
-                marketingConsentOn={marketingConsentOn}
+                informationConsentOn={informationConsentOn}
               />
             </div>
           </section>
@@ -874,21 +873,26 @@ export default function SettingsPageV2() {
           </section>
 
           {/* DISCLAIMER — on a phone it sits under the list, not under a section. */}
+          {/* 2026-10-22: a hairline card like every other block on the page
+              (was a dashed box in 15px body — the only dashed border left). */}
           <div
             style={{
-              marginTop: 32,
-              padding: "18px 24px",
-              border: "1px dashed rgba(245,240,232,0.14)",
-              fontSize: "var(--pq-text-body)",
-              lineHeight: 1.6,
+              padding: "16px 20px",
+              border: "1px solid var(--pq-ivory-line)",
+              borderRadius: "var(--pq-radius-card)",
+              background: "rgba(var(--pq-ivory-rgb), 0.02)",
+              fontSize: "var(--pq-text-body-sm)",
+              lineHeight: 1.65,
               color: "var(--pq-ivory-dim)",
             }}
-          className={`font-serif ${pane === null ? "" : "hidden md:block"}`} >
+            className={`[word-break:keep-all] md:mt-8 ${pane === null ? "" : "hidden md:block"}`}
+          >
             <strong
               style={{
                 color: "var(--pq-ivory-strong)",
+                fontWeight: 600,
               }}
-            className="font-serif" >
+            >
               {t("settingsV2.notice.title")}
             </strong>{" "}
             {t("settingsV2.notice.body")}

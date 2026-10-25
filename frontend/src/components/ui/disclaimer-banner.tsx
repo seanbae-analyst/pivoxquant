@@ -74,9 +74,12 @@ export function DisclaimerBanner({
     <div
       className={cn(
         "rounded-[var(--pq-radius-card)] transition-colors duration-300",
+        // 2026-10-22 (블랙·골드 리프레시 마무리): the 1.5px bronze top edge
+        // read as a glow bar under every screen — the refresh dropped glows.
+        // A plain hairline card, same as the page's own cards.
         isDark
-          ? "border border-[rgba(245,240,232,0.12)] border-t-[var(--pq-bronze-light)] border-t-[1.5px] bg-[rgba(255,255,255,0.02)]"
-          : "rounded-xl border border-slate-200 border-t-slate-400 border-t-[1.5px] bg-slate-50",
+          ? "border border-[var(--pq-ivory-line)] bg-[rgba(var(--pq-ivory-rgb),0.02)]"
+          : "rounded-xl border border-slate-200 bg-slate-50",
         className,
       )}
     >
@@ -84,7 +87,7 @@ export function DisclaimerBanner({
         type="button"
         onClick={() => !alwaysExpanded && setExpanded((prev) => !prev)}
         className={cn(
-          "flex w-full items-start gap-3 px-5 py-4 text-left md:px-6 md:py-5",
+          "flex w-full items-start gap-3 px-4 py-3.5 text-left md:px-5 md:py-4",
           !alwaysExpanded && "cursor-pointer",
           alwaysExpanded && "cursor-default",
         )}
@@ -100,15 +103,16 @@ export function DisclaimerBanner({
         />
         <div className="flex-1 min-w-0">
           {isDark && (
+            // A label, not a heading: at 18px bronze it was the loudest line
+            // at the foot of every screen.
             <div
-              className="font-display"
               style={{
-                fontWeight: 500,
-                fontSize: "var(--pq-text-h5)",
-                lineHeight: 1.2,
+                fontWeight: 600,
+                fontSize: "var(--pq-text-body-sm)",
+                lineHeight: 1.3,
                 letterSpacing: "0.01em",
                 color: "var(--pq-bronze-light)",
-                marginBottom: 6,
+                marginBottom: 4,
               }}
             >
               면책 고지
@@ -118,7 +122,7 @@ export function DisclaimerBanner({
             className={cn(
               "leading-relaxed",
               isDark
-                ? "text-[rgba(245,240,232,0.88)]"
+                ? "text-[var(--pq-ivory-mid)]"
                 : "text-slate-700 font-medium",
             )}
             style={{
@@ -146,7 +150,7 @@ export function DisclaimerBanner({
           id="disclaimer-panel"
           role="region"
           className={cn(
-            "px-5 pb-5 pt-3 border-t md:px-6 md:pb-6",
+            "px-4 pb-4 pt-3 border-t md:px-5 md:pb-5",
             isDark
               ? "border-[var(--pq-ivory-line)]"
               : "border-slate-200",

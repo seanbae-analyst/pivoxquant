@@ -27,7 +27,7 @@ export function isDemoMode(): boolean {
 export const DEMO_USER: User = {
   id: 1,
   email: "demo@pivoxquant.com",
-  name: "데모 투자자",
+  name: "배상현",
   available_capital: 100_000,
   available_capital_krw: 50_000_000,
   oauth_provider: "google",
@@ -64,8 +64,8 @@ const DEMO_MIRROR_HOME: MirrorHomeResponse = {
     confirmed: true,
     confirmed_at: "2026-09-02T01:00:00",
     confirmed_on: "2026-09-02",
-    counted: 3,
-    outside: 2,
+    counted: 4,
+    outside: 3,
     items: [
       {
         id: "frequency", title: "매매 횟수", line: "한 달에 매수·매도 5번 이하",
@@ -91,9 +91,11 @@ const DEMO_MIRROR_HOME: MirrorHomeResponse = {
         open_positions: 7, min_positions: 4,
       },
       {
-        id: "drawdown", title: "하락 대응", line: "한 주에 10% 빠지면 그냥 둔다",
-        measurable: false, status: "not_counted",
-        observed: "시세를 쓰지 않아 10% 빠진 주를 알 수 없어요 — 세지 않아요",
+        id: "drawdown", title: "하락 대응", line: "평단보다 10% 아래로 내려가면 그냥 둔다",
+        measurable: true, status: "outside",
+        observed: "선을 정한 뒤 평단보다 10% 아래에서 판 것 1번 · 더 산 것 0번",
+        note: "그냥 둔 것은 체결이 남지 않아 셀 수 없어요. 평단은 내가 기록한 체결가로 계산해요.",
+        sold_under: 1, added_under: 0, pct: 10,
       },
     ],
   },
@@ -187,14 +189,15 @@ const DEMO_PROFILE = {
 
 
 /* ── Alerts ── */
+// Only what the bell really receives (CLAUDE.md §알림): with vendor-price
+// display off that is the sector-concentration alert. The 2026-06 sample
+// showed 52-week, "변동성 확대" and "주간 메모" items — two had no sender at
+// all and one linked to a deleted /reports page (2026-10-22).
 const DEMO_ALERTS = {
-  unread: 2,
+  unread: 1,
   alerts: [
-    { id: 1, kind: "observation", title: "NVDA 52주 고점 근접", body: "52주 범위 상단에 닿았습니다", ticker: "NVDA", name: "NVIDIA", is_read: false, created_at: "2026-06-18T06:50:00+09:00" },
-    { id: 2, kind: "risk", title: "집중도 주의", body: "기술 섹터 비중 48%", is_read: false, created_at: "2026-06-17T16:30:00+09:00" },
-    { id: 3, kind: "observation", title: "TSLA 변동성 확대", body: "일중 변동성 상위", ticker: "TSLA", name: "Tesla", is_read: true, read_at: "2026-06-17T10:00:00+09:00", created_at: "2026-06-17T09:30:00+09:00" },
-    { id: 4, kind: "system", title: "주간 메모 도착", body: "6월 3주 거울이 준비됐어요", link: "/reports", is_read: true, read_at: "2026-06-16T09:00:00+09:00", created_at: "2026-06-16T08:00:00+09:00" },
-    { id: 5, kind: "observation", title: "LLY 52주 저점 근접", body: "52주 범위 하단에 닿았습니다", ticker: "LLY", name: "Eli Lilly", is_read: true, read_at: "2026-06-15T11:00:00+09:00", created_at: "2026-06-15T07:00:00+09:00" },
+    { id: 1, kind: "concentration_alert", title: "섹터 집중도 · 기술 48.0%", body: "한 섹터가 취득가 기준으로 장부의 30% 이상이에요.", link: "/mirror", is_read: false, created_at: "2026-06-17T16:30:00+09:00" },
+    { id: 2, kind: "concentration_alert", title: "섹터 집중도 · 기술 46.2%", body: "한 섹터가 취득가 기준으로 장부의 30% 이상이에요.", link: "/mirror", is_read: true, read_at: "2026-06-10T10:00:00+09:00", created_at: "2026-06-10T09:30:00+09:00" },
   ],
 };
 
@@ -560,6 +563,105 @@ function _demoSellMoment(query: string) {
   return { ok: true, ticker, words, held_days: 41, vs_cost_pct: null, matched_shares: 0 };
 }
 
+/* ── 종목별 내 기록 (/api/stock-record/<t>, 2026-10-25) — composed from the
+ *    same demo trades, pauses, research and notes so every screen agrees. ── */
+// SEC filings on the stock record (FILINGS_ENABLED) — demo rows for a US name.
+const DEMO_FILINGS: Record<string, { filed_on: string; form: string; label: string; earnings: boolean }[]> = {
+  NVDA: [
+    { filed_on: "2026-06-24", form: "8-K", label: "수시보고", earnings: false },
+    { filed_on: "2026-06-12", form: "8-K", label: "실적 발표", earnings: true },
+    { filed_on: "2026-05-29", form: "10-Q", label: "분기보고서", earnings: false },
+  ],
+  "005930": [
+    { filed_on: "2026-07-07", form: "공정공시", label: "연결재무제표기준영업(잠정)실적(공정공시)", earnings: true },
+    { filed_on: "2026-05-15", form: "정기공시", label: "분기보고서 (2026.03)", earnings: false },
+  ],
+};
+
+function _demoStockRecord(base: string) {
+  const raw = decodeURIComponent(base.slice("/api/stock-record/".length)).trim().toUpperCase();
+  const key = demoNoteTickerKey(raw);
+  const pos = DEMO_POSITION_ROWS.find((p) => demoNoteTickerKey(p.ticker) === key);
+  const fills = DEMO_TRADES.trades
+    .filter((t) => demoNoteTickerKey(t.symbol) === key)
+    .map((t) => ({
+      kind: "fill" as const, at: t.date, side: t.side as "buy" | "sell",
+      shares: t.shares, price: t.price, currency: t.currency, after_pause: false,
+    }));
+  const pauses = DEMO_PRETRADE_LIST.reflections
+    .filter((r) => demoNoteTickerKey(r.intended_ticker) === key)
+    .map((r) => {
+      const entry = r.intended_side === "BUY"; // // legal-ok — stored side code, compared only
+      const at = r.proceeded_at ?? r.cancelled_at ?? "2026-06-15T09:00:00+09:00";
+      return {
+        kind: "pause" as const, at, side: entry ? ("entry" as const) : ("exit" as const),
+        rationale: r.rationale, status: r.status,
+        bought_after: entry ? fills.some((f) => f.side === "buy" && f.at >= at) : null,
+      };
+    });
+  const research = DEMO_RESEARCH_NOTES.filter((n) => demoNoteTickerKey(n.ticker) === key).map((n) => ({
+    kind: "research" as const, at: n.created_at, id: n.id, theses: n.theses,
+    invalidation: n.invalidation, verdicts: n.verdicts, review_on: n.review_on,
+    reviewed_at: n.reviewed_at, due: n.due,
+  }));
+  const notes = DEMO_OBSERVATION_NOTES.filter((n) => n.tickers.some((t) => demoNoteTickerKey(t.ticker) === key)).map((n) => ({
+    kind: "note" as const, at: n.created_at, id: n.id, body: n.body, tags: n.tags,
+  }));
+  const filings = (DEMO_FILINGS[key] ?? []).map((f) => ({
+    kind: "filing" as const, at: `${f.filed_on}T00:00:00`, filed_on: f.filed_on, form: f.form,
+    label: f.label, earnings: f.earnings, source: /^\d{6}$/.test(key) ? "DART" : "SEC EDGAR",
+    url: /^\d{6}$/.test(key)
+      ? "https://dart.fss.or.kr/"
+      : `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${encodeURIComponent(key)}`,
+  }));
+  const usDay = (iso: string) => new Date(Date.parse(iso) - 4 * 3600_000).toISOString().slice(0, 10); // EDT, demo only
+  const releases = filings.filter((f) => f.earnings).map((f) => Date.parse(f.filed_on));
+  const afterRelease = (iso: string) =>
+    releases.some((d) => {
+      const days = (Date.parse(usDay(iso)) - d) / 86_400_000;
+      return days >= 1 && days <= 3;
+    });
+  const events = [...fills, ...pauses, ...research, ...notes, ...filings].sort((a, b) => (b.at ?? "").localeCompare(a.at ?? ""));
+  return {
+    ok: true,
+    ticker: pos?.ticker ?? raw,
+    name: pos?.name ?? DEMO_SEARCH_UNIVERSE.find((u) => demoNoteTickerKey(u.ticker) === key)?.name ?? null,
+    holding: pos ? { shares: pos.shares, avg_cost: pos.avg_cost, currency: pos.currency } : null,
+    counts: {
+      fills: fills.length,
+      buys: fills.filter((f) => f.side === "buy").length,
+      sells: fills.filter((f) => f.side === "sell").length,
+      pauses: pauses.length,
+      not_taken: pauses.filter((p) => p.bought_after === false).length,
+      research: research.length,
+      notes: notes.length,
+      filings: filings.length,
+    },
+    filing_reaction: releases.length
+      ? {
+          earnings: releases.length, window_days: 3, date_basis: /^\d{6}$/.test(key) ? ("kr" as const) : ("us" as const),
+          buys_after: fills.filter((f) => f.side === "buy" && afterRelease(f.at)).length,
+          sells_after: fills.filter((f) => f.side === "sell" && afterRelease(f.at)).length,
+          timed_fills: fills.length, untimed_fills: 0,
+        }
+      : null,
+    events,
+  };
+}
+
+// 내가 고른 회사들 (/api/pick-facts) — demo picks over the demo buys.
+const DEMO_PICK_FACTS = {
+  ok: true, window_days: 365, picked: 5, with_facts: 4, pending: 0, no_facts: 1,
+  counts: { net_loss: 1, revenue_down: 1, liabilities_over_equity: 2 },
+  sources: ["DART", "SEC EDGAR"],
+  picks: [
+    { ticker: "NVDA", name: "NVIDIA", bought_on: "2026-06-15", fiscal_end: "2026-01-25", filed_on: "2026-02-26", net_loss: false, revenue_down: false, liabilities_over_equity: false, source: "SEC EDGAR" },
+    { ticker: "AAPL", name: "Apple", bought_on: "2026-05-12", fiscal_end: "2025-09-27", filed_on: "2025-10-31", net_loss: false, revenue_down: false, liabilities_over_equity: true, source: "SEC EDGAR" },
+    { ticker: "TSLA", name: "Tesla", bought_on: "2026-05-20", fiscal_end: "2025-12-31", filed_on: "2026-01-29", net_loss: false, revenue_down: true, liabilities_over_equity: false, source: "SEC EDGAR" },
+    { ticker: "JOBY", name: "Joby Aviation", bought_on: "2026-06-02", fiscal_end: "2025-12-31", filed_on: "2026-02-25", net_loss: true, revenue_down: false, liabilities_over_equity: true, source: "SEC EDGAR" },
+  ],
+};
+
 /** Canned GET response for a path, or undefined if not registered yet. */
 function matchDemoGet(path: string): unknown | undefined {
   const qIdx = path.indexOf("?");
@@ -573,7 +675,9 @@ function matchDemoGet(path: string): unknown | undefined {
   if (base.startsWith("/api/research-notes/by-ticker/"))
     return _demoResearchByTicker(base);
   if (base === "/api/research-notes/overview") return DEMO_RESEARCH_OVERVIEW;
+  if (base.startsWith("/api/stock-record/")) return _demoStockRecord(base);
   if (base === "/api/doorway/summary") return DEMO_DOORWAY_SUMMARY;
+  if (base === "/api/pick-facts") return DEMO_PICK_FACTS;
 
   if (base === "/api/sell-moment") return _demoSellMoment(query);
   if (base === "/api/research-notes/list")

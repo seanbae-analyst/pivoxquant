@@ -195,7 +195,7 @@ def test_concentration_weights_by_krw_cost_basis_not_raw_native(
                   Alert.query.filter_by(user_id=user["id"],
                                         kind="concentration_alert").all()]
     assert not any("Semis" in t for t in titles), titles
-    assert any("Technology 97.4%" in t for t in titles), titles
+    assert any("기술 97.4%" in t for t in titles), titles  # sector shown in Korean (2026-10-22)
 
 
 def test_concentration_never_alerts_on_unknown_sector(app, make_user, add_position):

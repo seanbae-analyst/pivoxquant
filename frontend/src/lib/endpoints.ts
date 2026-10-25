@@ -349,6 +349,12 @@ export const API = {
     check: (id: number | string) => `/api/doorway/checks/${id}`,
     summary: "/api/doorway/summary",
   },
+  // 종목별 내 기록 (2026-10-25) — one stock's fills, pauses, research and
+  // notes on one timeline. GET only; the user's own records, no quote.
+  //   GET /<ticker> → {ticker, name, holding, counts, events}
+  stockRecord: (ticker: string) => `/api/stock-record/${encodeURIComponent(ticker)}`,
+  // 내가 고른 회사들 — 산 날 직전 공시 연간 숫자로 센 개수 (2026-10-25).
+  pickFacts: "/api/pick-facts",
   research: {
     create: "/api/research-notes",
     list: "/api/research-notes/list",
@@ -374,9 +380,12 @@ export const API = {
   // - POST   : record explicit opt-in (clears prior revocation)
   // - DELETE : record revocation
   //   Neither touches email_opt_out (2026-09-29) — that is profile.emailPreferences'.
+  //   categories GET → {categories:{information,marketing}} · POST {information?: bool, marketing?: bool}
+  //   (§50 ① split record; `information` gates the monthly report, 2026-10-22)
   consents: {
     marketing: "/api/consents/marketing",
     crossBorder: "/api/consents/cross-border",
+    categories: "/api/consents/categories",
   },
   // Import Inbox (2026-09-13, docs/product/IMPORT_INBOX_DESIGN.md §API).
   // The server receives only what the user uploads — a CSV/XLSX file or

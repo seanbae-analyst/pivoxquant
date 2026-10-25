@@ -257,7 +257,7 @@ export function AddPositionModalV2({
             <h2
               id={headlineId}
               className="font-display"
-              style={{ fontWeight: 500, fontSize: "var(--pq-text-h3)", lineHeight: 1.15, letterSpacing: "-0.02em", color: "var(--pq-ivory)", margin: "0 0 16px 0" }}
+              style={{ fontWeight: 500, fontSize: "clamp(24px, 4vw + 8px, 32px)" /* 24px in a phone sheet, 32px from ~600px */, lineHeight: 1.15, letterSpacing: "-0.02em", color: "var(--pq-ivory)", margin: "0 0 16px 0" }}
             >
               {t("dashboard.portfolio.holdingsImport.title")}
             </h2>
@@ -289,7 +289,7 @@ export function AddPositionModalV2({
             className="font-display"
             style={{
               fontWeight: 500,
-              fontSize: "var(--pq-text-h3)",
+              fontSize: "clamp(24px, 4vw + 8px, 32px)" /* 24px in a phone sheet, 32px from ~600px */,
               lineHeight: 1.15,
               letterSpacing: "-0.02em",
               color: "var(--pq-ivory)",

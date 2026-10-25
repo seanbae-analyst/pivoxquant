@@ -30,6 +30,7 @@ surface only factual statistics — never a score, grade, or directive
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
 
 from flask import Blueprint, jsonify, request
 from flask_login import current_user
@@ -338,7 +339,11 @@ def rebuy_mirror():
         .filter_by(user_id=current_user.id)
         .all()
     )
-    result = compute_rebuy_mirror(trades, period_days=period_days)
+    result = compute_rebuy_mirror(
+        trades,
+        period_days=period_days,
+        now=datetime.now(timezone.utc).replace(tzinfo=None),
+    )
 
     body = {
         "ok": True,

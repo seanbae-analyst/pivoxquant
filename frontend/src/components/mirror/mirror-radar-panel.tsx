@@ -41,16 +41,16 @@ export function MirrorRadarPanel({
 }) {
   return (
     <section
-      className={bordered ? "rounded-[4px] p-4" : undefined}
+      className={bordered ? "rounded-[var(--pq-radius-card)] p-4" : undefined}
       style={bordered ? { border: "1px solid var(--pq-ivory-line)" } : undefined}
       data-testid="mirror-radar-panel"
     >
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-        <div className="text-[12.5px]" style={{ color: "var(--pq-ivory)" }}>
+        <div className="text-[14px]" style={{ color: "var(--pq-ivory)" }}>
           선언 vs 관찰
         </div>
         <div
-          className="flex items-center gap-3 text-[10.5px]"
+          className="flex items-center gap-3 text-[11.5px]"
           style={{ color: "rgba(var(--pq-ivory-rgb), 0.55)" }}
         >
           <LegendDot colorVar="--pq-bronze" label="선언(설문)" />
@@ -58,7 +58,7 @@ export function MirrorRadarPanel({
         </div>
       </div>
 
-      <div className="mt-2 flex justify-center">
+      <div className="mt-3 flex justify-center">
         <SelfObservedRadar
           className="w-full max-w-[460px]"
           labels={data.radar.labels}
@@ -68,7 +68,7 @@ export function MirrorRadarPanel({
         />
       </div>
 
-      <p className="mt-1 text-center text-[10.5px]" style={{ color: "var(--pq-bronze)" }}>
+      <p className="mt-2 text-center text-[11.5px] leading-relaxed [word-break:keep-all]" style={{ color: "rgba(var(--pq-ivory-rgb), 0.55)" }}>
         각 축의 % = 최근 30일 관찰값 · — = 아직 잴 기록이 부족 · 브론즈=선언, 아이보리=관찰
       </p>
     </section>

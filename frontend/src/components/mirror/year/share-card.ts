@@ -21,6 +21,7 @@ export const SHARE_WIDTH = 1080;
 export const SHARE_HEIGHT = 1350;
 const PAD = 96;
 const WORDMARK = "PivoxQuant";
+const WORDMARK_HEAD = "Pivox";
 /** Some browsers start the download after the click handler returns. */
 const REVOKE_AFTER_MS = 1000;
 
@@ -35,8 +36,8 @@ export interface ShareCardText {
 export function shareCardLines(data: YearRecapResponse): ShareCardText {
   const { pauses, records, fills } = data;
   const lines: string[] = [];
-  if (pauses.started > 0) lines.push(`사기 전에 멈춘 ${pauses.started}번`);
-  if (pauses.never_bought > 0) lines.push(`그중 끝내 사지 않은 ${pauses.never_bought}번`);
+  if (pauses.started > 0) lines.push(`거래 전에 멈춘 ${pauses.started}번`);
+  if (pauses.never_bought > 0) lines.push(`그중 사려다 멈추고 끝내 사지 않은 ${pauses.never_bought}번`);
   if (records.reasoned_fills > 0) lines.push(`이유를 적은 체결 ${records.reasoned_fills}건`);
   if (records.research_written > 0) lines.push(`직접 쓴 리서치 ${records.research_written}편`);
   if (lines.length === 0 && fills.total > 0) lines.push(`기록한 체결 ${fills.total}건`);
@@ -112,9 +113,14 @@ export function drawShareCard(canvas: HTMLCanvasElement, text: ShareCardText): b
     y += 28;
   }
 
+  // The site logo: "Pivox" Ivory + "Quant" Bronze (components/ui/quant-mark.tsx).
+  const markY = SHARE_HEIGHT - PAD - 150;
+  const head = text.wordmark.slice(0, WORDMARK_HEAD.length);
+  ctx.font = `700 44px ${font}`;
+  ctx.fillStyle = ivory;
+  ctx.fillText(head, PAD, markY);
   ctx.fillStyle = bronze;
-  ctx.font = `600 44px ${font}`;
-  ctx.fillText(text.wordmark, PAD, SHARE_HEIGHT - PAD - 150);
+  ctx.fillText(text.wordmark.slice(head.length), PAD + ctx.measureText(head).width, markY);
 
   ctx.globalAlpha = 0.55;
   ctx.fillStyle = ivory;
