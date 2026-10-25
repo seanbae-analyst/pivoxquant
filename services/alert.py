@@ -34,7 +34,8 @@ ALLOWED_KINDS = {
     "price_52w_low",
     "concentration_alert",
     # 2026-10-25 — 가설 다시 보기 (services/filing_timeline/research_check):
-    # 채점 전 리서치가 있는 종목에 새 정기보고서·실적 발표. 벨만 (push=False).
+    # 채점 전 리서치가 있는 종목에 새 정기보고서·실적 발표. 벨 + 푸시, 알림
+    # 설정의 research_filing 줄로 끈다.
     "research_filing",
 }
 
@@ -117,6 +118,7 @@ _BELL_KIND_TO_EVENT_ID: dict[str, Optional[str]] = {
     "price_52w_high":      "price_52w",
     "price_52w_low":       "price_52w",
     "concentration_alert": "concentration",
+    "research_filing":     "research_filing",
 }
 
 

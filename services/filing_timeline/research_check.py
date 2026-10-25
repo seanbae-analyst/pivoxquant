@@ -13,8 +13,8 @@ research_notes)는 "틀렸다고 볼 신호"와 다시 볼 날을 적어 둔다.
   있어요." 공시를 해석하지 않고, 무엇을 하라고 하지 않는다.
 * **유저 문장을 알림에 옮기지 않는다.** 리서치 본문·틀린 신호는 DB 에 암호화돼
   있는데 ``alerts.body`` 는 평문이다 — 링크(종목 기록)에서 본인이 본다.
-* **벨만, 푸시 없음.** 알림 설정 표(models/user.py — 동결 파일)에 이 종류의
-  끄기 스위치가 아직 없어서 푸시는 보내지 않는다 (``create_alert(push=False)``).
+* **벨 + 푸시.** 알림 설정의 "가설 다시 보기" 줄(``research_filing`` —
+  models/user.py, 2026-10-25 CEO "푸시도 켜")로 앱 안·푸시를 따로 끈다.
 * **한 공시에 한 번.** 제목에 공시 날짜가 들어가고 400일 안 같은 제목은 다시
   만들지 않는다. 같은 종목에 리서치가 여럿이어도 알림은 하나.
 * 원천은 종목 기록과 같다: ``FILINGS_ENABLED``, 한국은 ``DART_API_KEY`` 도.
@@ -119,7 +119,7 @@ def run_once(*, now: datetime | None = None, ticker_budget: int = TICKER_BUDGET)
         made = create_alert(
             user_id, KIND, title, body=body, ticker=normalized,
             link=f"/journal/stock/{normalized}",
-            dedup_window_hours=DEDUP_HOURS, dedup_title_prefix=title, push=False,
+            dedup_window_hours=DEDUP_HOURS, dedup_title_prefix=title,
         )
         if made is not None:
             summary["alerts"] += 1

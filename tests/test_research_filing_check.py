@@ -4,8 +4,8 @@ Pins: an open research note gets one bell alert for the latest periodic report
 or earnings release filed after the day it was written — not a current report,
 not the writing day itself, not twice; a scored note and a name without a
 source get nothing; the alert carries no words of the user's note (those are
-encrypted at rest, alerts are not); bell only, never a push; flag off → no
-call at all. SEC is stubbed.
+encrypted at rest, alerts are not); bell + one push, both muted by the
+research_filing setting row; flag off → no call at all. SEC is stubbed.
 """
 from __future__ import annotations
 
@@ -88,7 +88,31 @@ def test_one_bell_for_the_latest_report_after_the_note(app, make_user, sec, monk
         assert SECRET not in (a.title + a.body)
     assert first["alerts"] == 1 and again["alerts"] == 0
     assert sec == ["AAPL"]          # one sync per ticker per day
-    assert pushed == []             # bell only
+    assert [p["kind"] for p in pushed] == ["research_filing"]   # one push, with the bell
+
+
+def test_setting_row_mutes_the_bell(app, make_user, sec):
+    from models import User
+
+    me = make_user(email="rfc-mute@test.com")["id"]
+    with app.app_context():
+        u = User.query.get(me)
+        u.notification_prefs = {"research_filing": {"inapp": False, "push": False}}
+        db.session.commit()
+        _note(me, "AAPL", datetime(2026, 7, 1, 3, 0))
+        out = run_once(now=NOW)
+        assert Alert.query.filter_by(user_id=me, kind=KIND, push_only=False).count() == 0
+    assert out["alerts"] == 0
+
+
+def test_setting_row_is_visible_only_with_filings_on(app, monkeypatch):
+    from models.user import visible_notification_event_ids
+
+    with app.app_context():
+        monkeypatch.setitem(app.config, "FILINGS_ENABLED", True)
+        assert "research_filing" in visible_notification_event_ids()
+        monkeypatch.setitem(app.config, "FILINGS_ENABLED", False)
+        assert "research_filing" not in visible_notification_event_ids()
 
 
 def test_scored_notes_same_day_and_no_source_get_nothing(app, make_user, sec):
