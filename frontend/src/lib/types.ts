@@ -1416,7 +1416,34 @@ export type StockRecordEvent =
       reviewed_at: string | null;
       due: boolean | null;
     }
-  | { kind: "note"; at: string | null; id: number; body: string; tags: string[] };
+  | { kind: "note"; at: string | null; id: number; body: string; tags: string[] }
+  | {
+      /** A US company's SEC filing (FILINGS_ENABLED). `at` is the filing date's 00:00. */
+      kind: "filing";
+      at: string | null;
+      /** Official SEC filing date — a US (Eastern) date, "YYYY-MM-DD". */
+      filed_on: string;
+      form: string;
+      /** Fixed Korean name of the form ("분기보고서", "실적 발표" …) — never a reading. */
+      label: string;
+      /** 8-K item 2.02 (an amendment is not a second release). */
+      earnings: boolean;
+      url: string;
+      source: string;
+    };
+
+/** "Did I trade right after an earnings release?" — counts only (FILINGS_ENABLED). */
+export interface StockRecordFilingReaction {
+  /** Earnings releases (8-K 2.02) in the record's span. */
+  earnings: number;
+  /** Counted: US date of the fill is the day after through `window_days` after a release. */
+  window_days: number;
+  buys_after: number;
+  sells_after: number;
+  timed_fills: number;
+  /** Date-only fills — not countable, set aside. */
+  untimed_fills: number;
+}
 
 export interface StockRecordResponse {
   ok: boolean;
@@ -1433,7 +1460,10 @@ export interface StockRecordResponse {
     not_taken: number;
     research: number;
     notes: number;
+    /** SEC filings laid on the timeline (0 when filings are off). */
+    filings?: number;
   };
+  filing_reaction?: StockRecordFilingReaction | null;
   /** Newest first. */
   events: StockRecordEvent[];
 }

@@ -15,7 +15,7 @@
  */
 import * as React from "react";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, ExternalLink } from "lucide-react";
 
 import { displayTicker, fmtMoneyKo, parseIsoUtc } from "@/lib/format";
 import type { StockRecordEvent, StockRecordResponse } from "@/lib/types";
@@ -84,6 +84,8 @@ function kindTitle(e: StockRecordEvent): string {
       return "리서치";
     case "note":
       return "관찰 노트";
+    case "filing":
+      return e.label;
   }
 }
 
@@ -140,11 +142,25 @@ function EventBody({ e }: { e: StockRecordEvent }) {
           )}
         </div>
       );
+    case "filing":
+      return (
+        <a
+          href={e.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="pq-hit mt-1 inline-flex items-center gap-1 text-[13px] underline-offset-2 hover:underline"
+          style={{ color: DIM }}
+        >
+          {e.form} · 원문 보기
+          <ExternalLink aria-hidden className="h-3 w-3" />
+        </a>
+      );
   }
 }
 
 function EventChips({ e }: { e: StockRecordEvent }) {
   if (e.kind === "fill" && e.after_pause) return <Chip>멈춤 뒤</Chip>;
+  if (e.kind === "filing") return <Chip>공시</Chip>;
   if (e.kind === "pause") {
     return (
       <span className="flex shrink-0 gap-1.5">
@@ -186,6 +202,8 @@ export function StockRecordView({ data }: { data: StockRecordResponse }) {
     else groups.push({ month: m, items: [e] });
   }
   const q = encodeURIComponent(data.ticker);
+  const hasFilings = data.events.some((e) => e.kind === "filing");
+  const fr = data.filing_reaction;
 
   return (
     <article data-testid="stock-record">
@@ -210,6 +228,19 @@ export function StockRecordView({ data }: { data: StockRecordResponse }) {
         <Stat n={c.research} label="리서치" />
         <Stat n={c.notes} label="관찰 노트" />
       </section>
+
+      {fr && fr.earnings > 0 && (
+        <section aria-label="실적 발표 뒤 체결" className="mt-3 text-[13px] leading-relaxed" data-testid="filing-reaction">
+          <p className="tabular-nums" style={{ color: "var(--pq-ivory)" }}>
+            실적 발표 {fr.earnings}번 · 그다음 날부터 {fr.window_days}일 안에 산 것 {fr.buys_after}번 · 판 것{" "}
+            {fr.sells_after}번
+          </p>
+          <p className="mt-0.5 text-[12px] [word-break:keep-all]" style={{ color: DIM }}>
+            미국 날짜로 셌어요. 발표 당일 체결은 발표 전인지 뒤인지 알 수 없어 빼요.
+            {fr.untimed_fills > 0 && ` 시각 없이 날짜만 있는 체결 ${fr.untimed_fills}건도 빼고 셌어요.`}
+          </p>
+        </section>
+      )}
 
       {data.events.length === 0 ? (
         <p className="mt-8 text-[14px]" style={{ color: DIM }} data-testid="stock-record-empty">
@@ -237,6 +268,11 @@ export function StockRecordView({ data }: { data: StockRecordResponse }) {
               </ol>
             </section>
           ))}
+          {hasFilings && (
+            <p className="text-[12px]" style={{ color: DIM }} data-testid="filing-source">
+              공시 출처: SEC EDGAR · 공시 날짜는 미국 날짜예요.
+            </p>
+          )}
         </div>
       )}
 

@@ -565,6 +565,15 @@ function _demoSellMoment(query: string) {
 
 /* ── 종목별 내 기록 (/api/stock-record/<t>, 2026-10-25) — composed from the
  *    same demo trades, pauses, research and notes so every screen agrees. ── */
+// SEC filings on the stock record (FILINGS_ENABLED) — demo rows for a US name.
+const DEMO_FILINGS: Record<string, { filed_on: string; form: string; label: string; earnings: boolean }[]> = {
+  NVDA: [
+    { filed_on: "2026-06-24", form: "8-K", label: "수시보고", earnings: false },
+    { filed_on: "2026-06-12", form: "8-K", label: "실적 발표", earnings: true },
+    { filed_on: "2026-05-29", form: "10-Q", label: "분기보고서", earnings: false },
+  ],
+};
+
 function _demoStockRecord(base: string) {
   const raw = decodeURIComponent(base.slice("/api/stock-record/".length)).trim().toUpperCase();
   const key = demoNoteTickerKey(raw);
@@ -594,7 +603,19 @@ function _demoStockRecord(base: string) {
   const notes = DEMO_OBSERVATION_NOTES.filter((n) => n.tickers.some((t) => demoNoteTickerKey(t.ticker) === key)).map((n) => ({
     kind: "note" as const, at: n.created_at, id: n.id, body: n.body, tags: n.tags,
   }));
-  const events = [...fills, ...pauses, ...research, ...notes].sort((a, b) => (b.at ?? "").localeCompare(a.at ?? ""));
+  const filings = (DEMO_FILINGS[key] ?? []).map((f) => ({
+    kind: "filing" as const, at: `${f.filed_on}T00:00:00`, filed_on: f.filed_on, form: f.form,
+    label: f.label, earnings: f.earnings, source: "SEC EDGAR",
+    url: `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${encodeURIComponent(key)}`,
+  }));
+  const usDay = (iso: string) => new Date(Date.parse(iso) - 4 * 3600_000).toISOString().slice(0, 10); // EDT, demo only
+  const releases = filings.filter((f) => f.earnings).map((f) => Date.parse(f.filed_on));
+  const afterRelease = (iso: string) =>
+    releases.some((d) => {
+      const days = (Date.parse(usDay(iso)) - d) / 86_400_000;
+      return days >= 1 && days <= 3;
+    });
+  const events = [...fills, ...pauses, ...research, ...notes, ...filings].sort((a, b) => (b.at ?? "").localeCompare(a.at ?? ""));
   return {
     ok: true,
     ticker: pos?.ticker ?? raw,
@@ -608,7 +629,16 @@ function _demoStockRecord(base: string) {
       not_taken: pauses.filter((p) => p.bought_after === false).length,
       research: research.length,
       notes: notes.length,
+      filings: filings.length,
     },
+    filing_reaction: releases.length
+      ? {
+          earnings: releases.length, window_days: 3,
+          buys_after: fills.filter((f) => f.side === "buy" && afterRelease(f.at)).length,
+          sells_after: fills.filter((f) => f.side === "sell" && afterRelease(f.at)).length,
+          timed_fills: fills.length, untimed_fills: 0,
+        }
+      : null,
     events,
   };
 }
