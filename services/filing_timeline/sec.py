@@ -49,6 +49,7 @@ class ParsedFiling:
     items: str
     filed_on: date
     url: str
+    title: str | None = None  # DART 공식 보고서명 (SEC 는 None)
 
 
 def _base_form(form: str) -> tuple[str, bool]:

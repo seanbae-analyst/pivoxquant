@@ -1418,15 +1418,16 @@ export type StockRecordEvent =
     }
   | { kind: "note"; at: string | null; id: number; body: string; tags: string[] }
   | {
-      /** A US company's SEC filing (FILINGS_ENABLED). `at` is the filing date's 00:00. */
+      /** A company filing — SEC EDGAR (US) or DART (KR). `at` is the filing date's 00:00. */
       kind: "filing";
       at: string | null;
-      /** Official SEC filing date — a US (Eastern) date, "YYYY-MM-DD". */
+      /** Official filing date, "YYYY-MM-DD" — US (Eastern) date for SEC, KST for DART. */
       filed_on: string;
+      /** SEC form code ("8-K") or DART type name ("정기공시"). */
       form: string;
-      /** Fixed Korean name of the form ("분기보고서", "실적 발표" …) — never a reading. */
+      /** SEC: fixed Korean name ("분기보고서", "실적 발표"); DART: the official report name. Never a reading. */
       label: string;
-      /** 8-K item 2.02 (an amendment is not a second release). */
+      /** SEC 8-K item 2.02 / DART 잠정실적 original (a correction is not a second release). */
       earnings: boolean;
       url: string;
       source: string;
@@ -1436,8 +1437,10 @@ export type StockRecordEvent =
 export interface StockRecordFilingReaction {
   /** Earnings releases (8-K 2.02) in the record's span. */
   earnings: number;
-  /** Counted: US date of the fill is the day after through `window_days` after a release. */
+  /** Counted: the fill's market date is the day after through `window_days` after a release. */
   window_days: number;
+  /** Which calendar the dates are on — "us" (SEC) or "kr" (DART). */
+  date_basis?: "us" | "kr";
   buys_after: number;
   sells_after: number;
   timed_fills: number;

@@ -105,7 +105,8 @@ def test_counts_day_after_through_three_days_never_release_day():
     ]
     out = earnings_reaction(fills, [d], coverage_from=date(2026, 1, 1))
     assert out == {
-        "window_days": 3, "buys_after": 1, "sells_after": 1, "timed_fills": 5, "untimed_fills": 1,
+        "window_days": 3, "date_basis": "us", "buys_after": 1, "sells_after": 1,
+        "timed_fills": 5, "untimed_fills": 1,
     }
 
 
@@ -210,7 +211,7 @@ def test_stock_record_lays_filings_between_own_records(app, make_user, sec_stub,
     assert all(e["source"] == "SEC EDGAR" and e["url"].startswith("https://www.sec.gov/") for e in filings)
     assert out["counts"]["filings"] == 4
     assert out["filing_reaction"] == {
-        "window_days": 3, "buys_after": 1, "sells_after": 0,
+        "window_days": 3, "date_basis": "us", "buys_after": 1, "sells_after": 0,
         "timed_fills": 2, "untimed_fills": 1, "earnings": 2,
     }
     # Newest first across kinds; the release sits under the next day's buy.
@@ -292,3 +293,121 @@ def test_submissions_tries_the_dash_form_for_class_shares(monkeypatch):
     assert cik == "0001067983" and payload == {"filings": {"recent": {}}}
     assert seen == [("https://data.sec.gov/submissions/CIK0001067983.json", 1, 8)]
     assert edgar.EdgarService.get_submissions("NOPE") == (None, None)
+
+
+# ── dart.py (한국 공시) ──────────────────────────────────────────────────────
+
+
+def _dart_row(no, day, title, rm=""):
+    return {"corp_code": "00126380", "corp_name": "삼성전자", "stock_code": "005930", "corp_cls": "Y",
+            "report_nm": title, "rcept_no": no, "flr_nm": "삼성전자", "rcept_dt": day, "rm": rm}
+
+
+def test_dart_rows_keep_official_titles_and_find_preliminary_earnings():
+    from services.filing_timeline import dart
+
+    rows = dart.parse_list([
+        _dart_row("20260707800123", "20260707", "연결재무제표기준영업(잠정)실적(공정공시)"),
+        _dart_row("20260708800124", "20260708", "[기재정정]연결재무제표기준영업(잠정)실적(공정공시)"),
+        _dart_row("20260709000125", "20260709", "주요사항보고서(자기주식취득결정)", rm="철"),   # withdrawn
+        _dart_row("", "20260710", "분기보고서 (2026.06)"),                                    # no number
+    ], "I002")
+    assert [(r.title, r.form) for r in rows] == [
+        ("연결재무제표기준영업(잠정)실적(공정공시)", "I002"),
+        ("[기재정정]연결재무제표기준영업(잠정)실적(공정공시)", "I002"),
+    ]
+    assert rows[0].filed_on == date(2026, 7, 7)
+    assert rows[0].url == "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260707800123"
+    assert [dart.is_earnings(r.title) for r in rows] == [True, False]  # a correction is not a second release
+    assert dart.TYPE_NAMES["A"] == "정기공시" and dart.TYPE_NAMES["I002"] == "공정공시"
+
+
+def test_dart_corp_code_map_from_zip():
+    import io
+    import zipfile
+
+    from services.filing_timeline import dart
+
+    xml = ("<result><list><corp_code>00126380</corp_code><corp_name>삼성전자</corp_name>"
+           "<stock_code>005930</stock_code></list><list><corp_code>00999999</corp_code>"
+           "<corp_name>비상장</corp_name><stock_code> </stock_code></list></result>")
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("CORPCODE.xml", xml)
+    assert dart.parse_corp_codes(buf.getvalue()) == {"005930": "00126380"}
+
+
+def test_korean_date_only_fills_count_on_korean_dates():
+    d = date(2026, 7, 7)  # 잠정실적 접수일 (KST)
+    fills = [
+        FillPoint(datetime(2026, 7, 8, 0, 0), "buy", untimed=True),    # D+1 KST, date-only → counted
+        FillPoint(datetime(2026, 7, 7, 6, 0), "buy"),                  # 15:00 KST on D → not
+        FillPoint(datetime(2026, 7, 9, 16, 0), "sell"),                # 7/10 01:00 KST = D+3 → counted
+    ]
+    out = earnings_reaction(fills, [d], coverage_from=date(2026, 1, 1), market="kr")
+    assert out["date_basis"] == "kr"
+    assert (out["buys_after"], out["sells_after"], out["untimed_fills"]) == (1, 1, 0)
+
+
+class _Resp:
+    def __init__(self, data):
+        self._data = data
+
+    def json(self):
+        return self._data
+
+
+@pytest.fixture
+def dart_stub(monkeypatch):
+    from services.filing_timeline import dart
+
+    calls = {"n": 0}
+    pages = {
+        "A": [_dart_row("20260814000111", "20260814", "반기보고서 (2026.06)"),
+              # older than the view: not shown, but it is how far back the list is known
+              _dart_row("20260515000099", "20260515", "분기보고서 (2026.03)")],
+        "I002": [_dart_row("20260707800123", "20260707", "연결재무제표기준영업(잠정)실적(공정공시)")],
+    }
+
+    def fake_get(path, params, timeout):
+        calls["n"] += 1
+        assert path == "list.json" and params["corp_code"] == "00126380"
+        rows = pages.get(params.get("pblntf_ty") or params.get("pblntf_detail_ty"))
+        if not rows:
+            return _Resp({"status": "013", "message": "조회된 데이타가 없습니다."})
+        return _Resp({"status": "000", "total_page": 1, "list": rows})
+
+    monkeypatch.setenv("DART_API_KEY", "k" * 40)
+    monkeypatch.setattr(dart, "corp_code_for", lambda code: "00126380" if code == "005930" else None)
+    monkeypatch.setattr(dart, "_get", fake_get)
+    store.reset_sync_state()
+    yield calls
+    store.reset_sync_state()
+
+
+def test_stock_record_lays_korean_filings(app, make_user, dart_stub, filings_on):
+    me = make_user(email="ft-kr@test.com")["id"]
+    with app.app_context():
+        _trade(me, "005930.KS", "BUY", datetime(2026, 7, 8, 0, 0), currency="KRW")   # date-only, D+1
+        _trade(me, "005930", "SELL", datetime(2026, 8, 20, 1, 0), currency="KRW")
+    out = _record(app, me, "005930")
+    filings = [e for e in out["events"] if e["kind"] == "filing"]
+    assert [(e["label"], e["form"], e["source"]) for e in filings] == [
+        ("반기보고서 (2026.06)", "정기공시", "DART"),
+        ("연결재무제표기준영업(잠정)실적(공정공시)", "공정공시", "DART"),
+    ]
+    assert filings[1]["earnings"] is True
+    r = out["filing_reaction"]
+    assert (r["date_basis"], r["earnings"], r["buys_after"], r["untimed_fills"]) == ("kr", 1, 1, 0)
+
+
+def test_korean_filings_need_a_dart_key(app, make_user, monkeypatch, filings_on):
+    from services.filing_timeline import dart
+
+    monkeypatch.delenv("DART_API_KEY", raising=False)
+    monkeypatch.setattr(dart, "_get", lambda *a, **k: pytest.fail("DART called without a key"))
+    me = make_user(email="ft-kr-nokey@test.com")["id"]
+    with app.app_context():
+        _trade(me, "005930.KS", "BUY", datetime(2026, 7, 8, 0, 0), currency="KRW")
+    out = _record(app, me, "005930")
+    assert out["counts"]["filings"] == 0 and out["filing_reaction"] is None

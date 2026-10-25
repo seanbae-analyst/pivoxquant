@@ -126,4 +126,29 @@ describe("StockRecordView", () => {
     expect(screen.queryByTestId("filing-source")).toBeNull();
     expect(screen.queryByTestId("filing-reaction")).toBeNull();
   });
+
+  it("names DART as the source and counts on Korean dates for a Korean name", () => {
+    const data: StockRecordResponse = {
+      ...DATA,
+      counts: { ...DATA.counts, filings: 1 },
+      filing_reaction: {
+        earnings: 1, window_days: 3, date_basis: "kr", buys_after: 1, sells_after: 0, timed_fills: 2, untimed_fills: 0,
+      },
+      events: [
+        {
+          kind: "filing", at: "2026-07-07T00:00:00", filed_on: "2026-07-07", form: "공정공시",
+          label: "연결재무제표기준영업(잠정)실적(공정공시)", earnings: true, source: "DART",
+          url: "https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260707800123",
+        },
+        ...DATA.events,
+      ],
+    };
+    render(<StockRecordView data={data} />);
+    const row = document.querySelector('li[data-kind="filing"]') as HTMLElement;
+    expect(within(row).getByText("연결재무제표기준영업(잠정)실적(공정공시)")).toBeTruthy();
+    expect(within(row).getByRole("link", { name: /공정공시 · 원문 보기/ }).getAttribute("href")).toContain("dart.fss.or.kr");
+    expect(screen.getByTestId("filing-source").textContent).toContain("DART");
+    expect(screen.getByTestId("filing-source").textContent).not.toContain("SEC");
+    expect(screen.getByTestId("filing-reaction").textContent).toContain("한국 날짜로 셌어요");
+  });
 });

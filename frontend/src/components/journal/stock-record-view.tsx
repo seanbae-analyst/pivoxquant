@@ -202,8 +202,9 @@ export function StockRecordView({ data }: { data: StockRecordResponse }) {
     else groups.push({ month: m, items: [e] });
   }
   const q = encodeURIComponent(data.ticker);
-  const hasFilings = data.events.some((e) => e.kind === "filing");
+  const filingSources = new Set(data.events.flatMap((e) => (e.kind === "filing" ? [e.source] : [])));
   const fr = data.filing_reaction;
+  const krBasis = fr?.date_basis === "kr";
 
   return (
     <article data-testid="stock-record">
@@ -236,7 +237,8 @@ export function StockRecordView({ data }: { data: StockRecordResponse }) {
             {fr.sells_after}번
           </p>
           <p className="mt-0.5 text-[12px] [word-break:keep-all]" style={{ color: DIM }}>
-            미국 날짜로 셌어요. 발표 당일 체결은 발표 전인지 뒤인지 알 수 없어 빼요.
+            {krBasis ? "한국 날짜로 셌어요." : "미국 날짜로 셌어요."} 발표 당일 체결은 발표 전인지 뒤인지 알 수 없어
+            빼요.
             {fr.untimed_fills > 0 && ` 시각 없이 날짜만 있는 체결 ${fr.untimed_fills}건도 빼고 셌어요.`}
           </p>
         </section>
@@ -268,9 +270,10 @@ export function StockRecordView({ data }: { data: StockRecordResponse }) {
               </ol>
             </section>
           ))}
-          {hasFilings && (
+          {filingSources.size > 0 && (
             <p className="text-[12px]" style={{ color: DIM }} data-testid="filing-source">
-              공시 출처: SEC EDGAR · 공시 날짜는 미국 날짜예요.
+              {filingSources.has("SEC EDGAR") && "공시 출처: SEC EDGAR · 공시 날짜는 미국 날짜예요."}
+              {filingSources.has("DART") && "공시 출처: 금융감독원 전자공시(DART)."}
             </p>
           )}
         </div>

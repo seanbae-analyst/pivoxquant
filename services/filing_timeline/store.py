@@ -1,4 +1,4 @@
-"""공시 행 저장과 동기화 — 종목당 하루 한 번만 SEC 에 묻는다.
+"""공시 행 저장과 동기화 — 종목당 하루 한 번만 원천(SEC · DART)에 묻는다.
 
 * 누가 그 종목의 기록 페이지를 열 때, 이 프로세스에서 마지막으로 받은 지
   ``REFRESH_SECONDS`` 가 지났으면 SEC 목록을 다시 받아 새 공시만 더한다.
@@ -18,7 +18,7 @@ import time
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from extensions import db
-from models.company_filing import SOURCE_SEC, CompanyFiling
+from models.company_filing import SOURCE_DART, SOURCE_SEC, CompanyFiling
 
 from .sec import ParsedFiling, parse_recent
 
@@ -28,7 +28,7 @@ REFRESH_SECONDS = 24 * 3600
 RETRY_SECONDS = 3600
 
 _LOCK = threading.Lock()
-# ticker → (마지막 시도 시각, 성공했나)
+# "source:ticker" → (마지막 시도 시각, 성공했나)
 _SYNCED: dict[str, tuple[float, bool]] = {}
 
 
@@ -56,12 +56,12 @@ def reset_sync_state() -> None:
         _SYNCED.clear()
 
 
-def _store(key: str, cik: str | None, rows: list[ParsedFiling]) -> int:
+def _store(source: str, key: str, cik: str | None, rows: list[ParsedFiling]) -> int:
     if not rows:
         return 0
     have = {
         a for (a,) in db.session.query(CompanyFiling.accession).filter(
-            CompanyFiling.source == SOURCE_SEC, CompanyFiling.ticker == key,
+            CompanyFiling.source == source, CompanyFiling.ticker == key,
         )
     }
     new = []
@@ -70,8 +70,9 @@ def _store(key: str, cik: str | None, rows: list[ParsedFiling]) -> int:
             continue
         have.add(r.accession)
         new.append(CompanyFiling(
-            source=SOURCE_SEC, ticker=key, cik=cik, accession=r.accession,
+            source=source, ticker=key, cik=cik, accession=r.accession,
             form=r.form, items=r.items or None, filed_on=r.filed_on, url=r.url,
+            title=r.title,
         ))
     if not new:
         return 0
@@ -84,35 +85,47 @@ def _store(key: str, cik: str | None, rows: list[ParsedFiling]) -> int:
     return len(new)
 
 
-def sync_ticker(key: str, *, now_ts: float | None = None) -> bool:
-    """때가 됐으면 SEC 목록을 받아 새 공시를 저장한다. 받아서 저장까지 했으면 True."""
+def _fetch(source: str, key: str) -> tuple[str | None, list[ParsedFiling]] | None:
+    if source == SOURCE_DART:
+        from . import dart
+
+        return dart.fetch(key)
     from services.data.edgar import EdgarService
 
-    now_ts = time.time() if now_ts is None else now_ts
-    if not key or not _due(key, now_ts):
-        return False
-    try:
-        cik, payload = EdgarService.get_submissions(key)
-    except Exception as exc:  # 네트워크·파싱 — 페이지는 공시 없이 뜬다
-        logger.warning("filing sync: SEC fetch failed for %s: %s", key, exc)
-        return False
+    cik, payload = EdgarService.get_submissions(key)
     if not payload:
+        return None
+    return cik, parse_recent(payload, cik)
+
+
+def sync_ticker(key: str, *, source: str = SOURCE_SEC, now_ts: float | None = None) -> bool:
+    """때가 됐으면 원천 목록을 받아 새 공시를 저장한다. 받아서 저장까지 했으면 True."""
+    now_ts = time.time() if now_ts is None else now_ts
+    marker = f"{source}:{key}"
+    if not key or not _due(marker, now_ts):
         return False
     try:
-        _store(key, cik, parse_recent(payload, cik))
+        got = _fetch(source, key)
+    except Exception as exc:  # 네트워크·파싱 — 페이지는 공시 없이 뜬다
+        logger.warning("filing sync: %s fetch failed for %s: %s", source, key, exc)
+        return False
+    if got is None:
+        return False
+    try:
+        _store(source, key, got[0], got[1])
     except SQLAlchemyError as exc:
         db.session.rollback()
-        logger.warning("filing sync: store failed for %s: %s", key, exc)
+        logger.warning("filing sync: store failed for %s %s: %s", source, key, exc)
         return False
-    _mark(key, now_ts, ok=True)
+    _mark(marker, now_ts, ok=True)
     return True
 
 
-def stored_filings(key: str) -> list[CompanyFiling]:
+def stored_filings(key: str, source: str = SOURCE_SEC) -> list[CompanyFiling]:
     """저장된 공시, 공시일 최신 먼저."""
     return (
         CompanyFiling.query
-        .filter(CompanyFiling.source == SOURCE_SEC, CompanyFiling.ticker == key)
+        .filter(CompanyFiling.source == source, CompanyFiling.ticker == key)
         .order_by(CompanyFiling.filed_on.desc(), CompanyFiling.id.desc())
         .all()
     )

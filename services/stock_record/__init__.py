@@ -23,11 +23,11 @@ Rules
 * **Counts, never rates.** The summary is how many of each — and how many
   pauses ended without a buy of the same name afterwards (the 일어나지 않은
   거래, read straight from ``reflection_id`` links and later fills).
-* **One outside source, behind a flag.** With ``FILINGS_ENABLED`` on, a US
-  name's SEC filings (annual · quarterly · current reports, 실적 발표) are
-  laid between the user's records by their official filing date, with a link
-  to the original — facts, not a reading (services/filing_timeline). On by
-  default since 2026-10-25 (CEO); never for KR names here.
+* **Company filings, behind a flag.** With ``FILINGS_ENABLED`` on, the
+  company's filings — SEC EDGAR for a US name, OpenDART for a KR name (needs
+  ``DART_API_KEY``) — are laid between the user's records by their official
+  filing date, with a link to the original — facts, not a reading
+  (services/filing_timeline). On by default since 2026-10-25 (CEO).
 
 The route wraps it in the legal scrub, keeping the user's own words verbatim.
 Reads only — except that an enabled filing sync may store new public filing
@@ -95,11 +95,14 @@ def _first_day(events: list[dict[str, Any]]) -> date | None:
 
 
 def _filing_block(key: str, normalized: str, fills: list, events: list[dict[str, Any]]) -> dict | None:
-    """SEC filings for a US name, when the flag is on and the user has records."""
-    from services.filing_timeline import FillPoint, filing_timeline, filings_enabled, is_us_ticker
+    """The company's filings (SEC / DART), when on and the user has records on it."""
+    from services.filing_timeline import (
+        FillPoint, filing_timeline, filings_enabled, market_of, source_available,
+    )
     from services.imports import is_date_only
 
-    if not filings_enabled() or not is_us_ticker(normalized):
+    market = market_of(normalized)
+    if not filings_enabled() or not source_available(market):
         return None
     first = _first_day(events)
     if first is None:
@@ -109,7 +112,9 @@ def _filing_block(key: str, normalized: str, fills: list, events: list[dict[str,
         for t in fills
     ]
     try:
-        return filing_timeline(key, fills=points, since=first - timedelta(days=FILING_LEAD_DAYS))
+        return filing_timeline(
+            key, fills=points, since=first - timedelta(days=FILING_LEAD_DAYS), market=market,
+        )
     except Exception as exc:  # the page shows without filings rather than failing
         db.session.rollback()
         logger.warning("stock_record: filings unavailable for %s: %s", key, exc)
