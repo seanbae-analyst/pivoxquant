@@ -92,8 +92,11 @@ function ContactForm() {
     <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
       {/* Header */}
       <header className="mb-6">
-        <RuledKicker>{t("support.contactKicker")}</RuledKicker>
-        <EditorialHead as="h1" size={32} className="mt-3">
+        {/* Phone: the app bar already titles the screen. */}
+        <div className="hidden md:block">
+          <RuledKicker>{t("support.contactKicker")}</RuledKicker>
+        </div>
+        <EditorialHead as="h1" size={32} className="md:mt-3">
           1:1 문의하기
         </EditorialHead>
         <Caption className="mt-2 max-w-lg">

@@ -150,7 +150,7 @@ export function ResearchReview({
           {saving ? "저장하는 중" : "채점 저장"}
         </button>
         {onCancel && (
-          <button type="button" onClick={onCancel} className="text-pq-caption text-[var(--pq-ivory-dim)] hover:text-[var(--pq-ivory)]">
+          <button type="button" onClick={onCancel} className="pq-hit text-pq-caption text-[var(--pq-ivory-dim)] hover:text-[var(--pq-ivory)]">
             취소
           </button>
         )}
@@ -254,13 +254,13 @@ export function ResearchCard({
               className={
                 note.due
                   ? "pq-ink-btn-bronze inline-flex items-center px-4 py-1.5 text-pq-mono-sm"
-                  : "text-pq-caption text-[var(--pq-bronze-light)] underline-offset-4 hover:underline"
+                  : "pq-hit text-pq-caption text-[var(--pq-bronze-light)] underline-offset-4 hover:underline"
               }
             >
               {note.due ? "채점하기" : "지금 채점하기"}
             </button>
           )}
-          <button type="button" onClick={remove} className="text-pq-caption text-[var(--pq-ivory-faint)] hover:text-[var(--pq-ivory)]">
+          <button type="button" onClick={remove} className="pq-hit text-pq-caption text-[var(--pq-ivory-faint)] hover:text-[var(--pq-ivory)]">
             지우기
           </button>
         </div>

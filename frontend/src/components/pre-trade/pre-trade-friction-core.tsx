@@ -1094,15 +1094,20 @@ export function sideLabelKo(wireOrSide: string | null | undefined): string {
 export function SectionLabel({ n, title }: { n: number; title: string }) {
   return (
     <div
-      className="flex items-baseline gap-4 border-t pt-5"
+      className="flex items-center gap-3 border-t pt-5"
       style={{ borderTopColor: "rgba(184,149,106,0.32)", borderTopWidth: 0.5 }}
     >
+      {/* A step badge, not a loose digit — on a phone the bare "1" read as a
+          stray character beside the heading (2026-10-22). */}
       <span
-        className="font-mono uppercase"
+        aria-hidden
+        className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full tabular-nums"
         style={{
-          fontSize: "var(--pq-text-eyebrow)",
-          letterSpacing: "0.01em",
+          fontSize: 12,
+          fontWeight: 600,
           color: "var(--pq-bronze)",
+          border: "1px solid rgba(var(--pq-bronze-rgb), 0.55)",
+          background: "rgba(var(--pq-bronze-rgb), 0.08)",
         }}
       >
         {n}

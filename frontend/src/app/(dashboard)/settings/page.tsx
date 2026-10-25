@@ -367,13 +367,6 @@ export default function SettingsPageV2() {
 
   return (
     <ErrorBoundary>
-      {/* TOP TICKER */}
-      <div
-        className="-mx-4 md:-ml-10 md:-mr-10 mb-4"
-        style={{ maxWidth: "100vw" }}
-      >
-      </div>
-
       {/* CFO STATUS — sticky hairline.
        * z-10 (2026-05-13 thorough-fix sweep): was z-40, clipped the
        * NotificationDropdown panel by stacking above the TopBar wrapper
@@ -419,14 +412,10 @@ export default function SettingsPageV2() {
           <AnchorRail />
         </div>
 
-        <div
-          className="pq-settings-body md:[grid-column:span_10]"
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 64,
-          }}
-        >
+        {/* Phone shows one pane (or the list) at a time — 64px between
+            sections is desktop rhythm; on a phone it opened a 96px hole
+            between the list and the notice under it (2026-10-22). */}
+        <div className="pq-settings-body flex flex-col gap-6 md:gap-16 md:[grid-column:span_10]">
           {/* Phone: an open pane's ‹ back + title live in the app bar
               (top-bar.tsx subScreen), like a native settings stack. */}
           {pane === null && <SettingsPhoneList />}
@@ -888,7 +877,6 @@ export default function SettingsPageV2() {
               (was a dashed box in 15px body — the only dashed border left). */}
           <div
             style={{
-              marginTop: 32,
               padding: "16px 20px",
               border: "1px solid var(--pq-ivory-line)",
               borderRadius: "var(--pq-radius-card)",
@@ -897,7 +885,8 @@ export default function SettingsPageV2() {
               lineHeight: 1.65,
               color: "var(--pq-ivory-dim)",
             }}
-          className={`[word-break:keep-all] ${pane === null ? "" : "hidden md:block"}`} >
+            className={`[word-break:keep-all] md:mt-8 ${pane === null ? "" : "hidden md:block"}`}
+          >
             <strong
               style={{
                 color: "var(--pq-ivory-strong)",
