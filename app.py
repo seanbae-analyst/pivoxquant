@@ -636,6 +636,47 @@ def _run_migrations(app):
         _do_migrations()
 
 
+def _enable_rls_on_owned_tables(engine):
+    """Turn on RLS for every public table this role owns that still has it off.
+
+    Self-heal twin of Alembic 056. Render never runs ``flask db upgrade`` (the
+    Procfile ``release:`` line is Heroku-only), so prod sat at alembic 049 and
+    056 never ran: 52 of 52 public tables had RLS off (measured 2026-10-25).
+    Only a table's owner can enable RLS, and the owner is the app's own role
+    (``pivox_app``) — the Supabase ``postgres`` role cannot, so it happens here.
+
+    No FORCE: the owner still bypasses RLS, so the app is unaffected. With no
+    policies, every other role (anon / authenticated via the Data API) sees
+    nothing — the second layer behind the revoked grants. Tables that
+    ``create_all()`` adds later are caught on the next boot. Steady state is one
+    catalog read. One transaction per table, so a lock timeout on one table
+    leaves the rest done and is retried next boot.
+    """
+    try:
+        with engine.connect() as conn:
+            tables = [r[0] for r in conn.execute(text(
+                "SELECT tablename FROM pg_tables WHERE schemaname = 'public' "
+                "AND tableowner = current_user AND NOT rowsecurity"
+            ))]
+    except Exception as exc:
+        logger.warning("Migration: RLS check skipped: %s", exc)
+        return
+    quote = engine.dialect.identifier_preparer.quote
+    enabled = 0
+    for name in tables:
+        try:
+            with engine.begin() as conn:
+                conn.execute(text("SET LOCAL lock_timeout = '5s'"))
+                conn.execute(text(
+                    f"ALTER TABLE public.{quote(name)} ENABLE ROW LEVEL SECURITY"
+                ))
+            enabled += 1
+        except Exception as exc:
+            logger.warning("Migration: enable RLS on %s skipped: %s", name, exc)
+    if enabled:
+        logger.info("Migration: enabled RLS on %d public tables", enabled)
+
+
 def _do_migrations():
     """Idempotent column-addition migrations. Safe to call concurrently only
     when protected by an external lock (see _run_migrations)."""
@@ -1200,6 +1241,9 @@ def _do_migrations():
         ("weekly_pulse", "learn"),
     ):
         _widen_column_to_text(_wt, _wc)
+
+    if is_postgres:
+        _enable_rls_on_owned_tables(db.engine)
 
     # Backfill FX rates
     from models import Position
