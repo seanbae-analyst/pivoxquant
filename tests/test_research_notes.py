@@ -1,7 +1,8 @@
 """Tests for 리서치 노트 (research notes) — backend.
 
 설계 docs/design/research-notes_2026-10-15.md. Covers the form's
-validation (required business + 1–3 theses, caps, fixed choices), the
+validation (1–3 theses required, business optional since 2026-10-25, caps,
+fixed choices), the
 review day (KST, +1/3/6 months, month-end clamp), scoring, the overview
 (due list, judgment × own-fill outcome, per-source counts — counts only),
 ownership, the route contract (codes, disclaimer, CSRF/auth), at-rest
@@ -108,12 +109,22 @@ def test_review_months_choices(app, make_user, months):
         assert out["review_on"] == add_months(kst_today(), months).isoformat()
 
 
+def test_business_is_optional_and_stored_empty(app, make_user):
+    """2026-10-25 — the form opens on the reason; 뭘로 돈을 버나 is folded."""
+    user = make_user(email="rn-nobiz@test.com")
+    with app.app_context():
+        for blank in ({"business": ""}, {"business": "   "}, {"business": None}):
+            out = _create(user["id"], **blank)
+            assert out["business"] == ""
+        form = {k: v for k, v in FORM.items() if k != "business"}
+        assert create_research(user["id"], form)["business"] == ""
+
+
 @pytest.mark.parametrize("bad", [
     {"ticker": ""},
     {"ticker": None},
-    {"business": ""},
-    {"business": "   "},
     {"business": "가" * (MAX_BUSINESS_CHARS + 1)},
+    {"business": 42},
     {"theses": []},
     {"theses": ["", "  "]},
     {"theses": "한 줄"},
@@ -307,7 +318,7 @@ def test_route_create_201_with_disclaimer(client, auth_user):
 
 
 def test_route_bad_input_and_non_object(client, auth_user):
-    for payload in ({**FORM, "business": ""}, {**FORM, "theses": []}, [1, 2], "text"):
+    for payload in ({**FORM, "theses": []}, [1, 2], "text"):
         resp = client.post("/api/research-notes", json=payload)
         assert resp.status_code == 400, payload
         assert resp.get_json()["code"] == "RESEARCH_BAD_INPUT"

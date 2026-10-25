@@ -211,7 +211,8 @@ export function ResearchCard({
         {written}에 씀{note.info_source ? ` · ${INFO_SOURCE_LABEL[note.info_source]}에서 알게 됨` : ""}
       </Caption>
 
-      <Field label="뭘로 돈을 버나">{note.business}</Field>
+      {/* 2026-10-25: the reason and the wrong-signal are the two fields the
+          form opens on, so they are the two the card leads with. */}
       <div className="mt-3">
         <div className="text-pq-caption text-[var(--pq-ivory-faint)]">내가 본 이유</div>
         <ol className="mt-1 list-none space-y-1.5 p-0">
@@ -225,11 +226,13 @@ export function ResearchCard({
           ))}
         </ol>
       </div>
+      {note.invalidation && <Field label="이게 보이면 틀린 것">{note.invalidation}</Field>}
       {scored && note.review_note && <Field label="채점 한 줄">{note.review_note}</Field>}
 
       <details className="mt-3">
         <summary className="cursor-pointer select-none text-pq-caption text-[var(--pq-ivory-dim)]">나머지 칸</summary>
-        <Field label="이게 보이면 틀린 것">{note.invalidation ?? "적지 않음"}</Field>
+        {!note.invalidation && <Field label="이게 보이면 틀린 것">적지 않음</Field>}
+        <Field label="뭘로 돈을 버나">{note.business || "적지 않음"}</Field>
         <Field label="가장 큰 위험">{note.risk ?? "적지 않음"}</Field>
         <Field label="직접 확인한 숫자">{note.numbers ?? "안 봄"}</Field>
       </details>

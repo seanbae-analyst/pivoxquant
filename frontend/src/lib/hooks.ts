@@ -445,7 +445,8 @@ export function useResearchByTicker(ticker: string | null) {
 /** Body of `POST /api/research-notes`. */
 export interface CreateResearchNoteBody {
   ticker: string;
-  business: string;
+  /** Optional since 2026-10-25 — stored as "" when left out. */
+  business?: string;
   theses: string[];
   invalidation?: string;
   risk?: string;

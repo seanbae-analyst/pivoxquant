@@ -332,6 +332,7 @@ export interface ResearchNote {
   id: number;
   ticker: string;
   name: string;
+  /** "" when not written (optional since 2026-10-25). */
   business: string;
   /** 1~3 assumptions, in the order written. */
   theses: string[];
