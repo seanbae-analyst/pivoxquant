@@ -572,6 +572,10 @@ const DEMO_FILINGS: Record<string, { filed_on: string; form: string; label: stri
     { filed_on: "2026-06-12", form: "8-K", label: "실적 발표", earnings: true },
     { filed_on: "2026-05-29", form: "10-Q", label: "분기보고서", earnings: false },
   ],
+  "005930": [
+    { filed_on: "2026-07-07", form: "공정공시", label: "연결재무제표기준영업(잠정)실적(공정공시)", earnings: true },
+    { filed_on: "2026-05-15", form: "정기공시", label: "분기보고서 (2026.03)", earnings: false },
+  ],
 };
 
 function _demoStockRecord(base: string) {
@@ -605,8 +609,10 @@ function _demoStockRecord(base: string) {
   }));
   const filings = (DEMO_FILINGS[key] ?? []).map((f) => ({
     kind: "filing" as const, at: `${f.filed_on}T00:00:00`, filed_on: f.filed_on, form: f.form,
-    label: f.label, earnings: f.earnings, source: "SEC EDGAR",
-    url: `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${encodeURIComponent(key)}`,
+    label: f.label, earnings: f.earnings, source: /^\d{6}$/.test(key) ? "DART" : "SEC EDGAR",
+    url: /^\d{6}$/.test(key)
+      ? "https://dart.fss.or.kr/"
+      : `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${encodeURIComponent(key)}`,
   }));
   const usDay = (iso: string) => new Date(Date.parse(iso) - 4 * 3600_000).toISOString().slice(0, 10); // EDT, demo only
   const releases = filings.filter((f) => f.earnings).map((f) => Date.parse(f.filed_on));
@@ -633,7 +639,7 @@ function _demoStockRecord(base: string) {
     },
     filing_reaction: releases.length
       ? {
-          earnings: releases.length, window_days: 3,
+          earnings: releases.length, window_days: 3, date_basis: /^\d{6}$/.test(key) ? ("kr" as const) : ("us" as const),
           buys_after: fills.filter((f) => f.side === "buy" && afterRelease(f.at)).length,
           sells_after: fills.filter((f) => f.side === "sell" && afterRelease(f.at)).length,
           timed_fills: fills.length, untimed_fills: 0,

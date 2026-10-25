@@ -1037,6 +1037,10 @@ def _do_migrations():
     # consent text that names 문 앞의 한 줄 answers. NULL (older tokens) →
     # routes/doorway.py refuses door answers sent with it.
     _add_column_if_missing("import_tokens", "doorway_consent_at", "TIMESTAMP")
+    # company_filings.title — 2026-10-25. Alembic twin: 066_company_filing_title.
+    # Nullable VARCHAR(200): the DART report name (한국 공시). A box whose table
+    # was created by 065 / create_all before this column existed gets it here.
+    _add_column_if_missing("company_filings", "title", "VARCHAR(200)")
 
     # pending_trades.currency_stated — 2026-09-29. Alembic twin:
     # 057_pending_currency_stated. Nullable BOOLEAN: did the input state the
