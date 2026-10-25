@@ -158,7 +158,7 @@ export default function GlobalError({
               lineHeight: 1.5,
             }}
           >
-            PivoxQuant
+            Pivox<span style={{ color: "rgba(184,149,106,0.5)" }}>Quant</span>
           </p>
         </div>
       </body>

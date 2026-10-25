@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { SidebarRecordCard } from "./sidebar-record-card";
+import { QuantMark } from "@/components/ui/quant-mark";
 
 export type TerminalSidebarKey =
   | "mirror"
@@ -90,21 +91,19 @@ export function TerminalSidebar({
 
   return (
     <div className="flex h-full flex-col">
-      {/* Brand mark — FINDING-030: canonical wordmark is italic Playfair
-          Display mixed-case "PivoxQuant" (splash + landing + market all use
-          this form). The sidebar previously rendered roman uppercase
-          "PIVOXQUANT", a competing second treatment. Now unified. */}
+      {/* Brand mark — "Pivox" Ivory + "Quant" Bronze, the landing header's
+          logo and PivoxMap / PivoxData's (2026-10-25). */}
       <div className="px-6 pt-7 pb-6">
         <span
           className="font-serif"
           style={{
-            fontSize: "var(--pq-text-h6)",
-            letterSpacing: "0.01em",
+            fontSize: "var(--pq-text-h5)",
+            letterSpacing: "-0.02em",
             color: "var(--pq-ivory)",
-            fontWeight: 500,
+            fontWeight: 700,
           }}
         >
-          PivoxQuant
+          <QuantMark />
         </span>
       </div>
 

@@ -7,6 +7,7 @@ import dynamic from "next/dynamic";
 import { AppCover, isStandaloneDisplay } from "@/components/pwa/app-cover";
 import { isDemoMode } from "@/lib/demo";
 import { markLaunchCovered } from "@/lib/launch-cover";
+import { QuantMark } from "@/components/ui/quant-mark";
 
 // 2026-10-09 (perf): the landing (≈364KB gz with motion) and the welcome
 // cards are split out of "/"'s first chunk. The landing keeps SSR — crawlers
@@ -47,12 +48,12 @@ function LoadingScreen() {
         }}
       />
 
-      {/* Wordmark — italic serif, mirrors /loading.tsx */}
+      {/* Wordmark — the header logo, mirrors /loading.tsx */}
       <div
-        className="font-serif text-lg tracking-tight mb-8"
-        style={{ color: "rgba(245,240,232,0.6)" }}
+        className="mb-8 text-pq-h5 font-bold tracking-[-0.02em]"
+        style={{ color: "var(--pq-ivory)" }}
       >
-        PivoxQuant
+        <QuantMark />
       </div>
 
       {/* Shimmer skeleton bar — hairline only */}
