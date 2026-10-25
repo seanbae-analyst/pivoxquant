@@ -302,6 +302,32 @@ def test_send_attaches_pdf_as_information_category(app, make_user,
     assert call["from_default"] == "reports@pivoxquant.com"
 
 
+def test_hourly_retries_on_the_first_send_one_report_a_month(app, make_user,
+                                                            fake_renderer,
+                                                            recording_sender):
+    """1일 매시 재시도(잠든 서버가 놓친 발송 복구)해도 한 달에 한 번만 나간다."""
+    u = make_user(email="once-a-month@test.com")
+    _grant(app, u["id"])
+
+    first = _dispatch(app, [u["id"]], now=datetime(2026, 10, 1, 0, 0))   # KST 09:00
+    later = _dispatch(app, [u["id"]], now=datetime(2026, 10, 1, 5, 0))   # KST 14:00
+    assert (first["sent"], later["sent"], later["skipped_already"]) == (1, 0, 1)
+    assert len(recording_sender.calls) == 1
+    # 다음 달 1일엔 그 달 몫이 새로 나간다.
+    nxt = _dispatch(app, [u["id"]], now=datetime(2026, 11, 1, 0, 0))
+    assert nxt["sent"] == 1 and len(recording_sender.calls) == 2
+
+
+def test_refused_send_is_retried_next_hour(app, make_user, fake_renderer,
+                                           recording_sender):
+    u = make_user(email="retry@test.com")
+    _grant(app, u["id"])
+    recording_sender.result = False
+    assert _dispatch(app, [u["id"]], now=datetime(2026, 10, 1, 0, 0))["skipped_send"] == 1
+    recording_sender.result = True
+    assert _dispatch(app, [u["id"]], now=datetime(2026, 10, 1, 1, 0))["sent"] == 1
+
+
 def test_send_copy_has_no_score_or_directive_language(app, make_user,
                                                       fake_renderer,
                                                       recording_sender):

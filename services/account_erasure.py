@@ -88,6 +88,7 @@ def _explicit_ops(user_id: int, email: str | None = None):
         AITwinPortfolio, AITwinWeeklyReport,
         PreTradeReflection, PersonaSnapshot, WeeklyPulse,
         PositionDDCheck, Inquiry, ObservationNote, ResearchNote, DoorwayCheck,
+        MonthlyReportSend,
         ScheduledEmail, NpsFeedback,
         CheckoutExpiration, PortfolioNavSnapshot, UserAgentAudit,
         ImportBatch, ImportToken, PendingTrade,
@@ -127,6 +128,8 @@ def _explicit_ops(user_id: int, email: str | None = None):
         ("research_notes", _d(ResearchNote)),
         # 문 앞의 한 줄 — 증권 앱을 연 시각·답·암호화된 한 줄 (2026-10-15).
         ("doorway_checks", _d(DoorwayCheck)),
+        # 월간 리포트 발송 기록 — 어느 달 몫을 언제 보냈는지뿐 (2026-10-25).
+        ("monthly_report_sends", _d(MonthlyReportSend)),
         ("persona_snapshots", _d(PersonaSnapshot)),
         ("weekly_pulse", _d(WeeklyPulse)),
         ("scheduled_emails", _d(ScheduledEmail)),
