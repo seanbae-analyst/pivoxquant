@@ -29,6 +29,7 @@ tools:
 
 ### 표시광고법 §3 (기만표시)
 - 실데이터 없는 샘플 값(`default('NVDA')`, `'$1,240'`) 을 유저에게 표시 금지. 없는 기능(AI·유료·시세 화면)을 파는 카피 금지.
+- **선례 — `frontend/src/lib/cfo/hooks.ts` (2026-09-06):** 백엔드가 404/501/5xx 를 내면 `mockPersona`(페르소나 "growth") · `mockRolling`(`Math.sin` 으로 만든 보유기간·회전율 시계열) 로 떨어져 `/portfolio` 에서 "선언 X, 지난 30일 Y" 라는 지어낸 행동 분석을 아무 표시 없이 보여 줬다(localStorage 키를 v2 로 올려 그때 캐시된 가짜 값도 버렸다). 지금 허용되는 폴백은 **그 유저 본인의 마지막 실제 응답**(localStorage 캐시)과 빈 상태뿐이다. 훅에 `mock*` 팩토리나 하드코딩한 샘플 payload 가 다시 생기면 FIX_REQUIRED. 데모 모드(`lib/demo.ts`, `NEXT_PUBLIC_DEMO_MODE`)의 fixture 는 예외지만 prod 빌드에서 플래그가 꺼져 있는지 같이 본다.
 
 ### 신용정보법 §22의9 (마이데이터)
 - 현재 유저 계좌를 읽지 않으므로 미촉발. `BROKER_LINKING_AVAILABLE` 을 켜거나 새 브로커를 붙이는 PR 은 즉시 `legal` escalate.
