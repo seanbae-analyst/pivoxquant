@@ -45,6 +45,7 @@ import MobileDrawer from "./mobile-drawer";
 import { useAuth } from "@/lib/auth";
 import { useT } from "@/lib/locale";
 import { businessInfoRaw, SUPPORT_EMAIL_DEFAULT } from "@/lib/business-info";
+import { QuantMark } from "@/components/ui/quant-mark";
 
 /** Same fallback chain as the footer's 전자상거래법 §13 block. */
 export const SUPPORT_EMAIL =
@@ -266,12 +267,12 @@ export default function TopNav() {
                 style={{
                   color: "var(--pq-ivory)",
                   letterSpacing: "-0.02em",
-                  fontSize: scrolled ? "17px" : "18px",
+                  fontSize: scrolled ? "var(--pq-text-mono-md)" : "var(--pq-text-h5)",
                   fontWeight: 700,
                   transition: "font-size 280ms cubic-bezier(0.16,1,0.3,1)",
                 }}
               >
-                Pivox<span style={{ color: "var(--pq-bronze)" }}>Quant</span>
+                <QuantMark />
               </span>
               <span
                 aria-hidden

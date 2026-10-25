@@ -25,6 +25,7 @@
 
 import { ChevronDown } from "lucide-react";
 import { useT } from "@/lib/locale";
+import { QuantMark } from "@/components/ui/quant-mark";
 
 export default function SplashPage() {
   const t = useT();
@@ -84,7 +85,7 @@ export default function SplashPage() {
             color: "var(--pq-ivory)",
           }}
         >
-          PIVOX<span style={{ color: "var(--pq-bronze)" }}>QUANT</span>
+          <QuantMark upper />
         </span>
       </div>
 

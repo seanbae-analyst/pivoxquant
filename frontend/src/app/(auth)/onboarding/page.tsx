@@ -34,6 +34,7 @@ import type {
   OnboardingOption,
   OnboardingQuestion,
 } from "@/data/onboarding-questions";
+import { QuantMark } from "@/components/ui/quant-mark";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -1183,13 +1184,10 @@ function OnboardingWizard() {
         <div className="mx-auto max-w-lg">
           <div className="mb-3 flex items-center justify-between">
             <span
-              className="text-base font-bold font-display"
-              style={{
-                color: "var(--pq-ivory)",
-                letterSpacing: "var(--pq-track-wordmark)",
-              }}
+              className="text-pq-h5 font-bold tracking-[-0.02em]"
+              style={{ color: "var(--pq-ivory)" }}
             >
-              PivoxQuant
+              <QuantMark />
             </span>
             {/* P1-6 (2026-05-20 ux-flow fix): Skip was opacity-0.5 plain text
                 — easy to miss, hurting first-run completion for users who

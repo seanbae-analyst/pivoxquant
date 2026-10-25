@@ -21,6 +21,7 @@ export const SHARE_WIDTH = 1080;
 export const SHARE_HEIGHT = 1350;
 const PAD = 96;
 const WORDMARK = "PivoxQuant";
+const WORDMARK_HEAD = "Pivox";
 /** Some browsers start the download after the click handler returns. */
 const REVOKE_AFTER_MS = 1000;
 
@@ -112,9 +113,14 @@ export function drawShareCard(canvas: HTMLCanvasElement, text: ShareCardText): b
     y += 28;
   }
 
+  // The site logo: "Pivox" Ivory + "Quant" Bronze (components/ui/quant-mark.tsx).
+  const markY = SHARE_HEIGHT - PAD - 150;
+  const head = text.wordmark.slice(0, WORDMARK_HEAD.length);
+  ctx.font = `700 44px ${font}`;
+  ctx.fillStyle = ivory;
+  ctx.fillText(head, PAD, markY);
   ctx.fillStyle = bronze;
-  ctx.font = `600 44px ${font}`;
-  ctx.fillText(text.wordmark, PAD, SHARE_HEIGHT - PAD - 150);
+  ctx.fillText(text.wordmark.slice(head.length), PAD + ctx.measureText(head).width, markY);
 
   ctx.globalAlpha = 0.55;
   ctx.fillStyle = ivory;

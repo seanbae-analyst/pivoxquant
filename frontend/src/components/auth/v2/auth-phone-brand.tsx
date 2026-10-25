@@ -13,6 +13,8 @@
  * desktop split layout stays as it was.
  */
 
+import { QuantMark } from "@/components/ui/quant-mark";
+
 interface AuthPhoneBrandProps {
   /** Small line under the wordmark (e.g. "멈춤 · 기록 · 거울"). */
   tagline?: string;
@@ -53,7 +55,7 @@ export function AuthPhoneBrand({ tagline, size = "cover" }: AuthPhoneBrandProps)
           animation: "none",
         }}
       >
-        PIVOX<span style={{ color: "var(--pq-bronze)" }}>QUANT</span>
+        <QuantMark upper />
       </span>
       {tagline ? (
         <span

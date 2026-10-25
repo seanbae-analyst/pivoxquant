@@ -190,7 +190,8 @@ describe("share card", () => {
     expect(drawn).toEqual([
       text.title,
       ...text.lines,
-      "PivoxQuant",
+      "Pivox",
+      "Quant",
       "정보 제공 목적이며 투자 권유가 아닙니다.",
       "Information only, not investment advice.",
     ]);

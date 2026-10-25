@@ -48,15 +48,20 @@ export default function OpengraphImage() {
               background: "#B8956A",
             }}
           />
+          {/* "Pivox" Ivory + "Quant" Bronze — the site logo (components/ui/quant-mark.tsx) */}
           <span
             style={{
+              display: "flex",
               fontSize: 36,
-              fontWeight: 600,
-              letterSpacing: -0.5,
-              color: "#FAFAFA",
+              fontWeight: 700,
+              letterSpacing: -0.7,
+              color: "#F5F0E8",
             }}
           >
-            PivoxQuant
+            <span>Pivox</span>
+            {/* satori lays the two spans out as separate flex items and adds
+                ~4px between them; -4 matches the one-word "PivoxQuant" width. */}
+            <span style={{ color: "#B8956A", marginLeft: -4 }}>Quant</span>
           </span>
         </div>
 

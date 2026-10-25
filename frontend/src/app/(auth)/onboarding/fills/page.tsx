@@ -53,6 +53,7 @@ import {
   errorKey,
   webhookUrl,
 } from "@/components/settings/import-tokens-section";
+import { QuantMark } from "@/components/ui/quant-mark";
 
 const TOKEN_NAME: Record<PhoneKind, string> = {
   android: "안드로이드 폰",
@@ -129,7 +130,7 @@ export default function OnboardingFillsPage() {
     <div className="flex min-h-[100dvh] flex-col bg-[var(--pq-ink)] text-[var(--pq-ivory)]">
       <header className="sticky top-0 z-20 border-b border-[var(--pq-ivory-line)] bg-[rgba(10,10,10,0.9)] px-4 py-3 backdrop-blur-xl sm:px-6">
         <div className="mx-auto flex max-w-3xl items-center justify-between">
-          <span className="font-serif text-base">PivoxQuant</span>
+          <span className="text-pq-h5 font-bold tracking-[-0.02em]"><QuantMark /></span>
           <span className="text-pq-mono-sm text-[var(--pq-ivory-faint)]">{t("fillsOnboarding.stepLabel")}</span>
         </div>
       </header>

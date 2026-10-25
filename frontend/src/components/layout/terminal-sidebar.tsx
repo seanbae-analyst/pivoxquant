@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { SidebarRecordCard } from "./sidebar-record-card";
+import { QuantMark } from "@/components/ui/quant-mark";
 
 export type TerminalSidebarKey =
   | "mirror"
@@ -96,13 +97,13 @@ export function TerminalSidebar({
         <span
           className="font-serif"
           style={{
-            fontSize: "18px",
+            fontSize: "var(--pq-text-h5)",
             letterSpacing: "-0.02em",
             color: "var(--pq-ivory)",
             fontWeight: 700,
           }}
         >
-          Pivox<span style={{ color: "var(--pq-bronze)" }}>Quant</span>
+          <QuantMark />
         </span>
       </div>
 

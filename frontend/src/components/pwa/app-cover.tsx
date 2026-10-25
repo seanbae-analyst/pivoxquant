@@ -1,5 +1,7 @@
 "use client";
 
+import { QuantMark } from "@/components/ui/quant-mark";
+
 /**
  * AppCover — PIVOXQUANT alone on Vantablack: the first picture of the
  * installed app (the iOS launch images in public/splash are drawn from the
@@ -40,7 +42,7 @@ export function AppCover({ hint }: { hint?: string }) {
           textAlign: "center",
         }}
       >
-        PIVOX<span style={{ color: "var(--pq-bronze)" }}>QUANT</span>
+        <QuantMark upper />
       </span>
       {hint && (
         <span

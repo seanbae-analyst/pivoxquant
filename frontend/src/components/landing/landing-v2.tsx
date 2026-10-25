@@ -57,6 +57,7 @@ import {
 } from "@/lib/business-info";
 import { useT } from "@/lib/locale";
 import { useAuth } from "@/lib/auth";
+import { QuantMark } from "@/components/ui/quant-mark";
 
 /* ───────────── pricing: removed 2026-09-02 ─────────────
  *
@@ -322,7 +323,7 @@ function SiteFooter() {
                   fontWeight: 700,
                 }}
               >
-                Pivox<span style={{ color: "var(--pq-bronze)" }}>Quant</span>
+                <QuantMark />
               </span>
             </Link>
             <p
