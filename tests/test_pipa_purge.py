@@ -431,3 +431,18 @@ def test_purge_user_rows_reports_failures_and_continues(app):
         assert counts.get("watchlist") == 1
         assert Watchlist.query.filter_by(user_id=uid).count() == 0
         db.session.rollback()
+
+
+@pytest.mark.parametrize("requested_utc, expected", [
+    # 10-22 08:00 KST → threshold 11-21 08:00 KST → next 03:30 KST sweep 11-22
+    (datetime(2026, 10, 21, 23, 0), "2026-11-22"),
+    # 10-22 02:00 KST → threshold 11-21 02:00 KST → the 03:30 sweep that day
+    (datetime(2026, 10, 21, 17, 0), "2026-11-21"),
+])
+def test_deletion_email_names_the_kst_day_the_purge_runs(requested_utc, expected):
+    """The request email printed the UTC date of request + 30 days — up to two
+    KST days before the 03:30 KST sweep that actually purges (2026-10-22)."""
+    from routes.auth import _purge_run_date_kst
+
+    assert _purge_run_date_kst(requested_utc) == expected
+    assert _purge_run_date_kst(None) is None

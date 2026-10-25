@@ -44,7 +44,6 @@ import { loginNextPath } from "@/lib/login-redirect";
 import { AuthHeroV2 } from "@/components/auth/v2/auth-hero-v2";
 import { AuthPhoneBrand } from "@/components/auth/v2/auth-phone-brand";
 import { OAuthButtonsV2 } from "@/components/auth/v2/oauth-buttons-v2";
-import { Fleuron } from "@/components/ui/editorial";
 
 // Error copy is locale-aware via errorsFor() computed inside the component.
 
@@ -332,14 +331,8 @@ export default function AuthEntryPage() {
             }}
             aria-hidden="true"
           >
-            <span
-              style={{
-                flex: 1,
-                height: 0,
-                borderTop: "0.5px solid var(--pq-ivory-line)",
-              }}
-            />
-            <Fleuron size={12} />
+            {/* One plain hairline — the ❦ in the middle was retired with
+                the other ornaments (2026-10-11 refresh). */}
             <span
               style={{
                 flex: 1,

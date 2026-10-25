@@ -162,8 +162,29 @@ def set_rate(rate: float):
             _usdkrw_ts = time.time()
 
 
+# 2026-10-22: the 1-min FX job and every portfolio request asked FMP for
+# USDKRW — ~1,440 calls/day against a 250/day budget. Once the budget went
+# "stale", get_fx_rate returned the old cached rate, which counted as a
+# success (fresh timestamp, fallback never tried) while US quotes froze.
+# Now: a rate younger than this is not re-fetched, and FX may use at most
+# half of FMP's stale threshold — the rest is left for quotes.
+FX_REFETCH_SECONDS = 300
+
+
+def _fmp_fx_allowed() -> bool:
+    try:
+        from services.data import fmp
+        return fmp.daily_calls_used() < fmp._BUDGET_STALE_THRESHOLD // 2
+    except Exception:
+        return True
+
+
 def _fetch_from_fmp() -> float | None:
-    """Primary source: FMP."""
+    """Primary source: FMP — skipped when FX has used its share of the
+    daily budget (then exchangerate-api is tried instead of a stale FMP
+    value passing as fresh)."""
+    if not _fmp_fx_allowed():
+        return None
     try:
         from services.data.fmp import get_fx_rate
         rate = get_fx_rate("USDKRW")
@@ -202,6 +223,8 @@ def refresh():
     if now - _last_attempt_ts < SHORT_CACHE_SECONDS:
         return
     _last_attempt_ts = now
+    if _usdkrw_ts and now - _usdkrw_ts < FX_REFETCH_SECONDS:
+        return
 
     rate = _fetch_from_fmp()
     if rate is None:
@@ -496,6 +519,8 @@ def _refresh_fx_rate(app):
     global _usdkrw, _usdkrw_ts
     with app.app_context():
         now = time.time()
+        if _usdkrw_ts and now - _usdkrw_ts < FX_REFETCH_SECONDS:
+            return
         rate = _fetch_from_fmp() or _fetch_from_exchangerate_api()
         if rate is not None:
             with _lock:

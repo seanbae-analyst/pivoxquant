@@ -5,12 +5,21 @@
  * skipped it for /mirror. The browser keeps the landing.
  */
 import { describe, it, expect, vi, afterEach } from "vitest";
+import * as React from "react";
 import { render, cleanup, screen, fireEvent } from "@testing-library/react";
 
 const auth = { user: null as null | { id: number }, loading: false, waking: false };
 vi.mock("@/lib/auth", () => ({ useAuth: () => auth }));
 let returning = false;
 vi.mock("@/lib/had-session", () => ({ hadSession: () => returning }));
+// next/link without a mounted router: render the anchor and expose `replace`.
+vi.mock("next/link", () => ({
+  default: ({ replace, children, ...rest }: { replace?: boolean } & React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
+    <a {...rest} data-replace={replace ? "true" : undefined}>
+      {children}
+    </a>
+  ),
+}));
 
 import { AppWelcome, isStandaloneDisplay } from "../app-welcome";
 
@@ -74,6 +83,20 @@ describe("AppWelcome", () => {
     expect(screen.getByTestId("app-welcome-enter").getAttribute("href")).toBe("/mirror");
     expect(screen.queryByTestId("app-welcome-start")).toBeNull();
     expect(screen.queryByTestId("app-welcome-waking")).toBeNull();
+  });
+
+  // 2026-10-15 bug hunt: a push left the cover under the home tab, so back
+  // from 거울 returned to the cards instead of leaving the app.
+  it("들어가기 replaces the cover in history; sign-up / sign-in stay a push", () => {
+    auth.user = { id: 1 };
+    render(<AppWelcome />);
+    goToLastCard();
+    expect(screen.getByTestId("app-welcome-enter").getAttribute("data-replace")).toBe("true");
+    cleanup();
+    auth.user = null;
+    render(<AppWelcome />);
+    goToLastCard();
+    expect(screen.getByTestId("app-welcome-start").getAttribute("data-replace")).toBeNull();
   });
 
   it("server still waking on a returning device: leads in, and says the server is waking", () => {

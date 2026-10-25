@@ -28,6 +28,8 @@ vi.mock("@/lib/hooks", () => ({
     isLoading: false,
     error: undefined,
   }),
+  // 매도 순간의 거울 — empty here; sell-moment.test.tsx covers the block.
+  useSellMomentForTyped: () => ({ data: null, isLoading: false }),
 }));
 
 import { apiFetch } from "@/lib/api";

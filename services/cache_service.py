@@ -150,6 +150,35 @@ def save_signal(ticker: str, data: dict):
         db.session.commit()
 
 
+# With vendor-price display off (MARKET_DATA_DISPLAY_ENABLED=0, the default)
+# no screen reads the SignalCache price — only the identity fields (name,
+# currency, sector), which do not change. Re-quoting every held ticker every
+# 3 min then only spent the FMP daily budget (480 calls/day per US ticker)
+# until quotes and FX froze for the rest of the day (2026-10-22). Off: a
+# ticker is re-warmed when its row is missing or older than this.
+IDENTITY_REFRESH_SECONDS = 24 * 3600
+
+
+def tickers_due_for_refresh(tickers, *, display_on: bool, now: datetime | None = None) -> list:
+    """The held tickers the 3-min refresh job should warm this round.
+
+    Display on: every ticker (the row's price is shown). Display off: only
+    tickers with no row yet (a new holding still needs its name) or a row
+    older than :data:`IDENTITY_REFRESH_SECONDS`.
+    """
+    tickers = list(tickers)
+    if display_on or not tickers:
+        return tickers
+    now = now or datetime.now(timezone.utc).replace(tzinfo=None)
+    rows = SignalCache.query.filter(SignalCache.ticker.in_(tickers)).all()
+    fresh = {
+        r.ticker for r in rows
+        if r.updated_at is not None
+        and (now - r.updated_at).total_seconds() < IDENTITY_REFRESH_SECONDS
+    }
+    return [t for t in tickers if t not in fresh]
+
+
 def cache_ticker(ticker: str) -> None:
     """Warm the SignalCache row for one ticker.
 

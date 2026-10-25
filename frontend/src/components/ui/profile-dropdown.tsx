@@ -190,12 +190,15 @@ export function ProfileDropdown() {
           className="flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-[rgba(var(--pq-bronze-wash-rgb),0.08)]"
         >
           <span
-            className="flex h-8 w-8 items-center justify-center rounded-full font-mono text-pq-mono-sm font-semibold"
+            // 36px: a whole Korean name ("배상현", lib/initials) fits inside the
+            // ring at 10px; one or two characters keep the 11px label.
+            className="flex h-9 w-9 items-center justify-center rounded-full font-semibold"
             style={{
               background: "transparent",
               border: "0.5px solid var(--pq-bronze)",
               color: "var(--pq-bronze)",
-              letterSpacing: "0.04em",
+              fontSize: init.length >= 3 ? 10 : 11,
+              letterSpacing: init.length >= 3 ? "-0.02em" : "0.04em",
             }}
           >
             {init}

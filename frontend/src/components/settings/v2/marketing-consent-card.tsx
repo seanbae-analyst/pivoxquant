@@ -36,11 +36,16 @@
 import * as React from "react";
 import { toast } from "sonner";
 
-import { MARKETING_CONSENT_ANCHOR } from "@/components/settings/v2/notifications-matrix";
 import {
+  INFORMATION_CONSENT_ANCHOR,
+  MARKETING_CONSENT_ANCHOR,
+} from "@/components/settings/v2/notifications-matrix";
+import {
+  fetchInformationConsent,
   fetchMarketingConsent,
   recordMarketingConsent,
   revokeMarketingConsent,
+  setInformationConsent,
   type MarketingConsentState,
 } from "@/lib/consents";
 
@@ -58,13 +63,37 @@ function formatTimestamp(iso: string | null): string | null {
   });
 }
 
-export function MarketingConsentCardV2({
+/** One consent record, normalised so both §50 categories share the card. */
+interface ConsentRecord {
+  opted_in: boolean;
+  consent_at: string | null;
+  revoked_at: string | null;
+}
+
+interface ConsentCopy {
+  anchor: string;
+  tag: string;
+  eyebrow: string;
+  title: string;
+  help: string;
+  ariaLabel: string;
+  toastOn: string;
+  toastOff: string;
+  toastFail: string;
+}
+
+function ConsentToggleCard({
+  copy,
+  load,
+  save,
   onConsentChange,
 }: {
-  /** Effective opt-in, reported after hydration and after each committed toggle. */
+  copy: ConsentCopy;
+  load: () => Promise<ConsentRecord | null>;
+  save: (next: boolean) => Promise<ConsentRecord>;
   onConsentChange?: (optedIn: boolean) => void;
-} = {}) {
-  const [state, setState] = React.useState<MarketingConsentState | null>(null);
+}) {
+  const [state, setState] = React.useState<ConsentRecord | null>(null);
   const [loaded, setLoaded] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
 
@@ -75,20 +104,16 @@ export function MarketingConsentCardV2({
   React.useEffect(() => {
     let cancelled = false;
     (async () => {
-      const fetched = await fetchMarketingConsent();
+      const fetched = await load();
       if (cancelled) return;
-      setState(
-        fetched ?? {
-          opted_in: false,
-          marketing_consent_at: null,
-          marketing_consent_revoked_at: null,
-        },
-      );
+      setState(fetched ?? { opted_in: false, consent_at: null, revoked_at: null });
       setLoaded(true);
     })();
     return () => {
       cancelled = true;
     };
+    // `load` is a module-level function per card — hydrate once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const optedIn = state?.opted_in ?? false;
@@ -97,8 +122,8 @@ export function MarketingConsentCardV2({
   React.useEffect(() => {
     if (loaded && !busy) onConsentChange?.(optedIn);
   }, [loaded, busy, optedIn, onConsentChange]);
-  const stampedAt = formatTimestamp(state?.marketing_consent_at ?? null);
-  const revokedAt = formatTimestamp(state?.marketing_consent_revoked_at ?? null);
+  const stampedAt = formatTimestamp(state?.consent_at ?? null);
+  const revokedAt = formatTimestamp(state?.revoked_at ?? null);
 
   const handleToggle = async (next: boolean) => {
     if (busy) return;
@@ -109,21 +134,15 @@ export function MarketingConsentCardV2({
     setBusy(true);
     setState((s) => (s ? { ...s, opted_in: next } : s));
     try {
-      const updated = next
-        ? await recordMarketingConsent()
-        : await revokeMarketingConsent();
+      const updated = await save(next);
       setState(updated);
-      toast.success(
-        next
-          ? "마케팅 메일 수신에 동의했습니다."
-          : "마케팅 메일 수신 동의를 철회했습니다.",
-      );
+      toast.success(next ? copy.toastOn : copy.toastOff);
     } catch (err) {
       setState(prev);
       const message =
         err instanceof Error && err.message
           ? err.message
-          : "마케팅 수신 동의를 바꾸지 못했습니다.";
+          : copy.toastFail;
       toast.error(message);
     } finally {
       setBusy(false);
@@ -132,7 +151,7 @@ export function MarketingConsentCardV2({
 
   return (
     <div
-      id={MARKETING_CONSENT_ANCHOR}
+      id={copy.anchor}
       style={{
         background: "rgba(255,255,255,0.02)",
         border: "1px solid var(--pq-ivory-line)",
@@ -152,7 +171,7 @@ export function MarketingConsentCardV2({
           color: "var(--pq-ivory-dim)",
         }}
       >
-        마케팅
+        {copy.tag}
       </span>
       <div
         className="font-mono"
@@ -162,7 +181,7 @@ export function MarketingConsentCardV2({
           marginBottom: 12,
         }}
       >
-        마케팅 메일 · 정통망법 §50 ①
+        {copy.eyebrow}
       </div>
       <div
         style={{
@@ -180,7 +199,7 @@ export function MarketingConsentCardV2({
               color: "var(--pq-ivory)",
             }}
           >
-            마케팅 정보 수신 동의
+            {copy.title}
           </div>
           <div
             className="font-serif"
@@ -190,7 +209,7 @@ export function MarketingConsentCardV2({
               marginTop: 2,
             }}
           >
-            이벤트 · 신기능 · 프로모션 안내. 언제든 해제할 수 있습니다.
+            {copy.help}
           </div>
           {loaded && optedIn && stampedAt ? (
             <div
@@ -225,7 +244,7 @@ export function MarketingConsentCardV2({
           type="button"
           role="switch"
           aria-checked={optedIn}
-          aria-label="마케팅 메일 수신 동의"
+          aria-label={copy.ariaLabel}
           onClick={() => handleToggle(!optedIn)}
           disabled={!loaded || busy}
           style={{
@@ -260,6 +279,82 @@ export function MarketingConsentCardV2({
         </button>
       </div>
     </div>
+  );
+}
+
+const fromMarketing = (s: MarketingConsentState): ConsentRecord => ({
+  opted_in: s.opted_in,
+  consent_at: s.marketing_consent_at,
+  revoked_at: s.marketing_consent_revoked_at,
+});
+
+const MARKETING_COPY: ConsentCopy = {
+  anchor: MARKETING_CONSENT_ANCHOR,
+  tag: "마케팅",
+  eyebrow: "마케팅 메일 · 정통망법 §50 ①",
+  title: "마케팅 정보 수신 동의",
+  help: "이벤트 · 신기능 · 프로모션 안내. 언제든 해제할 수 있습니다.",
+  ariaLabel: "마케팅 메일 수신 동의",
+  toastOn: "마케팅 메일 수신에 동의했습니다.",
+  toastOff: "마케팅 메일 수신 동의를 철회했습니다.",
+  toastFail: "마케팅 수신 동의를 바꾸지 못했습니다.",
+};
+
+async function loadMarketing(): Promise<ConsentRecord | null> {
+  const fetched = await fetchMarketingConsent();
+  return fetched ? fromMarketing(fetched) : null;
+}
+
+async function saveMarketing(next: boolean): Promise<ConsentRecord> {
+  return fromMarketing(next ? await recordMarketingConsent() : await revokeMarketingConsent());
+}
+
+export function MarketingConsentCardV2({
+  onConsentChange,
+}: {
+  /** Effective opt-in, reported after hydration and after each committed toggle. */
+  onConsentChange?: (optedIn: boolean) => void;
+} = {}) {
+  return (
+    <ConsentToggleCard
+      copy={MARKETING_COPY}
+      load={loadMarketing}
+      save={saveMarketing}
+      onConsentChange={onConsentChange}
+    />
+  );
+}
+
+/**
+ * 정보성 메일 (정통망법 §50 ① 분리 동의, 2026-10-22). The monthly mirror
+ * report answers to this record alone (services/email/sender.py); before it
+ * existed nothing ever wrote the record, so the report reached nobody while
+ * the settings page said when it would arrive.
+ */
+const INFORMATION_COPY: ConsentCopy = {
+  anchor: INFORMATION_CONSENT_ANCHOR,
+  tag: "정보성",
+  eyebrow: "정보성 메일 · 정통망법 §50 ①",
+  title: "정보성 메일 수신 동의",
+  help: "월간 거울 리포트처럼 내 기록을 정리해 보내는 메일입니다. 광고성 메일과 따로 받으며, 언제든 해제할 수 있습니다.",
+  ariaLabel: "정보성 메일 수신 동의",
+  toastOn: "정보성 메일 수신에 동의했습니다.",
+  toastOff: "정보성 메일 수신 동의를 철회했습니다.",
+  toastFail: "정보성 수신 동의를 바꾸지 못했습니다.",
+};
+
+export function InformationConsentCardV2({
+  onConsentChange,
+}: {
+  onConsentChange?: (optedIn: boolean) => void;
+} = {}) {
+  return (
+    <ConsentToggleCard
+      copy={INFORMATION_COPY}
+      load={fetchInformationConsent}
+      save={setInformationConsent}
+      onConsentChange={onConsentChange}
+    />
   );
 }
 

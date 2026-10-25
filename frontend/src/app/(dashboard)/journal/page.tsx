@@ -48,11 +48,13 @@ import { ConcentrationMirror } from "@/components/journal/concentration-mirror";
 import { ProfitLossMirror } from "@/components/journal/profit-loss-mirror";
 import { TurnoverMirror } from "@/components/journal/turnover-mirror";
 import { AveragingDownMirror } from "@/components/journal/averaging-down-mirror";
+import { RebuyMirror } from "@/components/journal/rebuy-mirror";
 import { FrictionOutcomeMirror } from "@/components/journal/friction-outcome-mirror";
 import { StorageProofToggle } from "@/components/journal/storage-proof-toggle";
 import { WeeklyPulseSection } from "@/components/journal/weekly-pulse-section";
 import { ImportInbox } from "@/components/journal/import-inbox";
 import { ObservationNoteComposer } from "@/components/journal/observation-note-composer";
+import { ResearchEntry } from "@/components/journal/research-entry";
 import { ObservationNoteCard } from "@/components/journal/observation-note-card";
 import { JournalPager } from "@/components/journal/journal-pager";
 import { PullToRefresh } from "@/components/layout/pull-to-refresh";
@@ -764,6 +766,14 @@ function JournalContent() {
           </ErrorBoundary>
         </div>
 
+        {/* 리서치 양식 — the structured way to write before buying, scored
+            later (docs/design/research-notes_2026-10-15.md). */}
+        <div className="mb-6">
+          <ErrorBoundary fallback={null}>
+            <ResearchEntry />
+          </ErrorBoundary>
+        </div>
+
         {/* Chips + this-week count. Counts only — no score, no label (§4-2).
             The count is dropped entirely when the notes feed failed: "0개" read
             off a failed fetch is a false statement about the user's own record. */}
@@ -875,7 +885,15 @@ function JournalContent() {
           <AveragingDownMirror />
         </div>
 
-        {/* Friction outcome sits LAST in the section on purpose. The five
+        {/* Rebuy sits after the follow-on-add mirror: both compare two of the
+            user's own fills of one name, never a vendor price, so this is the
+            "what did it cost when I came back" view while market-data display
+            is off (MARKET_DATA_DISPLAY_ENABLED). */}
+        <div className="mb-8">
+          <RebuyMirror />
+        </div>
+
+        {/* Friction outcome sits LAST in the section on purpose. The six
             mirrors above read TradeHistory — what you did. This one reads
             PreTradeReflection alongside it, so it is the only one that can
             speak about the trade that did not happen, and it reads best after

@@ -18,11 +18,11 @@
  *
  * Phone (<768px, incl. the installed PWA — 2026-10-09, reworked 2026-10-10):
  *   PortfolioPhoneSummary (large title, folds to one line on scroll) +
- *   PhonePager, three swipeable pages: 보유 (tappable holding rows → sheet) ·
+ *   PhonePager, swipeable pages: 보유 (tappable holding rows → sheet) ·
  *   현황 (PortfolioPhoneOverview: summary rows, curve when the vendor gate is
  *   on, sector strip, seed capital row → sheet, FX attribution) · 최근 활동
- *   (trades grouped by day). Same data and props as the desktop column;
- *   desktop markup is unchanged.
+ *   (trades grouped by day) · 월급날 (PaydayPlanCard, 2026-10-14). Same data
+ *   and props as the desktop column.
  *
  * Modals:
  *   - AddPositionModalV2         (state-controlled)
@@ -68,6 +68,7 @@ import { EquityCurveBlock } from "@/components/portfolio/v2/equity-curve-block";
 import { PositionsTableV2 } from "@/components/portfolio/v2/positions-table-v2";
 import { SectorDonutBlock } from "@/components/portfolio/v2/sector-donut-block";
 import { RecentTransactionsBlock } from "@/components/portfolio/v2/recent-transactions-block";
+import { PaydayPlanCard } from "@/components/portfolio/v2/payday-plan-card";
 import { AddPositionModalV2 } from "@/components/portfolio/v2/add-position-modal-v2";
 import { TradeModalV2 } from "@/components/portfolio/v2/trade-modal-v2";
 import { ObservationNoteModalV2 } from "@/components/portfolio/v2/observation-note-modal-v2";
@@ -343,7 +344,7 @@ export default function PortfolioPageV2() {
 
   async function refreshAll() {
     // An add/edit/sell just changed the book. A bare mutate(key) can be
-    // swallowed by the 10s dedupingInterval (PORTFOLIO_DEDUPE_MS) when a
+    // swallowed by the dedupingInterval (PORTFOLIO_DEDUPE_MS) when a
     // background refreshInterval fetch fired moments earlier — leaving the
     // holdings table and hero count showing pre-mutation data until the next
     // poll (the "I added it but it's not there" wart). Fetch fresh data
@@ -600,6 +601,13 @@ export default function PortfolioPageV2() {
                 label: "최근 활동",
                 content: <RecentTransactionsBlock limit={6} />,
               },
+              {
+                // 2026-10-14 — 월급날 배분. Amounts stay on this device
+                // (lib/payday-plan.ts); the card only reads trades + FX.
+                id: "payday",
+                label: "월급날",
+                content: <PaydayPlanCard variant="plain" />,
+              },
             ]}
           />
           {modals}
@@ -672,6 +680,14 @@ export default function PortfolioPageV2() {
           settings. */}
       <section aria-label="시드 자본">
         <CapitalCardV2 />
+      </section>
+
+      {/* ═══════════ PAYDAY SPLIT (2026-10-14) ═══════════
+          The user's own payday split, set next to what their recorded fills
+          put in. Every amount stays in this browser — see
+          components/portfolio/v2/payday-plan-card.tsx. */}
+      <section aria-label="월급날 배분" style={{ marginTop: 16 }}>
+        <PaydayPlanCard />
       </section>
 
       {/* ═══════════ 2-COL GRID — Sector / Recent ═══════════ */}

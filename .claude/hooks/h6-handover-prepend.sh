@@ -31,7 +31,9 @@ echo "HEAD   : $HEAD_LINE  [$HEAD_DATE]"
 echo "작업중 : 미커밋 ${DIRTY} · untracked ${UNTRACKED}"
 
 # --- prod 실측 (짧은 타임아웃, 실패해도 세션 시작 막지 않음) ---
-BE=$(curl -s -o /dev/null -m 4 -w '%{http_code}' https://web-production-7b484b.up.railway.app/api/health 2>/dev/null || echo "타임아웃")
+# 백엔드는 Render 다. 옛 Railway 주소는 404 를 돌려줘 장애처럼 보였다 (2026-10-15 실측).
+# free 인스턴스가 잠들어 있으면 4초 안에 못 깨어나 000 이 찍힌다 — 장애가 아니라 콜드스타트일 수 있다.
+BE=$(curl -s -o /dev/null -m 4 -w '%{http_code}' https://pivoxquant-api.onrender.com/api/health 2>/dev/null); [ "$BE" = "000" ] && BE="000(잠듦/타임아웃)"
 FE=$(curl -s -o /dev/null -m 4 -w '%{http_code}' -L https://www.pivoxquant.com 2>/dev/null || echo "타임아웃")
 echo "prod   : backend=$BE  frontend=$FE   (backend 200 아니면 로그인 이후 기능 전부 죽음)"
 

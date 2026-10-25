@@ -186,6 +186,8 @@ def find_inactive_users(
         User.created_at >= lower,
         User.created_at < upper,
         User.is_simulated == False,  # noqa: E712 — SQLAlchemy boolean
+        # PIPA §21 grace window — no nudge to a user who asked to leave.
+        User.deletion_requested_at.is_(None),
     )
 
     # ``inactive_nudge_sent_at`` is added by migration 038. Guard the

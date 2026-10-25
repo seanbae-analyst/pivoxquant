@@ -87,6 +87,14 @@ const EVENTS: EventRow[] = [
     defaults: { email: false, push: true, inapp: false },
     channels: ["push"],
   },
+  // 2026-10-25 (CEO "푸시도 켜"): 가설 다시 보기 — a new periodic report or
+  // earnings release on a name with an unscored research note
+  // (services/filing_timeline/research_check.py, 매일 08:20 KST). Bell + push.
+  {
+    id: "research_filing",
+    defaults: { email: false, push: true, inapp: true },
+    channels: ["push", "inapp"],
+  },
 ];
 type MatrixState = NotificationPrefsMap;
 
@@ -201,18 +209,20 @@ interface Props {
   onChange?: (state: MatrixState) => void;
   /** B2 email-delivery toggle (`!email_opt_out`). `undefined` = not known yet. */
   emailDeliveryOn?: boolean;
-  /** B3 marketing-consent card (effective opt-in). `undefined` = not known yet. */
-  marketingConsentOn?: boolean;
+  /** 정보성 consent card (effective opt-in). `undefined` = not known yet. */
+  informationConsentOn?: boolean;
 }
 
 /** Anchor ids of the two cards the monthly-report email also depends on.
  *  The settings page puts them on the B2 card / MarketingConsentCardV2. */
 export const EMAIL_DELIVERY_ANCHOR = "settings-email-delivery";
 export const MARKETING_CONSENT_ANCHOR = "settings-marketing-consent";
+/** 정보성 consent card — the one the monthly report actually needs (2026-10-22). */
+export const INFORMATION_CONSENT_ANCHOR = "settings-information-consent";
 
 /**
  * 2026-09-29 — the monthly report goes out only when THREE switches are on:
- * this row's email cell, B2 email delivery (`email_opt_out`) and B3 marketing
+ * this row's email cell, B2 email delivery (`email_opt_out`) and the 정보성
  * consent (services/email/sender.py checks all three). They are owned by
  * different cards, so an "on" cell here could silently send nothing. When the
  * cell is on and another switch blocks it, name that switch. Unknown (still
@@ -221,11 +231,11 @@ export const MARKETING_CONSENT_ANCHOR = "settings-marketing-consent";
 function monthlyMirrorBlocker(
   cellOn: boolean,
   emailDeliveryOn: boolean | undefined,
-  marketingConsentOn: boolean | undefined,
+  informationConsentOn: boolean | undefined,
 ): { key: string; href: string } | null {
   if (!cellOn) return null;
   const delivery = emailDeliveryOn === false;
-  const consent = marketingConsentOn === false;
+  const consent = informationConsentOn === false;
   if (delivery && consent) {
     return { key: "blockedByBoth", href: `#${EMAIL_DELIVERY_ANCHOR}` };
   }
@@ -233,7 +243,7 @@ function monthlyMirrorBlocker(
     return { key: "blockedByDelivery", href: `#${EMAIL_DELIVERY_ANCHOR}` };
   }
   if (consent) {
-    return { key: "blockedByConsent", href: `#${MARKETING_CONSENT_ANCHOR}` };
+    return { key: "blockedByConsent", href: `#${INFORMATION_CONSENT_ANCHOR}` };
   }
   return null;
 }
@@ -242,7 +252,7 @@ export function NotificationsMatrix({
   initial,
   onChange,
   emailDeliveryOn,
-  marketingConsentOn,
+  informationConsentOn,
 }: Props) {
   const t = useT();
   /** Event copy lives in settingsV2.notifications.<id>.{name,help}. */
@@ -392,9 +402,10 @@ export function NotificationsMatrix({
           <tr>
             <th
               scope="col"
-              className="font-mono"
+              // Phone: narrower side padding so the description column is not
+              // squeezed to four or five lines at 375px (2026-10-22).
+              className="py-3.5 pl-4 pr-2 font-mono md:pl-6 md:pr-3"
               style={{
-                padding: "14px 12px 14px 24px",
                 textAlign: "left",
                 borderBottom: "1px solid var(--pq-ivory-line)",
                 fontSize: "var(--pq-text-eyebrow)",
@@ -408,9 +419,8 @@ export function NotificationsMatrix({
               <th
                 key={c}
                 scope="col"
-                className="font-mono"
+                className="px-1.5 py-3.5 font-mono md:px-3"
                 style={{
-                  padding: "14px 12px",
                   textAlign: "center",
                   borderBottom: "1px solid var(--pq-ivory-line)",
                   fontSize: "var(--pq-text-eyebrow)",
@@ -430,13 +440,13 @@ export function NotificationsMatrix({
             const isLast = i === rows.length - 1;
             const blocker =
               e.id === "monthly_mirror"
-                ? monthlyMirrorBlocker(row.email, emailDeliveryOn, marketingConsentOn)
+                ? monthlyMirrorBlocker(row.email, emailDeliveryOn, informationConsentOn)
                 : null;
             return (
               <tr key={e.id}>
                 <td
+                  className="py-3.5 pl-4 pr-2 md:pl-6 md:pr-3"
                   style={{
-                    padding: "14px 12px 14px 24px",
                     borderBottom: isLast
                       ? "none"
                       : "1px solid var(--pq-ivory-line)",
@@ -482,8 +492,8 @@ export function NotificationsMatrix({
                 {(["email", "push", "inapp"] as const).map((ch) => (
                   <td
                     key={ch}
+                    className="px-1.5 py-3.5 md:px-3"
                     style={{
-                      padding: "14px 12px",
                       textAlign: "center",
                       borderBottom: isLast
                         ? "none"

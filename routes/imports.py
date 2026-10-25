@@ -57,6 +57,7 @@ from services.imports import (
     ImportParseError,
     RawTrade,
     amount_ok,
+    as_timed,
     kst_to_utc,
     mask_sensitive,
     parse_datetime_tz,
@@ -72,6 +73,7 @@ from services.imports.dedupe import (
     UNTIMED_RETRY_WINDOW,
     DedupeIndex,
     already_recorded,
+    is_arrival_stamped,
     is_duplicate,
     make_key,
 )
@@ -274,7 +276,7 @@ def _recompute(row: PendingTrade, seen: set[str] | None = None,
     )
     if index is not None:
         dup = index.is_duplicate(row.dedupe_key, row.ticker, row.action,
-                                 row.shares, row.price, row.traded_at)
+                                 row.shares, row.price, row.traded_at, arrival=untimed)
         if untimed and not dup:
             dup = index.is_untimed_retry(row.ticker or row.name, row.action,
                                          row.shares, row.price)
@@ -282,6 +284,7 @@ def _recompute(row: PendingTrade, seen: set[str] | None = None,
         dup = is_duplicate(
             row.user_id, row.dedupe_key, row.ticker, row.action,
             row.shares, row.price, row.traded_at, exclude_id=row.id,
+            arrival=is_arrival_stamped(row),
         )
     if seen is not None:
         if row.dedupe_key in seen:
@@ -332,8 +335,9 @@ def _rows_to_raw(rows) -> list[RawTrade]:
                             f"{label}.currency 는 KRW 또는 USD 여야 합니다.")
         traded_at = None
         _tz_utc = False  # reset per row — a rowless-zone row must not inherit the previous row's flag
+        time_given = False
         if item.get("traded_at") not in (None, ""):
-            traded_at, _tz_utc = parse_datetime_tz(item.get("traded_at"))
+            traded_at, _tz_utc, time_given = parse_datetime_tz(item.get("traded_at"))
             if traded_at is None:
                 raise _RowError(f"{label}.traded_at is not a recognised date.",
                                 f"{label}.traded_at 형식을 인식하지 못했습니다.")
@@ -343,8 +347,8 @@ def _rows_to_raw(rows) -> list[RawTrade]:
         )
         out.append(RawTrade(
             name=name, code=code, action=side, shares=float(shares), price=float(price),
-            currency=currency, traded_at=traded_at, confidence=1.0, raw_snippet=snippet,
-            extra={"tz_utc": bool(_tz_utc)},
+            currency=currency, traded_at=traded_at, time_given=time_given,
+            confidence=1.0, raw_snippet=snippet, extra={"tz_utc": bool(_tz_utc)},
         ))
     return out
 
@@ -456,8 +460,14 @@ def _ingest(user_id: int, source: str, *, text=None, rows=None, upload=None,
                 r.skip_reason = f"통화 불일치 — {t} 는 {_currency_for(t, None, '')} 종목인데 단가가 {r.currency}"
                 continue
         if r.traded_at is not None:
-            if not r.extra.get("tz_utc") and broker_guess != "pivoxquant":
-                r.traded_at = kst_to_utc(r.traded_at)
+            # Our own export is already the stored shape (services.imports
+            # "stored fill time"); an explicit zone is a timed instant.
+            if broker_guess == "pivoxquant":
+                pass
+            elif r.extra.get("tz_utc"):
+                r.traded_at = as_timed(r.traded_at)
+            else:
+                r.traded_at = kst_to_utc(r.traded_at, has_time=r.time_given)
             if not traded_at_ok(r.traded_at):
                 r.skip_reason = "거래 일시가 범위 밖 (미래 또는 1990년 이전)"
                 continue
@@ -480,7 +490,8 @@ def _ingest(user_id: int, source: str, *, text=None, rows=None, upload=None,
             skipped=skipped, mapping=mapping, unmapped_headers=unmapped,
         )
 
-    now = utcnow_naive()
+    # The arrival stamp of a time-less row is a timed instant (as_timed).
+    now = as_timed(utcnow_naive())
     batch = ImportBatch(
         user_id=user_id, source=source, token_id=token_id, broker_guess=broker_guess,
         filename=filename, row_count=len(raw_rows), consent_at=consent_at, created_at=now,
@@ -800,6 +811,8 @@ def issue_token():
     token = ImportToken(
         user_id=current_user.id, name=name, token_hash=_hash_token(raw),
         prefix=raw[:TOKEN_PREFIX_DISPLAY_LEN], consent_at=now, created_at=now,
+        # The consent label now also names 문 앞의 한 줄 answers (2026-10-15).
+        doorway_consent_at=now,
     )
     db.session.add(token)
     try:
@@ -909,12 +922,11 @@ def patch_pending(pid: int):
                              code="IMPORT_INVALID_FIELD", status=400)
         row.price = float(v)
     if "traded_at" in data:
-        dt, tz_utc = parse_datetime_tz(data.get("traded_at"))
+        dt, tz_utc, has_time = parse_datetime_tz(data.get("traded_at"))
         if dt is None:
             return api_error(en="traded_at is not a recognised date.", kr="거래 일시 형식을 인식하지 못했습니다.",
                              code="IMPORT_INVALID_FIELD", status=400)
-        if not tz_utc:
-            dt = kst_to_utc(dt)
+        dt = as_timed(dt) if tz_utc else kst_to_utc(dt, has_time=has_time)
         if not traded_at_ok(dt):
             return api_error(en="traded_at must be between 1990 and tomorrow.",
                              kr="거래 일시는 1990년 이후, 내일 이전이어야 합니다.",

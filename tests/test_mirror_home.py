@@ -302,3 +302,54 @@ def test_drift_needs_two_snapshots(client, auth_user, monkeypatch):
     monkeypatch.setattr("routes.mirror_home.get_history", lambda *a, **k: [snap, later])
     drift = client.get("/api/mirror-home").get_json()["drift"]
     assert drift["available"] is True and drift["descriptor"]
+
+
+# ── 내 규칙 (2026-10-14, services/profile/my_rules.py) ───────────────────
+
+def test_rules_unavailable_without_v3_answers(client, auth_user):
+    data = client.get("/api/mirror-home").get_json()
+    assert data["rules"]["available"] is False
+    assert data["rules"]["items"] == []
+
+
+def test_rules_count_own_fills_and_waiting_inbox_rows(client, auth_user, add_position, app):
+    """The route feeds the user's own rows: recorded fills this KST month plus
+    fills still waiting in the import inbox, against the line they declared."""
+    from datetime import datetime, timezone
+
+    from extensions import db
+    from models import TradeHistory
+    from models.import_batch import ImportBatch, PendingTrade
+
+    _onboard_v3(client, auth_user, add_position, declared_frequency="rare")   # ≤ 2 / month
+    add_position(auth_user["id"], ticker="AAA", shares=5.0)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    with app.app_context():
+        for i in range(2):
+            db.session.add(TradeHistory(
+                user_id=auth_user["id"], ticker="AAA", action="BUY", shares=1.0,
+                price_per_share=100.0, total_value=100.0, currency="USD", traded_at=now,
+            ))
+        # A holding-registration row is not a fill.
+        db.session.add(TradeHistory(
+            user_id=auth_user["id"], ticker="BBB", action="BUY", shares=3.0,
+            price_per_share=50.0, total_value=150.0, currency="USD", traded_at=now,
+            source="holding_seed",
+        ))
+        batch = ImportBatch(user_id=auth_user["id"], source="webhook")
+        db.session.add(batch)
+        db.session.flush()
+        db.session.add(PendingTrade(
+            batch_id=batch.id, user_id=auth_user["id"], ticker="AAA", name="AAA",
+            action="BUY", shares=1.0, price=100.0, traded_at=now, dedupe_key="k-1",
+        ))
+        db.session.commit()
+
+    rules = client.get("/api/mirror-home").get_json()["rules"]
+    assert rules["available"] is True
+    freq = next(i for i in rules["items"] if i["id"] == "frequency")
+    assert freq["ceiling"] == 2
+    assert freq["this_month"] == 3 and freq["waiting"] == 1
+    assert freq["status"] == "outside"
+    pos = next(i for i in rules["items"] if i["id"] == "positions")
+    assert pos["open_positions"] == 1

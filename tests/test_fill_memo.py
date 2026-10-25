@@ -83,3 +83,151 @@ def test_several_fills_one_push(webhook_client, token):  # noqa: F811
     assert send.call_count == 1
     if len(waiting) > 1:
         assert f"{len(waiting)}건" in send.call_args.kwargs["body"]
+
+
+# ── 내 규칙 line in the push (2026-10-14) ────────────────────────────────
+
+def _declare_rare(client, auth_user, app, confirm=True):
+    """Onboard with declared_frequency="rare" (≤ 2 fills / month) and, unless
+    ``confirm=False``, adopt it as the user's line (POST /rules/confirm)."""
+    from tests.test_mirror_home import _LEGAL
+    from extensions import db
+    from models import Position
+    with app.app_context():
+        db.session.add(Position(user_id=auth_user["id"], ticker="ONBOARD", shares=0.0,
+                                avg_cost=1.0, buy_fx_rate=1.0))
+        db.session.commit()
+    r = client.post("/api/profile/onboarding", json={"answers": {
+        "declared_holding": "months", "declared_frequency": "rare",
+        "declared_positions": "focused", "declared_drawdown_response": "hold",
+        "record_habit": "sometimes", "legal_confirmations": list(_LEGAL),
+    }})
+    assert r.status_code == 200, r.get_json()
+    if confirm:
+        assert client.post("/api/profile/rules/confirm").status_code == 200
+
+
+def _record_fills(app, user_id, n):
+    from datetime import datetime, timezone
+    from extensions import db
+    from models import TradeHistory
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    with app.app_context():
+        for _ in range(n):
+            db.session.add(TradeHistory(
+                user_id=user_id, ticker="005930.KS", action="BUY", shares=1.0,
+                price_per_share=70000.0, total_value=70000.0, currency="KRW", traded_at=now,
+            ))
+        db.session.commit()
+
+
+def test_push_names_the_month_count_past_the_users_own_line(
+    webhook_client, token, client, auth_user, app,  # noqa: F811
+):
+    _declare_rare(client, auth_user, app)
+    _record_fills(app, auth_user["id"], 2)          # 2 recorded + this fill = 3 > 2
+    with patch("services.push_service.send_push_to_user") as send:
+        r = _post(webhook_client, token)
+    assert r.status_code == 201
+    body = send.call_args.kwargs["body"]
+    # Adopted this month → the count runs from the adoption (2026-10-15).
+    assert "선을 정한 뒤 이번 달 들어온 거래가 3번이에요 — 정해 둔 선은 2번." in body
+    assert body.index("체결이 들어왔습니다") < body.index("이번 달") < body.index("이유")
+    for word in ("매수", "매도", "BUY", "SELL", "추천", "조언", "위반"):
+        assert word not in body
+
+
+def test_push_says_nothing_extra_within_the_line(
+    webhook_client, token, client, auth_user, app,  # noqa: F811
+):
+    _declare_rare(client, auth_user, app)
+    _record_fills(app, auth_user["id"], 1)          # 1 + this fill = 2 = line
+    with patch("services.push_service.send_push_to_user") as send:
+        _post(webhook_client, token)
+    assert "이번 달" not in send.call_args.kwargs["body"]
+
+
+def test_push_without_declared_answers_is_unchanged(webhook_client, token):  # noqa: F811
+    with patch("services.push_service.send_push_to_user") as send:
+        _post(webhook_client, token)
+    assert "이번 달" not in send.call_args.kwargs["body"]
+
+
+def test_push_says_nothing_extra_before_the_user_adopted_the_line(
+    webhook_client, token, client, auth_user, app,  # noqa: F811
+):
+    """"정해 둔 선" would name a line the user never set — answered, not adopted."""
+    _declare_rare(client, auth_user, app, confirm=False)
+    _record_fills(app, auth_user["id"], 5)
+    with patch("services.push_service.send_push_to_user") as send:
+        _post(webhook_client, token)
+    assert "이번 달" not in send.call_args.kwargs["body"]
+
+
+# ── the push counts from the adoption on (2026-10-15) ────────────────────
+
+def _fills_at(app, user_id, times):
+    from extensions import db
+    from models import TradeHistory
+    with app.app_context():
+        for at in times:
+            db.session.add(TradeHistory(
+                user_id=user_id, ticker="005930.KS", action="BUY", shares=1.0,
+                price_per_share=70000.0, total_value=70000.0, currency="KRW", traded_at=at,
+            ))
+        db.session.commit()
+
+
+def _adopted_at(app, user_id, at):
+    from extensions import db
+    from models import InvestmentProfile
+    with app.app_context():
+        InvestmentProfile.query.filter_by(user_id=user_id).first().rules_confirmed_at = at
+        db.session.commit()
+
+
+def test_rule_note_ignores_fills_from_before_the_adoption(client, auth_user, app):
+    """The /mirror card reads "YYYY-MM-DD부터"; the push must not call the
+    line the user drew this morning crossed by fills from before it."""
+    from datetime import datetime
+    from services.fill_memo import rule_note
+    _declare_rare(client, auth_user, app)
+    now = datetime(2026, 10, 14, 3, 0)                      # 12:00 KST
+    _adopted_at(app, auth_user["id"], datetime(2026, 10, 13, 23, 0))   # 08:00 KST
+    _fills_at(app, auth_user["id"], [datetime(2026, 10, d, 3, 0) for d in range(1, 6)])
+    with app.app_context():
+        assert rule_note(auth_user["id"], now) == ""
+    _fills_at(app, auth_user["id"], [datetime(2026, 10, 14, 1, 0)] * 2 + [datetime(2026, 10, 14, 0, 0)])
+    with app.app_context():
+        assert rule_note(auth_user["id"], now) == (
+            "선을 정한 뒤 이번 달 들어온 거래가 3번이에요 — 정해 둔 선은 2번."
+        )
+
+
+def test_rule_note_after_an_earlier_adoption_counts_the_whole_month(client, auth_user, app):
+    from datetime import datetime
+    from services.fill_memo import rule_note
+    _declare_rare(client, auth_user, app)
+    _adopted_at(app, auth_user["id"], datetime(2026, 9, 2, 3, 0))
+    _fills_at(app, auth_user["id"], [datetime(2026, 10, d, 3, 0) for d in range(1, 4)])
+    with app.app_context():
+        assert rule_note(auth_user["id"], datetime(2026, 10, 14, 3, 0)) == (
+            "이번 달 들어온 거래가 3번이에요 — 정해 둔 선은 2번."
+        )
+
+
+def test_a_failed_rule_note_rolls_the_session_back(app):
+    """A DB error inside rule_note leaves a Postgres transaction aborted; the
+    push then runs on that session. sell_note rolls back, but only runs for a
+    single fill — rule_note must roll back itself."""
+    from services import fill_memo
+
+    with app.app_context():
+        from extensions import db
+        from models import InvestmentProfile
+
+        with patch.object(InvestmentProfile, "query") as q, \
+                patch.object(db.session, "rollback") as rb:
+            q.filter_by.side_effect = RuntimeError("aborted")
+            assert fill_memo.rule_note(1) == ""
+            assert rb.called

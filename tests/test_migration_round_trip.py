@@ -130,6 +130,11 @@ def test_migration_chain_upgrades_to_head(migration_app: Flask):
     # 054 — 관찰 노트. body 는 EncryptedText(=TEXT 암호문)라 048 류의 폭
     # 문제가 여기서 재발하면 이 줄에서 먼저 걸린다.
     assert "observation_notes" in tables, "054_observation_notes missing"
+    assert "research_notes" in tables, "063_research_notes missing"
+    assert "doorway_checks" in tables, "064_doorway_checks missing"
+    assert "doorway_consent_at" in _columns(migration_app, "import_tokens"), (
+        "064_doorway_checks did not add import_tokens.doorway_consent_at"
+    )
 
     # 023 marketing consent + 024 cross-border consent column adds.
     user_cols = _columns(migration_app, "users")

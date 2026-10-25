@@ -982,6 +982,10 @@ def _do_migrations():
     _add_column_if_missing("investment_profiles", "questionnaire_version", "INTEGER")
     _add_column_if_missing("investment_profiles", "onboarding_answers_json", "TEXT")
     _add_column_if_missing("investment_profiles", "declared_vector_json", "TEXT")
+    # 내 규칙 (2026-10-14, alembic 062) — when the user adopted their onboarding
+    # answers as their own lines. Read by routes/mirror_home.py and
+    # services/fill_memo.py; written by POST /api/profile/rules/confirm.
+    _add_column_if_missing("investment_profiles", "rules_confirmed_at", "TIMESTAMP")
 
     # User referrals — `invited_count` is the one post-create candidate.
     _add_column_if_missing("user_referrals", "invited_count", "INTEGER", default="0")
@@ -1028,6 +1032,15 @@ def _do_migrations():
     # sure the column exists so the ORM INSERT/SELECT never fails on a box
     # whose import_batches table predates Phase 2.
     _add_column_if_missing("import_batches", "token_id", "INTEGER")
+    # import_tokens.doorway_consent_at — 2026-10-15. Alembic twin:
+    # 064_doorway_checks. Nullable TIMESTAMP: the token was issued under the
+    # consent text that names 문 앞의 한 줄 answers. NULL (older tokens) →
+    # routes/doorway.py refuses door answers sent with it.
+    _add_column_if_missing("import_tokens", "doorway_consent_at", "TIMESTAMP")
+    # company_filings.title — 2026-10-25. Alembic twin: 066_company_filing_title.
+    # Nullable VARCHAR(200): the DART report name (한국 공시). A box whose table
+    # was created by 065 / create_all before this column existed gets it here.
+    _add_column_if_missing("company_filings", "title", "VARCHAR(200)")
 
     # pending_trades.currency_stated — 2026-09-29. Alembic twin:
     # 057_pending_currency_stated. Nullable BOOLEAN: did the input state the
@@ -1248,7 +1261,7 @@ _SCHEDULER_LOCK_CONN = None
 _SCHEDULER_LOCK_KEY = 0x50_49_56_4F_58  # "PIVOX" hex — any constant works.
 
 
-def _try_acquire_scheduler_lock() -> bool:
+def _try_acquire_scheduler_lock(fail_safe: bool = True) -> bool:
     """Return True if THIS process should own the scheduler.
 
     On PostgreSQL: opens a dedicated connection and calls
@@ -1256,7 +1269,13 @@ def _try_acquire_scheduler_lock() -> bool:
     lifetime via ``_SCHEDULER_LOCK_CONN`` and auto-released by PG on
     disconnect (i.e. when the old container dies during a deploy).
 
-    On SQLite / any error: returns True (fail-safe — never lose crons).
+    On SQLite: returns True (no advisory locks, no deploy overlap). On an
+    error: returns True when ``fail_safe`` (the boot attempt — it cannot tell
+    whether anyone holds the lock, and never losing crons wins), else
+    re-raises. The background retry passes ``fail_safe=False``: it only runs
+    because the boot attempt SAW the lock held elsewhere, so an error there
+    is no reason to start a second scheduler (2026-10-15 — one pooler hiccup
+    during a deploy overlap used to start the crons twice).
     """
     global _SCHEDULER_LOCK_CONN
     try:
@@ -1266,6 +1285,7 @@ def _try_acquire_scheduler_lock() -> bool:
     if not IS_POSTGRES:
         # Local dev (SQLite) has no advisory locks and no deploy overlap.
         return True
+    conn = None
     try:
         # A raw psycopg2 connection — deliberately OUTSIDE the SQLAlchemy pool
         # so it is never recycled/returned (which would drop the lock).
@@ -1302,6 +1322,15 @@ def _try_acquire_scheduler_lock() -> bool:
                 _time.sleep(0.5)
         return False
     except Exception:
+        # A connection that errored after connecting holds no lock — close it,
+        # or every errored retry leaves one open against the pooler's limit.
+        if conn is not None and conn is not _SCHEDULER_LOCK_CONN:
+            try:
+                conn.close()
+            except Exception:
+                pass
+        if not fail_safe:
+            raise
         logger.exception(
             "scheduler advisory-lock acquire failed — falling back to "
             "starting the scheduler (fail-safe)"
@@ -1353,7 +1382,14 @@ def _init_scheduler(app):
         from models import Position
         with app.app_context():
             try:
-                tickers = sorted({p.ticker for p in Position.query.all()})
+                from services.market_display import market_data_display_enabled
+
+                held = sorted({p.ticker for p in Position.query.all()})
+                # Display off: identity only, so a ticker is re-warmed once a
+                # day, not every 3 min (FMP budget — cache_service).
+                tickers = cache_service.tickers_due_for_refresh(
+                    held, display_on=market_data_display_enabled(),
+                )
                 # Release the connection before any external API work.
                 db.session.remove()
 
@@ -1748,21 +1784,41 @@ def _retry_scheduler_lock_in_background(
 
     def _loop():
         deadline = _time.monotonic() + window
+        errors = 0
         while _time.monotonic() < deadline:
             _time.sleep(interval)
             try:
-                if _try_acquire_scheduler_lock():
-                    sched.start()
-                    logger.info(
-                        "scheduler started after deploy overlap (advisory lock "
-                        "acquired on retry) pid=%s", os.getpid(),
-                    )
-                    return
+                # Never the boot fail-safe here: the lock was seen held
+                # elsewhere, so an error is not a licence to start.
+                acquired = _try_acquire_scheduler_lock(fail_safe=False)
             except Exception:
-                logger.exception("scheduler lock retry failed")
+                errors += 1
+                logger.exception(
+                    "scheduler lock retry errored — scheduler stays stopped, "
+                    "retrying pid=%s", os.getpid(),
+                )
+                continue
+            if not acquired:
+                continue
+            try:
+                sched.start()
+            except Exception:
+                # The lock is ours now; another attempt cannot do better.
+                logger.exception(
+                    "scheduler.start failed after acquiring the advisory lock "
+                    "on retry pid=%s", os.getpid(),
+                )
+                return
+            logger.info(
+                "scheduler started after deploy overlap (advisory lock "
+                "acquired on retry) pid=%s", os.getpid(),
+            )
+            return
         logger.warning(
-            "scheduler lock still held elsewhere after %ss — giving up in pid=%s",
-            int(window), os.getpid(),
+            "scheduler advisory lock not acquired within %ss (%s attempt(s) "
+            "errored, the rest found it held elsewhere) — giving up, scheduler "
+            "stays stopped in pid=%s",
+            int(window), errors, os.getpid(),
         )
 
     t = threading.Thread(target=_loop, name="scheduler-lock-retry", daemon=True)

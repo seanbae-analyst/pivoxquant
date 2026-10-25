@@ -29,10 +29,17 @@
  *   worker's API cache that already exists (`clearSwApiCache` in lib/auth).
  * - Whose: scoped per user — the storage key includes the user id, the data
  *   enters SWR only after `/api/auth/me` has confirmed that same id, and any
- *   other user's entry is deleted at that point.
+ *   other user's entry is deleted at that point. Tabs share one owner mark
+ *   (PERSIST_OWNER_KEY): a tab whose user is no longer the owner — another
+ *   tab signed out, or signed in as someone else, so this tab's requests now
+ *   carry that other session's cookie — stops recording at once, deletes its
+ *   user's copy and drops what it fetched from memory (2026-10-15 bug hunt:
+ *   a tab left open as A wrote B's portfolio under A's key, and A saw it at
+ *   the next sign-in).
  * - How long: cleared on logout, on an account-deletion request (POST
  *   delete-request / DELETE delete-account, hooked in lib/api), when the
- *   server answers "not signed in", and when the signed-in user id changes.
+ *   server answers "not signed in", and when the signed-in user id changes —
+ *   in this tab or in another one (endSession is the one path for all).
  *   Entries older than PERSIST_MAX_AGE_MS are dropped on read. Total size is
  *   capped (PERSIST_MAX_CHARS) and the payload is versioned (an unknown
  *   version is discarded, never migrated).
@@ -41,8 +48,8 @@
  *   local-storage use (§8.4) without claiming it is the only one; §2's
  *   "원본 파일은 저장하지 않습니다" covers import raw files, which are
  *   excluded here. No sentence says data is never kept on the user's device,
- *   so this does not contradict it. A one-line disclosure in §8 would still
- *   be more transparent — flagged for the policy owner, not edited here.
+ *   so this does not contradict it. Disclosed since 2026-10-14 in §8.5
+ *   ("기기 안 저장 — 최근 화면 데이터").
  *
  * Not in scope: the (dashboard) auth gate still waits for `/api/auth/me`,
  * because persisting identity is exactly what this module refuses to do. So
@@ -70,6 +77,14 @@ export function persistStorageKey(uid: number): string {
   return `${PERSIST_STORAGE_PREFIX}v${PERSIST_VERSION}:u${uid}`;
 }
 
+/**
+ * The user id the device's copy belongs to, shared by every tab. Written when
+ * a tab activates a user, removed when a tab ends the session; any other
+ * value means the device moved on without this tab. Outside the payload
+ * prefix so activating one user's copy never deletes it.
+ */
+export const PERSIST_OWNER_KEY = "pq:swr-cache-owner";
+
 /* ── Allowlist ───────────────────────────────────────────────────────── */
 
 const EXACT_KEYS: ReadonlySet<string> = new Set([
@@ -79,6 +94,7 @@ const EXACT_KEYS: ReadonlySet<string> = new Set([
   API.behavior.profitLossMirror,
   API.behavior.turnoverMirror,
   API.behavior.averagingDownMirror,
+  API.behavior.rebuyMirror,
   API.behavior.frictionOutcome,
   PORTFOLIO_SUMMARY,
   PORTFOLIO_POSITIONS,
@@ -156,6 +172,8 @@ const hydrated = new Map<string, HydratedMeta>();
  */
 let restored = new WeakSet<object>();
 const listeners = new Set<() => void>();
+/** Told when another tab ended this tab's session (see onSessionEndedElsewhere). */
+const elsewhereListeners = new Set<() => void>();
 
 function notify(): void {
   listeners.forEach((l) => l());
@@ -188,6 +206,42 @@ function removeStorageKeys(keep: string | null): void {
   }
 }
 
+function removeStorageKey(key: string): void {
+  try {
+    storage()?.removeItem(key);
+  } catch {
+    /* blocked — nothing stored either */
+  }
+}
+
+/** Mark `uid` as the device copy's owner. False when the mark cannot be written. */
+function claimOwner(uid: number): boolean {
+  const store = storage();
+  if (!store) return true; // nothing is kept on the device, so nothing to guard
+  try {
+    store.setItem(PERSIST_OWNER_KEY, String(uid));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * This tab's user still owns the device's copy. Read before every write, so a
+ * `storage` event that never arrived (a frozen background tab) cannot let a
+ * stale tab write either.
+ */
+function ownerIsActive(): boolean {
+  if (activeUid === null) return false;
+  const store = storage();
+  if (!store) return true;
+  try {
+    return store.getItem(PERSIST_OWNER_KEY) === String(activeUid);
+  } catch {
+    return true; // unreadable storage takes no writes either
+  }
+}
+
 function readEntries(uid: number, now: number): Record<string, Entry> {
   const store = storage();
   if (!store) return {};
@@ -217,6 +271,53 @@ function evictHydrated(cache: Cache | undefined): void {
   hydrated.clear();
 }
 
+/** Delete every allowlisted key from the in-memory SWR cache. */
+function dropFromMemory(cache: Cache): void {
+  for (const key of Array.from(cache.keys())) if (isPersistableKey(key)) cache.delete(key);
+}
+
+/**
+ * The one way a session ends for this module — logout, deletion request,
+ * "not signed in", and another tab taking the device over. `wipe`:
+ *   "all"  this tab learned the session is over: every stored copy and the
+ *          owner mark go;
+ *   uid    another tab owns the device now: only `uid`'s copy goes (the mark
+ *          and the new owner's copy are that tab's).
+ */
+function endSession(cache: Cache | undefined, wipe: "all" | number): void {
+  if (flushTimer) clearTimeout(flushTimer);
+  flushTimer = null;
+  activeUid = null;
+  activeCache = null;
+  entries = {};
+  restored = new WeakSet<object>();
+  evictHydrated(cache);
+  if (wipe === "all") {
+    removeStorageKeys(null);
+    removeStorageKey(PERSIST_OWNER_KEY);
+  } else {
+    removeStorageKey(persistStorageKey(wipe));
+  }
+  notify();
+}
+
+/**
+ * Another tab signed out, or in as someone else. Everything this tab fetched
+ * belongs to its old user, and its next requests carry the other session's
+ * cookie — so nothing more is recorded, the old user's copy is deleted, and
+ * the allowlisted keys leave memory (a later activation must not capture
+ * them as the next user's). The auth layer is then told to ask the server
+ * who this tab is now.
+ */
+function sessionEndedElsewhere(): void {
+  const uid = activeUid;
+  if (uid === null) return;
+  const cache = activeCache ?? undefined;
+  if (cache) dropFromMemory(cache);
+  endSession(cache, uid);
+  elsewhereListeners.forEach((l) => l());
+}
+
 function bindLifecycle(): void {
   if (lifecycleBound || typeof window === "undefined") return;
   lifecycleBound = true;
@@ -225,6 +326,11 @@ function bindLifecycle(): void {
   window.addEventListener("pagehide", () => flushPersistedCache());
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") flushPersistedCache();
+  });
+  // Another tab moved the owner mark (or cleared this origin's storage: key null).
+  window.addEventListener("storage", (e) => {
+    if (e.key !== null && e.key !== PERSIST_OWNER_KEY) return;
+    if (activeUid !== null && !ownerIsActive()) sessionEndedElsewhere();
   });
 }
 
@@ -246,12 +352,19 @@ export function activatePersistedCacheForUser(
     // neither the restored copies nor anything fetched for them in memory
     // (flushPersistedCache reads the live cache, so it must not see them).
     evictHydrated(cache);
-    for (const key of Array.from(cache.keys())) if (isPersistableKey(key)) cache.delete(key);
+    dropFromMemory(cache);
     restored = new WeakSet<object>();
     if (flushTimer) clearTimeout(flushTimer);
     flushTimer = null;
   }
   removeStorageKeys(persistStorageKey(uid));
+  // No owner mark, no on-device copy: without it another tab's sign-out
+  // could not reach this one. Storage that refuses a few bytes would refuse
+  // the copy too, so this is the "unwritable" case, ended like any other.
+  if (!claimOwner(uid)) {
+    endSession(cache, "all");
+    return;
+  }
   activeUid = uid;
   activeCache = cache;
   entries = readEntries(uid, now);
@@ -273,15 +386,7 @@ export function activatePersistedCacheForUser(
 
 /** Logout / deletion request / "not signed in": remove everything. */
 export function clearPersistedSwrCache(cache?: Cache): void {
-  if (flushTimer) clearTimeout(flushTimer);
-  flushTimer = null;
-  activeUid = null;
-  activeCache = null;
-  entries = {};
-  restored = new WeakSet<object>();
-  evictHydrated(cache);
-  removeStorageKeys(null);
-  notify();
+  endSession(cache, "all");
 }
 
 /**
@@ -304,6 +409,10 @@ export function syncPersistedCacheIdentity(
 export function recordFetched(key: string, data: unknown, now: number = Date.now()): void {
   const wasHydrated = hydrated.delete(key);
   if (activeUid !== null && isPersistableKey(key)) {
+    if (!ownerIsActive()) {
+      sessionEndedElsewhere(); // this answer may already be the other session's
+      return;
+    }
     if (data == null) delete entries[key];
     else entries[key] = { at: now, data };
     if (!flushTimer) flushTimer = setTimeout(() => flushPersistedCache(), FLUSH_DEBOUNCE_MS);
@@ -334,6 +443,10 @@ export function flushPersistedCache(now: number = Date.now()): void {
   flushTimer = null;
   const store = storage();
   if (activeUid === null || !store) return;
+  if (!ownerIsActive()) {
+    sessionEndedElsewhere();
+    return;
+  }
   captureLiveValues(now);
   const kept: Record<string, Entry> = {};
   let size = 0;
@@ -419,6 +532,27 @@ export function useStaleness(key: string = API.mirror.home): Staleness {
   };
 }
 
+/**
+ * The signed-in user this tab's cache belongs to — set only once
+ * `/api/auth/me` has confirmed an id, null otherwise. lib/api reads it on an
+ * account-deletion request to remove that user's other on-device copies.
+ */
+export function persistedCacheUserId(): number | null {
+  return activeUid;
+}
+
+/**
+ * Subscribe to "another tab ended this tab's session" — the auth layer
+ * re-asks `/api/auth/me` so the screen follows the device's real session
+ * instead of waiting for its next poll. Returns the unsubscribe.
+ */
+export function onSessionEndedElsewhere(listener: () => void): () => void {
+  elsewhereListeners.add(listener);
+  return () => {
+    elsewhereListeners.delete(listener);
+  };
+}
+
 /** Test-only: reset module state between cases. */
 export function __resetPersistedCacheForTests(): void {
   if (flushTimer) clearTimeout(flushTimer);
@@ -429,4 +563,5 @@ export function __resetPersistedCacheForTests(): void {
   restored = new WeakSet<object>();
   hydrated.clear();
   listeners.clear();
+  elsewhereListeners.clear();
 }

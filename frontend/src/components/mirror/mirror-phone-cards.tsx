@@ -9,11 +9,17 @@
  * of those becomes its own card, in the same order the page already tells it:
  *
  *   1. 오늘의 거울  — the one sentence (leadSentence), nothing else
+ *   1b. 내 규칙    — MyRulesPanel (2026-10-14; "말한 나" until the user adopts
+ *                    the lines); dropped when the backend sent no `rules`
+ *                    block (older backend / could not be built)
  *   2. 선언 vs 관찰 — the radar block, identical to desktop (MirrorRadarPanel)
  *   3. 간극        — every gap row the backend sent + the drift descriptor.
  *                    Dropped when there is neither: an empty card would only
  *                    repeat card 1's "아직 쌓이지 않았어요".
- *   4. 한 가지만    — OneThingNudge → 「멈춤」
+ *   3b. 문 앞      — DoorwayPanel (2026-10-15), only once the user has set
+ *                    the door up (`first_check_at`); no invite card here
+ *   4. 한 가지만    — OneThingNudge → 「멈춤」, then one quiet row into
+ *                    /mirror/year (올해의 기록, 2026-10-15)
  *
  * Same data object, same components and copy as desktop — only the
  * arrangement differs. The pager is the shared PhonePager in "dots" mode
@@ -25,7 +31,8 @@
  */
 import * as React from "react";
 
-import type { MirrorGapDimension, MirrorHomeResponse } from "@/lib/types";
+import { useDoorwaySummary, usePickFacts } from "@/lib/hooks";
+import type { DoorwaySummaryResponse, MirrorGapDimension, MirrorHomeResponse, PickFactsResponse } from "@/lib/types";
 import { PhonePager, type PhonePage } from "@/components/portfolio/v2/phone-pager";
 import {
   DriftChip,
@@ -34,7 +41,11 @@ import {
   gapMagnitude,
 } from "@/components/mirror/mirror-headline";
 import { MirrorRadarPanel } from "@/components/mirror/mirror-radar-panel";
+import { MyRulesPanel } from "@/components/mirror/my-rules-panel";
+import { DoorwayPanelView } from "@/components/mirror/doorway-panel";
+import { PickFactsView } from "@/components/mirror/pick-facts-panel";
 import { OneThingNudge } from "@/components/mirror/one-thing-nudge";
+import { YearRecapEntry } from "@/components/mirror/year/year-entry";
 
 const DIM = "rgba(var(--pq-ivory-rgb), 0.55)";
 
@@ -45,7 +56,7 @@ const DIM = "rgba(var(--pq-ivory-rgb), 0.55)";
 function StoryCard({ wide = false, children }: { wide?: boolean; children: React.ReactNode }) {
   return (
     <div
-      className={`flex min-h-full flex-col rounded-[4px] pb-6 pt-5 ${wide ? "px-3" : "px-5"}`}
+      className={`flex min-h-full flex-col rounded-[var(--pq-radius-card)] pb-6 pt-5 ${wide ? "px-3" : "px-5"}`}
       style={{ border: "1px solid var(--pq-ivory-line)" }}
     >
       {children}
@@ -53,10 +64,12 @@ function StoryCard({ wide = false, children }: { wide?: boolean; children: React
   );
 }
 
-function SwipeHint() {
+function SwipeHint({ rulesNext = false }: { rulesNext?: boolean }) {
   return (
     <p className="pt-8 text-[12px]" style={{ color: DIM }} aria-hidden>
-      옆으로 넘기면 선언과 관찰을 나란히 볼 수 있어요 →
+      {rulesNext
+        ? "옆으로 넘기면 내 규칙과 선언·관찰을 차례로 볼 수 있어요 →"
+        : "옆으로 넘기면 선언과 관찰을 나란히 볼 수 있어요 →"}
     </p>
   );
 }
@@ -84,7 +97,7 @@ function GapCard({ data }: { data: MirrorHomeResponse }) {
   return (
     <section aria-label="간극">
       <div
-        className="text-[10.5px] uppercase tracking-[0.01em]"
+        className="text-[12px] font-medium tracking-[0.01em]"
         style={{ color: "var(--pq-bronze)" }}
       >
         간극
@@ -120,7 +133,11 @@ export function hasGapCard(data: MirrorHomeResponse): boolean {
 
 type CardSpec = { id: string; label: string; wide?: boolean; body: React.ReactNode };
 
-function cardSpecs(data: MirrorHomeResponse): CardSpec[] {
+function cardSpecs(
+  data: MirrorHomeResponse,
+  doorway: DoorwaySummaryResponse | null,
+  picks: PickFactsResponse | null,
+): CardSpec[] {
   const cards: CardSpec[] = [
     {
       id: "today",
@@ -131,31 +148,48 @@ function cardSpecs(data: MirrorHomeResponse): CardSpec[] {
           <div className="my-auto pt-8">
             <MirrorLead data={data} className="mt-4 text-[1.7rem] leading-[1.45]" />
           </div>
-          <SwipeHint />
+          <SwipeHint rulesNext={Boolean(data.rules)} />
         </>
       ),
     },
-    {
-      id: "radar",
-      label: "선언 vs 관찰",
-      wide: true,
-      body: (
-        <div className="my-auto">
-          <MirrorRadarPanel data={data} bordered={false} />
-        </div>
-      ),
-    },
   ];
+  if (data.rules) {
+    cards.push({
+      id: "rules",
+      label: data.rules.confirmed ? "내 규칙" : "말한 나",
+      body: <MyRulesPanel data={data} bordered={false} />,
+    });
+  }
+  cards.push({
+    id: "radar",
+    label: "선언 vs 관찰",
+    wide: true,
+    body: (
+      <div className="my-auto">
+        <MirrorRadarPanel data={data} bordered={false} />
+      </div>
+    ),
+  });
   if (hasGapCard(data)) {
     cards.push({ id: "gap", label: "간극", body: <GapCard data={data} /> });
+  }
+  if (doorway?.first_check_at) {
+    cards.push({ id: "doorway", label: "문 앞", body: <DoorwayPanelView data={doorway} bordered={false} /> });
+  }
+  if (picks?.ok && picks.with_facts > 0) {
+    cards.push({ id: "picks", label: "고른 회사", body: <PickFactsView data={picks} bordered={false} /> });
   }
   cards.push({
     id: "one-thing",
     label: "한 가지만",
     body: (
-      <div className="my-auto">
-        <OneThingNudge data={data} />
-      </div>
+      <>
+        <div className="my-auto">
+          <OneThingNudge data={data} />
+        </div>
+        {/* 2026-10-15 — the way into 올해의 기록, at the foot of the last card. */}
+        <YearRecapEntry className="mt-6" />
+      </>
     ),
   });
   return cards;
@@ -169,7 +203,9 @@ export function MirrorPhoneCards({
   /** Shown above the cards (e.g. a revalidation error line). */
   header?: React.ReactNode;
 }) {
-  const pages: PhonePage[] = cardSpecs(data).map((c) => ({
+  const { data: doorway } = useDoorwaySummary(30);
+  const { data: picks } = usePickFacts();
+  const pages: PhonePage[] = cardSpecs(data, doorway, picks).map((c) => ({
     id: c.id,
     label: c.label,
     content: <StoryCard wide={c.wide}>{c.body}</StoryCard>,

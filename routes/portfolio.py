@@ -2,7 +2,7 @@
 import logging
 import math
 import threading
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from flask import Blueprint, current_app, request, jsonify
 from flask_login import current_user
 from sqlalchemy.exc import IntegrityError
@@ -216,6 +216,9 @@ def _build_positions_list():
             "change_pct": round(change_pct, 4) if display_on else None,
             "observed_at": observed_at,
             "price_source": price_source,
+            # Last-known price (provider outage / FMP budget low) — the same
+            # flag the SSE push sets, so the row can say 지연 (2026-10-22).
+            "stale": bool(o.get("stale")) if display_on else False,
             # Cost basis normalised to KRW by the shared fx_service helper —
             # the weight denominator the /risk aggregators fall back to when
             # market_value is withheld. Same helper as the journal
@@ -562,9 +565,13 @@ def _parse_purchase_date(raw):
     except (ValueError, TypeError):
         return None
     parsed = parsed.replace(tzinfo=None)
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
     # Future date: reject → default now (cannot open a position in the future).
-    if parsed.date() > now.date():
+    # "Today" is the KST calendar day the user typed it on — the date-only
+    # convention stores the KST date (services/imports kst_to_utc). Against
+    # the UTC day, today's date typed before 09:00 KST read as tomorrow and
+    # fell back to now() (2026-10-15).
+    kst_today = (datetime.now(timezone.utc) + timedelta(hours=9)).date()
+    if parsed.date() > kst_today:
         return None
     # Implausibly old: guard against typos / sentinel dates.
     if parsed.year < 1900:

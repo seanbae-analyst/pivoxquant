@@ -74,6 +74,27 @@
       "sub": "Closed beta — everything is free. No payment details are collected. Start with a Google or Kakao account.",
       "eyebrow": "Ready?"
     },
+    "why": {
+      "eyebrow": "Why record",
+      "heading": "Looking is not the same as looking back.",
+      "deck": "Three figures from public surveys. This is not a claim that keeping a record improves returns. It only shows that most people are left with nothing to look back on.",
+      "financeFigure": "43.4",
+      "financeLabel": "Regularly check their own finances (score out of 100)",
+      "financeBody": "From 2,400 adults surveyed. People in their 20s scored 33.2, down sharply from 55.8 in 2022.",
+      "financeSource": "Financial Supervisory Service & Bank of Korea, 2024 National Financial Literacy Survey",
+      "financeHere": "What you bought and what you almost bought stay in the same place, with your reasons.",
+      "reportFigure": "65.3%",
+      "reportLabel": "Receive their fund's management report and do not read it",
+      "reportBody": "Up for a third year, from 57.7% in 2023 and 60.0% in 2024. The top reason: there is too much in it (41.9%).",
+      "reportSource": "Korea Financial Consumer Protection Foundation, 2025 Fund Investor Survey",
+      "reportHere": "Your last 30 days of trades on one screen, next to the investor you said you were.",
+      "sellsFigure": "Over 2×",
+      "sellsLabel": "Chance of selling a stock above its purchase price, versus one below it",
+      "sellsBody": "From the March–October 2020 trades of about 200,000 individual investors.",
+      "sellsSource": "Korea Capital Market Institute, Behavioral Biases and Trading of Korean Individual Investors (2022)",
+      "sellsHere": "Hold time and return of your profit-taking sells beside your loss-taking sells. It does not say which side was right.",
+      "note": "Figures are copied from each institution's public release (checked October 2026). We found no public survey that asks investors directly whether they keep a trading record."
+    },
     "steps": {
       "eyebrow": "The loop",
       "heading": "Upload. Pause. Record. Look back.",
@@ -85,7 +106,7 @@
       "s2body": "Seven questions before you hit buy. Why now, what would prove you wrong, whether you can afford to lose this. The time it takes to write the answers is the only friction.",
       "s2limit": "It does not pick stocks for you.",
       "s3verb": "Record",
-      "s3body": "What you bought and what you almost bought sit in the same place. Upload a broker file or a fill notification and the numbers are filled in; you write only why. Holding period, turnover, concentration, averaging down, how you close winners and losers — five habits computed straight from that record.",
+      "s3body": "What you bought and what you almost bought sit in the same place. Upload a broker file or a fill notification and the numbers are filled in; you write only why. Holding period, turnover, concentration, averaging down, how you close winners and losers, the price when you buy back — six habits computed straight from that record.",
       "s3limit": "It does not score you.",
       "s4verb": "Mirror",
       "s4body": "The investor you declared at onboarding, next to the investor your last 30 days of trades describe. Where those two diverge, across several axes, is the whole of this tool.",
@@ -522,6 +543,22 @@
       "emptyDesc": "When you buy more of a name you already hold, we show whether that price was below or above your average at the time, as a plain count.",
       "insufficient": "There are still too few follow-on buys to mirror stably. It will appear automatically as records accumulate."
     },
+    "rebuyMirror": {
+      "kicker": "OBSERVED",
+      "heading": "The price when you came back",
+      "rebuyLabel": "Bought again",
+      "higherLabel": "Above sale price",
+      "lowerLabel": "Below sale price",
+      "gapLabel": "Time until you came back (median)",
+      "changeLabel": "Vs. your sale price (median)",
+      "daysUnit": "d",
+      "byTickerLabel": "By name",
+      "tickerRow": "{rebuy} times · {higher} above / {lower} below",
+      "framing": "We reflect names you bought again within {window} days of selling them, using only the two prices you recorded. No market data, no judgement, no recommendation.",
+      "emptyTitle": "Nothing to mirror yet",
+      "emptyDesc": "Once you have bought a name again within {window} days of selling it, we show whether that price was above or below your sale price, as a plain count.",
+      "insufficient": "There are still too few names bought again after selling to mirror stably. It will appear automatically as records accumulate."
+    },
     "import": {
       "kicker": "Received fills · IMPORT INBOX",
       "title": "{n} received fills — write one line on why you bought or sold",
@@ -683,7 +720,7 @@
       },
       "deleteAccount": {
         "q": "How do I delete my account?",
-        "a": "Settings → Danger zone → Delete account. By default the request starts a 30-day grace period: you are signed out and sign-in is blocked, and the confirmation email carries a link to cancel. After 30 days every record is permanently purged (PIPA §21). The same dialog also offers an immediate, irreversible deletion. If you run into a problem, contact us via the 1:1 inquiry form."
+        "a": "Settings → 개인정보 · 데이터 (privacy & data) → 계정 삭제 (delete account). By default the request starts a 30-day grace period: you are signed out and sign-in is blocked, and the confirmation email carries a link to cancel. After 30 days every record is permanently purged (PIPA §21). The same dialog also offers an immediate, irreversible deletion. If you run into a problem, contact us via the 1:1 inquiry form."
       },
       "pwa": {
         "q": "Can I install PivoxQuant as an app? (PWA)",
@@ -738,12 +775,12 @@
       "eyebrow": "Import tokens",
       "heading": "A key that lets your tools",
       "headingAccent": "send fill notifications.",
-      "desc": "This token can only place fills on the pending list. Nothing is recorded until you approve it. It does not touch your brokerage account; your own tools (MacroDroid, a mail filter, and so on) use it to post notification text.",
+      "desc": "This token can only place fills on the pending list and leave doorway answers. Nothing is recorded until you approve it. It does not touch your brokerage account; your own tools (MacroDroid, a mail filter, and so on) use it to post notification text.",
       "issueKicker": "Issue",
       "nameLabel": "Token name",
       "namePlaceholder": "e.g. Phone MacroDroid",
       "nameHint": "1–60 characters. Naming the device or tool makes it easy to tell which one to revoke later.",
-      "consentLabel": "Collected: the ticker, quantity, price, and time read from text sent with this token. Purpose: your trade record. Next to each fill only one line of the source text is kept, with account numbers masked. Nothing is recorded until you approve it. I agree.",
+      "consentLabel": "Collected: the ticker, quantity, price, and time read from text sent with this token and, if you use the doorway question, when a broker app was opened, the answer you picked and your one line. Purpose: your trade record. Next to each fill only one line of the source text is kept, with account numbers masked. Nothing is recorded until you approve it. I agree.",
       "issue": "Issue",
       "issuing": "Issuing",
       "limitReached": "{limit} active tokens. Revoke one to issue another.",
@@ -782,7 +819,7 @@
       "guideStep2": "② Copy the token shown right after issuing. It cannot be shown again once you close it.",
       "guideStep3": "③ Follow the phone setup shown on the same screen to create one 'fill notification → send to PivoxQuant' rule in MacroDroid or Shortcuts. It takes about five minutes.",
       "guideStep4": "④ From the next fill on, it appears on the pending list at the top of the Journal page. Approve it with your reason to record it, or reject what you don't need.",
-      "guideNote1": "The token can only place fills on the pending list. It never touches your brokerage account or orders.",
+      "guideNote1": "The token can only place fills on the pending list and leave doorway answers. It never touches your brokerage account or orders.",
       "guideNote2": "If you change phones or think the token leaked, revoke it in the list below and issue a new one.",
       "setupKicker": "Phone setup — copy and paste these three values",
       "urlLabel": "Address to send to (URL)",
@@ -871,13 +908,17 @@
       "monthly_mirror": {
         "name": "Monthly mirror report",
         "help": "A PDF of what you recorded last month, mailed on the 1st. Your own record only — no scores, no prices.",
-        "blockedByConsent": "Not being sent — Marketing emails consent below is off.",
+        "blockedByConsent": "Not being sent — Informational emails consent below is off.",
         "blockedByDelivery": "Not being sent — Email delivery below is off.",
-        "blockedByBoth": "Not being sent — Email delivery and Marketing emails consent below are off."
+        "blockedByBoth": "Not being sent — Email delivery and Informational emails consent below are off."
       },
       "fill_memo": {
         "name": "A fill just arrived — note why",
         "help": "When your phone automation (import token) forwards a fill, a push is sent right away. Tapping it opens that fill's reason box."
+      },
+      "research_filing": {
+        "name": "Revisit a thesis",
+        "help": "When a company you wrote an unscored research note on files a new periodic report or earnings release, you hear about it. No reading of the filing — it takes you to that stock's record to look at your note again."
       }
     },
     "signin": {
@@ -889,11 +930,11 @@
     },
     "monthlyReport": {
       "eyebrow": "Monthly Mirror · Report",
-      "what": "On the 1st of each month at 08:30 KST, we email a PDF of the fills and pauses you recorded over the last 30 days. If you recorded nothing in that period, nothing is sent.",
+      "what": "On the 1st of each month at 08:30 KST, we email a PDF of the fills and pauses you recorded last month (the 1st to the last day). If you recorded nothing in that period, nothing is sent.",
       "contents": "What it holds: fills you recorded · acquiring more of a position you already had · round trips closed in the period · concentration at average cost · how each pause ended. No quotes and no scores, and the reasons you wrote in a pause are not copied in.",
       "gateCell": "Monthly mirror report · email, in the table above",
       "gateDelivery": "Email delivery",
-      "gateConsent": "Marketing information consent",
+      "gateConsent": "Informational emails consent",
       "on": "On",
       "off": "Off",
       "checking": "Checking…",
@@ -901,7 +942,7 @@
       "wontSend": "With the current settings nothing will be sent. Turn on what is off and it starts from the next 1st.",
       "download": "Get my report now",
       "downloading": "Building…",
-      "downloadNote": "The same PDF as the email, built for the last 30 days as of now.",
+      "downloadNote": "The same layout as the emailed PDF, built for the last 30 days as of now rather than last month.",
       "empty": "No fills or pauses were recorded in the last 30 days, so there is no report to build yet.",
       "tooMany": "Please try again in a moment. Reports can be built 5 times a minute.",
       "failed": "The report could not be built. Please try again in a moment."

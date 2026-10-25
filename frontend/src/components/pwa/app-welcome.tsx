@@ -28,6 +28,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { hadSession } from "@/lib/had-session";
 import { AppCover } from "./app-cover";
+import { QuantMark } from "@/components/ui/quant-mark";
 
 // AppCover / isStandaloneDisplay live in ./app-cover so "/" can paint the
 // cover without pulling this module (the welcome cards) into its first chunk.
@@ -132,7 +133,10 @@ export function AppWelcome() {
         style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 20px)" }}
         aria-hidden={onCover}
       >
-        <span className="font-serif text-[17px]">PivoxQuant</span>
+        {/* 44px tall like the skip button: the row was that button's height
+            on cards 1–2 and shorter on the last card, so the wordmark jumped
+            up 8px mid-swipe (2026-10-22). */}
+        <span className="inline-flex min-h-[44px] items-center text-pq-h5 font-bold tracking-[-0.02em]"><QuantMark /></span>
         {!last && (
           <button
             type="button"
@@ -175,8 +179,12 @@ export function AppWelcome() {
                 서버를 깨우는 중입니다 · 들어가서 기다려도 됩니다
               </p>
             ) : null}
+            {/* replace, not push (2026-10-15): the cover gives way to the
+                app, so back from the home tab leaves the app instead of
+                returning to the cards. */}
             <Link
               href="/mirror"
+              replace
               className="pq-ink-btn-bronze flex min-h-[52px] items-center justify-center text-[16px]"
               data-testid="app-welcome-enter"
             >

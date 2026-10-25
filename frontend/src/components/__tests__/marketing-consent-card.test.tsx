@@ -7,6 +7,8 @@ vi.mock("@/lib/consents", () => ({
   fetchMarketingConsent: vi.fn(),
   recordMarketingConsent: vi.fn(),
   revokeMarketingConsent: vi.fn(),
+  fetchInformationConsent: vi.fn(),
+  setInformationConsent: vi.fn(),
 }));
 
 vi.mock("sonner", () => ({
@@ -17,11 +19,16 @@ vi.mock("sonner", () => ({
 }));
 
 import {
+  fetchInformationConsent,
   fetchMarketingConsent,
   recordMarketingConsent,
   revokeMarketingConsent,
+  setInformationConsent,
 } from "@/lib/consents";
-import { MarketingConsentCardV2 } from "@/components/settings/v2/marketing-consent-card";
+import {
+  InformationConsentCardV2,
+  MarketingConsentCardV2,
+} from "@/components/settings/v2/marketing-consent-card";
 
 const mockedFetch = vi.mocked(fetchMarketingConsent);
 const mockedRecord = vi.mocked(recordMarketingConsent);
@@ -110,5 +117,58 @@ describe("MarketingConsentCardV2", () => {
       expect(mockedRevoke).toHaveBeenCalledTimes(1);
     });
     expect(mockedRecord).not.toHaveBeenCalled();
+  });
+});
+
+
+// 2026-10-22 — the monthly report is 정보성 mail and the sender reads only
+// the 정보성 record; this card is the first thing that ever writes it.
+describe("InformationConsentCardV2", () => {
+  const mockedInfoFetch = vi.mocked(fetchInformationConsent);
+  const mockedInfoSet = vi.mocked(setInformationConsent);
+
+  beforeEach(() => {
+    mockedInfoFetch.mockReset();
+    mockedInfoSet.mockReset();
+    mockedRecord.mockReset();
+  });
+
+  it("opts in through the categories record, not the marketing one", async () => {
+    mockedInfoFetch.mockResolvedValue({ opted_in: false, consent_at: null, revoked_at: null });
+    mockedInfoSet.mockResolvedValue({
+      opted_in: true,
+      consent_at: "2026-10-22T00:00:00Z",
+      revoked_at: null,
+    });
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+    render(<InformationConsentCardV2 onConsentChange={onChange} />);
+
+    const toggle = await screen.findByRole("switch", { name: /정보성 메일 수신 동의/ });
+    expect(toggle.closest("#settings-information-consent")).not.toBeNull();
+    await waitFor(() => expect(toggle).not.toBeDisabled());
+    expect(onChange).toHaveBeenLastCalledWith(false);
+
+    await user.click(toggle);
+    await waitFor(() => expect(mockedInfoSet).toHaveBeenCalledWith(true));
+    expect(mockedRecord).not.toHaveBeenCalled();
+    await waitFor(() => expect(onChange).toHaveBeenLastCalledWith(true));
+    expect(toggle).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("rolls back when the server refuses", async () => {
+    mockedInfoFetch.mockResolvedValue({
+      opted_in: true,
+      consent_at: "2026-10-01T00:00:00Z",
+      revoked_at: null,
+    });
+    mockedInfoSet.mockRejectedValue(new Error("nope"));
+    const user = userEvent.setup();
+    render(<InformationConsentCardV2 />);
+    const toggle = await screen.findByRole("switch", { name: /정보성 메일 수신 동의/ });
+    await waitFor(() => expect(toggle).toHaveAttribute("aria-checked", "true"));
+    await user.click(toggle);
+    await waitFor(() => expect(mockedInfoSet).toHaveBeenCalledWith(false));
+    await waitFor(() => expect(toggle).toHaveAttribute("aria-checked", "true"));
   });
 });

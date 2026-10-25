@@ -319,6 +319,190 @@ export interface ObservationNoteDeleteResponse {
   deleted: number;
 }
 
+/* ──────────────────────────────────────────────────────────────────────
+ * Research notes (리서치 양식, 2026-10-15) — routes/research_notes.py.
+ * ────────────────────────────────────────────────────────────────────── */
+
+export type ResearchInfoSource = "report" | "youtube" | "social" | "ai" | "self";
+export type ResearchVerdict = "right" | "wrong" | "unknown";
+/** Sign of the user's own realized result on that stock since the note. */
+export type ResearchOutcome = "gain" | "loss" | "flat" | "open";
+
+export interface ResearchNote {
+  id: number;
+  ticker: string;
+  name: string;
+  /** "" when not written (optional since 2026-10-25). */
+  business: string;
+  /** 1~3 assumptions, in the order written. */
+  theses: string[];
+  invalidation: string | null;
+  risk: string | null;
+  /** null = 안 봄 (left blank). */
+  numbers: string | null;
+  info_source: ResearchInfoSource | null;
+  surface: string;
+  /** KST date "YYYY-MM-DD". */
+  review_on: string;
+  /** Aligned with `theses`; empty until scored. */
+  verdicts: ResearchVerdict[];
+  review_note: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  due?: boolean;
+  outcome: ResearchOutcome;
+}
+
+export interface ResearchNoteResponse {
+  ok: boolean;
+  disclaimer?: string | null;
+  note: ResearchNote;
+}
+
+export interface ResearchNotesResponse {
+  ok: boolean;
+  disclaimer?: string | null;
+  notes: ResearchNote[];
+  next_before: number | null;
+}
+
+export type ResearchOutcomeCounts = Record<ResearchOutcome, number>;
+
+export interface ResearchOverviewResponse {
+  ok: boolean;
+  disclaimer?: string | null;
+  due: ResearchNote[];
+  counts: { notes: number; scored: number; due: number; waiting: number };
+  judgment: { right: ResearchOutcomeCounts; wrong: ResearchOutcomeCounts };
+  unknown: number;
+  by_source: Record<ResearchInfoSource | "none", Record<ResearchVerdict, number>>;
+}
+
+/* ── 문 앞의 한 줄 (doorway pause) — /api/doorway ─────────────────────── */
+
+/** The answer at the door. Lowercase data values; screen words are added here. */
+export type DoorwayIntent = "look" | "buy" | "sell";
+/** look → traded | none · buy/sell → as_said | other | none. */
+export type DoorwayOutcome = "traded" | "as_said" | "other" | "none";
+
+export interface DoorwayCheck {
+  id: number;
+  intent: DoorwayIntent;
+  ticker: string | null;
+  name: string | null;
+  note: string | null;
+  app: string | null;
+  source: "automation" | "web";
+  created_at: string | null;
+}
+
+export interface DoorwayCreateResponse {
+  ok: boolean;
+  disclaimer?: string | null;
+  check: DoorwayCheck;
+  today: number;
+  message: string;
+  pause_url: string | null;
+}
+
+/** `doorway` in GET /api/mirror-home/year — one year of door answers. */
+export interface YearRecapDoorway {
+  total: number;
+  intents: Record<DoorwayIntent, number>;
+  look: { n: number; traded: number };
+  said: { buy: DoorwaySaidCounts; sell: DoorwaySaidCounts };
+  not_happened: { n: number; later: number; never: number; open: number };
+  fills: { total: number; through_door: number };
+  follow_minutes: number;
+  later_days: number;
+}
+
+export interface DoorwayChecksResponse {
+  ok: boolean;
+  disclaimer?: string | null;
+  checks: DoorwayCheck[];
+  next_before: number | null;
+}
+
+export interface DoorwaySaidCounts {
+  n: number;
+  as_said: number;
+  other: number;
+  none: number;
+}
+
+export interface DoorwayRecent {
+  id: number | null;
+  at: string | null;
+  intent: DoorwayIntent;
+  ticker: string | null;
+  name: string | null;
+  note: string | null;
+  app: string | null;
+  outcome: DoorwayOutcome;
+}
+
+export interface DoorwaySummaryResponse {
+  ok: boolean;
+  disclaimer?: string | null;
+  window_days: number;
+  follow_minutes: number;
+  later_days: number;
+  first_check_at: string | null;
+  total: number;
+  intents: Record<DoorwayIntent, number>;
+  look: { n: number; traded: number };
+  said: { buy: DoorwaySaidCounts; sell: DoorwaySaidCounts };
+  not_happened: { n: number; later: number; never: number; open: number };
+  fills: { total: number; through_door: number };
+  /** 24 buckets, index = KST hour of the open. */
+  by_hour_kst: number[];
+  recent: DoorwayRecent[];
+  caveats: string[];
+}
+
+export interface ResearchByTickerResponse {
+  ok: boolean;
+  disclaimer?: string | null;
+  ticker: string;
+  count: number;
+  note: ResearchNote | null;
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+ * Sell-moment mirror (매도 순간의 거울, 2026-10-15) — routes/sell_moment.py.
+ * ────────────────────────────────────────────────────────────────────── */
+
+/** Where a quote came from — labelled 멈춤 / 체결 이유 / 리서치 / 관찰 노트. */
+export type SellMomentSource = "pause" | "fill_reason" | "research" | "note";
+
+/** One thing the user wrote about the stock before the sell — verbatim. */
+export interface SellMomentQuote {
+  source: SellMomentSource;
+  ticker: string;
+  text: string;
+  /** Research only — the user's own "틀렸다고 볼 신호". */
+  invalidation: string | null;
+  /** When it was written (naive UTC ISO). */
+  at: string;
+}
+
+/** `GET /api/sell-moment` · `GET /api/sell-moment/pending/<id>`. */
+export interface SellMomentResponse {
+  ok: boolean;
+  disclaimer?: string | null;
+  ticker: string;
+  /** Newest first, at most 4. Empty → the block renders nothing. */
+  words: SellMomentQuote[];
+  /** Share-weighted days the FIFO lots this sell closes were held; null when
+   *  no recorded 매수 or only holding-registration lots. */
+  held_days: number | null;
+  /** Sell price vs those lots' own cost, in percent; null across currencies. */
+  vs_cost_pct: number | null;
+  /** Shares matched to recorded lots (≤ the sell's shares). */
+  matched_shares: number;
+}
+
 /** `GET /api/observation-notes/by-ticker/<ticker>` — read back on /pre-trade. */
 export interface ObservationNotesByTickerResponse {
   ok: boolean;
@@ -610,6 +794,53 @@ export interface AveragingDownMirrorResponse {
   by_ticker: AveragingDownMirrorTickerRow[];
 }
 
+/* ── Rebuy Mirror (GET /api/behavior/rebuy-mirror) ──
+ *   A neutral, retrospective record of names the user SOLD and then bought
+ *   again within `rebuy_window_days`, comparing the later buy price with the
+ *   sale price. Both prices are the user's own fills of the same ticker, so
+ *   there is no market data and no FX conversion.
+ *
+ *   Invariants:
+ *   - Counts, a median gap in days and a median price change — never a
+ *     score / grade / label, and no "good / bad" judgement vocabulary.
+ *   - Every number is `null` when `sufficient_data` is false; `by_ticker` is
+ *     `[]`.
+ * ──────────────────────────────────────────────────────────────────── */
+export interface RebuyMirrorTickerRow {
+  ticker: string;
+  /** Display name when known; null falls back to the ticker at render. */
+  name: string | null;
+  rebuy_count: number;
+  higher_count: number;
+  lower_count: number;
+}
+
+export interface RebuyMirrorResponse {
+  ok: boolean;
+  disclaimer?: string;
+  /** Trailing window label echoed by the route ("all" / "30d"). */
+  period?: string;
+  /** Window length in days the backend applied (null = all history). */
+  period_days: number | null;
+  /** Max days from a sale to the buy that pairs with it. */
+  rebuy_window_days: number;
+  sufficient_data: boolean;
+  /** Sale → later-buy pairs in the window; null when insufficient. */
+  rebuy_count: number | null;
+  /** Pairs where the later buy was priced above the sale; null when insufficient. */
+  higher_count: number | null;
+  /** Pairs where the later buy was priced below the sale; null when insufficient. */
+  lower_count: number | null;
+  /** Pairs at the sale price (±epsilon); null when insufficient. */
+  flat_count: number | null;
+  /** Median days from sale to later buy; null when insufficient. */
+  median_gap_days: number | null;
+  /** Median (buy - sale) / sale × 100; null when insufficient. */
+  median_price_change_pct: number | null;
+  /** Neutral per-ticker breakdown; [] when sufficient_data is false. */
+  by_ticker: RebuyMirrorTickerRow[];
+}
+
 /* ── Artifact / Reports Archive ── */
 
 export type ArtifactType =
@@ -793,6 +1024,86 @@ export interface MirrorGapDimension {
 }
 
 
+/* ── 내 규칙 (2026-10-14) — services/profile/my_rules.py ──────────────────
+ * The user's own onboarding answers as plain lines, and where their own
+ * record sits against each. Thresholds are the user's buckets, never ours.
+ * Each line is crossed in ONE direction only (more trades, sooner sells,
+ * fewer names); doing less is never 선 밖. The lines are the user's rules
+ * only after they adopt them (`confirmed`, POST /api/profile/rules/confirm);
+ * before that the client shows them as "what you said", without a status.
+ * `status` is a fact against their own number — no score, grade or streak. */
+export type MyRuleStatus = "within" | "outside" | "no_data" | "no_line" | "not_counted";
+
+export interface MyRuleMonth {
+  /** KST calendar month, "YYYY-MM". */
+  month: string;
+  count: number;
+  /** count > ceiling (false when there is no ceiling). */
+  over: boolean;
+  /** The current, still-running month. */
+  partial: boolean;
+}
+
+export interface MyRuleItem {
+  id: "frequency" | "holding" | "positions" | "drawdown";
+  /** Short rule name, e.g. "매매 횟수". */
+  title: string;
+  /** The line in the user's own terms, e.g. "한 달에 매수·매도 5번 이하". */
+  line: string;
+  /** Whether the line is counted (all four are since 2026-10-25). */
+  measurable: boolean;
+  status: MyRuleStatus;
+  /** The observed fact, ready to print, e.g. "이번 달 6번 · 선 5번". */
+  observed: string;
+  /** A caveat printed under the count (drawdown: holding leaves no fill). */
+  note?: string;
+  /* drawdown — fills 10%+ under the ticker's running average cost */
+  sold_under?: number;
+  added_under?: number;
+  pct?: number;
+  /* frequency */
+  ceiling?: number | null;
+  this_month?: number;
+  /** Fills this month still waiting in the import inbox (included in this_month). */
+  waiting?: number;
+  months?: MyRuleMonth[];
+  months_over?: number;
+  months_shown?: number;
+  /* holding */
+  window_days?: number;
+  sells?: number;
+  /** Sells held fewer days than `min_days`. */
+  sooner?: number;
+  min_days?: number | null;
+  /* positions */
+  open_positions?: number;
+  min_positions?: number | null;
+}
+
+export interface MyRules {
+  /** False when the five onboarding questions were never answered (pre-V3 / skipped). */
+  available: boolean;
+  source: "onboarding";
+  /** True once the user adopted the answers as their lines. */
+  confirmed: boolean;
+  /** Naive-UTC ISO timestamp of that, or null. */
+  confirmed_at: string | null;
+  /** KST date of that ("YYYY-MM-DD"), or null. */
+  confirmed_on: string | null;
+  items: MyRuleItem[];
+  /** Lines with something to count right now. */
+  counted: number;
+  /** Of those, how many the record sits outside of. */
+  outside: number;
+}
+
+/** POST /api/profile/rules/confirm */
+export interface ConfirmMyRulesResponse {
+  ok: boolean;
+  rules_confirmed_at: string;
+}
+
+
 export interface MirrorHomeResponse {
   ok: boolean;
   stage: MirrorStage;
@@ -809,6 +1120,8 @@ export interface MirrorHomeResponse {
   observed: { trade_count: number };
   gap: MirrorGapDimension[];
   drift: { available: boolean; descriptor: string | null };
+  /** 내 규칙 (2026-10-14). null = could not be built; absent = older backend. Both → no card. */
+  rules?: MyRules | null;
   radar: {
     keys: string[];
     labels: string[];
@@ -909,6 +1222,9 @@ export interface ImportTokenDTO {
   last_used_at: string | null;
   revoked_at: string | null;
   batches_today: number;
+  /** Issued under the consent text that names 문 앞의 한 줄 answers
+   *  (2026-10-15) — only these tokens may post to /api/doorway/webhook. */
+  doorway_ok?: boolean;
 }
 
 export interface ImportTokensResponse {
@@ -983,4 +1299,206 @@ export interface HoldingsClosedItem {
   prev_shares: number;
   prev_avg_cost: number;
   note_kept: boolean;
+}
+
+/* ── 올해의 기록 (GET /api/mirror-home/year, routes/year_recap.py) ────────── */
+
+export interface YearRecapMonth {
+  month: string; // "YYYY-MM" (KST)
+  count: number;
+}
+
+export interface YearRecapRuleMonth extends YearRecapMonth {
+  /** More fills than the user's own monthly line. */
+  over: boolean;
+  /** The adoption month (counted from adoption) or this month (to today). */
+  partial: boolean;
+}
+
+export type YearRecapQuoteKind = "first_reason" | "not_taken" | "scored_thesis";
+
+export interface YearRecapQuote {
+  kind: YearRecapQuoteKind;
+  /** Where the sentence was written: a pause, a fill's reason, a research note. */
+  source: "pause" | "fill" | "research";
+  /** The user's own words, first line, kept verbatim by the scrub. */
+  text: string;
+  /** KST "YYYY-MM-DD" — the day it was written. */
+  date: string;
+  ticker: string | null;
+  name: string | null;
+  /** scored_thesis only — the user's own scoring of that thesis. */
+  verdict?: ResearchVerdict | null;
+}
+
+export interface YearRecapResponse {
+  ok: boolean;
+  disclaimer: string;
+  /** The one line printed on the share image (SoT services/legal/disclaimers.py). */
+  share_disclaimer: string;
+  year: number;
+  /** Years with any of the user's rows, newest first. */
+  years: number[];
+  range: { start: string; end: string; partial: boolean };
+  fills: {
+    total: number;
+    buys: number;
+    sells: number;
+    tickers: number;
+    months_active: number;
+    by_month: YearRecapMonth[];
+  };
+  pauses: {
+    started: number;
+    proceeded: number;
+    cancelled: number;
+    open: number;
+    cancelled_buy: number;
+    bought_later_anyway: number;
+    never_bought: number;
+  };
+  records: {
+    reasoned_fills: number;
+    research_written: number;
+    research_reviewed: number;
+    verdicts: Record<ResearchVerdict, number>;
+    observation_notes: number;
+  };
+  holding: { sells: number; median_days: number | null };
+  rules: {
+    confirmed_on: string;
+    frequency: {
+      ceiling: number;
+      months: YearRecapRuleMonth[];
+      within: number;
+      outside: number;
+    } | null;
+    holding: { min_days: number; sells: number; sooner: number } | null;
+  } | null;
+  quotes: YearRecapQuote[];
+  /** 문 앞의 한 줄 — the year's door counts (services/doorway.year_section);
+   *  null when there was no door answer that year. Counts only, no lines. */
+  doorway: null | YearRecapDoorway;
+  empty: boolean;
+}
+
+/* ── 종목별 내 기록 (GET /api/stock-record/<ticker>, 2026-10-25) ───────── */
+
+export type StockRecordEvent =
+  | {
+      kind: "fill";
+      at: string | null;
+      side: "buy" | "sell";
+      shares: number;
+      price: number;
+      currency: string | null;
+      /** The fill was linked to a pause (TradeHistory.reflection_id). */
+      after_pause: boolean;
+    }
+  | { kind: "registered"; at: string | null; shares: number; price: number; currency: string | null }
+  | {
+      kind: "pause";
+      at: string | null;
+      side: "entry" | "exit" | null;
+      rationale: string;
+      status: string | null;
+      /** Entry pauses: a buy of this name followed. null for exit pauses. */
+      bought_after: boolean | null;
+    }
+  | {
+      kind: "research";
+      at: string | null;
+      id: number;
+      theses: string[];
+      invalidation: string | null;
+      verdicts: string[];
+      review_on: string | null;
+      reviewed_at: string | null;
+      due: boolean | null;
+    }
+  | { kind: "note"; at: string | null; id: number; body: string; tags: string[] }
+  | {
+      /** A company filing — SEC EDGAR (US) or DART (KR). `at` is the filing date's 00:00. */
+      kind: "filing";
+      at: string | null;
+      /** Official filing date, "YYYY-MM-DD" — US (Eastern) date for SEC, KST for DART. */
+      filed_on: string;
+      /** SEC form code ("8-K") or DART type name ("정기공시"). */
+      form: string;
+      /** SEC: fixed Korean name ("분기보고서", "실적 발표"); DART: the official report name. Never a reading. */
+      label: string;
+      /** SEC 8-K item 2.02 / DART 잠정실적 original (a correction is not a second release). */
+      earnings: boolean;
+      url: string;
+      source: string;
+    };
+
+/** "Did I trade right after an earnings release?" — counts only (FILINGS_ENABLED). */
+export interface StockRecordFilingReaction {
+  /** Earnings releases (8-K 2.02) in the record's span. */
+  earnings: number;
+  /** Counted: the fill's market date is the day after through `window_days` after a release. */
+  window_days: number;
+  /** Which calendar the dates are on — "us" (SEC) or "kr" (DART). */
+  date_basis?: "us" | "kr";
+  buys_after: number;
+  sells_after: number;
+  timed_fills: number;
+  /** Date-only fills — not countable, set aside. */
+  untimed_fills: number;
+}
+
+export interface StockRecordResponse {
+  ok: boolean;
+  disclaimer?: string;
+  ticker: string;
+  name: string | null;
+  holding: { shares: number; avg_cost: number | null; currency: string } | null;
+  counts: {
+    fills: number;
+    buys: number;
+    sells: number;
+    pauses: number;
+    /** Pauses before buying that no buy of this name followed. */
+    not_taken: number;
+    research: number;
+    notes: number;
+    /** SEC filings laid on the timeline (0 when filings are off). */
+    filings?: number;
+  };
+  filing_reaction?: StockRecordFilingReaction | null;
+  /** Newest first. */
+  events: StockRecordEvent[];
+}
+
+/** GET /api/pick-facts — 내가 고른 회사들 (services/pick_facts). Counts only. */
+export interface PickFactsPick {
+  ticker: string;
+  name: string | null;
+  /** KST date of the first buy in the window. */
+  bought_on: string;
+  /** Fiscal year end of the annual numbers used — filed before `bought_on`. */
+  fiscal_end: string;
+  filed_on: string;
+  net_loss: boolean;
+  revenue_down: boolean;
+  liabilities_over_equity: boolean;
+  source: string;
+}
+
+export interface PickFactsResponse {
+  ok: boolean;
+  disclaimer?: string;
+  window_days: number;
+  /** Stocks first bought in the window. */
+  picked: number;
+  /** Of those, with annual numbers filed before the buy. */
+  with_facts: number;
+  /** Not fetched yet (next visit fills them). */
+  pending: number;
+  /** No source, or nothing filed before the buy. */
+  no_facts: number;
+  counts: { net_loss: number; revenue_down: number; liabilities_over_equity: number };
+  sources: string[];
+  picks: PickFactsPick[];
 }

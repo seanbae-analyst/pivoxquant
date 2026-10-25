@@ -87,8 +87,9 @@ def commit():
             code="IMPORT_CONSENT_REQUIRED", status=400,
         )
     try:
-        rows = hi.validate_commit_rows(data.get("rows"))
         close_ids = hi.validate_close_ids(data.get("close"))
+        # Everything sold: a close with no rows is a resync too.
+        rows = hi.validate_commit_rows(data.get("rows"), allow_empty=bool(close_ids))
     except hi.HoldingsError as exc:
         return _err(exc)
     try:

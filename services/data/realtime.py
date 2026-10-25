@@ -8,6 +8,7 @@ import os
 import logging
 import time
 import threading
+from datetime import datetime, timezone
 
 from services.time_utils import observed_at_iso
 
@@ -165,8 +166,10 @@ class RealtimeService:
         else:
             result = self._get_alpaca_price(ticker)
 
-        # Fallback to FMP
-        if not result:
+        # Fallback to FMP — US only. FMP has no KRX quotes; a KR miss only
+        # spent the daily budget US prices and FX live on (2026-10-22). KR
+        # degrades to the last-known value below.
+        if not result and not self.is_korean(ticker):
             result = self._get_fmp_price(ticker)
 
         if result:
@@ -180,11 +183,128 @@ class RealtimeService:
         # on a transient outage. Returns None only if nothing was ever cached.
         return self._serve_stale(ticker)
 
+    # KR batch: collect deadline (seconds) for the KIS REST fan-out. US
+    # tickers Alpaca missed go to FMP under their own, shorter deadline.
+    # Both run at once on the shared pool and the batch RETURNS at the
+    # deadline — late answers still land in the cache for the next round.
+    _KR_BATCH_DEADLINE = 8.0
+    _FMP_BATCH_DEADLINE = 5.0
+
+    def _batch_pool(self):
+        """One long-lived pool per service. ``with ThreadPoolExecutor()``
+        joined every worker on exit, so the 8s / 5s "deadlines" never
+        bounded a batch (2026-10-22: 100 KR tickers took ~13s)."""
+        pool = getattr(self, "_pool", None)
+        if pool is None:
+            from concurrent.futures import ThreadPoolExecutor
+            with self._price_cache_lock:
+                pool = getattr(self, "_pool", None)
+                if pool is None:
+                    pool = ThreadPoolExecutor(max_workers=12, thread_name_prefix="rt-batch")
+                    self._pool = pool
+        return pool
+
+    def _fresh_cached(self, ticker):
+        """A cache entry younger than ``_cache_ttl``, or None (lock held by caller)."""
+        cached = self._price_cache.get(ticker.upper().strip())
+        if cached and time.time() - cached.get("_ts", 0) < self._cache_ttl:
+            return cached
+        return None
+
+    def _claim(self, tickers):
+        """Single-flight: split ``tickers`` into the ones this caller fetches
+        and the ones another caller is already fetching (with its Event).
+        /summary, /positions and the SSE loop asked KIS for the same tickers
+        in the same second and queued behind one throttle (2026-10-22)."""
+        mine, theirs = [], []
+        with self._price_cache_lock:
+            inflight = self.__dict__.setdefault("_inflight", {})
+            for t in tickers:
+                key = t.upper().strip()
+                ev = inflight.get(key)
+                if ev is None:
+                    inflight[key] = threading.Event()
+                    mine.append(t)
+                else:
+                    theirs.append((t, ev))
+        return mine, theirs
+
+    def _release(self, tickers):
+        with self._price_cache_lock:
+            inflight = self.__dict__.setdefault("_inflight", {})
+            for t in tickers:
+                ev = inflight.pop(t.upper().strip(), None)
+                if ev is not None:
+                    ev.set()
+
+    def _fmp_price_cached(self, ticker):
+        """FMP quote for a US ticker, written to the shared cache when live."""
+        p = self._get_fmp_price(ticker)
+        if p and not p.get("stale"):
+            p["_ts"] = time.time()
+            with self._price_cache_lock:
+                self._price_cache[ticker.upper().strip()] = p
+        return p
+
     def get_prices_batch(self, tickers):
-        """Get prices for multiple tickers at once."""
+        """Get prices for multiple tickers at once.
+
+        Order: fresh shared cache (< ``_cache_ttl``) → one fetch per ticker
+        across concurrent callers → stale last-known value. KR tickers never
+        fall back to FMP — it has no KRX quotes, so the call only spent the
+        daily budget that US prices and FX live on (2026-10-22).
+        """
+        tickers = [t for t in dict.fromkeys(tickers or []) if t]
+        results = {}
+        with self._price_cache_lock:
+            for t in tickers:
+                hit = self._fresh_cached(t)
+                if hit is not None:
+                    results[t] = hit
+        todo = [t for t in tickers if t not in results]
+        mine, theirs = self._claim(todo)
+        start = time.time()
+        late = {}
+        try:
+            results.update(self._fetch_batch(mine, late))
+        finally:
+            # A fetch still running past the deadline keeps its claim until
+            # it lands: released at the deadline, the next round (SSE, every
+            # few seconds) queued a second fetch of the same ticker behind it
+            # on the shared pool and the KIS throttle (2026-10-22). The next
+            # caller waits on it instead and reads the cache it fills.
+            self._release([t for t in mine if t not in late])
+            for t, fut in late.items():
+                fut.add_done_callback(lambda _f, t=t: self._release([t]))
+
+        # Tickers another caller was fetching: wait for its answer (bounded
+        # by the same deadline), then read the cache it filled.
+        for t, ev in theirs:
+            ev.wait(timeout=max(0.0, self._KR_BATCH_DEADLINE - (time.time() - start)))
+            with self._price_cache_lock:
+                cached = self._price_cache.get(t.upper().strip())
+            if cached and cached.get("price") and time.time() - cached.get("_ts", 0) < max(self._cache_ttl, 30):
+                results[t] = cached
+
+        # Resilience: anything STILL missing degrades to its last-known cached
+        # value (flagged stale) so a transient KIS/FMP outage shows "last
+        # price + 지연" instead of a vanished row. Mostly matters for KR.
+        for t in [tk for tk in tickers if tk not in results]:
+            stale = self._serve_stale(t)
+            if stale is not None:
+                results[t] = stale
+
+        return results
+
+    def _fetch_batch(self, tickers, late=None):
+        """Network fetch for ``tickers`` (this caller owns them). Futures
+        still running at their deadline go into ``late`` ({ticker: future})."""
         us_tickers = [t for t in tickers if not self.is_korean(t)]
         kr_tickers = [t for t in tickers if self.is_korean(t)]
         results = {}
+        if not tickers:
+            return results
+        started = time.time()
 
         # Batch US via Alpaca — prefer latest trade prints over 1-min bars.
         if us_tickers and self.alpaca_available:
@@ -226,16 +346,30 @@ class RealtimeService:
                         "currency": "USD",
                         "source": "alpaca",
                         "timestamp": ts,
+                        "_ts": time.time(),
                     }
+                # Seed the shared cache like the KIS / FMP paths do: a
+                # concurrent caller waiting on this fetch (single-flight)
+                # reads its answer from the cache, and found nothing — US
+                # rows came back empty on the second of /summary +
+                # /positions (2026-10-22).
+                with self._price_cache_lock:
+                    for t in us_tickers:
+                        hit = results.get(t)
+                        if hit is not None:
+                            self._price_cache[t.upper().strip()] = hit
             except Exception as e:
                 logger.warning("Alpaca batch failed: %s", e)
 
-        # KR: warm up WS subscriptions, then fetch tickers CONCURRENTLY.
-        # KIS REST has no batch endpoint; the old serial loop stalled multi-KR
-        # portfolios (N × per-call). Parallel fetch + shared per-second
-        # throttle (_kis_quote_throttle, applied in _get_kis_price) + a hard
-        # collect deadline keeps it fast without tripping the KIS rate guard.
-        # WS still pushes ticks into the cache for subsequent rounds.
+        # KR (KIS REST) and the US tickers Alpaca missed (FMP) fetch at the
+        # same time on the shared pool. KIS has no batch endpoint; the shared
+        # per-second throttle (_kis_quote_throttle, in _get_kis_price) keeps
+        # the fan-out under the KIS rate guard. WS still pushes ticks into
+        # the cache for subsequent rounds.
+        from concurrent.futures import wait as _wait
+
+        pool = self._batch_pool()
+        kr_fut = {}
         if kr_tickers and self.kis_available:
             ws = self._ensure_kis_ws()
             if ws is not None:
@@ -243,53 +377,33 @@ class RealtimeService:
                     code = self.to_kr_code(t)
                     if code:
                         ws.subscribe(code)
-            from concurrent.futures import (
-                ThreadPoolExecutor, as_completed, TimeoutError as _FTimeout,
-            )
-            with ThreadPoolExecutor(max_workers=min(len(kr_tickers), 6)) as pool:
-                kr_fut = {pool.submit(self._get_kis_price, t): t for t in kr_tickers}
+            kr_fut = {pool.submit(self._get_kis_price, t): t for t in kr_tickers}
+        us_missing = [t for t in us_tickers if t not in results]
+        us_fut = {pool.submit(self._fmp_price_cached, t): t for t in us_missing}
+
+        def _collect(futs, label):
+            for fut, t in futs.items():
+                if not fut.done():
+                    continue
                 try:
-                    for fut in as_completed(kr_fut, timeout=8):
-                        try:
-                            p = fut.result()
-                            if p:
-                                results[kr_fut[fut]] = p
-                        except Exception:
-                            logger.debug("silent-fallback: KR batch fetch", exc_info=True)
-                except _FTimeout:
-                    logger.warning("KR batch hit 8s collect deadline; partial result")
+                    p = fut.result()
+                    if p:
+                        results[t] = p
+                except Exception:
+                    logger.debug("silent-fallback: %s batch fetch", label, exc_info=True)
+            if any(not f.done() for f in futs):
+                logger.warning("%s batch hit its collect deadline; partial result", label)
+                if late is not None:
+                    late.update({t: f for f, t in futs.items() if not f.done()})
+
+        if us_fut:
+            _wait(list(us_fut), timeout=self._FMP_BATCH_DEADLINE)
+            _collect(us_fut, "FMP")
+        if kr_fut:
+            spent = time.time() - started
+            _wait(list(kr_fut), timeout=max(0.0, self._KR_BATCH_DEADLINE - spent))
+            _collect(kr_fut, "KR")
             self._mark_kr(any(t in results for t in kr_tickers))
-
-        # Fallback for missing — parallel FMP calls with a 5s collect deadline.
-        # Previously serial: N tickers * 10s FMP timeout = N*10s stall. Now all
-        # missing tickers run concurrently and we stop collecting after 5s.
-        missing = [t for t in tickers if t not in results]
-        if missing:
-            from concurrent.futures import (
-                ThreadPoolExecutor, as_completed, TimeoutError as _FTimeout,
-            )
-            with ThreadPoolExecutor(max_workers=min(len(missing), 6)) as pool:
-                fut_map = {pool.submit(self._get_fmp_price, t): t for t in missing}
-                try:
-                    for fut in as_completed(fut_map, timeout=5):
-                        try:
-                            p = fut.result()
-                            if p:
-                                results[fut_map[fut]] = p
-                        except Exception:
-                            logger.debug("silent-fallback: get_prices_batch", exc_info=True)
-                except _FTimeout:
-                    # Don't let the collect deadline bubble out of the batch.
-                    logger.warning("FMP batch fallback hit 5s collect deadline; partial result")
-
-        # Resilience: anything STILL missing degrades to its last-known cached
-        # value (flagged stale) so a transient KIS/FMP outage shows "last
-        # price + 지연" instead of a vanished row. Mostly matters for KR.
-        for t in [tk for tk in tickers if tk not in results]:
-            stale = self._serve_stale(t)
-            if stale is not None:
-                results[t] = stale
-
         return results
 
     def get_all_realtime(self):
@@ -669,7 +783,11 @@ class RealtimeService:
                 ),
                 "currency": "KRW" if is_kr else "USD",
                 "source": "fmp_stale" if is_stale else "fmp",
-                "timestamp": observed_at_iso(),
+                # A stale quote was observed when it was fetched, not now.
+                "timestamp": (
+                    observed_at_iso(datetime.fromtimestamp(stale_at, timezone.utc))
+                    if is_stale and stale_at else observed_at_iso()
+                ),
             }
             if is_stale:
                 payload["stale"] = True
@@ -692,6 +810,12 @@ class RealtimeService:
             logger.warning("FMP get_quote failed %s: %s", ticker, e)
 
         if q and isinstance(q, dict) and q.get("price", 0) and float(q.get("price") or 0) > 0:
+            # ``_stale_at`` = get_quote served an old cached quote (budget
+            # low / every live source missed). It used to come back as a
+            # live "fmp" price and the overlay relabelled it "realtime" — a
+            # price frozen for hours, shown with no 지연 chip (2026-10-22).
+            if q.get("_stale_at") is not None:
+                return _format_quote(q, is_stale=True, stale_at=q["_stale_at"])
             return _format_quote(q, is_stale=False)
 
         # 2. Belt+suspenders: if get_quote returned None (budget-exhausted

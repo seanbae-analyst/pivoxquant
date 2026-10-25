@@ -47,6 +47,8 @@ from models import (
     NpsFeedback,
     ObservationNote,
     PersonaSnapshot,
+    ResearchNote,
+    DoorwayCheck,
     PortfolioShare,
     Position,
     PendingTrade,
@@ -99,6 +101,11 @@ def _apply_questionnaire_v3(profile, answers: dict, result: dict) -> None:
     consents already live in their own table.
     """
     stored = {k: v for k, v in answers.items() if k != "legal_confirmations"}
+    # 내 규칙 (2026-10-14): a changed rule answer is a new line, and a new line
+    # is adopted again explicitly — never carried over silently.
+    from services.profile.my_rules import rule_answers_changed
+    if rule_answers_changed(profile.onboarding_answers(), stored):
+        profile.rules_confirmed_at = None
     profile.questionnaire_version = 3
     profile.onboarding_answers_json = json.dumps(stored, ensure_ascii=False)
     profile.declared_vector_json = json.dumps(result.get("declared_vector") or {})
@@ -449,6 +456,57 @@ def update_locale():
             code="LOCALE_UPDATE_FAILED", status=500,
         )
     return jsonify({"locale": current_user.locale, "ok": True})
+
+
+# ── 내 규칙 — adopt the onboarding answers as my own lines ───────────────
+
+@profile_bp.route("/rules/confirm", methods=["POST"])
+@api_auth
+@general_rate_limit
+@legal_scrub_response
+def confirm_rules():
+    """The user adopts their onboarding answers as their own lines (내 규칙).
+
+    2026-10-14. The onboarding questions asked how the user *usually* trades —
+    a self-description. ``services/profile/my_rules.py`` shows those answers as
+    lines; this is the one explicit act that makes them the user's rules: from
+    here /mirror shows 선 안/밖 and the fill push may name a month past the
+    line (services/fill_memo.py). Idempotent — a second call keeps the first
+    timestamp. Re-answering a rule question clears it (``_apply_questionnaire_v3``).
+    No body.
+    """
+    from services.profile.my_rules import RULE_ANSWER_IDS
+
+    profile = InvestmentProfile.query.filter_by(user_id=current_user.id).first()
+    if profile is None:
+        return api_error(
+            en="No profile found. Complete onboarding first.",
+            kr="프로필이 없습니다. 먼저 온보딩을 완료해 주세요.",
+            code="PROFILE_NOT_FOUND", status=404,
+        )
+    answers = profile.onboarding_answers()
+    if not any(k in answers for k in RULE_ANSWER_IDS):
+        return api_error(
+            en="Answer the five onboarding questions first.",
+            kr="온보딩 다섯 문항에 먼저 답해 주세요.",
+            code="RULES_NOT_AVAILABLE", status=409,
+        )
+    if profile.rules_confirmed_at is None:
+        profile.rules_confirmed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            logger.exception("profile.confirm_rules commit failed (user_id=%s)", current_user.id)
+            return api_error(
+                en="Failed to save. Please try again.",
+                kr="저장하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+                code="RULES_CONFIRM_FAILED", status=500,
+            )
+    return jsonify({
+        "ok": True,
+        "rules_confirmed_at": profile.rules_confirmed_at.isoformat(),
+    })
 
 
 # ── Seed Capital (분석용 시드머니) ────────────────────────────────────────
@@ -1448,6 +1506,10 @@ _EXPORT_DD_CHECK_LIMIT = 5000          # one per position
 # 삭제된다(routes/auth.py:delete_account + scripts/nightly/pipa_purge.py).
 # 개인정보이므로 열람권 export 에서 닿을 수 있어야 한다 (2026-09-22).
 _EXPORT_OBS_NOTE_LIMIT = 5000          # 거래에 묶이지 않은 관찰 기록
+# 리서치 노트(양식 + 채점) — 같은 성격의 본인 서술, 탈퇴 시 함께 삭제 (2026-10-15).
+_EXPORT_RESEARCH_NOTE_LIMIT = 5000
+# 문 앞의 한 줄 — 증권 앱을 연 시각·답·한 줄. 하루 100건 상한이라 넉넉히 (2026-10-15).
+_EXPORT_DOORWAY_LIMIT = 20000
 _EXPORT_INQUIRY_LIMIT = 1000           # support inquiries (subject/body free-text)
 _EXPORT_TWIN_REPORT_LIMIT = 520        # ~10y weekly paper-twin reports
 _EXPORT_TWIN_POSITION_LIMIT = 5000     # paper twin open positions
@@ -1487,6 +1549,18 @@ def _iso_or_none(value):
         return value.isoformat()
     except (AttributeError, TypeError):
         return None
+
+
+def _onboarding_draft(user) -> dict:
+    """``users.onboarding_draft_json`` parsed, ``{}`` when absent or corrupt."""
+    raw = getattr(user, "onboarding_draft_json", None)
+    if not raw:
+        return {}
+    try:
+        data = json.loads(raw)
+    except (TypeError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
 
 
 def _serialize_user(user) -> dict:
@@ -2131,6 +2205,11 @@ def _xlsx_cell(value):
     import math
     from decimal import Decimal
 
+    # Strip openpyxl-illegal control characters BEFORE the injection guard:
+    # "\x01=HYPERLINK(...)" passed the guard (first char not a leader) and
+    # then became a live "=" formula once stripped (2026-10-22).
+    if isinstance(value, str):
+        value = _XLSX_ILLEGAL_RE.sub("", value)
     v = _safe_cell(value)
     if isinstance(v, Decimal):
         # Decimal('Infinity')/('NaN') are valid Decimals but become non-finite
@@ -2630,6 +2709,20 @@ def export_profile():
             .limit(_EXPORT_OBS_NOTE_LIMIT)
             .all()
         )
+        research_notes = (
+            ResearchNote.query
+            .filter_by(user_id=user_id)
+            .order_by(ResearchNote.created_at.desc())
+            .limit(_EXPORT_RESEARCH_NOTE_LIMIT)
+            .all()
+        )
+        doorway_checks = (
+            DoorwayCheck.query
+            .filter_by(user_id=user_id)
+            .order_by(DoorwayCheck.created_at.desc())
+            .limit(_EXPORT_DOORWAY_LIMIT)
+            .all()
+        )
         inquiries = (
             Inquiry.query
             .filter_by(user_id=user_id)
@@ -2788,6 +2881,14 @@ def export_profile():
         "investment_profile": (
             investment_profile.to_dict() if investment_profile else None
         ),
+        # PIPA §35 (2026-10-22): the user's own onboarding answers, verbatim —
+        # the profile above carried only the vector derived from them, and
+        # both deletion paths purge these as personal data. The unfinished
+        # draft goes with them.
+        "onboarding_answers": (
+            investment_profile.onboarding_answers() if investment_profile else {}
+        ),
+        "onboarding_draft": _onboarding_draft(user),
         "behavioral_scores": [b.to_dict() for b in behavioral_scores],
         "weekly_pulse": [p.to_dict() for p in weekly_pulse],
         "persona_snapshots": [s.to_dict() for s in persona_snapshots],
@@ -2799,6 +2900,8 @@ def export_profile():
         "user_referrals": [r.to_dict() for r in user_referrals],
         "position_dd_checks": [d.to_dict() for d in position_dd_checks],
         "observation_notes": [n.to_dict() for n in observation_notes],
+        "research_notes": [n.to_dict() for n in research_notes],
+        "doorway_checks": [c.to_dict() for c in doorway_checks],
         # Inquiry.to_dict(detail=True) — include the user's own subject/body
         # and any admin reply; this is their personal data under §35.
         "inquiries": [i.to_dict(detail=True) for i in inquiries],
@@ -2844,6 +2947,8 @@ def export_profile():
             "user_referrals": len(user_referrals),
             "position_dd_checks": len(position_dd_checks),
             "observation_notes": len(observation_notes),
+            "research_notes": len(research_notes),
+            "doorway_checks": len(doorway_checks),
             "inquiries": len(inquiries),
             "companion_waitlist": len(companion_waitlist),
             "portfolio_shares": len(portfolio_shares),

@@ -45,6 +45,7 @@ import MobileDrawer from "./mobile-drawer";
 import { useAuth } from "@/lib/auth";
 import { useT } from "@/lib/locale";
 import { businessInfoRaw, SUPPORT_EMAIL_DEFAULT } from "@/lib/business-info";
+import { QuantMark } from "@/components/ui/quant-mark";
 
 /** Same fallback chain as the footer's 전자상거래법 §13 block. */
 export const SUPPORT_EMAIL =
@@ -259,20 +260,19 @@ export default function TopNav() {
               className="group flex items-baseline gap-3"
               onMouseEnter={() => setActiveKey(null)}
             >
-              {/* FINDING-030: canonical wordmark — italic Playfair Display,
-                  mixed-case "PivoxQuant" (unified across splash / sidebar /
-                  market masthead). Was roman uppercase "PIVOXQUANT". */}
+              {/* 2026-10-25: "Pivox" Ivory + "Quant" Bronze, 18px bold — the
+                  same logo as PivoxMap / PivoxData headers (one family). */}
               <span
                 className="font-serif"
                 style={{
                   color: "var(--pq-ivory)",
-                  letterSpacing: "0.01em",
-                  fontSize: scrolled ? "15px" : "16px",
-                  fontWeight: 500,
+                  letterSpacing: "-0.02em",
+                  fontSize: scrolled ? "var(--pq-text-mono-md)" : "var(--pq-text-h5)",
+                  fontWeight: 700,
                   transition: "font-size 280ms cubic-bezier(0.16,1,0.3,1)",
                 }}
               >
-                PivoxQuant
+                <QuantMark />
               </span>
               <span
                 aria-hidden
@@ -370,7 +370,7 @@ export default function TopNav() {
                   visit), but they can no longer land on different copy. */}
               <Link
                 href={user ? "/mirror" : "/login"}
-                className="group relative inline-flex items-center gap-2 overflow-hidden rounded-sm px-4 font-serif text-pq-body transition-transform duration-200 active:scale-[0.98]"
+                className="group relative inline-flex items-center gap-2 overflow-hidden rounded-[var(--pq-radius-cta)] px-4 font-serif text-pq-body transition-transform duration-200 active:scale-[0.98]"
                 style={{
                   // WCAG 2.5.5 AA — 44x44 minimum tap target. Was 36 (failed
                   // mobile guideline + Apple HIG). Padding/letter-spacing
@@ -545,7 +545,7 @@ export default function TopNav() {
                                   ? "page"
                                   : undefined
                               }
-                              className="group relative flex items-start gap-3.5 rounded-sm p-4 transition-colors duration-300"
+                              className="group relative flex items-start gap-3.5 rounded-[var(--pq-radius-cta)] p-4 transition-colors duration-300"
                               style={{
                                 border: "0.5px solid transparent",
                               }}

@@ -35,6 +35,9 @@ NOTIFICATION_EVENT_IDS: tuple[str, ...] = (
     "concentration",
     "monthly_mirror",
     "fill_memo",
+    # 2026-10-25 (CEO "푸시도 켜"): 가설 다시 보기 — its sender ships with it,
+    # ``ops_research_filing_check`` → services/filing_timeline/research_check.py.
+    "research_filing",
 )
 
 #: Per-event channels that actually have a sender. The matrix used to offer
@@ -53,12 +56,19 @@ NOTIFICATION_EVENT_CHANNELS: dict[str, tuple[str, ...]] = {
     # 2026-10-07: the import webhook (routes/imports.py::webhook_import) pushes
     # "a fill just arrived — write down why" via services/fill_memo.py.
     "fill_memo":      ("push",),
+    # 2026-10-25: services/filing_timeline/research_check.py writes a bell row
+    # (create_alert) and pushes (notify_bell_alert). No email.
+    "research_filing": ("push", "inapp"),
 }
 
 #: Events whose producer needs a vendor market quote. While
 #: ``MARKET_DATA_DISPLAY_ENABLED`` is off, ``app.py::_scheduled_price_alerts``
 #: skips their sweep, so nothing can ever send them.
 _MARKET_PRICED_EVENT_IDS: frozenset[str] = frozenset({"price_52w"})
+
+#: Events whose producer reads company filings. While ``FILINGS_ENABLED`` is
+#: off, ``research_check.run_once`` returns before sending anything.
+_FILINGS_EVENT_IDS: frozenset[str] = frozenset({"research_filing"})
 
 
 def visible_notification_event_ids() -> tuple[str, ...]:
@@ -76,13 +86,15 @@ def visible_notification_event_ids() -> tuple[str, ...]:
     being flipped back on.
     """
     # Imported lazily — models must not import services at module scope.
+    from services.filing_timeline import filings_enabled
     from services.market_display import market_data_display_enabled
 
-    if market_data_display_enabled():
-        return NOTIFICATION_EVENT_IDS
-    return tuple(
-        e for e in NOTIFICATION_EVENT_IDS if e not in _MARKET_PRICED_EVENT_IDS
-    )
+    hidden: set[str] = set()
+    if not market_data_display_enabled():
+        hidden |= _MARKET_PRICED_EVENT_IDS
+    if not filings_enabled():
+        hidden |= _FILINGS_EVENT_IDS
+    return tuple(e for e in NOTIFICATION_EVENT_IDS if e not in hidden)
 
 # ``monthly_mirror`` channel defaults, and why they differ from the two
 # sweeps above:
@@ -105,6 +117,9 @@ NOTIFICATION_PREF_DEFAULTS: dict[str, dict[str, bool]] = {
     # up their own phone automation to send fills here — the push is the
     # point of that setup. Nothing else can trigger it.
     "fill_memo":      {"email": False, "push": True,  "inapp": False},
+    # On: it fires only for someone who wrote a research note and has not
+    # scored it yet — a filing on that very name is what the note waits for.
+    "research_filing": {"email": False, "push": True, "inapp": True},
 }
 
 

@@ -135,7 +135,7 @@ export function PortfolioPhoneSummary(props: PortfolioPhoneSummaryProps) {
         <button
           type="button"
           onClick={onAddPosition}
-          className="pq-cta-bronze flex min-h-[36px] shrink-0 items-center gap-1 rounded-sm bg-[var(--pq-bronze)] pl-2.5 pr-3 text-pq-button font-medium text-[var(--pq-ink)] transition-opacity active:opacity-80"
+          className="pq-cta-bronze flex min-h-[36px] shrink-0 items-center gap-1 rounded-[var(--pq-radius-cta)] bg-[var(--pq-bronze)] pl-2.5 pr-3 text-pq-button font-medium text-[var(--pq-ink)] transition-opacity active:opacity-80"
           data-testid="portfolio-phone-add"
         >
           <Plus aria-hidden className="h-4 w-4" strokeWidth={2} />

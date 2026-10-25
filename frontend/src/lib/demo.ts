@@ -27,7 +27,7 @@ export function isDemoMode(): boolean {
 export const DEMO_USER: User = {
   id: 1,
   email: "demo@pivoxquant.com",
-  name: "데모 투자자",
+  name: "배상현",
   available_capital: 100_000,
   available_capital_krw: 50_000_000,
   oauth_provider: "google",
@@ -57,6 +57,48 @@ const DEMO_MIRROR_HOME: MirrorHomeResponse = {
     { key: "hold_variance", label: "보유기간 편차", direction: "down", delta: -0.15, declared: 0.45, observed: 0.3 },
   ],
   drift: { available: true, descriptor: "영역 이동 관찰" },
+  // 내 규칙 (2026-10-14) — same shape services/profile/my_rules.py returns.
+  rules: {
+    available: true,
+    source: "onboarding",
+    confirmed: true,
+    confirmed_at: "2026-09-02T01:00:00",
+    confirmed_on: "2026-09-02",
+    counted: 4,
+    outside: 3,
+    items: [
+      {
+        id: "frequency", title: "매매 횟수", line: "한 달에 매수·매도 5번 이하",
+        measurable: true, status: "outside", observed: "이번 달 6번 · 선 5번",
+        ceiling: 5, this_month: 6, waiting: 0, months_over: 2, months_shown: 5,
+        months: [
+          { month: "2026-06", count: 3, over: false, partial: false },
+          { month: "2026-07", count: 4, over: false, partial: false },
+          { month: "2026-08", count: 7, over: true, partial: false },
+          { month: "2026-09", count: 5, over: false, partial: false },
+          { month: "2026-10", count: 6, over: true, partial: true },
+        ],
+      },
+      {
+        id: "holding", title: "보유 기간", line: "7일 이상 들고 있다가 판다",
+        measurable: true, status: "outside",
+        observed: "최근 90일 매도 6번 · 7일 전에 판 것 2번",
+        window_days: 90, sells: 6, sooner: 2, min_days: 7,
+      },
+      {
+        id: "positions", title: "종목 수", line: "4종목 이상 나눠 담는다",
+        measurable: true, status: "within", observed: "지금 7종목",
+        open_positions: 7, min_positions: 4,
+      },
+      {
+        id: "drawdown", title: "하락 대응", line: "평단보다 10% 아래로 내려가면 그냥 둔다",
+        measurable: true, status: "outside",
+        observed: "선을 정한 뒤 평단보다 10% 아래에서 판 것 1번 · 더 산 것 0번",
+        note: "그냥 둔 것은 체결이 남지 않아 셀 수 없어요. 평단은 내가 기록한 체결가로 계산해요.",
+        sold_under: 1, added_under: 0, pct: 10,
+      },
+    ],
+  },
   radar: {
     keys: [
       "holding_period", "turnover", "sector_diversity", "ticker_diversity",
@@ -147,14 +189,15 @@ const DEMO_PROFILE = {
 
 
 /* ── Alerts ── */
+// Only what the bell really receives (CLAUDE.md §알림): with vendor-price
+// display off that is the sector-concentration alert. The 2026-06 sample
+// showed 52-week, "변동성 확대" and "주간 메모" items — two had no sender at
+// all and one linked to a deleted /reports page (2026-10-22).
 const DEMO_ALERTS = {
-  unread: 2,
+  unread: 1,
   alerts: [
-    { id: 1, kind: "observation", title: "NVDA 52주 고점 근접", body: "52주 범위 상단에 닿았습니다", ticker: "NVDA", name: "NVIDIA", is_read: false, created_at: "2026-06-18T06:50:00+09:00" },
-    { id: 2, kind: "risk", title: "집중도 주의", body: "기술 섹터 비중 48%", is_read: false, created_at: "2026-06-17T16:30:00+09:00" },
-    { id: 3, kind: "observation", title: "TSLA 변동성 확대", body: "일중 변동성 상위", ticker: "TSLA", name: "Tesla", is_read: true, read_at: "2026-06-17T10:00:00+09:00", created_at: "2026-06-17T09:30:00+09:00" },
-    { id: 4, kind: "system", title: "주간 메모 도착", body: "6월 3주 거울이 준비됐어요", link: "/reports", is_read: true, read_at: "2026-06-16T09:00:00+09:00", created_at: "2026-06-16T08:00:00+09:00" },
-    { id: 5, kind: "observation", title: "LLY 52주 저점 근접", body: "52주 범위 하단에 닿았습니다", ticker: "LLY", name: "Eli Lilly", is_read: true, read_at: "2026-06-15T11:00:00+09:00", created_at: "2026-06-15T07:00:00+09:00" },
+    { id: 1, kind: "concentration_alert", title: "섹터 집중도 · 기술 48.0%", body: "한 섹터가 취득가 기준으로 장부의 30% 이상이에요.", link: "/mirror", is_read: false, created_at: "2026-06-17T16:30:00+09:00" },
+    { id: 2, kind: "concentration_alert", title: "섹터 집중도 · 기술 46.2%", body: "한 섹터가 취득가 기준으로 장부의 30% 이상이에요.", link: "/mirror", is_read: true, read_at: "2026-06-10T10:00:00+09:00", created_at: "2026-06-10T09:30:00+09:00" },
   ],
 };
 
@@ -178,6 +221,12 @@ const DEMO_TURNOVER_MIRROR = {
 const DEMO_AVGDOWN_MIRROR = {
   ok: true, period: "all", period_days: null, sufficient_data: true, follow_on_count: 9, below_avg_count: 6, above_avg_count: 2, flat_count: 1,
   by_ticker: [{ ticker: "NVDA", name: "NVIDIA", follow_on: 3, below_avg: 2, above_avg: 1 }, { ticker: "005930", name: "삼성전자", follow_on: 4, below_avg: 3, above_avg: 1 }, { ticker: "TSLA", name: "Tesla", follow_on: 2, below_avg: 1, above_avg: 0 }],
+};
+// Rebuy mirror — names sold and bought again within 90 days, own prices only.
+const DEMO_REBUY_MIRROR = {
+  ok: true, period: "all", period_days: null, rebuy_window_days: 90, sufficient_data: true,
+  rebuy_count: 5, higher_count: 3, lower_count: 2, flat_count: 0, median_gap_days: 12.0, median_price_change_pct: 4.2,
+  by_ticker: [{ ticker: "NVDA", name: "NVIDIA", rebuy_count: 2, higher_count: 2, lower_count: 0 }, { ticker: "005930", name: "삼성전자", rebuy_count: 2, higher_count: 1, lower_count: 1 }, { ticker: "TSLA", name: "Tesla", rebuy_count: 1, higher_count: 0, lower_count: 1 }],
 };
 const DEMO_PRETRADE_LIST = {
   ok: true,
@@ -348,6 +397,271 @@ function _demoSearch(query: string) {
   return { results };
 }
 
+/* ── Research notes (리서치 양식) — three notes in three states ─────────── */
+
+const DEMO_RESEARCH_NOTES = [
+  {
+    id: 903, ticker: "AAPL", name: "Apple",
+    business: "아이폰을 팔고, 깔린 기기 위에서 서비스 구독료를 받는다",
+    theses: ["서비스 매출 비중이 계속 오른다", "교체 주기가 다시 짧아진다"],
+    invalidation: "서비스 매출이 두 분기 연속 줄어든다",
+    risk: "한 지역 판매 의존도", numbers: "서비스 매출 3년 연속 증가",
+    info_source: "report", surface: "journal",
+    review_on: "2026-06-15", verdicts: [], review_note: null, reviewed_at: null,
+    created_at: "2026-03-15T02:00:00", due: true, outcome: "open",
+  },
+  {
+    id: 902, ticker: "005930.KS", name: "삼성전자",
+    business: "메모리 반도체와 스마트폰을 판다",
+    theses: ["메모리 가격이 반등한다", "파운드리 적자가 줄어든다"],
+    invalidation: "재고가 두 분기 연속 늘어난다",
+    risk: null, numbers: null,
+    info_source: "youtube", surface: "journal",
+    review_on: "2026-05-01", verdicts: ["right", "wrong"],
+    review_note: "가격은 올랐는데 파운드리는 그대로였다",
+    reviewed_at: "2026-05-02T01:00:00", created_at: "2026-02-01T01:00:00",
+    due: false, outcome: "gain",
+  },
+  {
+    id: 901, ticker: "NVDA", name: "NVIDIA",
+    business: "데이터센터용 GPU를 판다",
+    theses: ["데이터센터 수요가 한 해 더 이어진다"],
+    invalidation: null, risk: "대형 고객 몇 곳에 매출이 몰려 있다", numbers: null,
+    info_source: "self", surface: "portfolio",
+    review_on: "2026-11-20", verdicts: [], review_note: null, reviewed_at: null,
+    created_at: "2026-05-20T05:00:00", due: false, outcome: "open",
+  },
+];
+
+const DEMO_RESEARCH_OVERVIEW = {
+  ok: true,
+  due: [DEMO_RESEARCH_NOTES[0]],
+  counts: { notes: 3, scored: 1, due: 1, waiting: 1 },
+  judgment: {
+    right: { gain: 1, loss: 0, flat: 0, open: 0 },
+    wrong: { gain: 1, loss: 0, flat: 0, open: 0 },
+  },
+  unknown: 0,
+  by_source: {
+    report: { right: 0, wrong: 0, unknown: 0 },
+    youtube: { right: 1, wrong: 1, unknown: 0 },
+    social: { right: 0, wrong: 0, unknown: 0 },
+    ai: { right: 0, wrong: 0, unknown: 0 },
+    self: { right: 0, wrong: 0, unknown: 0 },
+    none: { right: 0, wrong: 0, unknown: 0 },
+  },
+};
+
+function _demoResearchByTicker(base: string) {
+  const ticker = decodeURIComponent(base.slice("/api/research-notes/by-ticker/".length)).toUpperCase();
+  const hits = DEMO_RESEARCH_NOTES.filter((n) => n.ticker === ticker || n.ticker.replace(/\.(KS|KQ)$/, "") === ticker);
+  return { ok: true, ticker, count: hits.length, note: hits[0] ?? null };
+}
+
+/* ── 문 앞의 한 줄 (doorway pause) — 30 days of opens ───────────────────── */
+
+const DEMO_DOORWAY_SUMMARY = {
+  ok: true,
+  window_days: 30,
+  follow_minutes: 60,
+  later_days: 30,
+  first_check_at: "2026-09-20T00:12:00",
+  total: 41,
+  intents: { look: 23, buy: 14, sell: 4 },
+  look: { n: 23, traded: 3 },
+  said: {
+    buy: { n: 14, as_said: 6, other: 2, none: 6 },
+    sell: { n: 4, as_said: 2, other: 0, none: 2 },
+  },
+  not_happened: { n: 7, later: 2, never: 3, open: 2 },
+  fills: { total: 15, through_door: 13 },
+  by_hour_kst: [0, 0, 0, 0, 0, 0, 0, 1, 3, 9, 4, 2, 3, 2, 1, 2, 0, 0, 0, 1, 2, 3, 6, 2],
+  recent: [
+    { id: 41, at: "2026-10-15T00:05:00", intent: "buy", ticker: "005930.KS", name: "삼성전자", note: "삼성전자 실적 발표 전에 조금", app: "toss", outcome: "none" },
+    { id: 40, at: "2026-10-14T13:40:00", intent: "look", ticker: null, name: null, note: null, app: "toss", outcome: "none" },
+    { id: 39, at: "2026-10-14T13:02:00", intent: "buy", ticker: "NVDA", name: "NVIDIA", note: "엔비디아 눌림", app: "toss", outcome: "as_said" },
+    { id: 38, at: "2026-10-14T00:31:00", intent: "look", ticker: null, name: null, note: null, app: "kiwoom", outcome: "traded" },
+    { id: 37, at: "2026-10-13T06:10:00", intent: "sell", ticker: "TSLA", name: "Tesla", note: "테슬라 반등에 정리", app: "toss", outcome: "as_said" },
+  ],
+  caveats: [
+    "체결은 문을 연 뒤 60분 안에 들어온 것만 그 열림에 잇습니다. 한 체결은 바로 앞의 열림 하나에만 이어집니다.",
+    "자동화가 꺼져 있던 때나 다른 기기·PC에서 한 거래는 '문을 거치지 않은 체결'로 셉니다.",
+    "기록 대기 목록에 아직 있는 체결도 함께 셉니다.",
+    "누가 언제 앱을 열지는 무작위가 아니므로, 이 숫자로 질문의 효과를 말할 수는 없습니다.",
+  ],
+};
+
+
+/* ── 올해의 기록 — one demo year, consistent with the research notes above ── */
+
+const DEMO_YEAR_MONTHS = [3, 2, 0, 5, 4, 1, 0, 6, 3, 2];
+
+const DEMO_YEAR_RECAP = {
+  ok: true,
+  disclaimer: "본 정보는 지난 거래의 회고적 사실 관찰이며 미래 예측이나 거래 권유가 아닙니다.",
+  share_disclaimer: "정보 제공 목적이며 투자 권유가 아닙니다. / Information only, not investment advice.", // legal-ok — disclaimer SoT text
+  year: 2026,
+  years: [2026],
+  range: { start: "2026-01-01", end: "2026-10-15", partial: true },
+  fills: {
+    total: 26, buys: 17, sells: 9, tickers: 8, months_active: 8,
+    by_month: DEMO_YEAR_MONTHS.map((count, i) => ({ month: `2026-${String(i + 1).padStart(2, "0")}`, count })),
+  },
+  pauses: {
+    started: 14, proceeded: 7, cancelled: 6, open: 1,
+    cancelled_buy: 6, bought_later_anyway: 2, never_bought: 4,
+  },
+  records: {
+    reasoned_fills: 19, research_written: 3, research_reviewed: 1,
+    verdicts: { right: 1, wrong: 1, unknown: 0 },
+    observation_notes: 5,
+  },
+  holding: { sells: 9, median_days: 23.5 },
+  rules: {
+    confirmed_on: "2026-08-10",
+    frequency: {
+      ceiling: 5,
+      months: [
+        { month: "2026-08", count: 4, over: false, partial: true },
+        { month: "2026-09", count: 3, over: false, partial: false },
+        { month: "2026-10", count: 2, over: false, partial: true },
+      ],
+      within: 3, outside: 0,
+    },
+    holding: { min_days: 7, sells: 3, sooner: 1 },
+  },
+  quotes: [
+    { kind: "first_reason", source: "pause", text: "실적 발표 전에 사 두고 싶다. 근데 지난번에도 이랬다.", date: "2026-01-06", ticker: "NVDA", name: "NVIDIA" },
+    { kind: "not_taken", source: "pause", text: "다들 산다길래 나도 들어가려 했다. 이유가 그것뿐이다.", date: "2026-03-18", ticker: "TSLA", name: "Tesla" },
+    { kind: "scored_thesis", source: "research", text: "메모리 가격이 반등한다", date: "2026-02-01", ticker: "005930.KS", name: "삼성전자", verdict: "right" },
+  ],
+  doorway: null,
+  empty: false,
+};
+
+/* ── Sell-moment mirror (매도 순간의 거울) — the demo user's own words ────── */
+
+function _demoSellMoment(query: string) {
+  const ticker = (new URLSearchParams(query).get("ticker") || "").toUpperCase();
+  const research = DEMO_RESEARCH_NOTES.find(
+    (n) => n.ticker === ticker || n.ticker.replace(/\.(KS|KQ)$/, "") === ticker,
+  );
+  const words = [
+    {
+      source: "pause", ticker,
+      text: "실적 발표 전에 들어간다. 발표가 기대보다 약하면 다시 본다.",
+      invalidation: null, at: "2026-08-28T01:30:00",
+    },
+    ...(research
+      ? [{
+          source: "research", ticker, text: research.theses.join(" · "),
+          invalidation: research.invalidation, at: research.created_at,
+        }]
+      : []),
+  ];
+  // No percent in demo — it would need the typed price against a real cost.
+  return { ok: true, ticker, words, held_days: 41, vs_cost_pct: null, matched_shares: 0 };
+}
+
+/* ── 종목별 내 기록 (/api/stock-record/<t>, 2026-10-25) — composed from the
+ *    same demo trades, pauses, research and notes so every screen agrees. ── */
+// SEC filings on the stock record (FILINGS_ENABLED) — demo rows for a US name.
+const DEMO_FILINGS: Record<string, { filed_on: string; form: string; label: string; earnings: boolean }[]> = {
+  NVDA: [
+    { filed_on: "2026-06-24", form: "8-K", label: "수시보고", earnings: false },
+    { filed_on: "2026-06-12", form: "8-K", label: "실적 발표", earnings: true },
+    { filed_on: "2026-05-29", form: "10-Q", label: "분기보고서", earnings: false },
+  ],
+  "005930": [
+    { filed_on: "2026-07-07", form: "공정공시", label: "연결재무제표기준영업(잠정)실적(공정공시)", earnings: true },
+    { filed_on: "2026-05-15", form: "정기공시", label: "분기보고서 (2026.03)", earnings: false },
+  ],
+};
+
+function _demoStockRecord(base: string) {
+  const raw = decodeURIComponent(base.slice("/api/stock-record/".length)).trim().toUpperCase();
+  const key = demoNoteTickerKey(raw);
+  const pos = DEMO_POSITION_ROWS.find((p) => demoNoteTickerKey(p.ticker) === key);
+  const fills = DEMO_TRADES.trades
+    .filter((t) => demoNoteTickerKey(t.symbol) === key)
+    .map((t) => ({
+      kind: "fill" as const, at: t.date, side: t.side as "buy" | "sell",
+      shares: t.shares, price: t.price, currency: t.currency, after_pause: false,
+    }));
+  const pauses = DEMO_PRETRADE_LIST.reflections
+    .filter((r) => demoNoteTickerKey(r.intended_ticker) === key)
+    .map((r) => {
+      const entry = r.intended_side === "BUY"; // // legal-ok — stored side code, compared only
+      const at = r.proceeded_at ?? r.cancelled_at ?? "2026-06-15T09:00:00+09:00";
+      return {
+        kind: "pause" as const, at, side: entry ? ("entry" as const) : ("exit" as const),
+        rationale: r.rationale, status: r.status,
+        bought_after: entry ? fills.some((f) => f.side === "buy" && f.at >= at) : null,
+      };
+    });
+  const research = DEMO_RESEARCH_NOTES.filter((n) => demoNoteTickerKey(n.ticker) === key).map((n) => ({
+    kind: "research" as const, at: n.created_at, id: n.id, theses: n.theses,
+    invalidation: n.invalidation, verdicts: n.verdicts, review_on: n.review_on,
+    reviewed_at: n.reviewed_at, due: n.due,
+  }));
+  const notes = DEMO_OBSERVATION_NOTES.filter((n) => n.tickers.some((t) => demoNoteTickerKey(t.ticker) === key)).map((n) => ({
+    kind: "note" as const, at: n.created_at, id: n.id, body: n.body, tags: n.tags,
+  }));
+  const filings = (DEMO_FILINGS[key] ?? []).map((f) => ({
+    kind: "filing" as const, at: `${f.filed_on}T00:00:00`, filed_on: f.filed_on, form: f.form,
+    label: f.label, earnings: f.earnings, source: /^\d{6}$/.test(key) ? "DART" : "SEC EDGAR",
+    url: /^\d{6}$/.test(key)
+      ? "https://dart.fss.or.kr/"
+      : `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${encodeURIComponent(key)}`,
+  }));
+  const usDay = (iso: string) => new Date(Date.parse(iso) - 4 * 3600_000).toISOString().slice(0, 10); // EDT, demo only
+  const releases = filings.filter((f) => f.earnings).map((f) => Date.parse(f.filed_on));
+  const afterRelease = (iso: string) =>
+    releases.some((d) => {
+      const days = (Date.parse(usDay(iso)) - d) / 86_400_000;
+      return days >= 1 && days <= 3;
+    });
+  const events = [...fills, ...pauses, ...research, ...notes, ...filings].sort((a, b) => (b.at ?? "").localeCompare(a.at ?? ""));
+  return {
+    ok: true,
+    ticker: pos?.ticker ?? raw,
+    name: pos?.name ?? DEMO_SEARCH_UNIVERSE.find((u) => demoNoteTickerKey(u.ticker) === key)?.name ?? null,
+    holding: pos ? { shares: pos.shares, avg_cost: pos.avg_cost, currency: pos.currency } : null,
+    counts: {
+      fills: fills.length,
+      buys: fills.filter((f) => f.side === "buy").length,
+      sells: fills.filter((f) => f.side === "sell").length,
+      pauses: pauses.length,
+      not_taken: pauses.filter((p) => p.bought_after === false).length,
+      research: research.length,
+      notes: notes.length,
+      filings: filings.length,
+    },
+    filing_reaction: releases.length
+      ? {
+          earnings: releases.length, window_days: 3, date_basis: /^\d{6}$/.test(key) ? ("kr" as const) : ("us" as const),
+          buys_after: fills.filter((f) => f.side === "buy" && afterRelease(f.at)).length,
+          sells_after: fills.filter((f) => f.side === "sell" && afterRelease(f.at)).length,
+          timed_fills: fills.length, untimed_fills: 0,
+        }
+      : null,
+    events,
+  };
+}
+
+// 내가 고른 회사들 (/api/pick-facts) — demo picks over the demo buys.
+const DEMO_PICK_FACTS = {
+  ok: true, window_days: 365, picked: 5, with_facts: 4, pending: 0, no_facts: 1,
+  counts: { net_loss: 1, revenue_down: 1, liabilities_over_equity: 2 },
+  sources: ["DART", "SEC EDGAR"],
+  picks: [
+    { ticker: "NVDA", name: "NVIDIA", bought_on: "2026-06-15", fiscal_end: "2026-01-25", filed_on: "2026-02-26", net_loss: false, revenue_down: false, liabilities_over_equity: false, source: "SEC EDGAR" },
+    { ticker: "AAPL", name: "Apple", bought_on: "2026-05-12", fiscal_end: "2025-09-27", filed_on: "2025-10-31", net_loss: false, revenue_down: false, liabilities_over_equity: true, source: "SEC EDGAR" },
+    { ticker: "TSLA", name: "Tesla", bought_on: "2026-05-20", fiscal_end: "2025-12-31", filed_on: "2026-01-29", net_loss: false, revenue_down: true, liabilities_over_equity: false, source: "SEC EDGAR" },
+    { ticker: "JOBY", name: "Joby Aviation", bought_on: "2026-06-02", fiscal_end: "2025-12-31", filed_on: "2026-02-25", net_loss: true, revenue_down: false, liabilities_over_equity: true, source: "SEC EDGAR" },
+  ],
+};
+
 /** Canned GET response for a path, or undefined if not registered yet. */
 function matchDemoGet(path: string): unknown | undefined {
   const qIdx = path.indexOf("?");
@@ -355,8 +669,19 @@ function matchDemoGet(path: string): unknown | undefined {
   const query = qIdx === -1 ? "" : path.slice(qIdx + 1);
 
   if (base === "/api/search") return _demoSearch(query);
+  if (base === "/api/mirror-home/year") return DEMO_YEAR_RECAP;
   if (base.startsWith("/api/observation-notes/by-ticker/"))
     return _demoNotesByTicker(base);
+  if (base.startsWith("/api/research-notes/by-ticker/"))
+    return _demoResearchByTicker(base);
+  if (base === "/api/research-notes/overview") return DEMO_RESEARCH_OVERVIEW;
+  if (base.startsWith("/api/stock-record/")) return _demoStockRecord(base);
+  if (base === "/api/doorway/summary") return DEMO_DOORWAY_SUMMARY;
+  if (base === "/api/pick-facts") return DEMO_PICK_FACTS;
+
+  if (base === "/api/sell-moment") return _demoSellMoment(query);
+  if (base === "/api/research-notes/list")
+    return { ok: true, notes: DEMO_RESEARCH_NOTES, next_before: null };
   if (base === "/api/portfolio/history")
     return _demoEquity(new URLSearchParams(query).get("period") || "1mo");
 
@@ -389,6 +714,8 @@ function matchDemoGet(path: string): unknown | undefined {
       return DEMO_TURNOVER_MIRROR;
     case "/api/behavior/averaging-down-mirror":
       return DEMO_AVGDOWN_MIRROR;
+    case "/api/behavior/rebuy-mirror":
+      return DEMO_REBUY_MIRROR;
     case "/api/pre-trade/list":
       return DEMO_PRETRADE_LIST;
     case "/api/observation-notes/list":

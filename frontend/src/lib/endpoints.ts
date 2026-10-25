@@ -105,6 +105,11 @@ export const API = {
     onboardingDraft: "/api/profile/onboarding/draft",
     update: "/api/profile",
     questionnaire: "/api/profile/questionnaire",
+    // 내 규칙 (2026-10-14) — the user adopts their onboarding answers as their
+    // own lines (routes/profile.py::confirm_rules). POST, no body, idempotent.
+    // Until then /mirror shows the lines without 선 안/밖 and the fill push
+    // adds no line. Re-answering a rule question clears it.
+    rulesConfirm: "/api/profile/rules/confirm",
     capital: "/api/profile/capital",
     // PIPA §35 self-service data export (routes/profile.py::export_profile).
     //   - `export`     → full personal-data record as JSON (instant download).
@@ -261,6 +266,12 @@ export const API = {
     // grade, or "물타기" judgement (자본시장법 / PIPA §23).
     // Response = AveragingDownMirrorResponse, 1:1.
     averagingDownMirror: "/api/behavior/averaging-down-mirror",
+    // Rebuy Mirror — names the user sold and bought again within 90 days:
+    // counts above / below the sale price, median gap in days, median price
+    // change between the two fills. Both prices are the user's own fills of
+    // the same ticker → no market data / FX, so it renders while vendor-price
+    // display is off. Read-only, @api_auth. Response = RebuyMirrorResponse, 1:1.
+    rebuyMirror: "/api/behavior/rebuy-mirror",
   },
   // Mirror home (거울) — single composed read: 선언 vs 관찰 persona shape, the
   // top diverging behavioural dimensions, the drift descriptor, and the latest
@@ -269,6 +280,11 @@ export const API = {
   // persona name (8-code or 3-bucket) — only neutral dimension labels.
   mirror: {
     home: "/api/mirror-home",
+    // 올해의 기록 (2026-10-15, routes/year_recap.py) — one KST calendar year of
+    // the user's own record: counts, a median, and up to three of their own
+    // sentences. No market data, no score. `?year=` omitted = this year.
+    year: (year?: number) =>
+      year ? `/api/mirror-home/year?year=${year}` : "/api/mirror-home/year",
   },
   // Pre-Trade Friction (Feature 6) — self-imposed cooldown + reflection.
   // Backend never places an order; /proceed only stamps "user finished
@@ -305,15 +321,71 @@ export const API = {
     byTicker: (ticker: string) =>
       `/api/observation-notes/by-ticker/${encodeURIComponent(ticker)}`,
   },
+  // Research notes (리서치 양식, 2026-10-15 —
+  // docs/design/research-notes_2026-10-15.md). The same five-field form for
+  // every stock, written by the user before buying, then scored by the user
+  // on a review day they chose. We fill in nothing about the stock and call
+  // no market data; the only thing we add is counts against the user's own
+  // fills. Read back (read-only) on /pre-trade.
+  //   create   POST   /                → 201 {note}
+  //   list     GET    /list            ?limit=&before=&ticker= → {notes, next_before}
+  //   overview GET    /overview        → {due, counts, judgment, unknown, by_source}
+  //   byTicker GET    /by-ticker/<t>   → {ticker, count, note|null}
+  //   detail   GET|DELETE /<id>
+  //   review   POST   /<id>/review     {verdicts, note?} → {note}
+  // 문 앞의 한 줄 (2026-10-15 — docs/design/doorway-pause_2026-10-15.md).
+  // The user's own phone automation asks "뭘 하러 왔어요?" when a broker app
+  // opens and posts the answer with the personal import token (the same key
+  // as 체결 자동 기록). We store the answer and, on read, count which opens
+  // were followed by the user's own fills. No market data, no broker access.
+  //   webhook  POST   /webhook            Bearer pvx_… · {text} | {intent, note?, app?} → 201
+  //   checks   POST   /checks             session · {intent, note?, app?} → 201 {check, today, message}
+  //            GET    /checks             ?limit=&before= → {checks, next_before}
+  //   check    DELETE /checks/<id>
+  //   summary  GET    /summary            ?days=7|30|90 → DoorwaySummaryResponse
+  doorway: {
+    webhook: "/api/doorway/webhook",
+    checks: "/api/doorway/checks",
+    check: (id: number | string) => `/api/doorway/checks/${id}`,
+    summary: "/api/doorway/summary",
+  },
+  // 종목별 내 기록 (2026-10-25) — one stock's fills, pauses, research and
+  // notes on one timeline. GET only; the user's own records, no quote.
+  //   GET /<ticker> → {ticker, name, holding, counts, events}
+  stockRecord: (ticker: string) => `/api/stock-record/${encodeURIComponent(ticker)}`,
+  // 내가 고른 회사들 — 산 날 직전 공시 연간 숫자로 센 개수 (2026-10-25).
+  pickFacts: "/api/pick-facts",
+  research: {
+    create: "/api/research-notes",
+    list: "/api/research-notes/list",
+    overview: "/api/research-notes/overview",
+    byTicker: (ticker: string) =>
+      `/api/research-notes/by-ticker/${encodeURIComponent(ticker)}`,
+    detail: (id: number | string) => `/api/research-notes/${id}`,
+    review: (id: number | string) => `/api/research-notes/${id}/review`,
+  },
+  // Sell-moment mirror (매도 순간의 거울, 2026-10-15 — routes/sell_moment.py).
+  // At a 매도, what the user wrote about the stock before it + how long the
+  // FIFO lots it closes were held + the sell price vs their own cost. The
+  // user's own rows only — no market data. Read-only.
+  //   typed    GET /?ticker=&shares=&price=&date=&currency= → SellMomentResponse
+  //   pending  GET /pending/<id>                            → SellMomentResponse
+  sellMoment: {
+    typed: "/api/sell-moment",
+    pending: (id: number | string) => `/api/sell-moment/pending/${id}`,
+  },
   // Marketing-consent record (정통망법 §50 ① — sender bears the burden of
   // proving prior opt-in). Backend lives in routes/consents.py (PR #73).
   // - GET    : returns { opted_in, marketing_consent_at, marketing_consent_revoked_at }
   // - POST   : record explicit opt-in (clears prior revocation)
   // - DELETE : record revocation
   //   Neither touches email_opt_out (2026-09-29) — that is profile.emailPreferences'.
+  //   categories GET → {categories:{information,marketing}} · POST {information?: bool, marketing?: bool}
+  //   (§50 ① split record; `information` gates the monthly report, 2026-10-22)
   consents: {
     marketing: "/api/consents/marketing",
     crossBorder: "/api/consents/cross-border",
+    categories: "/api/consents/categories",
   },
   // Import Inbox (2026-09-13, docs/product/IMPORT_INBOX_DESIGN.md §API).
   // The server receives only what the user uploads — a CSV/XLSX file or

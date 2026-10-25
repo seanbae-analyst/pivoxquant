@@ -42,6 +42,8 @@ const payload: MirrorHomeResponse = {
 vi.mock("@/lib/auth", () => ({ useAuth: () => ({ loading: false }) }));
 vi.mock("@/lib/hooks", () => ({
   useMirrorHome: () => ({ data: payload, isLoading: false, error: null }),
+  useDoorwaySummary: () => ({ data: null, isLoading: false, error: undefined, mutate: () => undefined }),
+  usePickFacts: () => ({ data: null, isLoading: false, error: undefined }),
 }));
 // A stale cache could still hold the old score series — it must not surface.
 vi.mock("@/lib/cfo/hooks", async (orig) => ({

@@ -17,12 +17,14 @@
 import { useSyncExternalStore } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-export type SettingsPane = "account" | "notifications" | "import" | "privacy";
+export type SettingsPane = "account" | "notifications" | "import" | "doorway" | "privacy";
 
 export const SETTINGS_PANES: ReadonlyArray<{ id: SettingsPane; title: string; sub: string }> = [
   { id: "account", title: "계정", sub: "이름 · 이메일 · 로그인 수단 · 언어" },
   { id: "notifications", title: "알림", sub: "푸시 · 이메일 · 월간 리포트" },
   { id: "import", title: "체결 자동 기록", sub: "폰 연결 열쇠 · 설정 안내" },
+  // 2026-10-15 — 문 앞의 한 줄: the phone asks once when a broker app opens.
+  { id: "doorway", title: "문 앞의 한 줄", sub: "증권 앱을 열 때 한 번 묻기" },
   { id: "privacy", title: "개인정보 · 데이터", sub: "내보내기 · 로그아웃 · 탈퇴" },
 ];
 
@@ -30,6 +32,7 @@ const HASH_TO_PANE: Record<string, SettingsPane> = {
   "#section-a": "account",
   "#section-c": "notifications",
   "#import-tokens": "import",
+  "#doorway": "doorway",
   "#section-e": "privacy",
 };
 
@@ -79,7 +82,7 @@ export function closePane() {
 export function SettingsPhoneList() {
   return (
     <nav aria-label="설정 항목" className="md:hidden" data-testid="settings-phone-list">
-      <ul className="overflow-hidden rounded-[4px] border border-[var(--pq-ivory-line)]">
+      <ul className="overflow-hidden rounded-[var(--pq-radius-card)] border border-[var(--pq-ivory-line)]">
         {SETTINGS_PANES.map((p, i) => (
           <li key={p.id} className={i > 0 ? "border-t border-[var(--pq-ivory-line)]" : ""}>
             <button

@@ -21,7 +21,7 @@ from . import (
     ImportParseError,
     RawTrade,
     mask_sensitive,
-    parse_datetime,
+    parse_datetime_has_time,
     parse_number,
     side_from_text,
     today_naive,
@@ -241,13 +241,17 @@ def _norm(h) -> str:
     return _NORMALISE.sub("", str(h or "").strip().lower())
 
 
-def _rank(h: str) -> tuple[int, int, int]:
+def _header_rank(fld: str, h: str) -> tuple[bool, bool, int]:
     """Exact-match preference: never an ORDER column when another matches
     (a 주문체결 export has 주문수량 10 / 체결수량 4 — the fill is 4; its
     주문구분 is often 지정가/시장가, not the side), a 체결 column first, then
     the longer header. 2026-10-13: 주문수량 and 체결수량 tied on length and
-    the first column won, so a partial fill was stored with the order size."""
-    return (0 if h.startswith("주문") else 1, 1 if h.startswith("체결") else 0, len(h))
+    the first column won, so a partial fill was stored with the order size.
+    For the clock (date / time) any header naming 주문 loses — a file with
+    both ``주문시간`` and ``체결시간`` took the order clock and imported every
+    row date-only (review 2026-10-15)."""
+    order = ("주문" in h) if fld in ("date", "time") else h.startswith("주문")
+    return (not order, h.startswith("체결"), len(h))
 
 
 def map_headers(headers: list) -> tuple[dict[str, int], dict[str, str], list[str]]:
@@ -257,7 +261,7 @@ def map_headers(headers: list) -> tuple[dict[str, int], dict[str, str], list[str
     raw: dict[str, str] = {}
     used: set[int] = set()
 
-    # Pass 1: exact matches — ranked by :func:`_rank`, so a file laid out as
+    # Pass 1: exact matches — ranked by :func:`_header_rank`, so a file laid out as
     # ``구분(현금/신용), …, 매매구분`` maps side to 매매구분, ``체결수량`` beats
     # ``수량`` and ``주문수량`` regardless of column order.
     for fld, syns in HEADER_SYNONYMS.items():
@@ -265,7 +269,7 @@ def map_headers(headers: list) -> tuple[dict[str, int], dict[str, str], list[str
         for i, h in enumerate(normed):
             if i in used or not h:
                 continue
-            if h in syns and (best is None or _rank(h) > _rank(normed[best])):
+            if h in syns and (best is None or _header_rank(fld, h) > _header_rank(fld, normed[best])):
                 best = i
         if best is not None:
             idx[fld] = best
@@ -368,12 +372,18 @@ def _parse_grid(grid: list[list]) -> ParseResult:
 
     cur_cols = currency_columns(headers)
     cur_cols["order_price"] = _norm(raw_map.get("price", "")).startswith("주문")
+    order_clock = _clock_is_order_time(raw_map)
+
     body = grid[hdr_i + 1: hdr_i + 1 + MAX_ROWS]
     for offset, row in enumerate(body):
         row_no = hdr_i + 2 + offset  # 1-based line number for the user
         if not any(str(c or "").strip() for c in row):
             continue
         trade = _row_to_trade(row, idx, cur_cols)
+        if order_clock:
+            # The clock is when the order was placed, not when it filled —
+            # keep the day only (see _clock_is_order_time).
+            trade.time_given = False
         trade.raw_snippet = mask_sensitive(" | ".join(str(c) for c in row if str(c or "").strip()))
         trade.extra["row"] = row_no
         if trade.skip_reason:
@@ -386,6 +396,19 @@ def _parse_grid(grid: list[list]) -> ParseResult:
             "reason": f"{MAX_ROWS}행까지만 읽었습니다 — 나머지는 기간을 나눠 다시 올려 주세요",
         })
     return result
+
+
+def _clock_is_order_time(raw_map: dict[str, str]) -> bool:
+    """Is the file's time of day an ORDER time (``주문시간`` / ``주문일시``)?
+
+    A limit order placed at 08:55 can fill at 09:20. Taken as the fill time,
+    it sits 25 minutes from the same fill's notification (09:20), past the
+    one-minute window that tells two genuine same-size fills apart
+    (``dedupe.FILL_TIME_TOLERANCE``), and one fill was recorded twice. A day
+    order fills on the day it was placed, so such rows import date-only and
+    dedupe on the day, as every row did before 2026-10-15."""
+    clock = raw_map.get("time") or raw_map.get("date") or ""
+    return "주문" in _norm(clock)
 
 
 def _cell(row: list, idx: dict[str, int], fld: str):
@@ -478,7 +501,7 @@ def _row_to_trade(row: list, idx: dict[str, int], cur_cols: dict | None = None) 
         t.skip_reason = f"통화 불일치 — 통화 {cur}, 단가 열 {col_cur}"
         return t
 
-    dt = parse_datetime(_cell(row, idx, "date"), _cell(row, idx, "time"))
+    dt, t.time_given = parse_datetime_has_time(_cell(row, idx, "date"), _cell(row, idx, "time"))
     if dt is None:
         if "date" in idx and str(_cell(row, idx, "date") or "").strip():
             t.skip_reason = "날짜 형식 미인식"

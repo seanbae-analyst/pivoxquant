@@ -12,7 +12,9 @@
  * The send gate is three switches owned by three different places
  * (services/reports_delivery.py): the matrix cell (`monthly_mirror` × email),
  * B2 email delivery (`email_opt_out`) and B3 consent. This card lists all
- * three and says plainly whether the next run would send. "Unknown" (still
+ * three and says plainly whether the next run would send. The consent is
+ * the 정보성 one (2026-10-22) — the sender never read the marketing toggle
+ * this card used to point at. "Unknown" (still
  * loading) is never shown as off.
  *
  * The PDF reads only the user's own records — no quote, no score — and does
@@ -27,7 +29,7 @@ import { useNotificationPreferences } from "@/lib/hooks";
 import { useT } from "@/lib/locale";
 import {
   EMAIL_DELIVERY_ANCHOR,
-  MARKETING_CONSENT_ANCHOR,
+  INFORMATION_CONSENT_ANCHOR,
 } from "@/components/settings/v2/notifications-matrix";
 
 /** The cron: day 1, 08:30 KST (services/scheduler/cron_jobs.py). */
@@ -64,10 +66,10 @@ export function monthlyReportWillSend(
 
 export function MonthlyReportCard({
   emailDeliveryOn,
-  marketingConsentOn,
+  informationConsentOn,
 }: {
   emailDeliveryOn: GateState;
-  marketingConsentOn: GateState;
+  informationConsentOn: GateState;
 }) {
   const t = useT();
   const m = (k: string, params?: Record<string, string>) =>
@@ -76,7 +78,7 @@ export function MonthlyReportCard({
   const cellOn: GateState = data?.prefs
     ? data.prefs.monthly_mirror?.email === true
     : undefined;
-  const willSend = monthlyReportWillSend(cellOn, emailDeliveryOn, marketingConsentOn);
+  const willSend = monthlyReportWillSend(cellOn, emailDeliveryOn, informationConsentOn);
   const [downloading, setDownloading] = React.useState(false);
   const [emptyNote, setEmptyNote] = React.useState(false);
 
@@ -118,7 +120,7 @@ export function MonthlyReportCard({
   const gates: { key: string; on: GateState; href?: string }[] = [
     { key: "gateCell", on: cellOn },
     { key: "gateDelivery", on: emailDeliveryOn, href: `#${EMAIL_DELIVERY_ANCHOR}` },
-    { key: "gateConsent", on: marketingConsentOn, href: `#${MARKETING_CONSENT_ANCHOR}` },
+    { key: "gateConsent", on: informationConsentOn, href: `#${INFORMATION_CONSENT_ANCHOR}` },
   ];
 
   return (

@@ -288,17 +288,33 @@ self.addEventListener("push", (event) => {
   event.waitUntil(self.registration.showNotification(data.title, options));
 });
 
+// A window opened from a notification carries `pq_launch=push` (2026-10-15).
+// lib/launch-cover.ts reads it (NOTIFICATION_LAUNCH_PARAM there — keep the
+// two in step): the user tapped to see this screen, so a cold launch is not
+// sent to the PIVOXQUANT cover first. Bug hunt: the concentration alert opens
+// /mirror, and a cold launch on bare /mirror used to bounce to "/".
+const NOTIFICATION_LAUNCH_PARAM = "pq_launch";
+
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = event.notification.data?.url || "/";
+  const target = new URL(event.notification.data?.url || "/", self.location.origin);
 
   event.waitUntil(
     self.clients.matchAll({ type: "window" }).then((clients) => {
-      const existing = clients.find(
-        (c) => new URL(c.url).pathname === url && "focus" in c,
-      );
+      // Focus only a window already on this exact screen — path AND query.
+      // "/journal?pending=<id>" (the fill push) must open that fill's reason
+      // field, not just raise a /journal window showing something else. The
+      // launch mark is ignored: a window this handler opened keeps it in its
+      // URL, and the next push to the same screen must find that window.
+      const screenOf = (u) => {
+        u.searchParams.delete(NOTIFICATION_LAUNCH_PARAM);
+        return u.pathname + u.search;
+      };
+      const want = screenOf(new URL(target.href));
+      const existing = clients.find((c) => screenOf(new URL(c.url)) === want && "focus" in c);
       if (existing) return existing.focus();
-      return self.clients.openWindow(url);
+      target.searchParams.set(NOTIFICATION_LAUNCH_PARAM, "push");
+      return self.clients.openWindow(target.href);
     }),
   );
 });

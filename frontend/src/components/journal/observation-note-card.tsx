@@ -103,7 +103,9 @@ export function ObservationNoteCard({
             color: "var(--pq-ivory-faint)",
           }}
         >
-          {relativeTime(note.created_at, locale)}
+          {/* verbose: "18주 전", like the pre-trade cards beside it — the
+              bare "18주 · 2026년 6월 18일" read as a duration. */}
+          {relativeTime(note.created_at, locale, { verbose: true })}
           <span className="opacity-70">
             {" · "}
             {noteAbsoluteDate(note.created_at)}
@@ -174,15 +176,18 @@ export function ObservationNoteCard({
         </p>
       )}
 
-      <div className="mt-2 flex items-center gap-2">
+      <div className="mt-1 flex items-center justify-end gap-2">
         {!confirming ? (
+          // A quiet text action at the card's foot (2026-10-22): as an
+          // outlined button it was the loudest thing on every note — a
+          // destructive action should not out-weigh what the user wrote.
           <button
             type="button"
             onClick={() => {
               setError(null);
               setConfirming(true);
             }}
-            className="pq-ink-btn-ghost px-3 text-pq-eyebrow"
+            className="-mr-2 inline-flex min-h-[44px] items-center px-2 text-pq-eyebrow text-[var(--pq-ivory-faint)] transition-colors hover:text-[var(--pq-ivory)]"
           >
             삭제
           </button>

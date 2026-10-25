@@ -21,6 +21,7 @@
  */
 
 import * as React from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { Sheet, type SheetHandle } from "@/components/ui/sheet";
 import { displayTicker } from "@/lib/format";
@@ -100,7 +101,7 @@ export function ObservationNoteModalV2({
             id={headlineId}
             className="font-display"
             style={{
-              fontSize: "var(--pq-text-h3)",
+              fontSize: "clamp(24px, 4vw + 8px, 32px)" /* 24px in a phone sheet, 32px from ~600px */,
               lineHeight: 1.15,
               fontWeight: 500,
               letterSpacing: "-0.015em",
@@ -121,6 +122,16 @@ export function ObservationNoteModalV2({
             close();
           }}
         />
+
+        {/* The structured way to write about this holding — the same
+            five-field form as /journal/research, prefilled with the symbol. */}
+        <Link
+          href={`/journal/research?ticker=${encodeURIComponent(symbol)}&name=${encodeURIComponent(name ?? "")}&from=portfolio`}
+          data-testid="obs-modal-research-link"
+          className="mt-4 inline-flex text-pq-caption text-[var(--pq-bronze-light)] underline-offset-4 hover:underline"
+        >
+          리서치 양식으로 쓰기 →
+        </Link>
 
         {/* Phone has the header close + drag; this stays for desktop. */}
         <div className="max-md:hidden" style={{ marginTop: 16, textAlign: "right" }}>

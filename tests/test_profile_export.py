@@ -174,6 +174,8 @@ def test_export_empty_user_returns_valid_payload(client, auth_user):
         "user_referrals": 0,
         "position_dd_checks": 0,
         "observation_notes": 0,
+        "research_notes": 0,
+        "doorway_checks": 0,
         "inquiries": 0,
         "companion_waitlist": 0,
         "portfolio_shares": 0,
@@ -196,7 +198,28 @@ def test_export_empty_user_returns_valid_payload(client, auth_user):
     for section in body["counts"]:
         assert body[section] == [], f"{section} should be [] for empty user"
     assert body["investment_profile"] is None
+    assert body["onboarding_answers"] == {}
+    assert body["onboarding_draft"] == {}
     assert body["user"]["email"] == auth_user["email"]
+
+
+def test_export_includes_own_onboarding_answers_and_draft(app, client, auth_user):
+    """PIPA §35 (2026-10-22): the answers themselves, not only the vector."""
+    from extensions import db
+    from models import InvestmentProfile, User
+
+    with app.app_context():
+        db.session.add(InvestmentProfile(
+            user_id=auth_user["id"],
+            onboarding_answers_json=json.dumps({"q_hold": "weeks"}),
+        ))
+        u = db.session.get(User, auth_user["id"])
+        u.onboarding_draft_json = json.dumps({"q_hold": "months"})
+        db.session.commit()
+
+    body = json.loads(client.get("/api/profile/export").data)
+    assert body["onboarding_answers"] == {"q_hold": "weeks"}
+    assert body["onboarding_draft"] == {"q_hold": "months"}
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -455,7 +478,7 @@ _EXPECTED_SECTIONS = {
     "behavioral_scores", "weekly_pulse", "persona_snapshots", "nps_feedback",
     "pre_trade_reflections", "artifacts", "artifact_feedback",
     "broker_connections", "user_referrals", "position_dd_checks", "inquiries",
-    "observation_notes",
+    "observation_notes", "research_notes", "doorway_checks",
     "companion_waitlist", "portfolio_shares", "push_subscriptions",
     "scheduled_emails", "checkout_expirations", "ai_twin_portfolios",
     "ai_twin_positions", "ai_twin_trades", "ai_twin_weekly_reports",

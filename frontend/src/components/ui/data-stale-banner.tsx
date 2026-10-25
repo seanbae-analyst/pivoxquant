@@ -175,7 +175,7 @@ export function DataStaleBanner() {
       role="status"
       aria-live="polite"
       data-testid="data-stale-banner"
-      className="mx-4 mt-3 rounded-sm border px-3 py-2 md:mx-10"
+      className="mx-4 mt-3 rounded-[var(--pq-radius-cta)] border px-3 py-2 md:mx-10"
       style={{
         borderColor: "rgba(234, 179, 8, 0.35)",
         backgroundColor: "rgba(234, 179, 8, 0.06)",
@@ -212,7 +212,7 @@ export function DataStaleBanner() {
           onClick={handleDismiss}
           aria-label="알림 닫기"
           data-testid="data-stale-banner-dismiss"
-          className="shrink-0 rounded-sm border px-2 py-1 font-mono uppercase tracking-[0.01em] transition-colors hover:bg-white/5"
+          className="shrink-0 rounded-[8px] border px-2 py-1 tracking-[0.01em] transition-colors hover:bg-white/5"
           style={{
             fontSize: "var(--pq-text-eyebrow)",
             borderColor: "rgba(234, 179, 8, 0.35)",

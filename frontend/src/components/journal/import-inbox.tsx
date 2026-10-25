@@ -44,7 +44,8 @@ import { apiFetch, ApiError } from "@/lib/api";
 import { API, PORTFOLIO_POSITIONS, PORTFOLIO_SUMMARY, PORTFOLIO_TRADES } from "@/lib/endpoints";
 import { displayName, parseIsoUtc } from "@/lib/format";
 import { fadeUp } from "@/lib/motion";
-import { SIDE_BUY } from "@/lib/fill-side";
+import { SIDE_BUY, SIDE_SELL } from "@/lib/fill-side";
+import { PendingSellMoment } from "@/components/journal/sell-moment";
 import { sideLabelKo } from "@/components/pre-trade/pre-trade-friction-core";
 import {
   RuledKicker,
@@ -503,6 +504,15 @@ export function PendingTradeRow({
         />
       )}
 
+      {/* 매도 순간의 거울 (2026-10-15): before the user writes why they sold,
+          what they wrote about this stock before — read-only, renders
+          nothing when there is nothing (services/sell_moment.py). */}
+      {row.action === SIDE_SELL && row.ticker && !row.needs_ticker && row.status === "pending" && (
+        <div className="mt-3">
+          <PendingSellMoment pendingId={row.id} sellShares={row.shares} />
+        </div>
+      )}
+
       {/* Thesis — the one line that turns a received fill into a record. */}
       <div className="mt-3">
         <label htmlFor={`import-thesis-${row.id}`}>
@@ -606,14 +616,10 @@ export function ImportInbox() {
 
   if (pending.length === 0) {
     return (
-      <div className="mb-8 flex items-baseline justify-between gap-3">
+      // One line, no link (2026-10-22): the journal's capture links sit right
+      // above it, so a third "체결 가져오기" here only repeated them.
+      <div className="mb-8">
         <Caption>{t("journal.import.emptyLine")}</Caption>
-        <Link
-          href="/journal/import"
-          className="font-mono text-pq-eyebrow text-[var(--pq-bronze-light)] underline-offset-4 hover:underline"
-        >
-          {t("journal.import.importLink")}
-        </Link>
       </div>
     );
   }

@@ -19,6 +19,7 @@ vi.mock("@/lib/api", () => {
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock("@/lib/hooks", () => ({
   fetcher: vi.fn(),
+  useResearchByTicker: () => ({ note: null, count: 0, isLoading: false }),
   useObservationNotesByTicker: () => ({
     notes: [], count: 0, disclaimer: null, isLoading: false, error: undefined, mutate: vi.fn(),
   }),
@@ -114,6 +115,21 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   window.matchMedia = originalMatchMedia;
+});
+
+describe("/pre-trade · 리서치 양식 link", () => {
+  it("sits on setup only, carries the ticker, and is gone once the questions start", () => {
+    stubViewport(true);
+    render(<PreTradePage />);
+    expect(screen.getByTestId("pre-trade-research-link").getAttribute("href")).toBe("/journal/research?new=1");
+
+    fillSetup();
+    expect(screen.getByTestId("pre-trade-research-link").getAttribute("href")).toBe("/journal/research?ticker=AAPL");
+
+    swipe(setupSurface(), -FAR);
+    expect(screen.getByTestId("question-1")).toBeTruthy();
+    expect(screen.queryByTestId("pre-trade-research-link")).toBeNull();
+  });
 });
 
 describe("/pre-trade · phone pager", () => {

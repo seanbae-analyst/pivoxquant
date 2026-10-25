@@ -95,7 +95,7 @@ def test_channel_enabled_masks_dead_channel_like_the_route(app, make_user):
 # ── (b) GET defaults ─────────────────────────────────────────────────────
 
 
-def test_get_preferences_returns_every_event(auth_user, client, market_display_on):
+def test_get_preferences_returns_every_event(auth_user, client, market_display_on, filings_on):
     """With every producer live, the matrix shows all canonical events."""
     resp = client.get("/api/notifications/preferences")
     assert resp.status_code == 200, resp.data
@@ -155,7 +155,7 @@ def test_get_preferences_requires_auth(client):
 # ── (c) PUT → GET round-trip ─────────────────────────────────────────────
 
 
-def test_put_then_get_round_trip(auth_user, client, market_display_on):
+def test_put_then_get_round_trip(auth_user, client, market_display_on, filings_on):
     body = {"prefs": {"concentration": {"email": False, "push": False, "inapp": True}}}
     put = client.put("/api/notifications/preferences", json=body)
     assert put.status_code == 200, put.data

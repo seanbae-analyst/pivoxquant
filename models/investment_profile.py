@@ -80,6 +80,11 @@ class InvestmentProfile(db.Model):
     questionnaire_version = db.Column(db.Integer, nullable=True)
     onboarding_answers_json = db.Column(db.Text, nullable=True)   # raw {qid: value}
     declared_vector_json = db.Column(db.Text, nullable=True)      # {feature_key: 0..1}
+    # 2026-10-14 (alembic 062) — when the user adopted their onboarding answers
+    # as their own lines (내 규칙, services/profile/my_rules.py). NULL = not
+    # adopted: /mirror shows the lines as "what you said", without 선 안/밖,
+    # and the fill push adds no line. Re-answering a rule question clears it.
+    rules_confirmed_at = db.Column(db.DateTime, nullable=True)
 
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
@@ -146,6 +151,9 @@ class InvestmentProfile(db.Model):
         """Serialize for API response."""
         return {
             "questionnaire_version": self.questionnaire_version,
+            "rules_confirmed_at": (
+                self.rules_confirmed_at.isoformat() if self.rules_confirmed_at else None
+            ),
             "declared_vector": self.declared_vector(),
             "profile_type": self.profile_type,
             "experience_level": self.experience_level,

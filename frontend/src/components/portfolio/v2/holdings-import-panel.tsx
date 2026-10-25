@@ -251,8 +251,19 @@ export function commitPayload(rows: HoldingRow[]) {
     }));
 }
 
+/** Same-name key — only the KRX suffix differs (`035720.KQ` = `035720.KS` =
+ * `035720`). Mirrors the server's `pre_trade.friction_outcome.ticker_key`,
+ * which the commit's close/replace checks use (2026-10-15). */
+export function tickerKey(ticker: string): string {
+  const t = (ticker || "").trim().toUpperCase();
+  for (const suffix of [".KS", ".KQ", ".KRX"]) {
+    if (t.endsWith(suffix)) return t.slice(0, -suffix.length);
+  }
+  return t;
+}
+
 /** Holdings on record that no row of the capture shows (any mode — a skipped
- * row is still on the screen). Same exact-ticker match as the server's, plus
+ * row is still on the screen). Same suffix-blind match as the server's, plus
  * one guard: a row whose ticker never resolved may still BE a holding — its
  * read name/code is compared loosely, and a match keeps the holding off the
  * list. Otherwise a capture row that OCR could not resolve, set to 건너뛰기,
@@ -263,16 +274,16 @@ export function absentHoldings(held: HoldingsHeld[], rows: HoldingRow[]): Holdin
   const squash = (x: string) => x.replace(/\s+/g, "").toUpperCase();
   const unresolved = rows.filter((r) => !r.ticker);
   const mayBe = (h: HoldingsHeld) => {
-    const code = normalizeTicker(h.ticker);
+    const code = tickerKey(normalizeTicker(h.ticker));
     const name = squash(h.name || "");
     return unresolved.some((r) => {
-      const rc = normalizeTicker(r.readCode);
+      const rc = tickerKey(normalizeTicker(r.readCode));
       if (rc && rc === code) return true;
       const rn = squash(r.readName);
       return rn.length >= 2 && name.length >= 2 && (name.includes(rn) || rn.includes(name));
     });
   };
-  return held.filter((h) => !rows.some((r) => r.ticker === h.ticker) && !mayBe(h));
+  return held.filter((h) => !rows.some((r) => tickerKey(r.ticker) === tickerKey(h.ticker)) && !mayBe(h));
 }
 
 /** Ids to close: marked by the user and still absent from the capture. */

@@ -4,7 +4,7 @@
 # 2026-05-19 v45.3 신규 작성 → 2026-09-21 전면 재작성 (services/quant · services/ai 는 삭제됐다)
 
 version: 1
-last_updated: "2026-09-21"  # quant/ai 동결 해제(코드 삭제), 살아있는 법적·기록 코어로 교체
+last_updated: "2026-10-25"  # 2026-10-25 models/user.py research_filing 알림 줄(CEO "푸시도 켜", PR #688) · 2026-10-22 rebuy_mirror.py 같은 날 순서 규칙(CEO "재매수 버그도 고쳐", PR #676) · 2026-10-22 rebuy_mirror.py 버그헌팅 수정(CEO "다 고칠래") · 2026-10-21 rebuy_mirror.py 추가(CEO 승인, PR #671) · 2026-09-21 quant/ai 동결 해제(코드 삭제), 살아있는 법적·기록 코어로 교체
 
 # 읽는 곳 (2026-09-21 grep): §verification 스니펫 · .githooks/post-checkout(파일명만) ·
 # agents/frozen-file-diff-guard.md. .githooks/pre-commit 의 FROZEN_PATHS 는 하드코딩(옛 quant 경로) — 별도 PR.
@@ -21,7 +21,7 @@ hard_frozen:
 
   - path: services/behavior/*.py
     owner: persona-quant-domain
-    reason: 기록 거울 4종 (회전율·집중도·물타기·손익처분) — 점수·등급·라벨 없는 사실 서술. 시세 import 금지.
+    reason: 기록 거울 5종 (회전율·집중도·물타기·손익처분·판 뒤 재매수) — 점수·등급·라벨 없는 사실 서술. 시세 import 금지.
     iron_rule_source: "CLAUDE.md 제품 §핵심 3축 (셋 다 시세를 안 부른다)"
     exceptions:
       - "FX 합산 버그 fix — fx-consistency-guard 승인 시 허용"

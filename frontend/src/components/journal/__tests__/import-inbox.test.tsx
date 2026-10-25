@@ -16,6 +16,8 @@ import { render, cleanup, screen, within, fireEvent, act } from "@testing-librar
 const hooks = vi.hoisted(() => ({
   usePendingImports: vi.fn(),
   useLinkableReflections: vi.fn(),
+  // 매도 순간의 거울 — nothing to show unless a test seeds it.
+  useSellMomentForPending: vi.fn(() => ({ data: null, isLoading: false })),
 }));
 vi.mock("@/lib/hooks", () => hooks);
 vi.mock("@/lib/locale", () => ({
@@ -131,14 +133,12 @@ describe("ImportInbox", () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it("renders the one-line import link when nothing is pending", () => {
+  it("renders one quiet line, no repeated import link, when nothing is pending", () => {
     loaded([]);
     render(<ImportInbox />);
     expect(screen.queryAllByTestId("pending-trade-row")).toHaveLength(0);
-    expect(screen.getByRole("link", { name: "journal.import.importLink" })).toHaveAttribute(
-      "href",
-      "/journal/import",
-    );
+    expect(screen.getByText("journal.import.emptyLine")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "journal.import.importLink" })).toBeNull();
   });
 
   it("renders two pending rows with facts and the pause status", () => {

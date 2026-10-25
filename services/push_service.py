@@ -216,6 +216,10 @@ TRANSACTIONAL_BELL_KINDS = frozenset({
     "artifact_ready",
     "account_sync",
     "watchlist_event",
+    # 2026-10-25 — a filing on a name the user's own unscored research note
+    # waits for (services/filing_timeline/research_check). A notice about the
+    # user's own record, not advertising; muted by its own pref row.
+    "research_filing",
 })
 
 

@@ -39,7 +39,7 @@ cd frontend && npx vitest run && npx tsc --noEmit && npm run lint && npm run bui
 | 화면 | 하는 일 | 시세 필요? |
 |---|---|---|
 | `/pre-trade` **멈춤** | 사기 전 7문항 기록. 쿨다운은 현재 **0초** (`DEFAULT_COOLDOWN_SECONDS=0`, CEO가 제거) — 지금의 마찰은 시간이 아니라 질문 자체다 | ❌ |
-| `/journal` **기록** | 기록 + behavior mirror 5종 (보유기간/회전율/집중도/물타기/손익처분) | ❌ |
+| `/journal` **기록** | 기록 + behavior mirror 6종 (보유기간/회전율/집중도/물타기/손익처분/판 뒤 재매수 — 2026-10-21 추가) | ❌ |
 | `/mirror` **거울** (홈) | 선언 페르소나 vs 관찰 페르소나(30일 9차원)의 **간극** + 드리프트 | ❌ |
 
 **온보딩은 v3 5문항 + 법적 확인이다 (2026-09-06).** 보유기간 · 매매 빈도 · 종목 수 · −10% 대응 · 기록 습관.
@@ -136,7 +136,7 @@ KIS 주문 disabled (read-only) · 한글+영문 면책 고지 · Cookie Consent
 
 ## 알림
 
-설정 → 알림은 **실제로 발신되는 것만** 노출한다. 발신자는 `app.py::_scheduled_price_alerts`(`price_52w` · `concentration`) + 월간 거울 리포트(`monthly_mirror`) + 가져오기 웹훅의 "방금 체결" 푸시(`fill_memo`, `services/fill_memo.py`).
+설정 → 알림은 **실제로 발신되는 것만** 노출한다. 발신자는 `app.py::_scheduled_price_alerts`(`price_52w` · `concentration`) + 월간 거울 리포트(`monthly_mirror`) + 가져오기 웹훅의 "방금 체결" 푸시(`fill_memo`, `services/fill_memo.py`) + 가설 다시 보기(`research_filing`, `services/filing_timeline/research_check.py`, 매일 08:20 KST — `FILINGS_ENABLED` 꺼지면 노출도 꺼짐).
 SoT = `models/user.py::NOTIFICATION_EVENT_IDS`, 노출 목록은 `visible_notification_event_ids()`. **`price_52w` 는 `MARKET_DATA_DISPLAY_ENABLED=0`(기본, 2026-09-19)이면 발신·노출 모두 꺼진다** — 벤더 시세라서. `concentration` 은 취득가 기준이라 계속 돈다. 옛 7종은 발신자가 없어 삭제 — 되살리려면 **발신자부터**.
 
 ---

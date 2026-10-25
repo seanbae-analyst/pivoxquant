@@ -43,7 +43,7 @@ describe("settings phone navigation", () => {
     window.history.replaceState(null, "", "/settings");
     render(<Probe />);
     expect(screen.getByTestId("pane").textContent).toBe("list");
-    expect(screen.getAllByRole("button")).toHaveLength(4);
+    expect(screen.getAllByRole("button")).toHaveLength(5);
 
     fireEvent.click(screen.getByTestId("settings-row-import"));
     expect(window.location.search).toBe("?s=import");

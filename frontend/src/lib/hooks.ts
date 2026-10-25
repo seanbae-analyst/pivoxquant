@@ -1,4 +1,4 @@
-import useSWR from "swr";
+import useSWR, { mutate as globalMutate } from "swr";
 import { apiFetch } from "./api";
 import { isDemoMode, demoResponseFor } from "./demo";
 import {
@@ -22,7 +22,9 @@ import type {
   ProfitLossMirrorResponse,
   TurnoverMirrorResponse,
   AveragingDownMirrorResponse,
+  RebuyMirrorResponse,
   MirrorHomeResponse,
+  ConfirmMyRulesResponse,
   PendingImportsResponse,
   ImportTokensResponse,
   ObservationNoteSource,
@@ -30,6 +32,20 @@ import type {
   ObservationNoteDeleteResponse,
   ObservationNotesResponse,
   ObservationNotesByTickerResponse,
+  DoorwayChecksResponse,
+  DoorwayCreateResponse,
+  DoorwayIntent,
+  DoorwaySummaryResponse,
+  PickFactsResponse,
+  ResearchByTickerResponse,
+  StockRecordResponse,
+  ResearchInfoSource,
+  ResearchNoteResponse,
+  ResearchNotesResponse,
+  ResearchOverviewResponse,
+  ResearchVerdict,
+  YearRecapResponse,
+  SellMomentResponse,
 } from "./types";
 
 // Exported so post-mutation handlers (e.g. portfolio refreshAll) can feed a
@@ -321,6 +337,217 @@ export async function deleteObservationNote(
   );
 }
 
+/* ── 올해의 기록 (year recap) ──────────────────────────────────────────── */
+
+/**
+ * One KST calendar year of the user's own record (routes/year_recap.py).
+ * `null` year = this year (the backend picks it, so the client clock never
+ * decides which year "this year" is).
+ */
+export function useYearRecap(year: number | null) {
+  const swr = useSWR<YearRecapResponse>(API.mirror.year(year ?? undefined), fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 60_000,
+  });
+  return { data: swr.data ?? null, isLoading: swr.isLoading, error: swr.error as Error | undefined };
+}
+
+/* ── Research notes (리서치 양식) ───────────────────────────────────────── */
+
+/* ── 내가 고른 회사들 (pick facts) ─────────────────────────────────────────── */
+
+/** Counts over the year's first buys, from numbers filed before each buy — the /mirror card. */
+export function usePickFacts() {
+  const swr = useSWR<PickFactsResponse>(API.pickFacts, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 60_000,
+  });
+  return { data: swr.data ?? null, isLoading: swr.isLoading, error: swr.error as Error | undefined };
+}
+
+/* ── 문 앞의 한 줄 (doorway pause) ──────────────────────────────────────── */
+
+/** Opens × own fills over the last `days` — the /mirror card. */
+export function useDoorwaySummary(days: 7 | 30 | 90 = 30) {
+  const swr = useSWR<DoorwaySummaryResponse>(`${API.doorway.summary}?days=${days}`, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30_000,
+  });
+  return { data: swr.data ?? null, isLoading: swr.isLoading, error: swr.error as Error | undefined, mutate: swr.mutate };
+}
+
+/**
+ * The /mirror door card (`useDoorwaySummary`, 30 s dedupe) shows counts and
+ * recent lines — re-read it after a create or delete so a deleted line does
+ * not linger there (2026-10-21).
+ */
+function revalidateDoorwaySummary(): void {
+  void globalMutate((key) => typeof key === "string" && key.startsWith(API.doorway.summary));
+}
+
+/** The web door (/pre-trade/door) — the same record the phone automation makes. */
+export async function createDoorwayCheck(body: {
+  intent: DoorwayIntent;
+  note?: string;
+  app?: string;
+}): Promise<DoorwayCreateResponse> {
+  const res = await apiFetch<DoorwayCreateResponse>(API.doorway.checks, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+  revalidateDoorwaySummary();
+  return res;
+}
+
+/** The user's own door answers, newest first — the list under the web door. */
+export function useDoorwayChecks(limit = 20) {
+  const swr = useSWR<DoorwayChecksResponse>(`${API.doorway.checks}?limit=${limit}`, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 10_000,
+  });
+  return {
+    checks: swr.data?.checks ?? [],
+    isLoading: swr.isLoading,
+    error: swr.error as Error | undefined,
+    mutate: swr.mutate,
+  };
+}
+
+export async function deleteDoorwayCheck(id: number): Promise<{ ok: boolean; deleted: number }> {
+  const res = await apiFetch<{ ok: boolean; deleted: number }>(API.doorway.check(id), { method: "DELETE" });
+  revalidateDoorwaySummary();
+  return res;
+}
+
+/** Due notes + judgment × outcome counts — what /journal/research opens on. */
+export function useResearchOverview() {
+  const swr = useSWR<ResearchOverviewResponse>(API.research.overview, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30_000,
+  });
+  return { data: swr.data ?? null, isLoading: swr.isLoading, error: swr.error as Error | undefined, mutate: swr.mutate };
+}
+
+/** The user's own research notes, newest first. */
+export function useResearchNotes(limit = 50) {
+  const swr = useSWR<ResearchNotesResponse>(`${API.research.list}?limit=${limit}`, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30_000,
+  });
+  return {
+    notes: swr.data?.notes ?? [],
+    isLoading: swr.isLoading,
+    error: swr.error as Error | undefined,
+    mutate: swr.mutate,
+  };
+}
+
+/**
+ * The latest research on ONE ticker — read on /pre-trade once a symbol is
+ * picked, so the cold reasoning sits next to the seven questions. `null`
+ * ticker disables the fetch. Read-only: the 멈춤 screen never writes one.
+ */
+/** 종목별 내 기록 — one stock's own records on one timeline (2026-10-25). */
+export function useStockRecord(ticker: string | null) {
+  const swr = useSWR<StockRecordResponse>(ticker ? API.stockRecord(ticker) : null, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30_000,
+  });
+  return { data: swr.data ?? null, error: swr.error as Error | undefined, isLoading: swr.isLoading, mutate: swr.mutate };
+}
+
+export function useResearchByTicker(ticker: string | null) {
+  const swr = useSWR<ResearchByTickerResponse>(ticker ? API.research.byTicker(ticker) : null, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30_000,
+  });
+  return { note: swr.data?.note ?? null, count: swr.data?.count ?? 0, isLoading: swr.isLoading };
+}
+
+/** Body of `POST /api/research-notes`. */
+export interface CreateResearchNoteBody {
+  ticker: string;
+  /** Optional since 2026-10-25 — stored as "" when left out. */
+  business?: string;
+  theses: string[];
+  invalidation?: string;
+  risk?: string;
+  numbers?: string;
+  info_source?: ResearchInfoSource | null;
+  review_months: 1 | 3 | 6;
+  surface?: "journal" | "portfolio" | "pre_trade";
+}
+
+export async function createResearchNote(payload: CreateResearchNoteBody): Promise<ResearchNoteResponse> {
+  return apiFetch<ResearchNoteResponse>(API.research.create, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function reviewResearchNote(
+  id: number,
+  payload: { verdicts: ResearchVerdict[]; note?: string },
+): Promise<ResearchNoteResponse> {
+  return apiFetch<ResearchNoteResponse>(API.research.review(id), {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteResearchNote(id: number): Promise<{ ok: boolean; deleted: number }> {
+  return apiFetch<{ ok: boolean; deleted: number }>(API.research.detail(id), { method: "DELETE" });
+}
+
+/* ── Sell-moment mirror (매도 순간의 거울) ─────────────────────────────── */
+
+/** The typed-sell query — `null` (or a non-positive number) disables the fetch. */
+export interface TypedSell {
+  ticker: string;
+  shares: number;
+  price: number;
+  /** The modal's "YYYY-MM-DD". */
+  date?: string;
+  currency?: "KRW" | "USD";
+}
+
+export function typedSellKey(sell: TypedSell | null): string | null {
+  if (!sell || !sell.ticker.trim()) return null;
+  if (!(sell.shares > 0) || !(sell.price > 0)) return null;
+  const q = new URLSearchParams({
+    ticker: sell.ticker.trim(),
+    shares: String(sell.shares),
+    price: String(sell.price),
+  });
+  if (sell.date) q.set("date", sell.date);
+  if (sell.currency) q.set("currency", sell.currency);
+  return `${API.sellMoment.typed}?${q.toString()}`;
+}
+
+/** A 매도 being typed in the portfolio sell modal. Read-only. */
+export function useSellMomentForTyped(sell: TypedSell | null) {
+  const swr = useSWR<SellMomentResponse>(typedSellKey(sell), fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30_000,
+    shouldRetryOnError: false,
+    keepPreviousData: true,
+  });
+  // keepPreviousData keeps the last input's answer while the new one loads —
+  // but on an error for the new input it would keep it for good, next to
+  // numbers it was not computed for (2026-10-21). An error shows nothing.
+  return { data: swr.error ? null : swr.data ?? null, isLoading: swr.isLoading };
+}
+
+/** A waiting 매도 fill in the import inbox (`/journal?pending=<id>`). */
+export function useSellMomentForPending(pendingId: number | null) {
+  const swr = useSWR<SellMomentResponse>(
+    pendingId != null ? API.sellMoment.pending(pendingId) : null,
+    fetcher,
+    { revalidateOnFocus: false, dedupingInterval: 30_000, shouldRetryOnError: false },
+  );
+  return { data: swr.data ?? null, isLoading: swr.isLoading };
+}
+
 /**
  * Import Inbox — the user's own parsed-but-unapproved fills
  * (docs/product/IMPORT_INBOX_DESIGN.md). A 404 (backend not yet wired)
@@ -403,6 +630,16 @@ export function useImportTokens() {
  *
  * Never returns a score / grade — only counts and average hold days.
  */
+/**
+ * 내 규칙 — adopt the onboarding answers as the user's own lines
+ * (POST /api/profile/rules/confirm). Through `apiFetch` for CSRF + credentials.
+ * Throws `ApiError` (409 `RULES_NOT_AVAILABLE` when there is nothing to adopt);
+ * the caller re-reads the mirror (`mutate(API.mirror.home)`) after success.
+ */
+export async function confirmMyRules(): Promise<ConfirmMyRulesResponse> {
+  return apiFetch<ConfirmMyRulesResponse>(API.profile.rulesConfirm, { method: "POST" });
+}
+
 /**
  * Mirror home (거울) — the composed 선언/관찰/트윈 read for the new home.
  * 404-safe soft-empty (returns null) so the surface degrades gracefully
@@ -648,6 +885,44 @@ export function useAveragingDownMirror() {
   };
 }
 
+/**
+ * Rebuy Mirror — names the user sold and bought again within the backend's
+ * window, compared on the user's own two prices. 1:1 with
+ * `useAveragingDownMirror`: a 404 normalises to `data === null` (calm empty
+ * state); a 5xx / network failure surfaces through `error` so the panel can
+ * render nothing — a mirror failure must NEVER take down the journal feed.
+ */
+export function useRebuyMirror() {
+  const swr = useSWR<RebuyMirrorResponse | null>(
+    API.behavior.rebuyMirror,
+    async (url: string): Promise<RebuyMirrorResponse | null> => {
+      const res = await fetch(url, { credentials: "include" });
+      if (res.status === 404) return null;
+      if (!res.ok) {
+        const err = new Error(`HTTP ${res.status}`) as Error & {
+          status?: number;
+        };
+        err.status = res.status;
+        throw err;
+      }
+      return res.json();
+    },
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 60_000,
+      keepPreviousData: true,
+      shouldRetryOnError: false,
+    },
+  );
+
+  return {
+    data: swr.data ?? null,
+    isLoading: swr.data === undefined && !swr.error,
+    error: swr.error as Error | undefined,
+    mutate: swr.mutate,
+  };
+}
+
 /* ── Broker connections (KIS read-only) ── */
 
 export interface BrokerConnectionsResponse {
@@ -717,7 +992,10 @@ export interface PortfolioSummary {
   costBasisKrw?: number;
 }
 
-export const PORTFOLIO_DEDUPE_MS = 10_000;
+// Below the 5 s market-hours poll: the poll revalidates *with* dedupe, so a
+// 10 s window swallowed every other tick and the real cadence was ~10 s +
+// latency (2026-10-22 "현황가격 업데이트가 너무 느려").
+export const PORTFOLIO_DEDUPE_MS = 4_000;
 
 /**
  * Portfolio polling (2026-10-09 perf). The 5 s market-hours poll keeps vendor

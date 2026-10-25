@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 
 /**
- * <Eyebrow/> — bronze tracked-out section label.
+ * <Eyebrow/> — bronze section label (plain text since 2026-10-22).
  *
  * Used to introduce sections / hero blocks across the landing surface.
  * Replaces the inline pattern:
@@ -16,9 +16,9 @@ import type { CSSProperties, ReactNode } from "react";
  */
 interface EyebrowProps {
   children: ReactNode;
-  /** Render the leading bronze hairline (default: true). */
+  /** @deprecated 2026-10-22 — hairlines retired; accepted, draws nothing. */
   withDashLeft?: boolean;
-  /** Render a trailing bronze hairline (default: false). */
+  /** @deprecated 2026-10-22 — hairlines retired; accepted, draws nothing. */
   withDashRight?: boolean;
   className?: string;
   style?: CSSProperties;
@@ -26,40 +26,28 @@ interface EyebrowProps {
 
 export function Eyebrow({
   children,
-  withDashLeft = true,
-  withDashRight = false,
   className = "",
   style,
 }: EyebrowProps) {
+  // 2026-10-22: no hairline, no uppercase — the 2026-10-11 refresh retired
+  // ruled kickers and tracked capitals (frontend/CLAUDE.md). The dash props
+  // stay accepted so callers need not change; they draw nothing.
   return (
     <div
-      className={`inline-flex items-center gap-2.5 ${className}`.trim()}
+      className={`inline-flex items-center ${className}`.trim()}
       style={style}
     >
-      {withDashLeft ? (
-        <span
-          aria-hidden
-          className="h-px w-7"
-          style={{ backgroundColor: "rgba(var(--pq-bronze-rgb), 0.7)" }}
-        />
-      ) : null}
       <span
-        className="font-serif uppercase"
         style={{
           color: "var(--pq-bronze)",
-          fontSize: "var(--pq-text-eyebrow)",
+          fontSize: "var(--pq-text-body-sm)",
+          fontWeight: 500,
           letterSpacing: "var(--pq-track-eyebrow)",
         }}
       >
         {children}
       </span>
-      {withDashRight ? (
-        <span
-          aria-hidden
-          className="h-px w-7"
-          style={{ backgroundColor: "rgba(var(--pq-bronze-rgb), 0.7)" }}
-        />
-      ) : null}
     </div>
   );
 }
+
