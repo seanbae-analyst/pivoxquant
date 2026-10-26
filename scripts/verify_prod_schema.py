@@ -23,10 +23,12 @@ PivoxQuant prod runs on a hybrid migration strategy:
   1. ``db.create_all()`` creates tables on first boot from SQLAlchemy models.
   2. ``_do_migrations()`` in app.py runs idempotent ``ADD COLUMN`` guards
      for every model column added after the initial baseline.
-  3. ``flask db upgrade`` (alembic) is best-effort — fails silently on a
-     prod DB that was created via path (1) because alembic_version table
-     doesn't exist and early migrations (003/004/005/007/...) are not
-     idempotent ``op.create_table`` calls that error on existing tables.
+  3. ``app.py::_sync_alembic_version()`` then keeps the alembic record honest
+     (2026-10-26): it stamps ``alembic_version`` at head on a DB that path (1)
+     built, and runs ``alembic upgrade head`` when the record is behind.
+     Migrations from 050 on are Inspector-idempotent, so they no-op where the
+     boot path already did the work. Nothing on Render runs ``flask db
+     upgrade`` on its own; before this step prod sat at 049 for weeks.
 
 This script is the canonical check that — regardless of which path
 populated the schema — every column the running code reads/writes is
