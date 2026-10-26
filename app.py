@@ -619,6 +619,7 @@ def _run_migrations(app):
             ))
             try:
                 _do_migrations()
+                _sync_alembic_version(app)
             except Exception:
                 # Leave the advisory lock release to `finally`; re-raise so
                 # the caller can log the root cause and fail fast if needed.
@@ -634,6 +635,116 @@ def _run_migrations(app):
     else:
         # SQLite — single process, no contention possible.
         _do_migrations()
+        _sync_alembic_version(app)
+
+
+# ── alembic 기록 동기화 (2026-10-26) ─────────────────────────────────────
+# Render 는 Procfile 의 ``release: flask db upgrade`` 를 읽지 않는다(Heroku 전용)
+# 그래서 prod 의 alembic_version 은 2026-09-01 의 stamp(049) 에서 멈춰 있었다 —
+# 스키마는 create_all() + _do_migrations() 가 부팅마다 맞췄지만 기록은 아니었다.
+# alembic_version 은 앱 롤(pivox_app)이 소유해 그 롤만 고칠 수 있으니 여기서 한다.
+#
+# alembic 은 version_num 을 VARCHAR(32) 로 만든다(바꿀 옵션이 없다). 리비전 id
+# 060·061·062 는 33~38자라 PostgreSQL 에서 ``upgrade`` 가 060 에서
+# StringDataRightTruncation 으로 죽었다 (2026-10-26 리허설 실측 — SQLite 는 길이를
+# 재지 않아 로컬에선 보이지 않았다). 부팅이 128 로 넓힌다.
+ALEMBIC_VERSION_COLUMN_LENGTH = 128
+# 테이블 잠금을 이만큼만 기다린다 (migrations/env.py 가 SET LOCAL 로 건다). 다른
+# 연결이 트랜잭션을 연 채 두면 DDL 이 영원히 멈추는 대신 이 시간 뒤 실패해 로그로
+# 남고 부팅은 계속된다.
+ALEMBIC_LOCK_TIMEOUT = "10s"
+_alembic_head_cache: dict = {}
+
+
+def _alembic_db_versions(engine):
+    """``alembic_version`` 의 행들. 테이블이 없으면 None (create_all 로 세운 DB)."""
+    from sqlalchemy import inspect as _inspect
+
+    if not _inspect(engine).has_table("alembic_version"):
+        return None
+    with engine.connect() as conn:
+        return [r[0] for r in conn.execute(text("SELECT version_num FROM alembic_version"))]
+
+
+def _widen_alembic_version_column(engine) -> None:
+    """PostgreSQL 전용 — ``alembic_version.version_num`` 이 128 보다 좁으면 넓힌다."""
+    if engine.dialect.name != "postgresql":
+        return
+    with engine.begin() as conn:
+        conn.execute(text(f"SET LOCAL lock_timeout = '{ALEMBIC_LOCK_TIMEOUT}'"))
+        length = conn.execute(text(
+            "SELECT character_maximum_length FROM information_schema.columns "
+            "WHERE table_schema = 'public' AND table_name = 'alembic_version' "
+            "AND column_name = 'version_num'"
+        )).scalar()
+        if length is not None and length < ALEMBIC_VERSION_COLUMN_LENGTH:
+            conn.execute(text(
+                "ALTER TABLE alembic_version ALTER COLUMN version_num "
+                f"TYPE VARCHAR({ALEMBIC_VERSION_COLUMN_LENGTH})"
+            ))
+            logger.info("alembic: version_num widened to VARCHAR(%d)",
+                        ALEMBIC_VERSION_COLUMN_LENGTH)
+
+
+def _sync_alembic_version(app) -> None:
+    """부팅 때 alembic 기록을 코드와 맞춘다 — ``_do_migrations()`` 뒤, 같은 lock 안.
+
+    - ``alembic_version`` 이 없으면(create_all 로 세운 DB) head 로 stamp 한다 —
+      CLAUDE.md 함정 1 의 수동 ``flask db stamp head`` 가 자동이 된다.
+    - head 보다 뒤면 ``upgrade head``. 050 부터의 리비전은 Inspector 로 멱등하다 —
+      create_all 이 먼저 돌아 테이블·컬럼이 이미 있을 수 있어서다. 새 리비전도
+      그래야 한다.
+    - 실패는 ERROR 로 남기고 부팅은 계속한다: 스키마 자체는 create_all +
+      _do_migrations 가 이미 맞췄고, 기록은 다음 부팅에 다시 시도한다.
+
+    ``ALEMBIC_SYNC_ON_BOOT=0`` 이면 아무것도 하지 않는다.
+    """
+    if os.environ.get("ALEMBIC_SYNC_ON_BOOT", "1") != "1":
+        logger.info("alembic: sync skipped (ALEMBIC_SYNC_ON_BOOT=0)")
+        return
+    migrate_ext = app.extensions.get("migrate")
+    if migrate_ext is None:
+        return
+    try:
+        from alembic import command
+        from alembic.script import ScriptDirectory
+
+        config = migrate_ext.migrate.get_config()
+        config.attributes["skip_logging_config"] = True  # migrations/env.py 가 읽는다
+        head = _alembic_head_cache.get(migrate_ext.directory)
+        if head is None:
+            head = ScriptDirectory.from_config(config).get_current_head()
+            _alembic_head_cache[migrate_ext.directory] = head
+        if head is None:
+            return
+        # _do_migrations() 끝의 FX 백필이 db.session 으로 positions 를 읽고, 갱신할
+        # 행이 없으면 commit 하지 않아 트랜잭션이 열린 채 남는다. 그 ACCESS SHARE
+        # 잠금이 살아 있으면 056 의 ALTER TABLE positions 가 영원히 기다린다 —
+        # 2026-10-26 리허설에서 실제로 멈췄다. DDL 전에 세션을 돌려보낸다.
+        db.session.remove()
+        config.attributes["lock_timeout"] = ALEMBIC_LOCK_TIMEOUT
+        _widen_alembic_version_column(db.engine)
+        current = _alembic_db_versions(db.engine)
+        if current is None:
+            command.stamp(config, head)
+            _widen_alembic_version_column(db.engine)
+            logger.info("alembic: fresh schema stamped at %s", head)
+        elif current == [head]:
+            logger.info("alembic: at head %s", head)
+        elif len(current) != 1:
+            logger.error("alembic: %d version rows %s — expected one, leaving it alone",
+                         len(current), current)
+        else:
+            logger.info("alembic: %s → upgrading to %s", current[0], head)
+            command.upgrade(config, head)
+            logger.info("alembic: now at %s", head)
+    except Exception:
+        logger.error(
+            "alembic: sync failed — alembic_version is unchanged. The schema itself is "
+            "kept by create_all()/_do_migrations(); fix the migration and redeploy, or run "
+            "`flask db upgrade` by hand. ALEMBIC_SYNC_ON_BOOT=0 disables this step.",
+            exc_info=True,
+        )
 
 
 def _enable_rls_on_owned_tables(engine):

@@ -15,9 +15,13 @@
 #   4. Deploy. First build takes a few minutes (the Dockerfile installs
 #      requirements.txt from scratch).
 #
-# The database is NOT defined here. It lives on Supabase
-# (project `pivoxquant`, ap-northeast-2), already schema-loaded and stamped at
-# alembic head. DATABASE_URL is pasted in as a secret.
+# The database is NOT defined here. It lives on Supabase (project
+# `pivoxquant`, ap-northeast-2); DATABASE_URL is pasted in as a secret.
+# Schema: the app keeps it at boot — db.create_all() + app.py::_do_migrations()
+# for the tables and columns, then _sync_alembic_version() stamps or upgrades
+# the alembic record (2026-10-26; it had sat at 049 since the 2026-09-01
+# stamp). Nothing else runs migrations: Render ignores the Procfile `release:`
+# line, and preDeployCommand is paid-plan only (render.com/docs/deploys).
 
 services:
   - type: web

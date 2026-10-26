@@ -25,9 +25,9 @@ permissions:
 
 ## 전제 (실측 2026-09-21)
 - prod = Supabase Postgres, **session pooler 필수** (`aws-0-ap-northeast-2.pooler.supabase.com:5432`, 롤 `pivox_app`). 로컬 dev/test = SQLite.
-- 최신 리비전 `053_age_self_declaration` (down_revision `052_import_tokens`). `migrations/versions/*.py` 는 **삭제 금지** + 동결 파일 (`.claude/frozen_files.yaml`, escape 토큰 `migration-guard approved`).
-- **빈 DB 를 alembic 으로 세우지 마라** — `flask db upgrade` 는 004 에서 죽는다. 앱 1회 부팅(`db.create_all()`) 후 반드시 `./venv/bin/python -m flask db stamp head` (CLAUDE.md 함정 1).
-- prod 스키마 반영 경로는 alembic 이 아니라 **부팅 시 `db.create_all()` + `app.py::_do_migrations()` ADD COLUMN 가드** 다. 기존 테이블에 컬럼을 더하면 `_do_migrations` 에도 넣어야 prod 에 생긴다 (함정 13). Render 에는 preDeploy 단계가 없고 GitHub Actions 배포 워크플로우도 없다.
+- head 는 `./venv/bin/python -m flask db heads` 로 읽어라 — 하드코딩하지 않는다 (2026-10-26 현재 `069_doorway_opened_at`). `migrations/versions/*.py` 는 **삭제 금지** + 동결 파일 (`.claude/frozen_files.yaml`, escape 토큰 `migration-guard approved`).
+- **빈 DB 를 alembic 으로 세우지 마라** — `flask db upgrade` 는 004 에서 죽는다. 앱 1회 부팅이면 `db.create_all()` 이 스키마를 만들고 `app.py::_sync_alembic_version()` 이 head 로 stamp 한다 (CLAUDE.md 함정 1, 2026-10-26 자동화).
+- prod 스키마 반영 경로는 **부팅 시 `db.create_all()` + `app.py::_do_migrations()` ADD COLUMN 가드** 다. 기존 테이블에 컬럼을 더하면 `_do_migrations` 에도 넣어야 prod 에 생긴다 (함정 13). 그 뒤 `_sync_alembic_version()` 이 alembic 기록을 맞춘다 — 뒤처져 있으면 `upgrade head` 를 돌리므로 **리비전은 Inspector 로 멱등**해야 하고(create_all 이 먼저 돈다) id 는 **128자 이하**(alembic 의 VARCHAR(32) 는 부팅이 넓힌다). Render 는 Procfile `release:` 를 읽지 않고 preDeploy 는 유료 플랜 전용이라 쓰지 않는다. GitHub Actions 배포 워크플로우도 없다.
 - CI `alembic-head-guard.yml` 이 `flask db heads` 단일 head 를 강제한다.
 
 ## 핵심 책임
@@ -35,7 +35,7 @@ permissions:
 ### 1. Alembic head linearity 검증
 - `migrations/versions/*.py` 의 `revision` + `down_revision` 체인이 **single linear chain** 인지
 - branching head 가 있으면 즉시 flag
-- 새 migration 의 `down_revision` 이 정확한 직전 head (`053_age_self_declaration`) 인지
+- 새 migration 의 `down_revision` 이 정확한 직전 head (`flask db heads` 가 찍는 것) 인지
 
 ### 2. Dialect 호환성 (SQLite dev/test ↔ PostgreSQL prod)
 - **금기 패턴**: `BigInteger primary_key=True autoincrement=True` (SQLite 비호환) · PostgreSQL 전용 타입 (`JSONB`, `ARRAY`, `tsvector`) · `BIGSERIAL` SQL — `db.Integer primary_key=True` 가 안전
@@ -66,7 +66,7 @@ permissions:
 5. SQLite ↔ PostgreSQL dialect 호환성
 6. **prod DB `alembic_version` 비교 (필수 — v44.7 사고 재발 방지)**:
    - `.env` 의 `DATABASE_URL` 로 `psql "$DATABASE_URL" -c "SELECT version_num FROM alembic_version"` 실행, 코드 head 와 비교
-   - **divergence 발견 시 P0 alert** (CEO 즉시 콜) — 해소는 `flask db stamp head` (upgrade 아님, 함정 1)
+   - **divergence 발견 시 P0 alert** (CEO 즉시 콜) — 2026-10-26 부터는 배포 부팅이 `_sync_alembic_version()` 으로 맞춘다. 그래도 어긋나 있으면 Render 로그의 `alembic:` 줄(실패 사유)을 먼저 읽어라
    - 신규 컬럼의 prod 반영 경로 grep: `models/` 정의 + `app.py::_do_migrations`. 기존 테이블 컬럼 추가인데 `_do_migrations` 에 없으면 **BLOCK**
 7. **PASS / FAIL / BLOCK** 판정 + 구체적 라인 + 수정 방안
 

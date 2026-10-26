@@ -11,14 +11,22 @@
 `migrations/env.py` 는 Flask 앱을 import 해야 동작하기 때문이다 — alembic 이
 시작하기도 전에 create_all 이 전부 만들어 놓는다.
 
-**스키마의 SoT 는 ORM 모델**이고 alembic 은 이력이다. 빈 DB 순서:
+**스키마의 SoT 는 ORM 모델**이고 alembic 은 이력이다. 빈 DB 는 앱을 DATABASE_URL 만
+걸고 **1회 부팅**하면 끝이다 — create_all 이 스키마를 만들고, 부팅 끝의
+`app.py::_sync_alembic_version()` 이 `alembic_version` 을 head 로 stamp 한다
+(2026-10-26 자동화). 그 전엔 `./venv/bin/python -m flask db stamp head` 를 손으로
+쳐야 했고, prod 는 2026-09-01 의 stamp(049) 에서 멈춰 있었다 — Render 는 Procfile 의
+`release:` 줄을 읽지 않고, preDeployCommand 는 유료 플랜 전용이다.
 
-```bash
-# ① 앱을 DATABASE_URL 만 걸고 1회 부팅 (create_all 이 스키마 생성)
-# ② 반드시 stamp — 빼먹으면 alembic_version 이 없어 이후 마이그레이션이
-#    001 부터 다시 돌다 영구히 깨진다
-./venv/bin/python -m flask db stamp head
-```
+같은 함수가 기록이 head 보다 뒤면 `upgrade head` 를 돈다. 그래서 규칙 둘:
+- **새 리비전은 Inspector 로 멱등**하게 쓴다 (050 부터 전부 그렇다) — create_all 이
+  먼저 돌아 테이블·컬럼이 이미 있을 수 있다.
+- 리비전 id 는 **128자 이하**. alembic 이 만드는 `version_num` 은 VARCHAR(32) 라
+  060·061·062(33~38자) 에서 PostgreSQL `upgrade` 가 죽었다(2026-10-26 리허설 실측) —
+  부팅이 128 로 넓힌다. SQLite 는 길이를 안 재서 로컬에선 보이지 않는다.
+
+실패하면 ERROR 로그만 남기고 부팅은 계속한다(스키마는 이미 맞다). Render 로그의
+`alembic:` 줄이 그날의 결과다. `ALEMBIC_SYNC_ON_BOOT=0` 으로 끌 수 있다.
 
 ### 2. `.env` 가 `override=True` 다
 

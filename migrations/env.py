@@ -1,7 +1,9 @@
 import logging
+import re
 from logging.config import fileConfig
 
 from flask import current_app
+from sqlalchemy import text
 
 from alembic import context
 
@@ -11,7 +13,12 @@ config = context.config
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
-fileConfig(config.config_file_name)
+#
+# Skipped when the running app drives alembic in-process at boot
+# (app.py::_sync_alembic_version sets the attribute): fileConfig() would
+# replace the process-wide logging config and disable the app's own loggers.
+if not config.attributes.get("skip_logging_config"):
+    fileConfig(config.config_file_name)
 logger = logging.getLogger('alembic.env')
 
 
@@ -103,6 +110,15 @@ def run_migrations_online():
         )
 
         with context.begin_transaction():
+            # Boot-time run (app.py::_sync_alembic_version): bound the wait for
+            # table locks, so a transaction left open elsewhere fails this run
+            # (logged, boot goes on) instead of hanging the deploy. SET LOCAL
+            # ends with this transaction, so the pooled connection stays clean.
+            lock_timeout = config.attributes.get("lock_timeout")
+            if lock_timeout and connection.dialect.name == "postgresql":
+                if not re.fullmatch(r"\d+(ms|s|min)", str(lock_timeout)):
+                    raise ValueError(f"lock_timeout must look like '10s', got {lock_timeout!r}")
+                connection.execute(text(f"SET LOCAL lock_timeout = '{lock_timeout}'"))
             context.run_migrations()
 
 

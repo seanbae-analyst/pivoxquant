@@ -91,7 +91,7 @@ cd frontend && npx vitest run && npx tsc --noEmit && npm run lint && npm run bui
 
 ## ⚠️ 함정 — 한 줄 요약 (전문과 근거: `docs/claude/traps.md`, 번호 동일)
 
-1. **빈 DB 를 alembic 으로 세우지 마라** — `flask db upgrade` 는 004 에서 죽는다. 앱을 1회 부팅(create_all) 후 반드시 `./venv/bin/python -m flask db stamp head`.
+1. **빈 DB 를 alembic 으로 세우지 마라** — `flask db upgrade` 는 004 에서 죽는다. 앱을 1회 부팅하면 끝 — create_all 이 스키마를 만들고 부팅이 `alembic_version` 을 stamp/upgrade 한다(`app.py::_sync_alembic_version`, 2026-10-26). 그래서 **새 리비전은 Inspector 로 멱등**해야 하고 id 는 128자 이하.
 2. **`.env` 가 `override=True`** — 셸의 `RUN_SCHEDULER=0` 도 덮인다. prod 재현은 `.env` 를 잠시 치우고.
 3. `.env.local` 의 `NEXT_PUBLIC_DEMO_MODE=1` 이면 백엔드가 아니라 fixture 를 본다.
 4. **Template Hardcoding Guard 는 방어선 0개** — 그 green 은 증거가 아니다. 살아있는 legal 스위트:
