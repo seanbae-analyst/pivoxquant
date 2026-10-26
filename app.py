@@ -523,6 +523,12 @@ def create_app(
             name="cache-warmup",
         ).start()
 
+    # 한국 공시 인증키 자가진단 — 부팅 로그 한 줄 (2026-10-26). OpenDART 는 틀린
+    # 키에도 HTTP 200 으로 거절문만 주어 화면에선 공시가 조용히 비었다. 키가
+    # 있으면 요청 1회를 데몬 스레드로, 없으면 그 사실만 적는다.
+    if app.config.get("FILINGS_ENABLED") and not app.config.get("TESTING"):
+        _start_dart_key_check()
+
     # Background scheduler — opt-in to avoid duplicate execution under
     # multi-worker gunicorn (each worker would otherwise spin up its own
     # scheduler, causing weekly_memo / refresh jobs to fire N times).
@@ -1381,6 +1387,23 @@ def _do_migrations():
     except Exception:
         logger.debug("silent-fallback: _do_migrations", exc_info=True)
         pass
+
+def _log_dart_key_check():
+    """``dart: 인증키 OK`` / ``dart: status 010: 등록되지 않은 인증키입니다 — …`` 한 줄."""
+    from services.filing_timeline import dart
+
+    ok, line = dart.check_key()
+    (logger.info if ok else logger.warning)("dart: %s", line)
+
+
+def _start_dart_key_check():
+    from services.filing_timeline import dart
+
+    if not dart.api_key():
+        logger.info("dart: DART_API_KEY 없음 — 한국 공시는 꺼져 있습니다 (Render 환경변수에 넣으면 켜집니다)")
+        return
+    threading.Thread(target=_log_dart_key_check, daemon=True, name="dart-key-check").start()
+
 
 def _populate_cache(app):
     """Warm the signal cache for currently-held tickers.
