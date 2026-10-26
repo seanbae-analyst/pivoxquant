@@ -387,7 +387,8 @@ function revalidateDoorwaySummary(): void {
 
 /** The web door (/pre-trade/door) — the same record the phone automation makes. */
 export async function createDoorwayCheck(body: {
-  intent: DoorwayIntent;
+  /** "open" = the app-open signal the web door sends when an automation opened it. */
+  intent: DoorwayIntent | "open";
   note?: string;
   app?: string;
 }): Promise<DoorwayCreateResponse> {

@@ -39,9 +39,9 @@ const CX = 150;
 const CY = 158;
 const R = 100;
 const LABEL_R = 114;
-const LABEL_SIZE = 11;
-const VALUE_SIZE = 10;
-const LINE = 13;
+const LABEL_SIZE = 12;
+const VALUE_SIZE = 11.5;
+const LINE = 14;
 
 /** "선언한 위험 감내" → ["선언한", "위험 감내"]: split at the space nearest
  *  the middle; short labels stay on one line. */

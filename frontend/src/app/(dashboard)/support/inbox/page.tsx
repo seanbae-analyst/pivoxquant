@@ -119,7 +119,7 @@ function EmptyState() {
       <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
                 <Link
           href="/support/contact"
-          className="inline-flex items-center gap-2 rounded-[var(--pq-radius-card)] border px-5 py-2.5 font-mono text-pq-caption uppercase tracking-[0.01em] transition-colors hover:bg-[var(--pq-card-veil-strong)]"
+          className="inline-flex min-h-[44px] items-center gap-2 rounded-[var(--pq-radius-card)] border px-5 py-2.5 font-mono text-pq-caption uppercase tracking-[0.01em] transition-colors hover:bg-[var(--pq-card-veil-strong)]"
           style={{ borderColor: "var(--pq-ivory-line)", color: "var(--pq-ivory-soft)" }}
         >
           1:1 문의하기

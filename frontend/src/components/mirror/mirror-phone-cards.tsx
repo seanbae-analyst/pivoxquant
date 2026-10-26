@@ -119,7 +119,7 @@ function GapCard({ data }: { data: MirrorHomeResponse }) {
 
       <DriftChip data={data} className="mt-5" />
 
-      <p className="mt-5 text-[11.5px] leading-relaxed" style={{ color: DIM }}>
+      <p className="mt-5 text-[12px] leading-relaxed" style={{ color: DIM }}>
         ↑↓ = 최근 30일이 선언보다 높게·낮게 관찰된 방향 · %p = 선언에서 벗어난 정도
       </p>
     </section>

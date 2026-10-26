@@ -35,7 +35,7 @@ export function LastSyncNote({
       role="status"
       data-testid="last-sync-note"
       className={`text-[12px] ${className}`.trim()}
-      style={{ color: "rgba(var(--pq-ivory-rgb), 0.45)", lineHeight: 1.5 }}
+      style={{ color: "var(--pq-ivory-faint)", lineHeight: 1.5 }}
     >
       마지막 동기화 {formatLastSync(syncedAt, sameDay)} · 최신 기록을 불러오는 중
     </p>

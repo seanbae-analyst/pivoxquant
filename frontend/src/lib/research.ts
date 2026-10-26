@@ -59,3 +59,9 @@ export function kstDateOf(isoUtc: string | null | undefined): string {
   if (Number.isNaN(t)) return "";
   return new Date(t + 9 * 3600_000).toISOString().slice(0, 10);
 }
+
+/** A ticker symbol, not a typed name — the server's ``services.imports.TICKER_RE``
+ *  (``^[A-Z0-9][A-Z0-9.-]{0,19}$``) on the upper-cased value. */
+export function looksLikeTicker(value: string | null | undefined): boolean {
+  return /^[A-Z0-9][A-Z0-9.-]{0,19}$/.test((value ?? "").trim().toUpperCase());
+}

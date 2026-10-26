@@ -304,7 +304,8 @@ export function NotificationDropdown() {
         {unread > 0 && (
           <span
             className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 font-mono text-pq-eyebrow font-semibold"
-            style={{ background: "var(--pq-bronze)", color: "var(--pq-ivory)" }}
+            // Ink on bronze (7.3:1) — ivory on bronze read at 2.45:1.
+            style={{ background: "var(--pq-bronze)", color: "var(--pq-ink)" }}
           >
             {unread > 99 ? "99+" : unread}
           </span>

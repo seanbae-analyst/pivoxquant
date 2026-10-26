@@ -151,6 +151,38 @@ _DATE_PATTERNS = (
 )
 _TIME_ONLY = re.compile(r"(?<![\d:])(?P<H>\d{1,2}):(?P<M>\d{2})(?::(?P<S>\d{2}))?(?![\d:])")
 
+# 오전/오후 · AM/PM next to a printed time (2026-10-21). Korean broker texts
+# and Excel time cells print a 12-hour clock ("오후 2:05:00"); read without the
+# marker, a 14:05 fill became 02:05 — and since dedupe compares two printed
+# times (2026-10-15), the same fill pasted once as "14:05" and once as
+# "오후 2:05" was stored twice.
+_MERIDIEM_BEFORE = re.compile(r"(?:(오전|오후)|(?<![A-Za-z])(AM|PM|A\.M\.|P\.M\.))\s*$", re.IGNORECASE)
+_MERIDIEM_AFTER = re.compile(r"^\s*(AM|PM|A\.M\.|P\.M\.)(?![A-Za-z])", re.IGNORECASE)
+
+
+def _meridiem(text: str, start: int, end: int) -> str | None:
+    """``"am"`` / ``"pm"`` when a marker sits right before ``text[start:end]``
+    (오후 2:05 · PM 2:05) or right after it (2:05 PM), else None."""
+    m = _MERIDIEM_BEFORE.search(text[max(0, start - 6):start])
+    mark = (m.group(1) or m.group(2)) if m else None
+    if mark is None:
+        a = _MERIDIEM_AFTER.match(text[end:end + 7])
+        mark = a.group(1) if a else None
+    if mark is None:
+        return None
+    return "pm" if mark in ("오후",) or mark.upper().startswith("P") else "am"
+
+
+def meridiem_hour(text: str, start: int, end: int, hour: int) -> int:
+    """The 24-hour value of ``hour`` printed at ``text[start:end]``. A printed
+    13~23 is already 24-hour (오후 14:05) and stays."""
+    mark = _meridiem(text, start, end)
+    if mark == "pm" and hour < 12:
+        return hour + 12
+    if mark == "am" and hour == 12:
+        return 0
+    return hour
+
 
 def parse_datetime(value, time_value=None) -> datetime | None:
     """Parse a date (+ optional separate time) into a naive datetime.
@@ -186,15 +218,29 @@ def parse_datetime_has_time(value, time_value=None) -> tuple[datetime | None, bo
                 continue
             g = m.groupdict()
             year = int(g["y"]) if g.get("y") else utcnow_naive().year
+            hour = int(g["H"] or 0)
+            if g.get("H") is not None:
+                hour = meridiem_hour(s, m.start("H"), m.end(), hour)
             try:
                 dt = datetime(
                     year, int(g["m"]), int(g["d"]),
-                    int(g["H"] or 0), int(g["M"] or 0), int(g["S"] or 0),
+                    hour, int(g["M"] or 0), int(g["S"] or 0),
                     int((g.get("f") or "0").ljust(6, "0")),
                 )
             except ValueError:
                 return None, False
             has_time = g.get("H") is not None
+            if not has_time:
+                # "2026-09-01 오후 2:05:00" — the marker keeps the date pattern
+                # from taking the time; read it only with a marker beside it.
+                rest = s[m.end():]
+                tm = _TIME_ONLY.search(rest)
+                if tm and _meridiem(rest, tm.start(), tm.end()):
+                    h = meridiem_hour(rest, tm.start(), tm.end(), int(tm.group("H")))
+                    mi, se = int(tm.group("M")), int(tm.group("S") or 0)
+                    if h < 24 and mi < 60 and se < 60:
+                        dt = dt.replace(hour=h, minute=mi, second=se)
+                        has_time = True
             break
         if dt is None:
             return None, False
@@ -225,7 +271,7 @@ def _parse_time(value) -> tuple[int, int, int] | None:
     se = int(m.group("S") or 0)
     if h > 23 or mi > 59 or se > 59:
         return None
-    return (h, mi, se)
+    return (meridiem_hour(str(value), m.start(), m.end(), h), mi, se)
 
 
 _NOT_A_FILL = re.compile(r"취소|정정|환전")
@@ -346,6 +392,7 @@ __all__ = [
     "mask_sensitive",
     "parse_number",
     "parse_datetime",
+    "meridiem_hour",
     "parse_datetime_has_time",
     "parse_datetime_tz",
     "amount_ok",

@@ -34,3 +34,18 @@ describe("fill cards: the times sign", () => {
     expect(prices).not.toContain(359000);
   });
 });
+
+describe("fill cards: 오전/오후 next to the clock (2026-10-21)", () => {
+  it("reads 오후 02:05 as 14:05, and leaves a 24-hour clock alone", () => {
+    y = 0;
+    const words = [
+      ...line(["체결내역", undefined]),
+      ...line(["2026.09.25", "2026.09.25"]),
+      ...line(["대한항공", undefined], ["매도", undefined], ["20", "20"], ["주", undefined], ["×", undefined], ["24,350", "24,350"]),
+      ...line(["오후", undefined], ["02:05", "02:05"], ["487,000", "487,000"], ["원", undefined]),
+    ];
+    const { rows } = parseFillScreen(words);
+    expect(rows.map((r) => r.time?.value)).toContain("14:05");
+    expect(rows.map((r) => r.time?.value)).not.toContain("02:05");
+  });
+});

@@ -313,3 +313,57 @@ describe("<ObservationNoteComposer /> — ticker dedupe", () => {
     expect(screen.getByText("종목 · 선택 (1/5)")).toBeTruthy();
   });
 });
+
+describe("<ObservationNoteComposer /> — phone fold (2026-10-25)", () => {
+  function mockViewport(phone: boolean) {
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn((query: string) => ({
+        matches: query.includes("max-width") ? phone : false,
+        media: query,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      })),
+    );
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("on a phone shows only the line to write in until it is touched", async () => {
+    mockViewport(true);
+    const user = userEvent.setup();
+    render(<ObservationNoteComposer source="journal" />);
+
+    const textarea = screen.getByLabelText("관찰 노트 본문") as HTMLTextAreaElement;
+    expect(textarea.rows).toBe(3);
+    expect(screen.queryByLabelText("종목 검색")).toBeNull();
+    expect(screen.queryByLabelText("태그 입력")).toBeNull();
+    expect(screen.queryByRole("button", { name: "기록" })).toBeNull();
+
+    await user.click(textarea);
+    expect(textarea.rows).toBe(5);
+    expect(screen.getByLabelText("종목 검색")).toBeTruthy();
+    expect(screen.getByLabelText("태그 입력")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "기록" })).toBeDisabled();
+  });
+
+  it("opens straight away when a ticker is handed in", () => {
+    mockViewport(true);
+    render(<ObservationNoteComposer source="journal" defaultTickers={["005930.KS"]} />);
+    expect(screen.getByLabelText("005930.KS 빼기")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "기록" })).toBeTruthy();
+  });
+
+  it("the compact /portfolio host and a desktop width never fold", () => {
+    mockViewport(true);
+    const { unmount } = render(<ObservationNoteComposer source="portfolio" compact />);
+    expect(screen.getByRole("button", { name: "기록" })).toBeTruthy();
+    unmount();
+
+    mockViewport(false);
+    render(<ObservationNoteComposer source="journal" />);
+    expect(screen.getByRole("button", { name: "기록" })).toBeTruthy();
+  });
+});

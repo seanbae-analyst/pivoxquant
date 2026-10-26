@@ -382,18 +382,23 @@ export interface ResearchOverviewResponse {
 
 /** The answer at the door. Lowercase data values; screen words are added here. */
 export type DoorwayIntent = "look" | "buy" | "sell";
+/** A stored row at the door: an answer, or "open" — the app-open signal sent
+ *  before the question arrived and no answer followed (yet). 2026-10-26. */
+export type DoorwayRowIntent = DoorwayIntent | "open";
 /** look → traded | none · buy/sell → as_said | other | none. */
 export type DoorwayOutcome = "traded" | "as_said" | "other" | "none";
 
 export interface DoorwayCheck {
   id: number;
-  intent: DoorwayIntent;
+  intent: DoorwayRowIntent;
   ticker: string | null;
   name: string | null;
   note: string | null;
   app: string | null;
   source: "automation" | "web";
   created_at: string | null;
+  /** When the app-open signal came (null = an answer that came alone). */
+  opened_at?: string | null;
 }
 
 export interface DoorwayCreateResponse {
@@ -408,8 +413,12 @@ export interface DoorwayCreateResponse {
 /** `doorway` in GET /api/mirror-home/year — one year of door answers. */
 export interface YearRecapDoorway {
   total: number;
-  intents: Record<DoorwayIntent, number>;
+  intents: Record<DoorwayIntent, number> & { open?: number };
   look: { n: number; traded: number };
+  /** Opens with no answer (app-open signal only), 2026-10-26. */
+  unanswered?: { n: number; traded: number };
+  /** First app-open signal — null: `total` counts answers, not opens. */
+  opens_since?: string | null;
   said: { buy: DoorwaySaidCounts; sell: DoorwaySaidCounts };
   not_happened: { n: number; later: number; never: number; open: number };
   fills: { total: number; through_door: number };
@@ -434,7 +443,7 @@ export interface DoorwaySaidCounts {
 export interface DoorwayRecent {
   id: number | null;
   at: string | null;
-  intent: DoorwayIntent;
+  intent: DoorwayRowIntent;
   ticker: string | null;
   name: string | null;
   note: string | null;
@@ -449,9 +458,14 @@ export interface DoorwaySummaryResponse {
   follow_minutes: number;
   later_days: number;
   first_check_at: string | null;
+  /** First app-open signal (2026-10-26). Null → `total` is the number of
+   *  answers; set → it is the number of opens on the signalling phone. */
+  opens_since?: string | null;
   total: number;
-  intents: Record<DoorwayIntent, number>;
+  intents: Record<DoorwayIntent, number> & { open?: number };
   look: { n: number; traded: number };
+  /** Opens with no answer (app-open signal only). */
+  unanswered?: { n: number; traded: number };
   said: { buy: DoorwaySaidCounts; sell: DoorwaySaidCounts };
   not_happened: { n: number; later: number; never: number; open: number };
   fills: { total: number; through_door: number };
@@ -1373,7 +1387,8 @@ export interface YearRecapResponse {
       within: number;
       outside: number;
     } | null;
-    holding: { min_days: number; sells: number; sooner: number } | null;
+    /** sooner_label — the my_rules wording ("산 날 판 것"), 2026-10-21. */
+    holding: { min_days: number; sells: number; sooner: number; sooner_label?: string | null } | null;
   } | null;
   quotes: YearRecapQuote[];
   /** 문 앞의 한 줄 — the year's door counts (services/doorway.year_section);
