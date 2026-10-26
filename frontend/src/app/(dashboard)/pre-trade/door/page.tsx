@@ -286,8 +286,8 @@ export default function DoorPage() {
             뭘 하러 왔어요?
           </h1>
           <p className="mt-2 text-[13px] leading-relaxed" style={{ color: DIM }}>
-            답은 거울의 &lsquo;문 앞&rsquo;에 쌓이고, 그 뒤 체결과 나란히 보여요. 남긴 답은
-            아래에서 하나씩 지울 수 있어요.
+            답은 거울의 &lsquo;문 앞&rsquo;에 쌓이고, 그 뒤 체결과 나란히 보여요. 남은 기록은
+            답하지 않은 열림까지 아래에서 하나씩 지울 수 있어요.
           </p>
 
           {intent === null ? (
