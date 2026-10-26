@@ -32,6 +32,7 @@ import { displayName } from "@/lib/format";
 import { FieldLabel, Caption } from "@/components/ui/editorial";
 import { TickerSearch } from "@/components/shared/ticker-search";
 import type { TickerSearchResult } from "@/components/shared/ticker-search";
+import { useIsPhone } from "@/lib/use-phone";
 import type {
   ObservationNote,
   ObservationNoteSource,
@@ -134,6 +135,15 @@ export function ObservationNoteComposer({
   const [notice, setNotice] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
+  // Phone (2026-10-25): the full box — 5 lines, 종목, 태그, 기록 — filled the
+  // whole first screen of /journal, so the user's own records started a
+  // screen and a half down. Until the box is touched it shows the line to
+  // write in; the first tap opens the rest. Desktop and the compact
+  // /portfolio host are unchanged.
+  const isPhone = useIsPhone();
+  const [opened, setOpened] = React.useState(false);
+  const folded =
+    isPhone && !compact && !opened && body.length === 0 && tickers.length === 0 && tags.length === 0;
 
   // Code points, not UTF-16 units — `Array.from` splits surrogate pairs the
   // way Python's `len()` counts them, so an emoji costs the user 1 here and 1
@@ -255,145 +265,150 @@ export function ObservationNoteComposer({
         onChange={(e) => setBody(e.target.value)}
         placeholder={OBS_NOTE_PLACEHOLDER}
         aria-label="관찰 노트 본문"
-        rows={compact ? 3 : 5}
+        onFocus={() => setOpened(true)}
+        rows={compact || folded ? 3 : 5}
         className="mt-3 w-full resize-y rounded-[var(--pq-radius-card)] border border-[var(--pq-ivory-line)] bg-transparent p-3 font-serif text-pq-body-sm leading-relaxed text-[var(--pq-ivory)] outline-none focus:border-[var(--pq-bronze)]"
       />
 
-      <div className="mt-1 flex items-baseline justify-between gap-3">
-        <span
-          className="font-mono tracking-[0.01em]"
-          style={{
-            fontSize: "var(--pq-text-eyebrow)",
-            color: overLimit ? "var(--pq-negative)" : "var(--pq-ivory-faint)",
-          }}
-        >
-          {bodyLength} / {OBS_NOTE_MAX_CHARS}
-        </span>
-        {overLimit && (
-          <span
-            className="font-mono"
-            style={{
-              fontSize: "var(--pq-text-eyebrow)",
-              color: "var(--pq-negative)",
-            }}
-          >
-            {OBS_NOTE_MAX_CHARS}자를 넘으면 기록할 수 없습니다.
-          </span>
-        )}
-      </div>
+      {!folded && (
+        <>
+          <div className="mt-1 flex items-baseline justify-between gap-3">
+            <span
+              className="font-mono tracking-[0.01em]"
+              style={{
+                fontSize: "var(--pq-text-eyebrow)",
+                color: overLimit ? "var(--pq-negative)" : "var(--pq-ivory-faint)",
+              }}
+            >
+              {bodyLength} / {OBS_NOTE_MAX_CHARS}
+            </span>
+            {overLimit && (
+              <span
+                className="font-mono"
+                style={{
+                  fontSize: "var(--pq-text-eyebrow)",
+                  color: "var(--pq-negative)",
+                }}
+              >
+                {OBS_NOTE_MAX_CHARS}자를 넘으면 기록할 수 없습니다.
+              </span>
+            )}
+          </div>
 
-      {/* 종목 — 0~5개. 비워 두면 시장 전반에 대한 기록이 됩니다. */}
-      <div className="mt-4">
-        <FieldLabel tone="muted">
-          종목 · 선택 ({tickers.length}/{OBS_NOTE_MAX_TICKERS})
-        </FieldLabel>
-        {tickers.length > 0 && (
-          <ul className="mt-2 flex list-none flex-wrap gap-2 p-0">
-            {tickers.map((t) => (
-              <li key={t.ticker}>
-                <button
-                  type="button"
-                  onClick={() => removeTicker(t.ticker)}
-                  aria-label={`${t.ticker} 빼기`}
-                  className="inline-flex items-center gap-2 rounded-[var(--pq-radius-card)] border border-[rgba(var(--pq-bronze-rgb),0.35)] px-2 py-1 text-[var(--pq-bronze)]"
-                  style={{ fontSize: "var(--pq-text-eyebrow)" }}
-                >
-                  <span className="font-mono">
-                    {displayName(t.ticker, t.name)}
-                  </span>
-                  <span aria-hidden="true">×</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-        {tickers.length < OBS_NOTE_MAX_TICKERS && (
-          <div className="mt-2">
-            <TickerSearch
-              value={tickerQuery}
-              onChange={setTickerQuery}
-              onPick={addTicker}
-              ariaLabel="종목 검색"
-              placeholder="종목명 또는 티커"
-              showPickedName={false}
-              inputClassName="w-full rounded-[var(--pq-radius-card)] border border-[var(--pq-ivory-line)] bg-transparent px-3 py-2 font-mono text-pq-body-sm text-[var(--pq-ivory)] outline-none focus:border-[var(--pq-bronze)]"
+          {/* 종목 — 0~5개. 비워 두면 시장 전반에 대한 기록이 됩니다. */}
+          <div className="mt-4">
+            <FieldLabel tone="muted">
+              종목 · 선택 ({tickers.length}/{OBS_NOTE_MAX_TICKERS})
+            </FieldLabel>
+            {tickers.length > 0 && (
+              <ul className="mt-2 flex list-none flex-wrap gap-2 p-0">
+                {tickers.map((t) => (
+                  <li key={t.ticker}>
+                    <button
+                      type="button"
+                      onClick={() => removeTicker(t.ticker)}
+                      aria-label={`${t.ticker} 빼기`}
+                      className="inline-flex items-center gap-2 rounded-[var(--pq-radius-card)] border border-[rgba(var(--pq-bronze-rgb),0.35)] px-2 py-1 text-[var(--pq-bronze)]"
+                      style={{ fontSize: "var(--pq-text-eyebrow)" }}
+                    >
+                      <span className="font-mono">
+                        {displayName(t.ticker, t.name)}
+                      </span>
+                      <span aria-hidden="true">×</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {tickers.length < OBS_NOTE_MAX_TICKERS && (
+              <div className="mt-2">
+                <TickerSearch
+                  value={tickerQuery}
+                  onChange={setTickerQuery}
+                  onPick={addTicker}
+                  ariaLabel="종목 검색"
+                  placeholder="종목명 또는 티커"
+                  showPickedName={false}
+                  inputClassName="w-full rounded-[var(--pq-radius-card)] border border-[var(--pq-ivory-line)] bg-transparent px-3 py-2 font-mono text-pq-body-sm text-[var(--pq-ivory)] outline-none focus:border-[var(--pq-bronze)]"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* 태그 — 0~10개, 각 40자까지. Enter 또는 쉼표로 추가. */}
+          <div className="mt-4">
+            <FieldLabel tone="muted">
+              태그 · 선택 ({tags.length}/{OBS_NOTE_MAX_TAGS})
+            </FieldLabel>
+            {tags.length > 0 && (
+              <ul className="mt-2 flex list-none flex-wrap gap-2 p-0">
+                {tags.map((tag) => (
+                  <li key={tag}>
+                    <button
+                      type="button"
+                      onClick={() => setTags((prev) => prev.filter((x) => x !== tag))}
+                      aria-label={`${tag} 태그 빼기`}
+                      className="inline-flex items-center gap-2 rounded-[var(--pq-radius-card)] border border-[var(--pq-ivory-line)] px-2 py-1 text-[var(--pq-ivory-dim)]"
+                      style={{ fontSize: "var(--pq-text-eyebrow)" }}
+                    >
+                      <span className="font-mono">{tag}</span>
+                      <span aria-hidden="true">×</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <input
+              value={tagDraft}
+              onChange={(e) => setTagDraft(e.target.value)}
+              onKeyDown={onTagKeyDown}
+              onBlur={() => tagDraft.trim() && commitTag()}
+              aria-label="태그 입력"
+              placeholder="Enter 또는 쉼표로 추가"
+              autoComplete="off"
+              className="mt-2 w-full rounded-[var(--pq-radius-card)] border border-[var(--pq-ivory-line)] bg-transparent px-3 py-2 font-mono text-pq-body-sm text-[var(--pq-ivory)] outline-none focus:border-[var(--pq-bronze)]"
             />
           </div>
-        )}
-      </div>
 
-      {/* 태그 — 0~10개, 각 40자까지. Enter 또는 쉼표로 추가. */}
-      <div className="mt-4">
-        <FieldLabel tone="muted">
-          태그 · 선택 ({tags.length}/{OBS_NOTE_MAX_TAGS})
-        </FieldLabel>
-        {tags.length > 0 && (
-          <ul className="mt-2 flex list-none flex-wrap gap-2 p-0">
-            {tags.map((tag) => (
-              <li key={tag}>
-                <button
-                  type="button"
-                  onClick={() => setTags((prev) => prev.filter((x) => x !== tag))}
-                  aria-label={`${tag} 태그 빼기`}
-                  className="inline-flex items-center gap-2 rounded-[var(--pq-radius-card)] border border-[var(--pq-ivory-line)] px-2 py-1 text-[var(--pq-ivory-dim)]"
-                  style={{ fontSize: "var(--pq-text-eyebrow)" }}
-                >
-                  <span className="font-mono">{tag}</span>
-                  <span aria-hidden="true">×</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-        <input
-          value={tagDraft}
-          onChange={(e) => setTagDraft(e.target.value)}
-          onKeyDown={onTagKeyDown}
-          onBlur={() => tagDraft.trim() && commitTag()}
-          aria-label="태그 입력"
-          placeholder="Enter 또는 쉼표로 추가"
-          autoComplete="off"
-          className="mt-2 w-full rounded-[var(--pq-radius-card)] border border-[var(--pq-ivory-line)] bg-transparent px-3 py-2 font-mono text-pq-body-sm text-[var(--pq-ivory)] outline-none focus:border-[var(--pq-bronze)]"
-        />
-      </div>
+          {notice && (
+            <p
+              role="status"
+              className="mt-3 font-mono"
+              style={{
+                fontSize: "var(--pq-text-eyebrow)",
+                color: "var(--pq-ivory-dim)",
+              }}
+            >
+              {notice}
+            </p>
+          )}
 
-      {notice && (
-        <p
-          role="status"
-          className="mt-3 font-mono"
-          style={{
-            fontSize: "var(--pq-text-eyebrow)",
-            color: "var(--pq-ivory-dim)",
-          }}
-        >
-          {notice}
-        </p>
+          {error && (
+            <p
+              role="alert"
+              className="mt-3 font-mono"
+              style={{
+                fontSize: "var(--pq-text-eyebrow)",
+                color: "var(--pq-negative)",
+              }}
+            >
+              {error}
+            </p>
+          )}
+
+          <div className="mt-4 flex items-center gap-3">
+            <button
+              type="submit"
+              disabled={!canSubmit}
+              aria-disabled={!canSubmit}
+              className="pq-ink-btn-bronze inline-flex items-center px-5 py-2 text-pq-mono-sm disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              {submitting ? "기록하는 중" : "기록"}
+            </button>
+            <Caption>기록은 본인만 볼 수 있습니다.</Caption>
+          </div>
+        </>
       )}
-
-      {error && (
-        <p
-          role="alert"
-          className="mt-3 font-mono"
-          style={{
-            fontSize: "var(--pq-text-eyebrow)",
-            color: "var(--pq-negative)",
-          }}
-        >
-          {error}
-        </p>
-      )}
-
-      <div className="mt-4 flex items-center gap-3">
-        <button
-          type="submit"
-          disabled={!canSubmit}
-          aria-disabled={!canSubmit}
-          className="pq-ink-btn-bronze inline-flex items-center px-5 py-2 text-pq-mono-sm disabled:cursor-not-allowed disabled:opacity-30"
-        >
-          {submitting ? "기록하는 중" : "기록"}
-        </button>
-        <Caption>기록은 본인만 볼 수 있습니다.</Caption>
-      </div>
     </form>
   );
 }

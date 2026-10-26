@@ -213,7 +213,13 @@ def resolve_ticker(code: str, name: str, *, latin_name_is_symbol: bool = True) -
         if _KR_CODE_RE.match(code) or _US_TICKER_RE.match(code):
             ticker = normalize_ticker(code) or None
     if ticker is None and name:
-        hit = _kr_name_index().get(name)
+        index = _kr_name_index()
+        hit = index.get(name)
+        if not hit and len(name) > 2 and name[-1] in "이가은는":
+            # A subject particle glued to the name ("삼성전자가 …"). The parser
+            # no longer strips 이/가 itself — they end real names (카카오페이,
+            # LG디스플레이) — so the exact name is tried first (2026-10-13).
+            hit = index.get(name[:-1])
         if hit:
             ticker = normalize_ticker(hit)
         elif latin_name_is_symbol and _US_TICKER_RE.match(name):

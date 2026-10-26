@@ -57,6 +57,7 @@ import {
 } from "@/lib/business-info";
 import { useT } from "@/lib/locale";
 import { useAuth } from "@/lib/auth";
+import { QuantMark } from "@/components/ui/quant-mark";
 
 /* ───────────── pricing: removed 2026-09-02 ─────────────
  *
@@ -312,17 +313,17 @@ function SiteFooter() {
         <div className="mb-14 grid grid-cols-2 gap-8 md:grid-cols-6 md:gap-10">
           <div className="col-span-2">
             <Link href="/" className="mb-5 inline-block">
-              {/* FINDING-030: canonical italic Playfair mixed-case wordmark. */}
+              {/* "Pivox" Ivory + "Quant" Bronze — same logo as PivoxMap / PivoxData (2026-10-25). */}
               <span
                 className="font-serif"
                 style={{
                   fontSize: "var(--pq-text-h5)",
-                  letterSpacing: "0.01em",
+                  letterSpacing: "-0.02em",
                   color: "var(--pq-ivory)",
-                  fontWeight: 500,
+                  fontWeight: 700,
                 }}
               >
-                PivoxQuant
+                <QuantMark />
               </span>
             </Link>
             <p

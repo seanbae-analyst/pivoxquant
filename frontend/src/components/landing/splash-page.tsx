@@ -25,6 +25,7 @@
 
 import { ChevronDown } from "lucide-react";
 import { useT } from "@/lib/locale";
+import { QuantMark } from "@/components/ui/quant-mark";
 
 export default function SplashPage() {
   const t = useT();
@@ -70,9 +71,8 @@ export default function SplashPage() {
         <span
           className="pq-splash-wordmark font-serif"
           style={{
-            // Matches the landing header wordmark (top-left) — same font
-            // family, weight, tracking, casing. Only the size is scaled up
-            // since this is the full-viewport cover treatment.
+            // "PIVOX" Ivory + "QUANT" Bronze, as the PivoxMap / PivoxData
+            // covers (2026-10-25).
             // v3 token: --pq-text-display = clamp(3rem, 7vw, 6rem). Capped at
             // 10vw: the token's 48px floor × 0.22em tracking made the word
             // ~411px wide and clipped both edges on a 390px iPhone.
@@ -85,7 +85,7 @@ export default function SplashPage() {
             color: "var(--pq-ivory)",
           }}
         >
-          PIVOXQUANT
+          <QuantMark upper />
         </span>
       </div>
 

@@ -162,12 +162,13 @@ def _closed_lots(sell: SellInput, ticker: str, trades: Iterable) -> tuple[int | 
     if not ticker or sell.traded_at is None or not (sell.shares > 0):
         return None, None, 0.0
     key = ticker_key(ticker)
-    rows = [
+    same = [
         t for t in trades
         if _same(getattr(t, "ticker", None), key)
         and getattr(t, "traded_at", None) is not None
-        and t.traded_at <= sell.traded_at
     ]
+    replay_at = _replay_at(sell.traded_at, same)
+    rows = [t for t in same if t.traded_at <= replay_at]
     # fifo_util keys lots by the exact ticker — replay copies under one key
     # so a 매수 on 035720.KQ is a lot for a 매도 on 035720.KS (ORM rows untouched).
     lots = [
@@ -183,7 +184,7 @@ def _closed_lots(sell: SellInput, ticker: str, trades: Iterable) -> tuple[int | 
     ]
     synthetic = _SyntheticSell(
         ticker=key, action=_SELL, shares=float(sell.shares),
-        price_per_share=float(sell.price), traded_at=sell.traded_at,
+        price_per_share=float(sell.price), traded_at=replay_at,
         id=max((t.id for t in lots), default=0) + 1,
     )
     before = fifo_match_closed_trades_with_pnl(lots)
@@ -194,6 +195,20 @@ def _closed_lots(sell: SellInput, ticker: str, trades: Iterable) -> tuple[int | 
     merged, _pct = collapse_pairs_by_sell(mine)[0]
     held = None if merged.buy_is_seed else _held_days([p for p, _ in mine], sell.traded_at)
     return held, _vs_cost(sell, rows, mine, merged.buy_price), float(merged.quantity)
+
+
+def _replay_at(sold_at: datetime, rows: list) -> datetime:
+    """Where the sell sits in the replay. A timed row and a date-only row of
+    the same KST day have no order between them as instants (a date-only row
+    reads 09:00 KST), so the sell goes after every such row of its day — the
+    user sold what they held by then (2026-10-21)."""
+    day = _kst_date(sold_at)
+    sell_dated = is_date_only(sold_at)
+    later = [
+        t.traded_at for t in rows
+        if _kst_date(t.traded_at) == day and (sell_dated or is_date_only(t.traded_at))
+    ]
+    return max([sold_at, *later])
 
 
 def _held_days(slices: list, sold_at: datetime) -> int | None:

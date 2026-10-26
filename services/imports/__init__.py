@@ -26,10 +26,15 @@ RAW_SNIPPET_MAX = 300
 # Account-number shapes: ``123-45-678901`` style and any 8+ digit run.
 # ISO dates (``2026-09-01`` / ``20260901``) share those shapes; they are the
 # one thing a fill snippet must keep, so a token that is a plausible
-# calendar date is left alone.
-_ACCOUNT_DASHED = re.compile(r"\d{2,}-\d{2,}-\d{2,}")
+# calendar date is left alone. The hyphen may be any dash a phone or OCR
+# hands back (en/em dash, minus, non-breaking hyphen, underscore), and a
+# phone number may be spaced or dotted (2026-10-13 — the same gaps as the
+# on-device mask, frontend/src/lib/fill-ocr/mask.ts).
+_DASH = "[-\u2013\u2014\u2212\u2011_]"
+_ACCOUNT_DASHED = re.compile(rf"\d{{2,}}{_DASH}\d{{2,}}{_DASH}\d{{2,}}")
 _ACCOUNT_LONG = re.compile(r"\d{8,}")
-_ISO_DATE = re.compile(r"^(19|20)\d{2}-(0?[1-9]|1[0-2])-(0?[1-9]|[12]\d|3[01])$")
+_PHONE = re.compile(r"(?<!\d)01[016789][ .]\d{3,4}[ .]\d{4}(?!\d)")
+_ISO_DATE = re.compile(rf"^(19|20)\d{{2}}{_DASH}(0?[1-9]|1[0-2]){_DASH}(0?[1-9]|[12]\d|3[01])$")
 _COMPACT_DATE = re.compile(r"^(19|20)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])$")
 
 
@@ -95,6 +100,7 @@ def mask_sensitive(text: str | None, limit: int = RAW_SNIPPET_MAX) -> str:
     s = " ".join(str(text).split())
     s = _ACCOUNT_DASHED.sub(lambda m: m.group(0) if _ISO_DATE.match(m.group(0)) else "***", s)
     s = _ACCOUNT_LONG.sub(lambda m: m.group(0) if _COMPACT_DATE.match(m.group(0)) else "***", s)
+    s = _PHONE.sub("***", s)
     return s[:limit]
 
 
@@ -136,13 +142,46 @@ _DATE_PATTERNS = (
         r"(?<!\d)(?P<y>\d{4})(?P<m>\d{2})(?P<d>\d{2})(?!\d)"
         r"(?:[ T]?(?P<H>\d{1,2}):(?P<M>\d{2})(?::(?P<S>\d{2}))?)?"
     ),
-    # 9월 1일 / 09월 01일 (year = current) (+ optional time)
+    # 2025년 3월 4일 / 9월 1일 (no year → current) (+ optional time).
+    # 2026-10-13: the 년 was not read, so "2025년 03월 04일" became 2026-03-04.
     re.compile(
-        r"(?P<m>\d{1,2})월\s*(?P<d>\d{1,2})일"
+        r"(?:(?P<y>\d{4})년\s*)?(?P<m>\d{1,2})월\s*(?P<d>\d{1,2})일"
         r"(?:\s*(?P<H>\d{1,2}):(?P<M>\d{2})(?::(?P<S>\d{2}))?)?"
     ),
 )
 _TIME_ONLY = re.compile(r"(?<![\d:])(?P<H>\d{1,2}):(?P<M>\d{2})(?::(?P<S>\d{2}))?(?![\d:])")
+
+# 오전/오후 · AM/PM next to a printed time (2026-10-21). Korean broker texts
+# and Excel time cells print a 12-hour clock ("오후 2:05:00"); read without the
+# marker, a 14:05 fill became 02:05 — and since dedupe compares two printed
+# times (2026-10-15), the same fill pasted once as "14:05" and once as
+# "오후 2:05" was stored twice.
+_MERIDIEM_BEFORE = re.compile(r"(?:(오전|오후)|(?<![A-Za-z])(AM|PM|A\.M\.|P\.M\.))\s*$", re.IGNORECASE)
+_MERIDIEM_AFTER = re.compile(r"^\s*(AM|PM|A\.M\.|P\.M\.)(?![A-Za-z])", re.IGNORECASE)
+
+
+def _meridiem(text: str, start: int, end: int) -> str | None:
+    """``"am"`` / ``"pm"`` when a marker sits right before ``text[start:end]``
+    (오후 2:05 · PM 2:05) or right after it (2:05 PM), else None."""
+    m = _MERIDIEM_BEFORE.search(text[max(0, start - 6):start])
+    mark = (m.group(1) or m.group(2)) if m else None
+    if mark is None:
+        a = _MERIDIEM_AFTER.match(text[end:end + 7])
+        mark = a.group(1) if a else None
+    if mark is None:
+        return None
+    return "pm" if mark in ("오후",) or mark.upper().startswith("P") else "am"
+
+
+def meridiem_hour(text: str, start: int, end: int, hour: int) -> int:
+    """The 24-hour value of ``hour`` printed at ``text[start:end]``. A printed
+    13~23 is already 24-hour (오후 14:05) and stays."""
+    mark = _meridiem(text, start, end)
+    if mark == "pm" and hour < 12:
+        return hour + 12
+    if mark == "am" and hour == 12:
+        return 0
+    return hour
 
 
 def parse_datetime(value, time_value=None) -> datetime | None:
@@ -179,15 +218,29 @@ def parse_datetime_has_time(value, time_value=None) -> tuple[datetime | None, bo
                 continue
             g = m.groupdict()
             year = int(g["y"]) if g.get("y") else utcnow_naive().year
+            hour = int(g["H"] or 0)
+            if g.get("H") is not None:
+                hour = meridiem_hour(s, m.start("H"), m.end(), hour)
             try:
                 dt = datetime(
                     year, int(g["m"]), int(g["d"]),
-                    int(g["H"] or 0), int(g["M"] or 0), int(g["S"] or 0),
+                    hour, int(g["M"] or 0), int(g["S"] or 0),
                     int((g.get("f") or "0").ljust(6, "0")),
                 )
             except ValueError:
                 return None, False
             has_time = g.get("H") is not None
+            if not has_time:
+                # "2026-09-01 오후 2:05:00" — the marker keeps the date pattern
+                # from taking the time; read it only with a marker beside it.
+                rest = s[m.end():]
+                tm = _TIME_ONLY.search(rest)
+                if tm and _meridiem(rest, tm.start(), tm.end()):
+                    h = meridiem_hour(rest, tm.start(), tm.end(), int(tm.group("H")))
+                    mi, se = int(tm.group("M")), int(tm.group("S") or 0)
+                    if h < 24 and mi < 60 and se < 60:
+                        dt = dt.replace(hour=h, minute=mi, second=se)
+                        has_time = True
             break
         if dt is None:
             return None, False
@@ -205,6 +258,9 @@ def _parse_time(value) -> tuple[int, int, int] | None:
     m = _TIME_ONLY.search(str(value))
     if not m:
         digits = re.sub(r"\D", "", str(value))
+        # A time cell stored as a number lost its leading zero: 93000 = 09:30:00.
+        if len(digits) in (3, 5):
+            digits = "0" + digits
         if len(digits) in (4, 6):
             h, mi = int(digits[:2]), int(digits[2:4])
             se = int(digits[4:6]) if len(digits) == 6 else 0
@@ -215,7 +271,10 @@ def _parse_time(value) -> tuple[int, int, int] | None:
     se = int(m.group("S") or 0)
     if h > 23 or mi > 59 or se > 59:
         return None
-    return (h, mi, se)
+    return (meridiem_hour(str(value), m.start(), m.end(), h), mi, se)
+
+
+_NOT_A_FILL = re.compile(r"취소|정정|환전")
 
 
 def side_from_text(value) -> str | None:
@@ -228,6 +287,10 @@ def side_from_text(value) -> str | None:
         return None
     s = str(value).strip()
     if not s:
+        return None
+    # A cancelled / amended order or a currency exchange is not a fill:
+    # "매수취소" read as 매수, "환전매도" as 매도 (2026-10-13 bug hunt).
+    if _NOT_A_FILL.search(s):
         return None
     low = s.lower()
     if "매수" in s or re.search(r"\b(buy|bought|long)\b", low) or low in ("b", "매입"):
@@ -329,6 +392,7 @@ __all__ = [
     "mask_sensitive",
     "parse_number",
     "parse_datetime",
+    "meridiem_hour",
     "parse_datetime_has_time",
     "parse_datetime_tz",
     "amount_ok",

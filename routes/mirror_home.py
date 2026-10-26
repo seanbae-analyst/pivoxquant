@@ -288,11 +288,15 @@ def get_mirror_home():
     drift = {"available": False, "descriptor": None}
     try:
         snapshots = get_history(user_id, days_back=180)
-        dr = compute_drift(snapshots)
-        drift = {
-            "available": bool(dr.get("available")),
-            "descriptor": dr.get("descriptor"),
-        }
+        # compute_drift answers "available" from ONE snapshot (first == last,
+        # distance 0 → "유지 관찰"), and the headline printed that as an
+        # observation (2026-10-13 bug hunt). Drift needs two points.
+        if len(snapshots) >= 2:
+            dr = compute_drift(snapshots)
+            drift = {
+                "available": bool(dr.get("available")),
+                "descriptor": dr.get("descriptor"),
+            }
     except Exception:  # pragma: no cover — defensive
         logger.debug("mirror-home: drift unavailable", exc_info=True)
 

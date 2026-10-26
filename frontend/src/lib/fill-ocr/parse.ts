@@ -232,14 +232,30 @@ function monthDay(compact: string): [number, number] | null {
 
 export const TIME_RE = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/;
 
-function readTime(w: OcrWord): Cell<string> {
+/** 오전/오후 · AM/PM as its own word next to a clock (2026-10-21). Read
+ *  without it, "오후 02:05" went out as 02:05 — the server's
+ *  ``services.imports.meridiem_hour`` only sees the time cell. */
+function meridiemOf(prev?: OcrWord, next?: OcrWord): "am" | "pm" | null {
+  const before = (prev?.t ?? "").trim().toUpperCase();
+  const after = (next?.t ?? "").trim().toUpperCase();
+  if (before === "오후" || before === "PM" || after === "PM") return "pm";
+  if (before === "오전" || before === "AM" || after === "AM") return "am";
+  return null;
+}
+
+function readTime(w: OcrWord, prev?: OcrWord, next?: OcrWord): Cell<string> {
   const m = w.t.match(TIME_RE);
   if (!m) return { value: null };
   const [hh, mm, ss] = [+m[1], +m[2], m[3] !== undefined ? +m[3] : null];
   const ok =
     m[1].length === 2 && hh < 24 && mm < 60 && (ss === null || ss < 60) &&
     w.alt != null && digitsOf(w.alt) === digitsOf(w.t);
-  return ok ? { value: w.t } : { value: null, hint: w.t };
+  if (!ok) return { value: null, hint: w.t };
+  const mark = meridiemOf(prev, next);
+  const h24 = mark === "pm" && hh < 12 ? hh + 12 : mark === "am" && hh === 12 ? 0 : hh;
+  if (h24 === hh) return { value: w.t };
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return { value: `${pad(h24)}:${pad(mm)}${ss === null ? "" : `:${pad(ss)}`}` };
 }
 
 export const isNumericWord = (t: string) => /^[~≈]?[$₩]?\d[\d,.]*(원|%|\))?$/.test(t);
@@ -338,7 +354,9 @@ export function nameFrom(words: OcrWord[], usd: boolean): { name: string; code: 
   // A date header split into tokens ("2026 년 9 월 22 일 (화)") leaves only
   // date words once the digits are dropped — that is not a stock name.
   const name = joined.trim();
-  const dateOnly = /^[\s()（）]*((년|월|일|[월화수목금토일]요일|\(?[월화수목금토일]\)?)[\s()（）]*)+$/.test(name);
+  // Digits too: nameDigitAt keeps the "23" of "9 월 23 일", so a yearless
+  // header came back as the name "월23일" (2026-10-13 bug hunt).
+  const dateOnly = /^[\s()（）\d]*((년|월|일|[월화수목금토일]요일|\(?[월화수목금토일]\)?)[\s()（）\d]*)+$/.test(name);
   return { name: dateOnly ? "" : name, code };
 }
 
@@ -438,8 +456,8 @@ function cardFill(recLines: Line[], detailIdx: number, ctx: Ctx): ParsedFill {
     f.code = ok ? { value: code } : { value: null, hint: code };
   }
   f.side = { value: sideFromText(compact) };
-  const tw = words.find((w) => TIME_RE.test(w.t));
-  if (tw) f.time = readTime(tw);
+  const ti = words.findIndex((w) => TIME_RE.test(w.t));
+  if (ti >= 0) f.time = readTime(words[ti], words[ti - 1], words[ti + 1]);
   const rowDates = new Set(words.map((w) => fullDate(w.t)).filter(Boolean));
   const rowDate = [...rowDates][0] ?? null;
   f.date = { value: rowDate ?? ctx.date };
@@ -593,13 +611,14 @@ function tableFills(lines: Line[], hi: number, cols: Column[], ctx: Ctx): Parsed
     let q: NumRead | null = null, p: NumRead | null = null, a: NumRead | null = null;
     const nameWords: OcrWord[] = [];
     const codeWords: { w: OcrWord; col: Col }[] = [];
-    for (const w of all.flatMap((l) => l.words)) {
+    const flat = all.flatMap((l) => l.words);
+    for (const [wi, w] of flat.entries()) {
       const d = fullDate(w.t);
       if (d) {
         f.date = w.alt != null && digitsOf(w.alt) === digitsOf(w.t) ? { value: d } : { value: null, hint: w.t };
         continue;
       }
-      if (TIME_RE.test(w.t)) { f.time = readTime(w); continue; }
+      if (TIME_RE.test(w.t)) { f.time = readTime(w, flat[wi - 1], flat[wi + 1]); continue; }
       const col = nearestCol(w);
       if (col === "ignore") continue;
       if (isCode(w.t) && col !== "qty" && col !== "price" && col !== "amount" && col !== "fee" && col !== "tax") {
@@ -646,7 +665,14 @@ function tableFills(lines: Line[], hi: number, cols: Column[], ctx: Ctx): Parsed
 // ── entry point ────────────────────────────────────────────────────────
 
 function yearContext(lines: Line[]): number | null {
-  const years = lines.flatMap((l) => [...l.compact.matchAll(/(20\d{2})(?:년|[./-]\d)/g)].map((m) => +m[1]));
+  // A year, not the start of a price: "$2050.25" read as 2050 (and, being
+  // the max, beat the real 2026 — 2026-10-13 bug hunt). Not after $ / a digit
+  // / a separator, followed by 년 or a real month, and not in the future —
+  // a fill has already happened.
+  const thisYear = new Date().getFullYear();
+  const years = lines.flatMap((l) =>
+    [...l.compact.matchAll(/(?<![$\d.,])(20\d{2})(?:년|[./-](?:0?[1-9]|1[0-2])(?!\d))/g)].map((m) => +m[1]))
+    .filter((y) => y <= thisYear);
   return years.length ? Math.max(...years) : null;
 }
 
@@ -718,9 +744,13 @@ export function parseFillScreen(words: OcrWord[]): ScreenParse {
       .replace(/\([^)]*\)?/g, "");
     return !/\d/.test(rest);
   };
+  // A month-day header that cannot be dated (no year on screen, or a 12월 →
+  // 1월 turn) is still a section header: undated, so the cards below it do
+  // not inherit the header above, and never a card's name line ("월23일" —
+  // 2026-10-13 bug hunt).
   lines.forEach((l, i) => {
     const d = headerDate(l, ctx);
-    if (d && !isDetail(l) && onlyDate(l)) {
+    if ((d || monthDay(l.compact)) && !isDetail(l) && onlyDate(l)) {
       headerLines.add(i);
       dateAt.set(i, d);
     }

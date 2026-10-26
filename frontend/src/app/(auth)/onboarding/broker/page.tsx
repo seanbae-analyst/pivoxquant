@@ -23,6 +23,7 @@ import {
   LegalConsentModal,
   hasLocalConsent,
 } from "@/components/ui/legal-consent-modal";
+import { QuantMark } from "@/components/ui/quant-mark";
 
 /**
  * Step 0 of the onboarding flow — the user's holdings. Ink theme.
@@ -180,8 +181,8 @@ export default function OnboardingBrokerPage() {
       <header className="sticky top-0 z-20 border-b border-[var(--pq-ivory-line)] bg-[rgba(10,10,10,0.9)] backdrop-blur-xl px-4 py-3 sm:px-6">
         <div className="mx-auto max-w-3xl">
           <div className="mb-3 flex items-center justify-between">
-            <span className="font-serif text-base text-[var(--pq-ivory)]">
-              PivoxQuant
+            <span className="text-pq-h5 font-bold tracking-[-0.02em] text-[var(--pq-ivory)]">
+              <QuantMark />
             </span>
           </div>
 

@@ -306,6 +306,8 @@ RESULT_SKIPPED_PREF = "skipped_pref"
 RESULT_SKIPPED_CONSENT = "skipped_consent"
 RESULT_SKIPPED_EMPTY = "skipped_empty"
 RESULT_SKIPPED_SEND = "skipped_send"
+# 2026-10-25 — 그 달 몫을 이미 보냈다 (1일 매시 재시도, models/monthly_report_send.py).
+RESULT_SKIPPED_ALREADY = "skipped_already"
 
 
 def send_report_to_user(user: Any, *, now: datetime | None = None) -> str:
@@ -337,6 +339,14 @@ def send_report_to_user(user: Any, *, now: datetime | None = None) -> str:
     filename = mirror_report_filename(label_ref)
     period_label = f"{_to_kst(label_ref):%Y-%m}"
 
+    # 1일 08:30–23:30 매시 다시 도는 잡이다(잠든 서버가 놓친 발송을 되찾으려고).
+    # 이미 보낸 달은 PDF 를 만들기 전에 건너뛴다.
+    from extensions import db
+    from models import MonthlyReportSend
+
+    if MonthlyReportSend.query.filter_by(user_id=user.id, period=period_label).first():
+        return RESULT_SKIPPED_ALREADY
+
     built = build_mirror_pdf(
         user.id, locale=locale, period_days=period_days, as_of=as_of
     )
@@ -359,7 +369,11 @@ def send_report_to_user(user: Any, *, now: datetime | None = None) -> str:
         email_category=EmailCategory.INFORMATION,
         event_id=REPORT_EVENT_ID,
     )
-    return RESULT_SENT if ok else RESULT_SKIPPED_SEND
+    if not ok:
+        return RESULT_SKIPPED_SEND
+    db.session.add(MonthlyReportSend(user_id=user.id, period=period_label))
+    db.session.commit()
+    return RESULT_SENT
 
 
 # ── 전체 발송 ───────────────────────────────────────────────────────────────
@@ -385,6 +399,7 @@ def dispatch_monthly_reports(
         RESULT_SKIPPED_CONSENT: 0,
         RESULT_SKIPPED_EMPTY:   0,
         RESULT_SKIPPED_SEND:    0,
+        RESULT_SKIPPED_ALREADY: 0,
         "errors":               0,
     }
 

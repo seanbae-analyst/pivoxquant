@@ -342,6 +342,22 @@ describe("another tab ends this tab's session", () => {
     expect(JSON.stringify(stored(8))).not.toContain("fetchedFor");
   });
 
+  // 2026-10-21 bug hunt: SWR writes an answer into the cache AFTER onSuccess,
+  // so a late answer for 7 landed after memory was cleared — and 8's
+  // activation kept it as 8's live value.
+  it("a late answer that lands after the session ended is not kept for the next user", () => {
+    const cache = newCache();
+    activatePersistedCacheForUser(cache, 7, NOW);
+    window.localStorage.setItem(PERSIST_OWNER_KEY, "8"); // the other tab, event not yet heard
+    const late = { owner: 7 };
+    recordFetched(PORTFOLIO_SUMMARY, late);              // onSuccess …
+    cache.set(PORTFOLIO_SUMMARY, { data: late });        // … then SWR writes it
+    activatePersistedCacheForUser(cache, 8, NOW);
+    expect(cache.get(PORTFOLIO_SUMMARY)).toBeUndefined();
+    flushPersistedCache(NOW);
+    expect(JSON.stringify(stored(8))).not.toContain("owner");
+  });
+
   it("the same user in another tab changes nothing", () => {
     const told = vi.fn();
     onSessionEndedElsewhere(told);
@@ -459,6 +475,23 @@ describe("middleware + useStaleness with real SWR", () => {
       vi.advanceTimersByTime(2_000);
     });
     expect(stored(7)!.entries[API.mirror.home].data).toEqual({ m: 1 });
+  });
+
+  it("an answer whose request began before the session ended never reaches the cache", async () => {
+    const cache = newCache();
+    activatePersistedCacheForUser(cache, 7);
+    let release: (v: unknown) => void = () => {};
+    const slow = () => new Promise((r) => { release = r; });
+    withSwr(cache, <Screen swrKey={API.mirror.home} fetcher={slow} />);
+    await waitFor(() => expect(release).not.toBe(undefined));
+    otherTabSets(PERSIST_OWNER_KEY, "8");                // 7's session ends here
+    activatePersistedCacheForUser(cache, 8);             // /me names 8
+    await act(async () => {
+      release({ owner: 7 });                             // 7's answer, late
+    });
+    expect(cache.get(API.mirror.home)?.data).toBeUndefined();
+    flushPersistedCache();
+    expect(JSON.stringify(stored(8))).not.toContain("owner");
   });
 
   it("does not touch hooks for keys outside the allowlist", async () => {

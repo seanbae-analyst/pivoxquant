@@ -7,10 +7,14 @@
  * else's conclusion (a report, a video, a friend); the form names the few
  * things worth checking yourself, in plain words, and nothing more:
  *
- *   1. 이 회사는 뭘로 돈을 버나 (필수)   2. 내가 보는 이유 1~3개 (필수)
- *   3. 이게 보이면 틀린 것              4. 가장 큰 위험 하나
- *   5. 직접 확인한 숫자 (비우면 "안 봄")
+ *   1. 내가 보는 이유 1~3개 (필수)    2. 이게 보이면 틀린 것
  *   + 어디서 알게 됐나 · 다시 볼 날 (1·3·6개월)
+ *   더 적기(접힘): 이 회사는 뭘로 돈을 버나 · 가장 큰 위험 하나 ·
+ *                 직접 확인한 숫자 (비우면 "안 봄")
+ *
+ * 2026-10-25 (CEO "적어야 할게 너무 많다"): the form opens on two fields —
+ * the reason (scored on the review day) and what would prove it wrong. The
+ * other three stay, folded; "뭘로 돈을 버나" is no longer required.
  *
  * We fill in nothing about the stock — no figures, no news, no per-stock
  * guidance (자본시장법 §6 투자자문 경계 · FMP §2.2.2). Placeholders are
@@ -44,7 +48,7 @@ const INPUT =
 export interface ResearchFormProps {
   /** Pre-picked symbol (e.g. from a /portfolio row). */
   defaultTicker?: { ticker: string; name?: string } | null;
-  surface?: "journal" | "portfolio";
+  surface?: "journal" | "portfolio" | "pre_trade";
   onSaved: (note: ResearchNote) => void;
   onCancel?: () => void;
 }
@@ -104,7 +108,7 @@ export function ResearchForm({ defaultTicker, surface = "journal", onSaved, onCa
   const [error, setError] = React.useState<string | null>(null);
 
   const filledTheses = theses.map((t) => t.trim()).filter(Boolean);
-  const canSubmit = Boolean(picked) && business.trim().length > 0 && filledTheses.length > 0 && !submitting;
+  const canSubmit = Boolean(picked) && filledTheses.length > 0 && !submitting;
 
   const onPick = (r: TickerSearchResult) => {
     setPicked({ ticker: r.ticker, name: r.name });
@@ -119,7 +123,7 @@ export function ResearchForm({ defaultTicker, surface = "journal", onSaved, onCa
     try {
       const res = await createResearchNote({
         ticker: picked.ticker,
-        business: business.trim(),
+        business: business.trim() || undefined,
         theses: filledTheses,
         invalidation: invalidation.trim() || undefined,
         risk: risk.trim() || undefined,
@@ -168,18 +172,7 @@ export function ResearchForm({ defaultTicker, surface = "journal", onSaved, onCa
         )}
       </div>
 
-      <Step n={1} label="이 회사는 뭘로 돈을 버나">
-        <input
-          aria-label="이 회사는 뭘로 돈을 버나"
-          value={business}
-          maxLength={RESEARCH_MAX_BUSINESS}
-          onChange={(e) => setBusiness(e.target.value)}
-          placeholder="예: 구독료로 번다"
-          className={INPUT}
-        />
-      </Step>
-
-      <Step n={2} label="내가 보는 이유">
+      <Step n={1} label="내가 보는 이유">
         <ul className="list-none space-y-2 p-0">
           {theses.map((t, i) => (
             <li key={i} className="flex items-center gap-2">
@@ -216,7 +209,7 @@ export function ResearchForm({ defaultTicker, surface = "journal", onSaved, onCa
         <Caption className="mt-1">다시 볼 날, 이 줄마다 맞았는지 스스로 채점해요.</Caption>
       </Step>
 
-      <Step n={3} label="이게 보이면 틀린 것" optional>
+      <Step n={2} label="이게 보이면 틀린 것" optional>
         <input
           aria-label="이게 보이면 틀린 것"
           value={invalidation}
@@ -227,29 +220,46 @@ export function ResearchForm({ defaultTicker, surface = "journal", onSaved, onCa
         />
       </Step>
 
-      <Step n={4} label="가장 큰 위험 하나" optional>
-        <input
-          aria-label="가장 큰 위험 하나"
-          value={risk}
-          maxLength={RESEARCH_MAX_RISK}
-          onChange={(e) => setRisk(e.target.value)}
-          placeholder="예: 매출이 한 고객에 몰려 있다"
-          className={INPUT}
-        />
-      </Step>
+      {/* Folded (2026-10-25): worth writing, not worth blocking on. */}
+      <details className="mt-6" data-testid="research-more">
+        <summary className="pq-hit cursor-pointer select-none text-pq-body-sm text-[var(--pq-bronze-light)]">
+          더 적기 (선택) · 뭘로 돈을 버나 · 가장 큰 위험 · 확인한 숫자
+        </summary>
+        <Step n={3} label="이 회사는 뭘로 돈을 버나" optional>
+          <input
+            aria-label="이 회사는 뭘로 돈을 버나"
+            value={business}
+            maxLength={RESEARCH_MAX_BUSINESS}
+            onChange={(e) => setBusiness(e.target.value)}
+            placeholder="예: 구독료로 번다"
+            className={INPUT}
+          />
+        </Step>
 
-      <Step n={5} label="직접 확인한 숫자" optional>
-        <textarea
-          aria-label="직접 확인한 숫자"
-          value={numbers}
-          maxLength={RESEARCH_MAX_NUMBERS}
-          onChange={(e) => setNumbers(e.target.value)}
-          rows={2}
-          placeholder="예: 최근 3년 매출 추이를 사업보고서에서 봄"
-          className={INPUT}
-        />
-        <Caption className="mt-1">본 만큼만 적어요. 안 봤으면 비워 두면 「안 봄」으로 남아요.</Caption>
-      </Step>
+        <Step n={4} label="가장 큰 위험 하나" optional>
+          <input
+            aria-label="가장 큰 위험 하나"
+            value={risk}
+            maxLength={RESEARCH_MAX_RISK}
+            onChange={(e) => setRisk(e.target.value)}
+            placeholder="예: 매출이 한 고객에 몰려 있다"
+            className={INPUT}
+          />
+        </Step>
+
+        <Step n={5} label="직접 확인한 숫자" optional>
+          <textarea
+            aria-label="직접 확인한 숫자"
+            value={numbers}
+            maxLength={RESEARCH_MAX_NUMBERS}
+            onChange={(e) => setNumbers(e.target.value)}
+            rows={2}
+            placeholder="예: 최근 3년 매출 추이를 사업보고서에서 봄"
+            className={INPUT}
+          />
+          <Caption className="mt-1">본 만큼만 적어요. 안 봤으면 비워 두면 「안 봄」으로 남아요.</Caption>
+        </Step>
+      </details>
 
       <div className="mt-6">
         <FieldLabel tone="muted">어디서 알게 됐나</FieldLabel>

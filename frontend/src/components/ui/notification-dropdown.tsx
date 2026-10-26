@@ -226,7 +226,8 @@ export function NotificationDropdown() {
                 type="button"
                 onClick={() => onItemClick(n)}
                 className={cn(
-                  "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-[rgba(var(--pq-bronze-wash-rgb),0.05)]",
+                  // rounded-none: the base button radius bent the hairline between rows
+                  "flex w-full items-start gap-3 rounded-none px-4 py-3 text-left transition-colors hover:bg-[rgba(var(--pq-bronze-wash-rgb),0.05)]",
                   // Phone sheet: full-width rows on the sheet gutter.
                   "max-md:min-h-[56px] max-md:px-5",
                 )}
@@ -303,7 +304,8 @@ export function NotificationDropdown() {
         {unread > 0 && (
           <span
             className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 font-mono text-pq-eyebrow font-semibold"
-            style={{ background: "var(--pq-bronze)", color: "var(--pq-ivory)" }}
+            // Ink on bronze (7.3:1) — ivory on bronze read at 2.45:1.
+            style={{ background: "var(--pq-bronze)", color: "var(--pq-ink)" }}
           >
             {unread > 99 ? "99+" : unread}
           </span>

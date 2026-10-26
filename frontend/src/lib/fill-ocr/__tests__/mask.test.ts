@@ -25,6 +25,14 @@ describe("dropReason — lines that must not leave the device", () => {
     ["45160882-24", "account"],
     ["1O2-34-5678l9", "account"], // O / l read for 0 / 1
     ["010-1234-5678", "account"], // a phone number goes too
+    // the dashes OCR swaps in for a hyphen (2026-10-13)
+    ["123—45—678901 김미래", "account"],
+    ["123−45−678901", "account"],
+    ["123‑45‑678901", "account"],
+    ["123_45_678901", "account"],
+    // a phone number spaced or dotted
+    ["010 1234 5678", "account"],
+    ["010.1234.5678", "account"],
     ["계좌 45160882-24 이서연", "identity"],
     ["위탁 6000-0934", "identity"],
     ["이 서 연 님 의 계좌", "identity"],
@@ -43,6 +51,9 @@ describe("dropReason — lines that must not leave the device", () => {
     "2026-10-01 09:31 체결가 71,000원",
     "일자 : 2022.02.18",
     "20261001 매수 10주",
+    "2026—10—01 체결",
+    "조회기간 2026-10-01~2026-10-13", // a date range is not an account number
+    "20261001~20261013",
     "TIGER MSCI KOREA ESG 350 136,000",
     "AAPL 12 $171.25",
   ])("keeps %s", (line) => {

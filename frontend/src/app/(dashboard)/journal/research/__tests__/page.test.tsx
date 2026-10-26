@@ -102,6 +102,15 @@ describe("/journal/research — more than 100 notes", () => {
     expect(screen.queryByTestId("research-load-more")).toBeNull();
   });
 
+  it("a body that is not a page (demo `{}`) draws no cards and offers no more", async () => {
+    fetchMock.mockReset();
+    fetchMock.mockResolvedValue({} as ResearchNotesResponse);
+    renderPage();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    expect(screen.queryAllByTestId("research-card")).toHaveLength(0);
+    expect(screen.queryByTestId("research-load-more")).toBeNull();
+  });
+
   it("re-reads every loaded page after a change on a card", async () => {
     renderPage();
     await waitFor(() => expect(screen.getByTestId("research-load-more")).toBeTruthy());

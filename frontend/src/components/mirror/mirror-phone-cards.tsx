@@ -31,8 +31,8 @@
  */
 import * as React from "react";
 
-import { useDoorwaySummary } from "@/lib/hooks";
-import type { DoorwaySummaryResponse, MirrorGapDimension, MirrorHomeResponse } from "@/lib/types";
+import { useDoorwaySummary, usePickFacts } from "@/lib/hooks";
+import type { DoorwaySummaryResponse, MirrorGapDimension, MirrorHomeResponse, PickFactsResponse } from "@/lib/types";
 import { PhonePager, type PhonePage } from "@/components/portfolio/v2/phone-pager";
 import {
   DriftChip,
@@ -43,6 +43,7 @@ import {
 import { MirrorRadarPanel } from "@/components/mirror/mirror-radar-panel";
 import { MyRulesPanel } from "@/components/mirror/my-rules-panel";
 import { DoorwayPanelView } from "@/components/mirror/doorway-panel";
+import { PickFactsView } from "@/components/mirror/pick-facts-panel";
 import { OneThingNudge } from "@/components/mirror/one-thing-nudge";
 import { YearRecapEntry } from "@/components/mirror/year/year-entry";
 
@@ -118,7 +119,7 @@ function GapCard({ data }: { data: MirrorHomeResponse }) {
 
       <DriftChip data={data} className="mt-5" />
 
-      <p className="mt-5 text-[11.5px] leading-relaxed" style={{ color: DIM }}>
+      <p className="mt-5 text-[12px] leading-relaxed" style={{ color: DIM }}>
         ↑↓ = 최근 30일이 선언보다 높게·낮게 관찰된 방향 · %p = 선언에서 벗어난 정도
       </p>
     </section>
@@ -132,7 +133,11 @@ export function hasGapCard(data: MirrorHomeResponse): boolean {
 
 type CardSpec = { id: string; label: string; wide?: boolean; body: React.ReactNode };
 
-function cardSpecs(data: MirrorHomeResponse, doorway: DoorwaySummaryResponse | null): CardSpec[] {
+function cardSpecs(
+  data: MirrorHomeResponse,
+  doorway: DoorwaySummaryResponse | null,
+  picks: PickFactsResponse | null,
+): CardSpec[] {
   const cards: CardSpec[] = [
     {
       id: "today",
@@ -171,6 +176,9 @@ function cardSpecs(data: MirrorHomeResponse, doorway: DoorwaySummaryResponse | n
   if (doorway?.first_check_at) {
     cards.push({ id: "doorway", label: "문 앞", body: <DoorwayPanelView data={doorway} bordered={false} /> });
   }
+  if (picks?.ok && picks.with_facts > 0) {
+    cards.push({ id: "picks", label: "고른 회사", body: <PickFactsView data={picks} bordered={false} /> });
+  }
   cards.push({
     id: "one-thing",
     label: "한 가지만",
@@ -196,7 +204,8 @@ export function MirrorPhoneCards({
   header?: React.ReactNode;
 }) {
   const { data: doorway } = useDoorwaySummary(30);
-  const pages: PhonePage[] = cardSpecs(data, doorway).map((c) => ({
+  const { data: picks } = usePickFacts();
+  const pages: PhonePage[] = cardSpecs(data, doorway, picks).map((c) => ({
     id: c.id,
     label: c.label,
     content: <StoryCard wide={c.wide}>{c.body}</StoryCard>,

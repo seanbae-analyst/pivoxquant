@@ -1,7 +1,12 @@
 "use client";
 
 /**
- * <WeeklyPulseCard /> — the 5-field weekly pulse form + its history curve.
+ * <WeeklyPulseCard /> — the weekly pulse form + its history curve.
+ *
+ * 2026-10-25 (CEO "적어야 할게 너무 많다"): two taps and 기록하기. 기분 and
+ * 자신감 start unpicked (a preset 3/3 recorded a week nobody rated) and
+ * both must be picked; the topic chips stay open; the two lines (마음에
+ * 걸리는 것 · 배우고 싶은 것) are folded and optional.
  *
  * Inline only. It is rendered in exactly one place, /journal's
  * <WeeklyPulseSection /> (the single input surface for the pulse).
@@ -64,8 +69,8 @@ function PulseForm({
 }: {
   onSubmit: (entry: Omit<PulseEntry, "submitted_at">) => Promise<void>;
 }) {
-  const [mood, setMood] = React.useState(3);
-  const [confidence, setConfidence] = React.useState(3);
+  const [mood, setMood] = React.useState<number | null>(null);
+  const [confidence, setConfidence] = React.useState<number | null>(null);
   const [worry, setWorry] = React.useState("");
   const [topics, setTopics] = React.useState<string[]>([]);
   const [learn, setLearn] = React.useState("");
@@ -76,8 +81,11 @@ function PulseForm({
       cur.includes(t) ? cur.filter((x) => x !== t) : [...cur, t],
     );
 
+  const ready = mood !== null && confidence !== null;
+
   const handle = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (mood === null || confidence === null) return;
     setBusy(true);
     try {
       await onSubmit({ mood, confidence, worry, topics, learn });
@@ -100,24 +108,6 @@ function PulseForm({
       />
 
       <div>
-        <label
-          className="block text-pq-eyebrow text-[var(--pq-bronze)] mb-1.5"
-          htmlFor="pulse-worry"
-        >
-          마음에 걸리는 것 하나
-        </label>
-        <input
-          id="pulse-worry"
-          type="text"
-          value={worry}
-          onChange={(e) => setWorry(e.target.value)}
-          placeholder="예) 미국 금리 동결 가능성"
-          className="pq-ink-input w-full"
-          maxLength={200}
-        />
-      </div>
-
-      <div>
         <div className="text-pq-eyebrow text-[var(--pq-bronze)] mb-2">
           지켜보는 주제
         </div>
@@ -130,7 +120,7 @@ function PulseForm({
                 aria-pressed={active}
                 type="button"
                 onClick={() => toggleTopic(t)}
-                className="text-pq-mono-sm min-h-[34px] px-3 py-1 rounded-[var(--pq-radius-card)] border transition-colors"
+                className="text-pq-mono-sm min-h-[44px] md:min-h-[34px] px-3 py-1 rounded-[var(--pq-radius-card)] border transition-colors"
                 style={{
                   borderColor: active
                     ? "var(--pq-bronze)"
@@ -148,30 +138,57 @@ function PulseForm({
         </div>
       </div>
 
-      <div>
-        <label
-          className="block text-pq-eyebrow text-[var(--pq-bronze)] mb-1.5"
-          htmlFor="pulse-learn"
-        >
-          배우고 싶은 것
-        </label>
-        <input
-          id="pulse-learn"
-          type="text"
-          value={learn}
-          onChange={(e) => setLearn(e.target.value)}
-          placeholder="예) 처분 효과 기초"
-          className="pq-ink-input w-full"
-          maxLength={200}
-        />
-      </div>
+      {/* Folded and optional (2026-10-25). */}
+      <details data-testid="pulse-more">
+        <summary className="pq-hit cursor-pointer select-none text-pq-body-sm text-[var(--pq-bronze-light)]">
+          한 줄 더 (선택) · 마음에 걸리는 것 · 배우고 싶은 것
+        </summary>
+        <div className="mt-3 space-y-5">
+          <div>
+            <label
+              className="block text-pq-eyebrow text-[var(--pq-bronze)] mb-1.5"
+              htmlFor="pulse-worry"
+            >
+              마음에 걸리는 것 하나
+            </label>
+            <input
+              id="pulse-worry"
+              type="text"
+              value={worry}
+              onChange={(e) => setWorry(e.target.value)}
+              placeholder="예) 미국 금리 동결 가능성"
+              className="pq-ink-input w-full"
+              maxLength={200}
+            />
+          </div>
+
+          <div>
+            <label
+              className="block text-pq-eyebrow text-[var(--pq-bronze)] mb-1.5"
+              htmlFor="pulse-learn"
+            >
+              배우고 싶은 것
+            </label>
+            <input
+              id="pulse-learn"
+              type="text"
+              value={learn}
+              onChange={(e) => setLearn(e.target.value)}
+              placeholder="예) 처분 효과 기초"
+              className="pq-ink-input w-full"
+              maxLength={200}
+            />
+          </div>
+        </div>
+      </details>
 
       <button
         type="submit"
-        disabled={busy}
+        disabled={busy || !ready}
+        aria-disabled={busy || !ready}
         className="pq-ink-btn-bronze w-full disabled:opacity-50"
       >
-        {busy ? "저장하는 중…" : "기록하기"}
+        {busy ? "저장하는 중…" : ready ? "기록하기" : "기분과 자신감을 골라 주세요"}
       </button>
     </form>
   );
@@ -183,7 +200,7 @@ function LikertRow({
   onChange,
 }: {
   label: string;
-  value: number;
+  value: number | null;
   onChange: (v: number) => void;
 }) {
   return (
@@ -201,7 +218,7 @@ function LikertRow({
               onClick={() => onChange(n)}
               aria-label={`${label} — 5점 중 ${n}점`}
               aria-pressed={active}
-              className="flex-1 h-9 rounded-[var(--pq-radius-card)] border font-mono text-pq-body-sm transition-colors"
+              className="flex-1 h-11 md:h-9 rounded-[var(--pq-radius-card)] border font-mono text-pq-body-sm transition-colors"
               style={{
                 borderColor: active
                   ? "var(--pq-bronze)"

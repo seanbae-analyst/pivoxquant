@@ -72,6 +72,8 @@ def test_parse_text_without_a_head_is_an_error(text):
     ("TSLA 반등", "TSLA"),
     ("005930 조금", "005930.KS"),
     ("AI 관련주 하나", None),      # stop-listed acronym, not C3.ai
+    ("CASH 조금 남겨두고 LOW 에서", None),  # common words that are US symbols
+    ("GOOD 타이밍 TSLA", "TSLA"),
     ("그냥 느낌", None),
     ("", None),
 ])
@@ -172,7 +174,7 @@ def test_outcomes_for_each_intent():
         Fill(t0 + timedelta(hours=10, minutes=3), "AAPL", "SELL"),        # sell w/o ticker → as said
     ]
     out = summarize(checks, fills, now=NOW, days=90, first_check_at=t0)
-    assert out["intents"] == {"look": 2, "buy": 3, "sell": 1}
+    assert out["intents"] == {"look": 2, "buy": 3, "sell": 1, "open": 0}
     assert out["look"] == {"n": 2, "traded": 1}
     assert out["said"]["buy"] == {"n": 3, "as_said": 1, "other": 1, "none": 1}
     assert out["said"]["sell"] == {"n": 1, "as_said": 1, "other": 0, "none": 0}
@@ -201,7 +203,73 @@ def test_window_edges_grace_and_follow():
     ]
     out = summarize(checks, fills, now=NOW, first_check_at=t0)
     assert {r["id"]: r["outcome"] for r in out["recent"]} == {1: "traded", 2: "none"}
-    # Only fills from the first open on count; the grace fill is 40s earlier.
+    # The grace fill 40s before the first open is that open's fill, so it is
+    # counted — and as through the door (it used to read 1 total · 0 door next
+    # to an open marked "traded").
+    assert out["fills"] == {"total": 2, "through_door": 1}
+
+
+def test_a_later_open_does_not_end_the_window():
+    """2026-10-21 — the not-happened check reassigned ``start``/``end``, which
+    the window filter reads, so every open after the first no-fill buy's
+    +30 days fell out of a 90-day (or yearly) count."""
+    checks = [
+        _check(1, NOW - timedelta(days=80), "buy", "TSLA"),
+        *[_check(i, NOW - timedelta(days=10, minutes=i), "look") for i in range(2, 7)],
+    ]
+    fills = [Fill(NOW - timedelta(days=9), "AAPL", "BUY")]
+    out = summarize(checks, fills, now=NOW, days=90, first_check_at=checks[0].created_at)
+    assert out["total"] == 6
+    assert out["intents"] == {"look": 5, "buy": 1, "sell": 0, "open": 0}
+    assert out["fills"]["total"] == 1
+
+    # The year: a sell in January must not cut June off, nor pull January of
+    # the next year in.
+    start, end = datetime(2025, 12, 31, 15, 0), datetime(2026, 12, 31, 15, 0)
+    year_checks = [
+        _check(1, datetime(2026, 1, 5, 1, 0), "sell", "TSLA"),
+        _check(2, datetime(2026, 6, 5, 1, 0), "look"),
+        _check(3, datetime(2027, 1, 5, 1, 0), "look"),
+    ]
+    later = datetime(2027, 6, 1)
+    out = year_section(year_checks, [], start=start, end=end, now=later,
+                       first_check_at=year_checks[0].created_at)
+    assert out["total"] == 2
+
+
+def test_reopening_the_app_does_not_turn_a_buy_into_never():
+    """살 → 20분 뒤 다시 열어 "그냥 보기" → 그 종목 체결. The fill is the later
+    open's (latest open only), but the stock was bought — not "never"."""
+    t0 = NOW - timedelta(days=40)
+    checks = [_check(1, t0, "buy", "005930.KS"), _check(2, t0 + timedelta(minutes=20), "look")]
+    fills = [Fill(t0 + timedelta(minutes=30), "005930.KS", "BUY")]
+    out = summarize(checks, fills, now=NOW, days=90, first_check_at=t0)
+    assert {r["id"]: r["outcome"] for r in out["recent"]} == {1: "none", 2: "traded"}
+    assert out["not_happened"] == {"n": 1, "later": 1, "never": 0, "open": 0}
+
+
+def test_a_bare_code_fill_is_the_same_stock_as_the_open():
+    t0 = NOW - timedelta(days=40)
+    checks = [_check(1, t0, "buy", "005930.KS"), _check(2, t0 + timedelta(days=1), "buy", "005930.KS")]
+    fills = [Fill(t0 + timedelta(minutes=5), "005930", "BUY"), Fill(t0 + timedelta(days=3), "005930", "BUY")]
+    out = summarize(checks, fills, now=NOW, days=90, first_check_at=t0)
+    assert {r["id"]: r["outcome"] for r in out["recent"]} == {1: "as_said", 2: "none"}
+    assert out["not_happened"] == {"n": 1, "later": 1, "never": 0, "open": 0}
+
+
+def test_date_only_fills_join_no_open_but_count_by_kst_day():
+    """A manual / CSV fill with no time is stored at its KST date 00:00 — read
+    as UTC that is 09:00 KST. It must not be tied to an open near 09:00, and
+    the not-happened check reads it by KST day."""
+    day = datetime(2026, 9, 1)                     # stored date-only fill of 9/1 (KST)
+    look = _check(1, datetime(2026, 8, 31, 23, 30), "look")       # 9/1 08:30 KST
+    buy = _check(2, datetime(2026, 9, 1, 11, 0), "buy", "TSLA")   # 9/1 20:00 KST
+    fills = [Fill(day, "TSLA", "BUY", untimed=True)]
+    out = summarize([look, buy], fills, now=NOW, days=90, first_check_at=look.created_at)
+    assert {r["id"]: r["outcome"] for r in out["recent"]} == {1: "none", 2: "none"}
+    assert out["look"] == {"n": 1, "traded": 0}
+    # Same KST day as the buy open → it was bought (not "never").
+    assert out["not_happened"] == {"n": 1, "later": 1, "never": 0, "open": 0}
     assert out["fills"] == {"total": 1, "through_door": 0}
 
 
@@ -247,7 +315,7 @@ def test_year_section_counts_only_that_year():
     fills = [Fill(datetime(2025, 12, 31, 15, 40), "TSLA", "BUY")]
     out = year_section(checks, fills, start=start, end=end, now=NOW, first_check_at=checks[0].created_at)
     assert out["total"] == 2
-    assert out["intents"] == {"look": 1, "buy": 1, "sell": 0}
+    assert out["intents"] == {"look": 1, "buy": 1, "sell": 0, "open": 0}
     assert out["said"]["buy"]["as_said"] == 1
     assert out["fills"] == {"total": 1, "through_door": 1}
     # Counts only — no recent rows, no user line.
@@ -267,7 +335,7 @@ def test_a_not_happened_open_does_not_shrink_the_window():
     fills = [Fill(NOW - timedelta(days=5, minutes=-10), "TSLA", "BUY")]
     out = summarize(checks, fills, now=NOW, days=90, first_check_at=old)
     assert out["total"] == 6
-    assert out["intents"] == {"look": 5, "buy": 1, "sell": 0}
+    assert out["intents"] == {"look": 5, "buy": 1, "sell": 0, "open": 0}
     assert out["not_happened"] == {"n": 1, "later": 0, "never": 1, "open": 0}
     assert out["fills"] == {"total": 1, "through_door": 1}
     assert len(out["recent"]) == 6
@@ -570,3 +638,192 @@ def test_load_fills_keeps_a_date_only_fill_on_the_since_kst_day(app, auth_user):
         db.session.commit()
         fills = load_fills(auth_user["id"], datetime(2026, 10, 14, 4, 0))  # 13:00 KST
     assert [f.untimed for f in fills] == [True]
+
+
+# ─────────────────────────────────────────────────────────────────────
+# 열림 신호 — 질문 전에 먼저 오는 한 번 (2026-10-26)
+# ─────────────────────────────────────────────────────────────────────
+
+@pytest.mark.parametrize("payload,expected", [
+    ({"text": "열림"}, True),
+    ({"text": " 열림 ", "app": "toss"}, True),
+    ({"text": "open"}, True),
+    ({"intent": "open"}, True),
+    ({"open": True}, True),
+    ({"text": "열림 삼성전자"}, False),
+    ({"text": "보기"}, False),
+    ({"intent": "look"}, False),
+    ({"open": "yes"}, False),
+])
+def test_is_open_signal(payload, expected):
+    from services.doorway.service import is_open_signal
+
+    assert is_open_signal(payload) is expected
+
+
+def test_open_signal_then_answer_is_one_open(app, make_user):
+    user = make_user(email="dw-open@test.com")
+    with app.app_context():
+        opened = record_check(user["id"], {"text": "열림", "app": "토스"}, source="automation", now=NOW)
+        assert opened["created"] is True and opened["today"] == 1
+        assert opened["check"]["intent"] == "open"
+        assert opened["check"]["app"] == "toss"
+        assert opened["check"]["opened_at"] == NOW.isoformat()
+
+        # A second signal before any answer is the same open (shortcut ran twice).
+        again = record_check(user["id"], {"text": "열림", "app": "toss"}, source="automation",
+                             now=NOW + timedelta(seconds=30))
+        assert again["created"] is False and again["check"]["id"] == opened["check"]["id"]
+        assert again["today"] == 1
+
+        # The answer lands on that open — still one row.
+        answered = record_check(user["id"], {"text": "살 삼성전자 실적", "app": "toss"}, source="automation",
+                                now=NOW + timedelta(seconds=40))
+        assert answered["created"] is False and answered["check"]["id"] == opened["check"]["id"]
+        assert answered["check"]["intent"] == "buy"
+        assert answered["check"]["ticker"] == "005930.KS"
+        assert answered["check"]["created_at"] == NOW.isoformat()
+        assert answered["today"] == 1
+
+        # Nothing open is waiting → an answer alone is its own row, as before.
+        alone = record_check(user["id"], {"intent": "look"}, source="automation",
+                             now=NOW + timedelta(seconds=50))
+        assert alone["created"] is True and alone["today"] == 2
+        assert alone["check"]["opened_at"] is None
+        assert DoorwayCheck.query.filter_by(user_id=user["id"]).count() == 2
+
+
+def test_open_signal_dedupe_is_per_app_and_one_minute(app, make_user):
+    user = make_user(email="dw-dedupe@test.com")
+    with app.app_context():
+        a = record_check(user["id"], {"open": True, "app": "toss"}, source="automation", now=NOW)
+        b = record_check(user["id"], {"open": True, "app": "kiwoom"}, source="automation",
+                         now=NOW + timedelta(seconds=10))
+        c = record_check(user["id"], {"open": True, "app": "toss"}, source="automation",
+                         now=NOW + timedelta(seconds=70))
+        assert [a["created"], b["created"], c["created"]] == [True, True, True]
+        assert c["today"] == 3
+        # An answered open is not a duplicate target: reopening right after an answer counts.
+        record_check(user["id"], {"intent": "look", "app": "toss"}, source="automation",
+                     now=NOW + timedelta(seconds=75))
+        d = record_check(user["id"], {"open": True, "app": "toss"}, source="automation",
+                         now=NOW + timedelta(seconds=80))
+        assert d["created"] is True and d["today"] == 4
+
+
+def test_an_answer_after_ten_minutes_is_its_own_open(app, make_user):
+    user = make_user(email="dw-late@test.com")
+    with app.app_context():
+        opened = record_check(user["id"], {"intent": "open", "app": "toss"}, source="web", now=NOW)
+        late = record_check(user["id"], {"intent": "look", "app": "toss"}, source="web",
+                            now=NOW + timedelta(minutes=11))
+        assert late["created"] is True and late["check"]["id"] != opened["check"]["id"]
+        assert db.session.get(DoorwayCheck, opened["check"]["id"]).intent == "open"
+        # Another app's answer does not take this app's open.
+        fresh = record_check(user["id"], {"intent": "open", "app": "toss"}, source="web",
+                             now=NOW + timedelta(minutes=20))
+        other = record_check(user["id"], {"intent": "sell", "app": "kiwoom"}, source="web",
+                             now=NOW + timedelta(minutes=21))
+        assert other["created"] is True
+        assert db.session.get(DoorwayCheck, fresh["check"]["id"]).intent == "open"
+
+
+def test_open_signals_count_toward_the_daily_cap(app, make_user, monkeypatch):
+    import services.doorway.service as svc
+
+    monkeypatch.setattr(svc, "DAILY_LIMIT", 1)
+    user = make_user(email="dw-opencap@test.com")
+    with app.app_context():
+        record_check(user["id"], {"open": True, "app": "toss"}, source="automation", now=NOW)
+        # Its answer is not a new row, so the cap does not refuse it.
+        record_check(user["id"], {"intent": "look", "app": "toss"}, source="automation",
+                     now=NOW + timedelta(seconds=5))
+        with pytest.raises(DoorwayInputError) as exc:
+            record_check(user["id"], {"open": True, "app": "toss"}, source="automation",
+                         now=NOW + timedelta(minutes=5))
+        assert exc.value.code == "DOORWAY_DAILY_LIMIT"
+
+
+def test_unanswered_opens_are_counted_and_matched():
+    from services.doorway.service import CAVEAT_ANSWERS_ONLY, CAVEAT_OPENS
+
+    t0 = NOW - timedelta(days=5)
+    checks = [
+        _check(1, t0, "open"),
+        _check(2, t0 + timedelta(hours=2), "open"),
+        _check(3, t0 + timedelta(hours=4), "look"),
+    ]
+    fills = [Fill(t0 + timedelta(minutes=20), "005930.KS", "BUY")]
+    out = summarize(checks, fills, now=NOW, first_check_at=t0, opens_since=t0 - timedelta(days=40))
+    assert out["total"] == 3
+    assert out["intents"] == {"look": 1, "buy": 0, "sell": 0, "open": 2}
+    assert out["unanswered"] == {"n": 2, "traded": 1}
+    assert {r["id"]: r["outcome"] for r in out["recent"]} == {1: "traded", 2: "none", 3: "none"}
+    assert out["fills"] == {"total": 1, "through_door": 1}
+    assert out["opens_since"] == (t0 - timedelta(days=40)).isoformat()
+    assert out["caveats"][0] == CAVEAT_OPENS and CAVEAT_ANSWERS_ONLY not in out["caveats"]
+
+    # Signal switched on inside the window: say from when.
+    since = NOW - timedelta(days=10)          # 10-05 06:00 UTC = 10-05 KST
+    out = summarize(checks, fills, now=NOW, first_check_at=t0, opens_since=since)
+    assert out["caveats"][:2] == [CAVEAT_OPENS, "10월 5일 전에는 질문에 답한 열림만 셌습니다."]
+
+    # No signal ever: the count is answers, and the first caveat says so.
+    out = summarize([checks[2]], fills, now=NOW, first_check_at=t0)
+    assert out["opens_since"] is None
+    assert out["caveats"][0] == CAVEAT_ANSWERS_ONLY
+
+
+def test_year_section_reads_the_first_signal_from_the_rows():
+    start, end = datetime(2025, 12, 31, 15, 0), datetime(2026, 12, 31, 15, 0)
+    first = datetime(2026, 3, 1, 1, 0)
+    rows = [
+        SimpleNamespace(id=1, created_at=first, intent="open", ticker=None, note=None, app="toss",
+                        opened_at=first),
+        SimpleNamespace(id=2, created_at=first + timedelta(days=1), intent="look", ticker=None, note=None,
+                        app="toss", opened_at=first + timedelta(days=1)),
+    ]
+    out = year_section(rows, [], start=start, end=end, now=datetime(2026, 10, 1), first_check_at=first)
+    assert out["total"] == 2
+    assert out["unanswered"] == {"n": 1, "traded": 0}
+    assert out["opens_since"] == first.isoformat()
+    assert out["intents"]["open"] == 1
+
+
+def test_webhook_open_signal_then_answer(client, bearer_client, auth_user):
+    headers = _token(client)
+    first = bearer_client.post(WEBHOOK, json={"text": "열림", "app": "toss"}, headers=headers)
+    assert first.status_code == 201, first.data
+    assert first.get_json()["check"]["intent"] == "open"
+    assert first.get_json()["message"].startswith("열림을 기록했어요")
+    again = bearer_client.post(WEBHOOK, data="열림", content_type="text/plain", headers=headers)
+    assert again.status_code == 200
+    assert again.get_json()["check"]["id"] == first.get_json()["check"]["id"]
+    answer = bearer_client.post(WEBHOOK, json={"text": "팔 테슬라 반등", "app": "toss"}, headers=headers)
+    assert answer.status_code == 200
+    assert answer.get_json()["check"]["id"] == first.get_json()["check"]["id"]
+    assert answer.get_json()["check"]["intent"] == "sell"
+    assert "오늘 1번째" in answer.get_json()["message"]
+    assert client.get(TOKENS).get_json()["tokens"][0]["last_used_at"]
+
+    # An open nobody answered still shows on the mirror, and the summary says
+    # the count is opens now.
+    bearer_client.post(WEBHOOK, json={"open": True, "app": "kiwoom"}, headers=headers)
+    s = client.get(SUMMARY).get_json()
+    assert s["total"] == 2
+    assert s["unanswered"]["n"] == 1
+    assert s["intents"]["sell"] == 1 and s["intents"]["open"] == 1
+    assert s["opens_since"]
+    listed = client.get(CHECKS).get_json()["checks"]
+    assert {c["intent"] for c in listed} == {"sell", "open"}
+    assert all(c["opened_at"] for c in listed)
+
+
+def test_web_door_open_signal_uses_the_session(client, auth_user):
+    resp = client.post(CHECKS, json={"intent": "open", "app": "kiwoom"})
+    assert resp.status_code == 201, resp.data
+    assert resp.get_json()["check"]["source"] == "web"
+    joined = client.post(CHECKS, json={"intent": "buy", "note": "삼성전자 실적 전", "app": "kiwoom"})
+    assert joined.status_code == 200
+    assert joined.get_json()["check"]["id"] == resp.get_json()["check"]["id"]
+    assert joined.get_json()["pause_url"].endswith("/pre-trade?ticker=005930.KS")

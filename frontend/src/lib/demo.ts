@@ -466,17 +466,20 @@ const DEMO_DOORWAY_SUMMARY = {
   follow_minutes: 60,
   later_days: 30,
   first_check_at: "2026-09-20T00:12:00",
-  total: 41,
-  intents: { look: 23, buy: 14, sell: 4 },
+  opens_since: "2026-09-20T00:12:00",
+  total: 48,
+  intents: { look: 23, buy: 14, sell: 4, open: 7 },
   look: { n: 23, traded: 3 },
+  unanswered: { n: 7, traded: 1 },
   said: {
     buy: { n: 14, as_said: 6, other: 2, none: 6 },
     sell: { n: 4, as_said: 2, other: 0, none: 2 },
   },
   not_happened: { n: 7, later: 2, never: 3, open: 2 },
-  fills: { total: 15, through_door: 13 },
-  by_hour_kst: [0, 0, 0, 0, 0, 0, 0, 1, 3, 9, 4, 2, 3, 2, 1, 2, 0, 0, 0, 1, 2, 3, 6, 2],
+  fills: { total: 16, through_door: 14 },
+  by_hour_kst: [0, 0, 0, 0, 0, 0, 0, 1, 3, 10, 5, 2, 3, 2, 1, 2, 0, 0, 0, 1, 3, 4, 8, 3],
   recent: [
+    { id: 42, at: "2026-10-15T02:20:00", intent: "open", ticker: null, name: null, note: null, app: "toss", outcome: "none" },
     { id: 41, at: "2026-10-15T00:05:00", intent: "buy", ticker: "005930.KS", name: "삼성전자", note: "삼성전자 실적 발표 전에 조금", app: "toss", outcome: "none" },
     { id: 40, at: "2026-10-14T13:40:00", intent: "look", ticker: null, name: null, note: null, app: "toss", outcome: "none" },
     { id: 39, at: "2026-10-14T13:02:00", intent: "buy", ticker: "NVDA", name: "NVIDIA", note: "엔비디아 눌림", app: "toss", outcome: "as_said" },
@@ -484,6 +487,7 @@ const DEMO_DOORWAY_SUMMARY = {
     { id: 37, at: "2026-10-13T06:10:00", intent: "sell", ticker: "TSLA", name: "Tesla", note: "테슬라 반등에 정리", app: "toss", outcome: "as_said" },
   ],
   caveats: [
+    "열림 신호를 보내는 폰에서 증권 앱을 연 횟수입니다. 답하기 전에 1분 안에 다시 연 것은 한 번으로 셉니다.",
     "체결은 문을 연 뒤 60분 안에 들어온 것만 그 열림에 잇습니다. 한 체결은 바로 앞의 열림 하나에만 이어집니다.",
     "자동화가 꺼져 있던 때나 다른 기기·PC에서 한 거래는 '문을 거치지 않은 체결'로 셉니다.",
     "기록 대기 목록에 아직 있는 체결도 함께 셉니다.",
@@ -563,6 +567,105 @@ function _demoSellMoment(query: string) {
   return { ok: true, ticker, words, held_days: 41, vs_cost_pct: null, matched_shares: 0 };
 }
 
+/* ── 종목별 내 기록 (/api/stock-record/<t>, 2026-10-25) — composed from the
+ *    same demo trades, pauses, research and notes so every screen agrees. ── */
+// SEC filings on the stock record (FILINGS_ENABLED) — demo rows for a US name.
+const DEMO_FILINGS: Record<string, { filed_on: string; form: string; label: string; earnings: boolean }[]> = {
+  NVDA: [
+    { filed_on: "2026-06-24", form: "8-K", label: "수시보고", earnings: false },
+    { filed_on: "2026-06-12", form: "8-K", label: "실적 발표", earnings: true },
+    { filed_on: "2026-05-29", form: "10-Q", label: "분기보고서", earnings: false },
+  ],
+  "005930": [
+    { filed_on: "2026-07-07", form: "공정공시", label: "연결재무제표기준영업(잠정)실적(공정공시)", earnings: true },
+    { filed_on: "2026-05-15", form: "정기공시", label: "분기보고서 (2026.03)", earnings: false },
+  ],
+};
+
+function _demoStockRecord(base: string) {
+  const raw = decodeURIComponent(base.slice("/api/stock-record/".length)).trim().toUpperCase();
+  const key = demoNoteTickerKey(raw);
+  const pos = DEMO_POSITION_ROWS.find((p) => demoNoteTickerKey(p.ticker) === key);
+  const fills = DEMO_TRADES.trades
+    .filter((t) => demoNoteTickerKey(t.symbol) === key)
+    .map((t) => ({
+      kind: "fill" as const, at: t.date, side: t.side as "buy" | "sell",
+      shares: t.shares, price: t.price, currency: t.currency, after_pause: false,
+    }));
+  const pauses = DEMO_PRETRADE_LIST.reflections
+    .filter((r) => demoNoteTickerKey(r.intended_ticker) === key)
+    .map((r) => {
+      const entry = r.intended_side === "BUY"; // // legal-ok — stored side code, compared only
+      const at = r.proceeded_at ?? r.cancelled_at ?? "2026-06-15T09:00:00+09:00";
+      return {
+        kind: "pause" as const, at, side: entry ? ("entry" as const) : ("exit" as const),
+        rationale: r.rationale, status: r.status,
+        bought_after: entry ? fills.some((f) => f.side === "buy" && f.at >= at) : null,
+      };
+    });
+  const research = DEMO_RESEARCH_NOTES.filter((n) => demoNoteTickerKey(n.ticker) === key).map((n) => ({
+    kind: "research" as const, at: n.created_at, id: n.id, theses: n.theses,
+    invalidation: n.invalidation, verdicts: n.verdicts, review_on: n.review_on,
+    reviewed_at: n.reviewed_at, due: n.due,
+  }));
+  const notes = DEMO_OBSERVATION_NOTES.filter((n) => n.tickers.some((t) => demoNoteTickerKey(t.ticker) === key)).map((n) => ({
+    kind: "note" as const, at: n.created_at, id: n.id, body: n.body, tags: n.tags,
+  }));
+  const filings = (DEMO_FILINGS[key] ?? []).map((f) => ({
+    kind: "filing" as const, at: `${f.filed_on}T00:00:00`, filed_on: f.filed_on, form: f.form,
+    label: f.label, earnings: f.earnings, source: /^\d{6}$/.test(key) ? "DART" : "SEC EDGAR",
+    url: /^\d{6}$/.test(key)
+      ? "https://dart.fss.or.kr/"
+      : `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${encodeURIComponent(key)}`,
+  }));
+  const usDay = (iso: string) => new Date(Date.parse(iso) - 4 * 3600_000).toISOString().slice(0, 10); // EDT, demo only
+  const releases = filings.filter((f) => f.earnings).map((f) => Date.parse(f.filed_on));
+  const afterRelease = (iso: string) =>
+    releases.some((d) => {
+      const days = (Date.parse(usDay(iso)) - d) / 86_400_000;
+      return days >= 1 && days <= 3;
+    });
+  const events = [...fills, ...pauses, ...research, ...notes, ...filings].sort((a, b) => (b.at ?? "").localeCompare(a.at ?? ""));
+  return {
+    ok: true,
+    ticker: pos?.ticker ?? raw,
+    name: pos?.name ?? DEMO_SEARCH_UNIVERSE.find((u) => demoNoteTickerKey(u.ticker) === key)?.name ?? null,
+    holding: pos ? { shares: pos.shares, avg_cost: pos.avg_cost, currency: pos.currency } : null,
+    counts: {
+      fills: fills.length,
+      buys: fills.filter((f) => f.side === "buy").length,
+      sells: fills.filter((f) => f.side === "sell").length,
+      pauses: pauses.length,
+      not_taken: pauses.filter((p) => p.bought_after === false).length,
+      research: research.length,
+      notes: notes.length,
+      filings: filings.length,
+    },
+    filing_reaction: releases.length
+      ? {
+          earnings: releases.length, window_days: 3, date_basis: /^\d{6}$/.test(key) ? ("kr" as const) : ("us" as const),
+          buys_after: fills.filter((f) => f.side === "buy" && afterRelease(f.at)).length,
+          sells_after: fills.filter((f) => f.side === "sell" && afterRelease(f.at)).length,
+          timed_fills: fills.length, untimed_fills: 0,
+        }
+      : null,
+    events,
+  };
+}
+
+// 내가 고른 회사들 (/api/pick-facts) — demo picks over the demo buys.
+const DEMO_PICK_FACTS = {
+  ok: true, window_days: 365, picked: 5, with_facts: 4, pending: 0, no_facts: 1,
+  counts: { net_loss: 1, revenue_down: 1, liabilities_over_equity: 2 },
+  sources: ["DART", "SEC EDGAR"],
+  picks: [
+    { ticker: "NVDA", name: "NVIDIA", bought_on: "2026-06-15", fiscal_end: "2026-01-25", filed_on: "2026-02-26", net_loss: false, revenue_down: false, liabilities_over_equity: false, source: "SEC EDGAR" },
+    { ticker: "AAPL", name: "Apple", bought_on: "2026-05-12", fiscal_end: "2025-09-27", filed_on: "2025-10-31", net_loss: false, revenue_down: false, liabilities_over_equity: true, source: "SEC EDGAR" },
+    { ticker: "TSLA", name: "Tesla", bought_on: "2026-05-20", fiscal_end: "2025-12-31", filed_on: "2026-01-29", net_loss: false, revenue_down: true, liabilities_over_equity: false, source: "SEC EDGAR" },
+    { ticker: "JOBY", name: "Joby Aviation", bought_on: "2026-06-02", fiscal_end: "2025-12-31", filed_on: "2026-02-25", net_loss: true, revenue_down: false, liabilities_over_equity: true, source: "SEC EDGAR" },
+  ],
+};
+
 /** Canned GET response for a path, or undefined if not registered yet. */
 function matchDemoGet(path: string): unknown | undefined {
   const qIdx = path.indexOf("?");
@@ -576,7 +679,9 @@ function matchDemoGet(path: string): unknown | undefined {
   if (base.startsWith("/api/research-notes/by-ticker/"))
     return _demoResearchByTicker(base);
   if (base === "/api/research-notes/overview") return DEMO_RESEARCH_OVERVIEW;
+  if (base.startsWith("/api/stock-record/")) return _demoStockRecord(base);
   if (base === "/api/doorway/summary") return DEMO_DOORWAY_SUMMARY;
+  if (base === "/api/pick-facts") return DEMO_PICK_FACTS;
 
   if (base === "/api/sell-moment") return _demoSellMoment(query);
   if (base === "/api/research-notes/list")

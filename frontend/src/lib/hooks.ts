@@ -36,7 +36,9 @@ import type {
   DoorwayCreateResponse,
   DoorwayIntent,
   DoorwaySummaryResponse,
+  PickFactsResponse,
   ResearchByTickerResponse,
+  StockRecordResponse,
   ResearchInfoSource,
   ResearchNoteResponse,
   ResearchNotesResponse,
@@ -352,6 +354,17 @@ export function useYearRecap(year: number | null) {
 
 /* ── Research notes (리서치 양식) ───────────────────────────────────────── */
 
+/* ── 내가 고른 회사들 (pick facts) ─────────────────────────────────────────── */
+
+/** Counts over the year's first buys, from numbers filed before each buy — the /mirror card. */
+export function usePickFacts() {
+  const swr = useSWR<PickFactsResponse>(API.pickFacts, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 60_000,
+  });
+  return { data: swr.data ?? null, isLoading: swr.isLoading, error: swr.error as Error | undefined };
+}
+
 /* ── 문 앞의 한 줄 (doorway pause) ──────────────────────────────────────── */
 
 /** Opens × own fills over the last `days` — the /mirror card. */
@@ -374,7 +387,8 @@ function revalidateDoorwaySummary(): void {
 
 /** The web door (/pre-trade/door) — the same record the phone automation makes. */
 export async function createDoorwayCheck(body: {
-  intent: DoorwayIntent;
+  /** "open" = the app-open signal the web door sends when an automation opened it. */
+  intent: DoorwayIntent | "open";
   note?: string;
   app?: string;
 }): Promise<DoorwayCreateResponse> {
@@ -434,6 +448,15 @@ export function useResearchNotes(limit = 50) {
  * picked, so the cold reasoning sits next to the seven questions. `null`
  * ticker disables the fetch. Read-only: the 멈춤 screen never writes one.
  */
+/** 종목별 내 기록 — one stock's own records on one timeline (2026-10-25). */
+export function useStockRecord(ticker: string | null) {
+  const swr = useSWR<StockRecordResponse>(ticker ? API.stockRecord(ticker) : null, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30_000,
+  });
+  return { data: swr.data ?? null, error: swr.error as Error | undefined, isLoading: swr.isLoading, mutate: swr.mutate };
+}
+
 export function useResearchByTicker(ticker: string | null) {
   const swr = useSWR<ResearchByTickerResponse>(ticker ? API.research.byTicker(ticker) : null, fetcher, {
     revalidateOnFocus: false,
@@ -445,7 +468,8 @@ export function useResearchByTicker(ticker: string | null) {
 /** Body of `POST /api/research-notes`. */
 export interface CreateResearchNoteBody {
   ticker: string;
-  business: string;
+  /** Optional since 2026-10-25 — stored as "" when left out. */
+  business?: string;
   theses: string[];
   invalidation?: string;
   risk?: string;

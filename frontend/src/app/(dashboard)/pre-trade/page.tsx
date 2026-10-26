@@ -73,6 +73,7 @@ import {
 } from "@/components/pre-trade/pre-trade-friction-core";
 import { RelatedObservationNotes } from "@/components/pre-trade/related-observation-notes";
 import { RelatedResearch } from "@/components/pre-trade/related-research";
+import { looksLikeTicker } from "@/lib/research";
 import { TickerSearch } from "@/components/shared/ticker-search";
 import type { BackendPositionRow } from "@/components/portfolio/types";
 import { PORTFOLIO_POSITIONS } from "@/lib/endpoints";
@@ -246,9 +247,11 @@ export default function PreTradePage() {
         {cycle.phase === "setup" && (
           <Link
             href={
-              ticker.trim()
-                ? `/journal/research?ticker=${encodeURIComponent(ticker.trim().toUpperCase())}`
-                : "/journal/research?new=1"
+              // Only a symbol rides along — the search box holds typed text
+              // ("삼성전자") until a pick, and a name is not a ticker.
+              looksLikeTicker(ticker)
+                ? `/journal/research?ticker=${encodeURIComponent(ticker.trim().toUpperCase())}&from=pre_trade`
+                : "/journal/research?new=1&from=pre_trade"
             }
             data-testid="pre-trade-research-link"
             className="flex items-center justify-between gap-3 rounded-[var(--pq-radius-card)] px-4 py-3 transition-colors hover:bg-[var(--pq-card-veil-strong)]"
@@ -377,7 +380,10 @@ function SetupStep(props: {
               onChange={setTicker}
               onPick={(r) => setTicker(r.ticker)}
               ariaLabel="종목"
-              inputClassName="w-full bg-transparent border-b border-[rgba(245,240,232,0.15)] py-2 font-mono text-pq-lead uppercase outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)]"
+              // A name works too (/api/search resolves names) — the code-only
+              // hint read as "type a ticker" to someone who thinks "삼성전자".
+              placeholder="삼성전자 · AAPL"
+              inputClassName="w-full bg-transparent border-b border-[rgba(245,240,232,0.15)] py-2.5 font-mono text-pq-lead uppercase outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)]"
               inputStyle={{ letterSpacing: "0.04em" }}
             />
           </Field>
@@ -390,7 +396,7 @@ function SetupStep(props: {
                   onClick={() => setSide(s)}
                   aria-label={SIDE_LABEL_KO[s]}
                   aria-pressed={side === s}
-                  className={`px-4 py-2 text-pq-eyebrow transition-colors ${
+                  className={`min-h-[44px] min-w-[72px] rounded-[var(--pq-radius-cta)] px-4 py-2 text-pq-body-sm transition-colors md:min-h-0 md:min-w-0 md:text-pq-eyebrow ${
                     side === s
                       ? "bg-[rgba(245,240,232,0.10)] border border-[var(--pq-ivory)] text-[var(--pq-ivory)]"
                       : "border border-[rgba(245,240,232,0.15)] text-[var(--pq-ivory-mid)] hover:border-[rgba(245,240,232,0.45)]"
@@ -411,7 +417,7 @@ function SetupStep(props: {
               value={sharesText}
               onChange={(e) => setSharesText(e.target.value)}
               placeholder="0"
-              className="w-full bg-transparent border-b border-[rgba(245,240,232,0.15)] py-2 font-mono text-pq-lead outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)]"
+              className="w-full bg-transparent border-b border-[rgba(245,240,232,0.15)] py-2.5 font-mono text-pq-lead outline-none focus:border-[var(--pq-bronze)] text-[var(--pq-ivory)]"
             />
           </Field>
         </div>
@@ -435,7 +441,7 @@ function SetupStep(props: {
                   type="button"
                   aria-pressed={on}
                   onClick={() => togglePick(chip)}
-                  className={`min-h-[40px] rounded-[var(--pq-radius-cta)] border px-3.5 text-pq-body-sm transition-colors ${
+                  className={`min-h-[44px] rounded-[var(--pq-radius-cta)] border px-3.5 text-pq-body-sm transition-colors md:min-h-[40px] ${
                     on
                       ? "border-[var(--pq-bronze)] bg-[rgba(var(--pq-bronze-rgb),0.14)] text-[var(--pq-ivory)]"
                       : "border-[rgba(245,240,232,0.15)] text-[var(--pq-ivory-mid)] hover:border-[rgba(245,240,232,0.45)]"
@@ -540,7 +546,7 @@ function HeldPicker({ ticker, setTicker }: { ticker: string; setTicker: (s: stri
                 type="button"
                 onClick={() => setTicker(sym)}
                 aria-pressed={active}
-                className={`px-3 py-1.5 text-pq-mono-sm tracking-[0.01em] transition-colors ${
+                className={`min-h-[44px] px-3 py-1.5 text-pq-mono-sm tracking-[0.01em] transition-colors md:min-h-0 ${
                   active
                     ? "bg-[rgba(245,240,232,0.10)] border border-[var(--pq-ivory)] text-[var(--pq-ivory)]"
                     : "border border-[rgba(245,240,232,0.15)] text-[var(--pq-ivory-mid)] hover:border-[rgba(245,240,232,0.45)]"

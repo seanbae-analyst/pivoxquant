@@ -775,7 +775,7 @@
       "eyebrow": "Import tokens",
       "heading": "A key that lets your tools",
       "headingAccent": "send fill notifications.",
-      "desc": "This token can only place fills on the pending list and leave doorway answers. Nothing is recorded until you approve it. It does not touch your brokerage account; your own tools (MacroDroid, a mail filter, and so on) use it to post notification text.",
+      "desc": "This token can only place fills on the pending list and leave doorway records (when a broker app was opened, and your answer). Nothing is recorded until you approve it. It does not touch your brokerage account; your own tools (MacroDroid, a mail filter, and so on) use it to post notification text.",
       "issueKicker": "Issue",
       "nameLabel": "Token name",
       "namePlaceholder": "e.g. Phone MacroDroid",
@@ -819,7 +819,7 @@
       "guideStep2": "② Copy the token shown right after issuing. It cannot be shown again once you close it.",
       "guideStep3": "③ Follow the phone setup shown on the same screen to create one 'fill notification → send to PivoxQuant' rule in MacroDroid or Shortcuts. It takes about five minutes.",
       "guideStep4": "④ From the next fill on, it appears on the pending list at the top of the Journal page. Approve it with your reason to record it, or reject what you don't need.",
-      "guideNote1": "The token can only place fills on the pending list and leave doorway answers. It never touches your brokerage account or orders.",
+      "guideNote1": "The token can only place fills on the pending list and leave doorway records (app-open times and answers). It never touches your brokerage account or orders.",
       "guideNote2": "If you change phones or think the token leaked, revoke it in the list below and issue a new one.",
       "setupKicker": "Phone setup — copy and paste these three values",
       "urlLabel": "Address to send to (URL)",
@@ -915,6 +915,10 @@
       "fill_memo": {
         "name": "A fill just arrived — note why",
         "help": "When your phone automation (import token) forwards a fill, a push is sent right away. Tapping it opens that fill's reason box."
+      },
+      "research_filing": {
+        "name": "Revisit a thesis",
+        "help": "When a company you wrote an unscored research note on files a new periodic report or earnings release, you hear about it. No reading of the filing — it takes you to that stock's record to look at your note again."
       }
     },
     "signin": {

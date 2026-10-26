@@ -79,7 +79,7 @@ function MonthBars({ months }: { months: YearRecapResponse["fills"]["by_month"] 
       </div>
       <div className="mt-1.5 flex gap-[6px]" aria-hidden>
         {months.map((m) => (
-          <span key={m.month} className="flex-1 text-center text-[11px] tabular-nums" style={{ color: DIM }}>
+          <span key={m.month} className="flex-1 text-center text-[12px] tabular-nums" style={{ color: DIM }}>
             {Number(m.month.slice(5))}
           </span>
         ))}
@@ -212,7 +212,7 @@ function RulesSection({ rules }: { rules: NonNullable<YearRecapResponse["rules"]
       {rules.holding && (
         <p className="mt-4 text-[14px] tabular-nums" style={{ color: IVORY }} data-testid="year-rules-holding">
           {rules.holding.sells > 0
-            ? `매도 ${rules.holding.sells}번 중 ${rules.holding.min_days}일 전에 판 것 ${rules.holding.sooner}번`
+            ? `매도 ${rules.holding.sells}번 중 ${rules.holding.sooner_label ?? `${rules.holding.min_days}일 전에 판 것`} ${rules.holding.sooner}번`
             : "규칙을 정한 뒤 매도 기록 없음"}
         </p>
       )}
@@ -228,12 +228,18 @@ function DoorwaySection({ d }: { d: YearRecapDoorway }) {
     { key: "buy", label: "살 게 있음", n: d.intents.buy },
     { key: "sell", label: "팔 게 있음", n: d.intents.sell },
   ];
+  // With the app-open signal the total is opens, and some had no answer (2026-10-26).
+  if (d.opens_since) rows.push({ key: "open", label: "답 안 함", n: d.intents.open ?? 0 });
   const top = Math.max(1, ...rows.map((r) => r.n));
   const said = d.said.buy.n + d.said.sell.n;
   const asSaid = d.said.buy.as_said + d.said.sell.as_said;
   return (
     <Section id="doorway" title="문 앞">
-      <BigNumber value={d.total} unit="번" label="증권 앱을 열 때 남긴 답" />
+      <BigNumber
+        value={d.total}
+        unit="번"
+        label={d.opens_since ? "증권 앱을 연 횟수" : "증권 앱을 열 때 남긴 답"}
+      />
       <ul className="mt-5 list-none space-y-2 p-0">
         {rows.map((r) => (
           <li key={r.key} className="flex items-center gap-3 text-[12.5px] tabular-nums" style={{ color: DIM }}>
@@ -252,11 +258,17 @@ function DoorwaySection({ d }: { d: YearRecapDoorway }) {
         {d.look.n > 0 && (
           <li>그냥 보기 {d.look.n}번 중 {d.look.traded}번은 {d.follow_minutes}분 안에 체결이 있었어요.</li>
         )}
+        {d.unanswered && d.unanswered.n > 0 && (
+          <li>
+            답하지 않은 {d.unanswered.n}번 중 {d.unanswered.traded}번은 {d.follow_minutes}분 안에 체결이 있었어요.
+          </li>
+        )}
         {said > 0 && <li>살 게 · 팔 게 있다고 한 {said}번 중 말한 대로 체결 {asSaid}번</li>}
         {d.not_happened.n > 0 && (
           <li>
             종목을 적고 체결 없이 끝난 {d.not_happened.n}번 중 {d.later_days}일 안에 그 종목 체결{" "}
             {d.not_happened.later} · 체결 없음 {d.not_happened.never}
+            {d.not_happened.open > 0 ? ` · 아직 ${d.later_days}일이 안 됨 ${d.not_happened.open}` : ""}
           </li>
         )}
       </ul>

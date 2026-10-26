@@ -21,6 +21,7 @@ import { useFocusTrap } from "@/lib/useFocusTrap";
 import { PQ_EASE, PQ_DUR_BASE, PQ_DUR_FAST } from "@/lib/motion";
 import { useAuth } from "@/lib/auth";
 import { useT } from "@/lib/locale";
+import { QuantMark } from "@/components/ui/quant-mark";
 
 const backdropVariants: Variants = {
   hidden: { opacity: 0 },
@@ -111,17 +112,17 @@ export default function MobileDrawer({
           >
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4">
-              {/* FINDING-030: canonical italic Playfair mixed-case wordmark. */}
+              {/* "Pivox" Ivory + "Quant" Bronze — same logo as PivoxMap / PivoxData (2026-10-25). */}
               <span
                 className="font-serif"
                 style={{
                   color: "var(--pq-ivory)",
-                  letterSpacing: "0.01em",
-                  fontSize: "var(--pq-text-h6)",
-                  fontWeight: 500,
+                  letterSpacing: "-0.02em",
+                  fontSize: "var(--pq-text-h5)",
+                  fontWeight: 700,
                 }}
               >
-                PivoxQuant
+                <QuantMark />
               </span>
               {/* FINDING-LAND-007 sweep (design-audit-20260514): drawer
                   close button matched the hamburger at 40px — below the

@@ -45,7 +45,7 @@ function StatusChip({ status }: { status: MyRuleStatus }) {
   const outside = status === "outside";
   return (
     <span
-      className="shrink-0 rounded-full px-2 py-0.5 text-[11px]"
+      className="shrink-0 rounded-full px-2 py-0.5 text-[12px]"
       style={{
         color: outside ? "var(--pq-bronze)" : DIM,
         border: `1px solid ${outside ? "var(--pq-bronze)" : "var(--pq-ivory-line)"}`,
@@ -91,7 +91,7 @@ function MonthBars({
             <div key={m.month} className="relative flex h-full flex-1 items-end justify-center">
               {m.partial && (
                 <span
-                  className="absolute text-[10.5px] tabular-nums"
+                  className="absolute text-[12px] tabular-nums"
                   style={{ bottom: `calc(${pct(m.count)} + 2px)`, color: "var(--pq-ivory)" }}
                 >
                   {m.count}
@@ -119,7 +119,7 @@ function MonthBars({
       </div>
       <div className="mt-1 flex gap-[2px]" aria-hidden>
         {months.map((m) => (
-          <span key={m.month} className="flex-1 text-center text-[10.5px]" style={{ color: DIM }}>
+          <span key={m.month} className="flex-1 text-center text-[12px]" style={{ color: DIM }}>
             {monthLabel(m)}
           </span>
         ))}
@@ -127,7 +127,7 @@ function MonthBars({
       {/* The threshold is named under the plot, not at the end of its line,
           where it collided with the running month's count at phone width. */}
       {ceiling !== null && (
-        <div className="mt-2 flex items-center gap-1.5 text-[10.5px]" style={{ color: DIM }} aria-hidden>
+        <div className="mt-2 flex items-center gap-1.5 text-[12px]" style={{ color: DIM }} aria-hidden>
           <span className="inline-block w-4" style={{ borderTop: LINE_STROKE }} />
           {adopted ? "정해 둔 선" : "답한 선"} {ceiling}번
         </div>
@@ -154,7 +154,7 @@ function RuleRow({ rule, adopted }: { rule: MyRuleItem; adopted: boolean }) {
       data-testid={`my-rule-${rule.id}`}
     >
       <div className="flex items-baseline justify-between gap-3">
-        <span className="text-[11.5px]" style={{ color: DIM }}>
+        <span className="text-[12px]" style={{ color: DIM }}>
           {rule.title}
         </span>
         {adopted && <StatusChip status={rule.status} />}
@@ -166,7 +166,7 @@ function RuleRow({ rule, adopted }: { rule: MyRuleItem; adopted: boolean }) {
         {rule.observed}
       </p>
       {rule.note && (
-        <p className="mt-1 text-[11.5px] leading-relaxed" style={{ color: "rgba(var(--pq-ivory-rgb), 0.42)" }}>
+        <p className="mt-1 text-[12px] leading-relaxed" style={{ color: "var(--pq-ivory-faint)" }}>
           {rule.note}
         </p>
       )}
@@ -284,7 +284,7 @@ export function MyRulesPanel({
           {adopted ? "내 규칙" : "온보딩 때 말한 나"}
         </div>
         {adopted && rules.confirmed_on && (
-          <span className="text-[11px] tabular-nums" style={{ color: DIM }}>
+          <span className="text-[12px] tabular-nums" style={{ color: DIM }}>
             {rules.confirmed_on}부터
           </span>
         )}
@@ -301,7 +301,7 @@ export function MyRulesPanel({
         ))}
       </ul>
       {adopted && (
-        <p className="mt-3 text-[11.5px] leading-relaxed" style={{ color: DIM }}>
+        <p className="mt-3 text-[12px] leading-relaxed" style={{ color: DIM }}>
           선은 온보딩에서 답한 내용 그대로예요. 시세는 쓰지 않고 내 거래 기록만 셉니다. 답을
           바꾸면 새 선을 다시 확정해요.{" "}
           <Link

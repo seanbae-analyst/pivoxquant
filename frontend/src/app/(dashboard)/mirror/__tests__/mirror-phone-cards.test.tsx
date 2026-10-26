@@ -32,6 +32,7 @@ vi.mock("@/lib/auth", () => ({ useAuth: () => ({ loading: false }) }));
 vi.mock("@/lib/hooks", () => ({
   useMirrorHome: () => state.swr,
   useDoorwaySummary: () => ({ data: state.doorway, isLoading: false, error: undefined, mutate: vi.fn() }),
+  usePickFacts: () => ({ data: null, isLoading: false, error: undefined }),
 }));
 vi.mock("@/lib/use-phone", () => ({ useIsPhone: () => state.phone }));
 vi.mock("motion/react", () => ({ useReducedMotion: () => false }));
@@ -170,7 +171,7 @@ describe("/mirror phone — story cards", () => {
       render(<MirrorPage />);
       const labels = screen.getAllByRole("tab").map((t) => t.getAttribute("aria-label"));
       expect(labels.slice(-2)).toEqual(["문 앞", "한 가지만"]);
-      expect(within(screen.getByTestId("phone-page-doorway")).getByText("증권 앱을 3번 열었어요")).toBeInTheDocument();
+      expect(within(screen.getByTestId("phone-page-doorway")).getByText("문 앞 질문에 3번 답했어요")).toBeInTheDocument();
     } finally {
       state.doorway = null;
     }

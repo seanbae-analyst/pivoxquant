@@ -89,12 +89,17 @@ EXPECTED_JOB_IDS = {
     # services.reports_delivery.main() → 알림 설정 opt-in + 정보성 동의가
     # 있는 사용자에게 지난 30일 기록 PDF 발송.
     "ops_monthly_mirror_report",
+    # 가설 다시 보기 (2026-10-25) — 매일 08:20–23:20 KST 매시.
+    # services.filing_timeline.research_check.main() → 채점 전 리서치 종목의
+    # 새 정기보고서·실적 발표를 벨 알림으로.
+    "ops_research_filing_check",
 }
 # 19 (Wave H) + 4 (Wave I) + 1 (L-3) + 2 (C-1/C-2) + 1 (viral) + 1 (marketing)
 # + 1 (T9 launch audit) + 1 (T10 data integrity) + 1 (T11 lawyer packet) = 31,
 # minus ops_caus_daily_sweep (CAUS retired 2026-09-01 — CLAUDE.md 함정 §7) = 30,
 # plus 1 (월간 거울 리포트, 2026-09-17) = 31
-EXPECTED_JOB_COUNT = 31
+# plus 1 (가설 다시 보기, 2026-10-25) = 32
+EXPECTED_JOB_COUNT = 32
 
 
 @pytest.fixture
@@ -209,8 +214,11 @@ EXPECTED_TRIGGER_FIELDS = {
     "ops_data_integrity_sweep": {"hour": "4", "minute": "0"},
     # Lawyer packet weekly — 일요일 21:00 KST
     "ops_lawyer_packet_weekly": {"day_of_week": "sun", "hour": "21", "minute": "0"},
-    # 월간 거울 리포트 — 매월 1일 08:30 KST
-    "ops_monthly_mirror_report": {"day": "1", "hour": "8", "minute": "30"},
+    # 월간 거울 리포트 — 매월 1일 08:30–23:30 KST 매시 (2026-10-25: 잠든 서버가
+    # 놓친 발송을 깨어 있는 다음 정각에 — monthly_report_sends 가 한 달 한 번)
+    "ops_monthly_mirror_report": {"day": "1", "hour": "8-23", "minute": "30"},
+    # 가설 다시 보기 — 매일 08:20–23:20 KST 매시 (같은 공시는 제목 dedup)
+    "ops_research_filing_check": {"hour": "8-23", "minute": "20"},
 }
 
 

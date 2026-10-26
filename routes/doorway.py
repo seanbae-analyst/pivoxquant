@@ -4,6 +4,10 @@ Endpoints (all under ``/api/doorway``):
 
     POST   /webhook             — 폰 자동화가 보낸다 (Bearer 가져오기 토큰, 세션 없음)
     POST   /checks              — 웹의 /door 화면이 보낸다 (세션 + CSRF)
+
+    두 POST 모두 답(보기·살·팔) 또는 열림 신호(``{"text": "열림"}`` ·
+    ``{"intent": "open"}``)를 받는다 — 신호는 질문 전에 먼저 와서 답하지 않은
+    열림도 남기고, 이어 온 답이 그 행에 붙는다 (services/doorway, 2026-10-26).
     GET    /checks              — 본인 열림 목록, id 커서
     DELETE /checks/<id>         — 하나 지우기
     GET    /summary?days=30     — 열림 × 체결 개수 (거울 카드)
@@ -87,6 +91,8 @@ def _created(user_id: int, source: str):
         result = record_check(user_id, data, source=source)
     except DoorwayInputError as exc:
         return _input_error(exc)
+    # 201 = a new row. 200 = no new row: a repeated open signal, or an answer
+    # joined to the open signal sent just before it.
     check = result["check"]
     path = pause_path(check)
     pause_url = None
@@ -100,7 +106,7 @@ def _created(user_id: int, source: str):
         # 자동화가 '알림 보기'로 띄울 한 줄 — 개수만.
         "message": reply_line(check, result["today"]),
         "pause_url": pause_url,
-    }, status=201)
+    }, status=201 if result.get("created", True) else 200)
 
 
 @doorway_bp.route("/webhook", methods=["POST"])
@@ -121,7 +127,7 @@ def webhook_check():
             code="DOORWAY_TOKEN_RECONSENT", status=403,
         )
     result = _created(g.import_user_id, SOURCE_AUTOMATION)
-    if result[1] != 201:
+    if result[1] not in (200, 201):
         return result
     # 설정의 "마지막 사용"이 문 앞으로만 쓰는 열쇠에도 맞게 — imports.webhook 과 같다.
     token = g.import_token

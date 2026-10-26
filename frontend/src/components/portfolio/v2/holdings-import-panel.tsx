@@ -25,6 +25,7 @@ import * as React from "react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { useT } from "@/lib/locale";
+import { normalizeTicker } from "@/lib/format";
 import { apiFetch, ApiError } from "@/lib/api";
 import { API } from "@/lib/endpoints";
 import { parseHoldingsScreen, type ParsedHolding } from "@/lib/fill-ocr/parse-holdings";
@@ -262,9 +263,27 @@ export function tickerKey(ticker: string): string {
 }
 
 /** Holdings on record that no row of the capture shows (any mode — a skipped
- * row is still on the screen). Same suffix-blind match as the server's. */
+ * row is still on the screen). Same suffix-blind match as the server's, plus
+ * one guard: a row whose ticker never resolved may still BE a holding — its
+ * read name/code is compared loosely, and a match keeps the holding off the
+ * list. Otherwise a capture row that OCR could not resolve, set to 건너뛰기,
+ * listed its own holding as "not in this capture" and the server could not
+ * catch a 정리됨 on it (2026-10-13 bug hunt). Being too lenient here only
+ * means the holding can't be closed in this run. */
 export function absentHoldings(held: HoldingsHeld[], rows: HoldingRow[]): HoldingsHeld[] {
-  return held.filter((h) => !rows.some((r) => tickerKey(r.ticker) === tickerKey(h.ticker)));
+  const squash = (x: string) => x.replace(/\s+/g, "").toUpperCase();
+  const unresolved = rows.filter((r) => !r.ticker);
+  const mayBe = (h: HoldingsHeld) => {
+    const code = tickerKey(normalizeTicker(h.ticker));
+    const name = squash(h.name || "");
+    return unresolved.some((r) => {
+      const rc = tickerKey(normalizeTicker(r.readCode));
+      if (rc && rc === code) return true;
+      const rn = squash(r.readName);
+      return rn.length >= 2 && name.length >= 2 && (name.includes(rn) || rn.includes(name));
+    });
+  };
+  return held.filter((h) => !rows.some((r) => tickerKey(r.ticker) === tickerKey(h.ticker)) && !mayBe(h));
 }
 
 /** Ids to close: marked by the user and still absent from the capture. */
@@ -712,7 +731,8 @@ function AbsentHoldings({ absent, closeIds, onChange }: {
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="font-mono [overflow-wrap:anywhere]" style={{ ...small, color: "var(--pq-ivory)" }}>
-                  {h.name && h.name !== h.ticker ? `${h.name} · ` : ""}{h.ticker}
+                  {/* no raw ".KS" on screen (feedback_ticker_display) */}
+                  {h.name && h.name !== h.ticker ? `${h.name} · ` : ""}{normalizeTicker(h.ticker) || h.ticker}
                 </span>
                 <select
                   value={closing ? "close" : "keep"}
@@ -853,7 +873,7 @@ function HoldingReviewRow({
       <div className="mt-2">
         {r.ticker && !changing && (
           <div className="flex flex-wrap items-center gap-2 font-mono" style={{ ...small, color: "var(--pq-ivory)" }}>
-            <span data-testid="holdings-ticker">{r.tickerName ? `${r.tickerName} · ` : ""}{r.ticker}</span>
+            <span data-testid="holdings-ticker">{r.tickerName ? `${r.tickerName} · ` : ""}{normalizeTicker(r.ticker) || r.ticker}</span>
             <button type="button" onClick={() => { setChanging(true); setQuery(""); }} className="underline" style={{ color: "var(--pq-bronze)", background: "none", border: "none", cursor: "pointer" }}>
               {t("dashboard.portfolio.holdingsImport.changeTicker")}
             </button>

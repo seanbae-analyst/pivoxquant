@@ -332,6 +332,7 @@ export interface ResearchNote {
   id: number;
   ticker: string;
   name: string;
+  /** "" when not written (optional since 2026-10-25). */
   business: string;
   /** 1~3 assumptions, in the order written. */
   theses: string[];
@@ -381,18 +382,23 @@ export interface ResearchOverviewResponse {
 
 /** The answer at the door. Lowercase data values; screen words are added here. */
 export type DoorwayIntent = "look" | "buy" | "sell";
+/** A stored row at the door: an answer, or "open" — the app-open signal sent
+ *  before the question arrived and no answer followed (yet). 2026-10-26. */
+export type DoorwayRowIntent = DoorwayIntent | "open";
 /** look → traded | none · buy/sell → as_said | other | none. */
 export type DoorwayOutcome = "traded" | "as_said" | "other" | "none";
 
 export interface DoorwayCheck {
   id: number;
-  intent: DoorwayIntent;
+  intent: DoorwayRowIntent;
   ticker: string | null;
   name: string | null;
   note: string | null;
   app: string | null;
   source: "automation" | "web";
   created_at: string | null;
+  /** When the app-open signal came (null = an answer that came alone). */
+  opened_at?: string | null;
 }
 
 export interface DoorwayCreateResponse {
@@ -407,8 +413,12 @@ export interface DoorwayCreateResponse {
 /** `doorway` in GET /api/mirror-home/year — one year of door answers. */
 export interface YearRecapDoorway {
   total: number;
-  intents: Record<DoorwayIntent, number>;
+  intents: Record<DoorwayIntent, number> & { open?: number };
   look: { n: number; traded: number };
+  /** Opens with no answer (app-open signal only), 2026-10-26. */
+  unanswered?: { n: number; traded: number };
+  /** First app-open signal — null: `total` counts answers, not opens. */
+  opens_since?: string | null;
   said: { buy: DoorwaySaidCounts; sell: DoorwaySaidCounts };
   not_happened: { n: number; later: number; never: number; open: number };
   fills: { total: number; through_door: number };
@@ -433,7 +443,7 @@ export interface DoorwaySaidCounts {
 export interface DoorwayRecent {
   id: number | null;
   at: string | null;
-  intent: DoorwayIntent;
+  intent: DoorwayRowIntent;
   ticker: string | null;
   name: string | null;
   note: string | null;
@@ -448,9 +458,14 @@ export interface DoorwaySummaryResponse {
   follow_minutes: number;
   later_days: number;
   first_check_at: string | null;
+  /** First app-open signal (2026-10-26). Null → `total` is the number of
+   *  answers; set → it is the number of opens on the signalling phone. */
+  opens_since?: string | null;
   total: number;
-  intents: Record<DoorwayIntent, number>;
+  intents: Record<DoorwayIntent, number> & { open?: number };
   look: { n: number; traded: number };
+  /** Opens with no answer (app-open signal only). */
+  unanswered?: { n: number; traded: number };
   said: { buy: DoorwaySaidCounts; sell: DoorwaySaidCounts };
   not_happened: { n: number; later: number; never: number; open: number };
   fills: { total: number; through_door: number };
@@ -1372,11 +1387,133 @@ export interface YearRecapResponse {
       within: number;
       outside: number;
     } | null;
-    holding: { min_days: number; sells: number; sooner: number } | null;
+    /** sooner_label — the my_rules wording ("산 날 판 것"), 2026-10-21. */
+    holding: { min_days: number; sells: number; sooner: number; sooner_label?: string | null } | null;
   } | null;
   quotes: YearRecapQuote[];
   /** 문 앞의 한 줄 — the year's door counts (services/doorway.year_section);
    *  null when there was no door answer that year. Counts only, no lines. */
   doorway: null | YearRecapDoorway;
   empty: boolean;
+}
+
+/* ── 종목별 내 기록 (GET /api/stock-record/<ticker>, 2026-10-25) ───────── */
+
+export type StockRecordEvent =
+  | {
+      kind: "fill";
+      at: string | null;
+      side: "buy" | "sell";
+      shares: number;
+      price: number;
+      currency: string | null;
+      /** The fill was linked to a pause (TradeHistory.reflection_id). */
+      after_pause: boolean;
+    }
+  | { kind: "registered"; at: string | null; shares: number; price: number; currency: string | null }
+  | {
+      kind: "pause";
+      at: string | null;
+      side: "entry" | "exit" | null;
+      rationale: string;
+      status: string | null;
+      /** Entry pauses: a buy of this name followed. null for exit pauses. */
+      bought_after: boolean | null;
+    }
+  | {
+      kind: "research";
+      at: string | null;
+      id: number;
+      theses: string[];
+      invalidation: string | null;
+      verdicts: string[];
+      review_on: string | null;
+      reviewed_at: string | null;
+      due: boolean | null;
+    }
+  | { kind: "note"; at: string | null; id: number; body: string; tags: string[] }
+  | {
+      /** A company filing — SEC EDGAR (US) or DART (KR). `at` is the filing date's 00:00. */
+      kind: "filing";
+      at: string | null;
+      /** Official filing date, "YYYY-MM-DD" — US (Eastern) date for SEC, KST for DART. */
+      filed_on: string;
+      /** SEC form code ("8-K") or DART type name ("정기공시"). */
+      form: string;
+      /** SEC: fixed Korean name ("분기보고서", "실적 발표"); DART: the official report name. Never a reading. */
+      label: string;
+      /** SEC 8-K item 2.02 / DART 잠정실적 original (a correction is not a second release). */
+      earnings: boolean;
+      url: string;
+      source: string;
+    };
+
+/** "Did I trade right after an earnings release?" — counts only (FILINGS_ENABLED). */
+export interface StockRecordFilingReaction {
+  /** Earnings releases (8-K 2.02) in the record's span. */
+  earnings: number;
+  /** Counted: the fill's market date is the day after through `window_days` after a release. */
+  window_days: number;
+  /** Which calendar the dates are on — "us" (SEC) or "kr" (DART). */
+  date_basis?: "us" | "kr";
+  buys_after: number;
+  sells_after: number;
+  timed_fills: number;
+  /** Date-only fills — not countable, set aside. */
+  untimed_fills: number;
+}
+
+export interface StockRecordResponse {
+  ok: boolean;
+  disclaimer?: string;
+  ticker: string;
+  name: string | null;
+  holding: { shares: number; avg_cost: number | null; currency: string } | null;
+  counts: {
+    fills: number;
+    buys: number;
+    sells: number;
+    pauses: number;
+    /** Pauses before buying that no buy of this name followed. */
+    not_taken: number;
+    research: number;
+    notes: number;
+    /** SEC filings laid on the timeline (0 when filings are off). */
+    filings?: number;
+  };
+  filing_reaction?: StockRecordFilingReaction | null;
+  /** Newest first. */
+  events: StockRecordEvent[];
+}
+
+/** GET /api/pick-facts — 내가 고른 회사들 (services/pick_facts). Counts only. */
+export interface PickFactsPick {
+  ticker: string;
+  name: string | null;
+  /** KST date of the first buy in the window. */
+  bought_on: string;
+  /** Fiscal year end of the annual numbers used — filed before `bought_on`. */
+  fiscal_end: string;
+  filed_on: string;
+  net_loss: boolean;
+  revenue_down: boolean;
+  liabilities_over_equity: boolean;
+  source: string;
+}
+
+export interface PickFactsResponse {
+  ok: boolean;
+  disclaimer?: string;
+  window_days: number;
+  /** Stocks first bought in the window. */
+  picked: number;
+  /** Of those, with annual numbers filed before the buy. */
+  with_facts: number;
+  /** Not fetched yet (next visit fills them). */
+  pending: number;
+  /** No source, or nothing filed before the buy. */
+  no_facts: number;
+  counts: { net_loss: number; revenue_down: number; liabilities_over_equity: number };
+  sources: string[];
+  picks: PickFactsPick[];
 }

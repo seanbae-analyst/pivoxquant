@@ -54,6 +54,7 @@ import {
 import { parseUtcSafe } from "@/lib/relative-time";
 import { useT } from "@/lib/locale";
 import { currentLocationPath, loginHref } from "@/lib/login-redirect";
+import { localDayStr } from "@/lib/local-day";
 
 interface AddPositionModalV2Props {
   open: boolean;
@@ -70,14 +71,6 @@ interface AddPositionModalV2Props {
  *  not per keystroke). Matches <TickerSearch />'s search debounce. */
 const LINK_LOOKUP_DEBOUNCE_MS = 300;
 
-/** Local calendar day "YYYY-MM-DD" of `d` (default now) — no UTC shift, so
- *  it matches a date input's value and compares as a string. */
-function localDayStr(d: Date = new Date()): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
 
 // SECTOR_OPTIONS removed 2026-05-01 — sector is resolved server-side via
 // SignalCache (kr_stock_registry / FMP profile) and is NOT a Position

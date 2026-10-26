@@ -185,6 +185,15 @@ def test_boot_attempt_keeps_its_fail_safe(monkeypatch):
     assert app_module._SCHEDULER_LOCK_CONN is None
 
 
+def test_boot_error_after_seeing_the_lock_held_does_not_start(monkeypatch):
+    """Boot try 0 sees the lock held, try 1 is dropped by the pooler — someone
+    holds the lock, so boot must not start a second scheduler (it retries in
+    the background instead)."""
+    _fake_pg(monkeypatch, ["held", "error"])
+    assert app_module._try_acquire_scheduler_lock() is False
+    assert app_module._SCHEDULER_LOCK_CONN is None
+
+
 def test_retry_error_while_the_lock_is_held_does_not_start(monkeypatch):
     """Deploy overlap: boot saw the lock held (2 attempts), then the pooler
     drops one retry. That must not start a second scheduler without the lock."""
