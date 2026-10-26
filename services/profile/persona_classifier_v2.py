@@ -63,6 +63,7 @@ from .persona_analytics import (
     PERSONA_CODES,
     PERSONA_LABELS,
     PERSONA_TAGLINES,
+    _UNKNOWN_SECTOR,
     _fetch_positions,
     _fetch_trades,
     _norm_log,
@@ -231,9 +232,13 @@ def _extract_features(
             hp_days = sum(p.hold_days for p in window_pairs) / len(window_pairs)
         else:
             ages = fifo_open_position_ages(trades, reference_time=now, include_seeds=False)
-            hp_days = (sum(ages) / len(ages)) if ages else 0.0
-        values["holding_period"] = _norm_log(hp_days, floor=1.0, ceil=180.0)
-        present["holding_period"] = 1
+            # No closed pair and no open purchased lot (e.g. the window's sells
+            # only closed holding-registration seeds): nothing to measure. It
+            # used to read 0 days — "intraday" — with present=1 (2026-10-13).
+            hp_days = (sum(ages) / len(ages)) if ages else None
+        if hp_days is not None:
+            values["holding_period"] = _norm_log(hp_days, floor=1.0, ceil=180.0)
+            present["holding_period"] = 1
 
     # D2 turnover — trades per day, log-normalised
     if trade_count > 0:
@@ -242,7 +247,14 @@ def _extract_features(
         present["turnover"] = 1
 
     # D3 sector_diversity — 1 - HHI on traded volume
-    if trade_count >= MIN_TRADES_FOR_OBSERVATION:
+    # Only when some traded ticker has a known sector: with none (every US
+    # ticker, anything sold out) all volume sat in one UNKNOWN bucket and the
+    # radar showed a measured 0 — "one sector" (2026-10-13 bug hunt).
+    known_sector = any(
+        sector_map.get((t.ticker or "").upper(), _UNKNOWN_SECTOR) != _UNKNOWN_SECTOR
+        for t in window_trades
+    )
+    if trade_count >= MIN_TRADES_FOR_OBSERVATION and known_sector:
         values["sector_diversity"] = _sector_diversification(window_trades, sector_map)
         present["sector_diversity"] = 1
 

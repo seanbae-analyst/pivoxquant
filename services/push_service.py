@@ -40,6 +40,37 @@ PUSH_URL_ALERTS = "/mirror"
 PUSH_URL_TRADES = "/portfolio"
 
 
+# The browsers' push services. The endpoint is a URL the server later POSTs
+# to (services/push_service.webpush), so an arbitrary one made the server send
+# requests to any host, internal ones included, on a fill the caller can
+# trigger themselves (2026-10-13 bug hunt). Checked when a subscription is
+# saved (routes/push.py) and again before each send, for rows saved before.
+# Chrome / Samsung / Opera / Brave → FCM; Firefox → Mozilla autopush;
+# Safari → Apple; Edge → WNS.
+_PUSH_HOST_SUFFIXES = (
+    "fcm.googleapis.com",
+    "android.googleapis.com",
+    "push.services.mozilla.com",
+    "push.apple.com",
+    "notify.windows.com",
+)
+
+
+def push_endpoint_ok(endpoint: object) -> bool:
+    from urllib.parse import urlsplit
+
+    if not isinstance(endpoint, str) or len(endpoint) > 2048:
+        return False
+    try:
+        parts = urlsplit(endpoint)
+    except ValueError:
+        return False
+    host = (parts.hostname or "").lower()
+    return parts.scheme == "https" and any(
+        host == s or host.endswith("." + s) for s in _PUSH_HOST_SUFFIXES
+    )
+
+
 def send_push_to_user(
     user_id: int,
     title: str,
@@ -138,6 +169,9 @@ def send_push_to_user(
     })
 
     for sub in subs:
+        if not push_endpoint_ok(sub.endpoint):
+            logger.warning("push: skipping non-push-service endpoint (sub %s)", sub.id)
+            continue
         try:
             webpush(
                 subscription_info={

@@ -43,6 +43,7 @@ import {
   useReflectionLink,
 } from "@/components/pre-trade/reflection-link-line";
 import { PreTradeFirstLink } from "@/components/portfolio/v2/pre-trade-first-link";
+import { localDayStr } from "@/lib/local-day";
 import { TypedSellMoment } from "@/components/journal/sell-moment";
 
 interface TradeModalV2Props {
@@ -107,9 +108,8 @@ export function TradeModalV2({
 
   const [shares, setShares] = React.useState("");
   const [price, setPrice] = React.useState("");
-  const [date, setDate] = React.useState(() =>
-    new Date().toISOString().slice(0, 10),
-  );
+  // Local day, not toISOString's UTC day (yesterday before 09:00 KST).
+  const [date, setDate] = React.useState(() => localDayStr());
   const [avgCost, setAvgCost] = React.useState("");
   const [note, setNote] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
@@ -132,7 +132,7 @@ export function TradeModalV2({
       setAvgCost("");
       setNote("");
     }
-    setDate(new Date().toISOString().slice(0, 10));
+    setDate(localDayStr());
   }, [open, action, position]);
 
   // Escape / backdrop / back are owned by <Sheet /> (desktop and phone).

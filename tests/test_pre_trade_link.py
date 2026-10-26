@@ -228,6 +228,21 @@ class TestPositionReviewLink:
         assert out["realised"]["with_friction"]["n"] == 1
         assert out["realised"]["without_friction"]["n"] == 0
 
+    def test_backdated_linked_add_keeps_the_purchase_date(self, client, app, auth_user, seeded):
+        """2026-10-13: the linked buy was stamped today even with a purchase_date."""
+        uid = auth_user["id"]
+        with app.app_context():
+            rid = _refl(uid, "AAPL", days_ago=5)
+        day = (_now() - timedelta(days=2)).strftime("%Y-%m-%d")
+        r = client.post(POSITIONS, json={
+            "symbol": "AAPL", "quantity": 2, "price": 100, "note": "실적 전 진입 이유",
+            "purchase_date": day, "reflection_id": rid,
+        })
+        assert r.status_code == 200, r.get_json()
+        t = _latest_trade(app, uid)
+        assert t.reflection_id == rid
+        assert t.traded_at.strftime("%Y-%m-%d") == day
+
     def test_holding_mode_still_seeds(self, client, app, auth_user, seeded):
         r = client.post(POSITIONS, json={"symbol": "AAPL", "quantity": 2, "price": 100})
         assert r.status_code == 200

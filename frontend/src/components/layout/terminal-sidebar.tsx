@@ -151,7 +151,8 @@ function SidebarLink({ item, isActive }: { item: Item; isActive: boolean }) {
       <Link
         href={item.href}
         aria-current={isActive ? "page" : undefined}
-        className="flex items-center gap-2.5 rounded-sm font-serif transition-colors"
+        // rounded-r only: the 3px active bar on the left stays a straight rule
+        className="flex items-center gap-2.5 rounded-r-sm font-serif transition-colors"
         style={{
           padding: "10px 14px",
           fontSize: "var(--pq-text-body)",

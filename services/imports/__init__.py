@@ -26,10 +26,15 @@ RAW_SNIPPET_MAX = 300
 # Account-number shapes: ``123-45-678901`` style and any 8+ digit run.
 # ISO dates (``2026-09-01`` / ``20260901``) share those shapes; they are the
 # one thing a fill snippet must keep, so a token that is a plausible
-# calendar date is left alone.
-_ACCOUNT_DASHED = re.compile(r"\d{2,}-\d{2,}-\d{2,}")
+# calendar date is left alone. The hyphen may be any dash a phone or OCR
+# hands back (en/em dash, minus, non-breaking hyphen, underscore), and a
+# phone number may be spaced or dotted (2026-10-13 — the same gaps as the
+# on-device mask, frontend/src/lib/fill-ocr/mask.ts).
+_DASH = "[-\u2013\u2014\u2212\u2011_]"
+_ACCOUNT_DASHED = re.compile(rf"\d{{2,}}{_DASH}\d{{2,}}{_DASH}\d{{2,}}")
 _ACCOUNT_LONG = re.compile(r"\d{8,}")
-_ISO_DATE = re.compile(r"^(19|20)\d{2}-(0?[1-9]|1[0-2])-(0?[1-9]|[12]\d|3[01])$")
+_PHONE = re.compile(r"(?<!\d)01[016789][ .]\d{3,4}[ .]\d{4}(?!\d)")
+_ISO_DATE = re.compile(rf"^(19|20)\d{{2}}{_DASH}(0?[1-9]|1[0-2]){_DASH}(0?[1-9]|[12]\d|3[01])$")
 _COMPACT_DATE = re.compile(r"^(19|20)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])$")
 
 
@@ -95,6 +100,7 @@ def mask_sensitive(text: str | None, limit: int = RAW_SNIPPET_MAX) -> str:
     s = " ".join(str(text).split())
     s = _ACCOUNT_DASHED.sub(lambda m: m.group(0) if _ISO_DATE.match(m.group(0)) else "***", s)
     s = _ACCOUNT_LONG.sub(lambda m: m.group(0) if _COMPACT_DATE.match(m.group(0)) else "***", s)
+    s = _PHONE.sub("***", s)
     return s[:limit]
 
 
@@ -136,9 +142,10 @@ _DATE_PATTERNS = (
         r"(?<!\d)(?P<y>\d{4})(?P<m>\d{2})(?P<d>\d{2})(?!\d)"
         r"(?:[ T]?(?P<H>\d{1,2}):(?P<M>\d{2})(?::(?P<S>\d{2}))?)?"
     ),
-    # 9월 1일 / 09월 01일 (year = current) (+ optional time)
+    # 2025년 3월 4일 / 9월 1일 (no year → current) (+ optional time).
+    # 2026-10-13: the 년 was not read, so "2025년 03월 04일" became 2026-03-04.
     re.compile(
-        r"(?P<m>\d{1,2})월\s*(?P<d>\d{1,2})일"
+        r"(?:(?P<y>\d{4})년\s*)?(?P<m>\d{1,2})월\s*(?P<d>\d{1,2})일"
         r"(?:\s*(?P<H>\d{1,2}):(?P<M>\d{2})(?::(?P<S>\d{2}))?)?"
     ),
 )
@@ -251,6 +258,9 @@ def _parse_time(value) -> tuple[int, int, int] | None:
     m = _TIME_ONLY.search(str(value))
     if not m:
         digits = re.sub(r"\D", "", str(value))
+        # A time cell stored as a number lost its leading zero: 93000 = 09:30:00.
+        if len(digits) in (3, 5):
+            digits = "0" + digits
         if len(digits) in (4, 6):
             h, mi = int(digits[:2]), int(digits[2:4])
             se = int(digits[4:6]) if len(digits) == 6 else 0
@@ -264,6 +274,9 @@ def _parse_time(value) -> tuple[int, int, int] | None:
     return (meridiem_hour(str(value), m.start(), m.end(), h), mi, se)
 
 
+_NOT_A_FILL = re.compile(r"취소|정정|환전")
+
+
 def side_from_text(value) -> str | None:
     """Map a broker "구분" cell / notification word to a buy / sell side value.
 
@@ -274,6 +287,10 @@ def side_from_text(value) -> str | None:
         return None
     s = str(value).strip()
     if not s:
+        return None
+    # A cancelled / amended order or a currency exchange is not a fill:
+    # "매수취소" read as 매수, "환전매도" as 매도 (2026-10-13 bug hunt).
+    if _NOT_A_FILL.search(s):
         return None
     low = s.lower()
     if "매수" in s or re.search(r"\b(buy|bought|long)\b", low) or low in ("b", "매입"):

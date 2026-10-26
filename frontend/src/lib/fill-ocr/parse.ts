@@ -354,7 +354,9 @@ export function nameFrom(words: OcrWord[], usd: boolean): { name: string; code: 
   // A date header split into tokens ("2026 년 9 월 22 일 (화)") leaves only
   // date words once the digits are dropped — that is not a stock name.
   const name = joined.trim();
-  const dateOnly = /^[\s()（）]*((년|월|일|[월화수목금토일]요일|\(?[월화수목금토일]\)?)[\s()（）]*)+$/.test(name);
+  // Digits too: nameDigitAt keeps the "23" of "9 월 23 일", so a yearless
+  // header came back as the name "월23일" (2026-10-13 bug hunt).
+  const dateOnly = /^[\s()（）\d]*((년|월|일|[월화수목금토일]요일|\(?[월화수목금토일]\)?)[\s()（）\d]*)+$/.test(name);
   return { name: dateOnly ? "" : name, code };
 }
 
@@ -663,7 +665,14 @@ function tableFills(lines: Line[], hi: number, cols: Column[], ctx: Ctx): Parsed
 // ── entry point ────────────────────────────────────────────────────────
 
 function yearContext(lines: Line[]): number | null {
-  const years = lines.flatMap((l) => [...l.compact.matchAll(/(20\d{2})(?:년|[./-]\d)/g)].map((m) => +m[1]));
+  // A year, not the start of a price: "$2050.25" read as 2050 (and, being
+  // the max, beat the real 2026 — 2026-10-13 bug hunt). Not after $ / a digit
+  // / a separator, followed by 년 or a real month, and not in the future —
+  // a fill has already happened.
+  const thisYear = new Date().getFullYear();
+  const years = lines.flatMap((l) =>
+    [...l.compact.matchAll(/(?<![$\d.,])(20\d{2})(?:년|[./-](?:0?[1-9]|1[0-2])(?!\d))/g)].map((m) => +m[1]))
+    .filter((y) => y <= thisYear);
   return years.length ? Math.max(...years) : null;
 }
 
@@ -735,9 +744,13 @@ export function parseFillScreen(words: OcrWord[]): ScreenParse {
       .replace(/\([^)]*\)?/g, "");
     return !/\d/.test(rest);
   };
+  // A month-day header that cannot be dated (no year on screen, or a 12월 →
+  // 1월 turn) is still a section header: undated, so the cards below it do
+  // not inherit the header above, and never a card's name line ("월23일" —
+  // 2026-10-13 bug hunt).
   lines.forEach((l, i) => {
     const d = headerDate(l, ctx);
-    if (d && !isDetail(l) && onlyDate(l)) {
+    if ((d || monthDay(l.compact)) && !isDetail(l) && onlyDate(l)) {
       headerLines.add(i);
       dateAt.set(i, d);
     }

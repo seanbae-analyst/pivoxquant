@@ -226,7 +226,8 @@ export function NotificationDropdown() {
                 type="button"
                 onClick={() => onItemClick(n)}
                 className={cn(
-                  "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-[rgba(var(--pq-bronze-wash-rgb),0.05)]",
+                  // rounded-none: the base button radius bent the hairline between rows
+                  "flex w-full items-start gap-3 rounded-none px-4 py-3 text-left transition-colors hover:bg-[rgba(var(--pq-bronze-wash-rgb),0.05)]",
                   // Phone sheet: full-width rows on the sheet gutter.
                   "max-md:min-h-[56px] max-md:px-5",
                 )}
