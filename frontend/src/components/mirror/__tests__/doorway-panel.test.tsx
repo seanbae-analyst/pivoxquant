@@ -7,6 +7,10 @@
  * own line and the backend's caveats. Never a score, grade, streak or
  * directive. Never set up → one invite line (desktop) or nothing (phone).
  * Set up but quiet → one line pointing at the settings.
+ *
+ * 2026-10-26: the headline says what was counted — answers ("문 앞 질문에 N번
+ * 답했어요") until the app-open signal is on, then opens ("증권 앱을 N번
+ * 열었어요") with a 답 안 함 bar for opens whose question was closed.
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -53,8 +57,10 @@ const SUMMARY: DoorwaySummaryResponse = {
 describe("DoorwayPanelView", () => {
   it("reads the counts back as facts", () => {
     render(<DoorwayPanelView data={SUMMARY} />);
-    expect(screen.getByText("증권 앱을 9번 열었어요")).toBeInTheDocument();
+    // No app-open signal: every row is an answer, so the count is answers.
+    expect(screen.getByTestId("doorway-headline").textContent).toBe("문 앞 질문에 9번 답했어요");
     const bars = screen.getByTestId("doorway-intents");
+    expect(within(bars).queryByText("답 안 함")).toBeNull();
     expect(within(bars).getByText("그냥 보기")).toBeInTheDocument();
     expect(within(bars).getByText("5")).toBeInTheDocument();
     const facts = within(screen.getByTestId("doorway-facts")).getAllByRole("listitem").map((li) => li.textContent);
@@ -66,6 +72,27 @@ describe("DoorwayPanelView", () => {
       "이 기간 체결 4건 중 3건이 문을 거쳤어요.",
     ]);
     expect(screen.getByTestId("doorway-hours")).toBeInTheDocument();
+  });
+
+  it("with the app-open signal counts opens, unanswered ones too", () => {
+    const signalled: DoorwaySummaryResponse = {
+      ...SUMMARY,
+      opens_since: "2026-09-20T00:12:00",
+      total: 12,
+      intents: { look: 5, buy: 3, sell: 1, open: 3 },
+      unanswered: { n: 3, traded: 1 },
+      recent: [
+        { id: 12, at: "2026-10-15T02:00:00", intent: "open", ticker: null, name: null, note: null, app: "toss", outcome: "none" },
+        ...SUMMARY.recent,
+      ],
+    };
+    render(<DoorwayPanelView data={signalled} />);
+    expect(screen.getByTestId("doorway-headline").textContent).toBe("증권 앱을 12번 열었어요");
+    const bars = screen.getByTestId("doorway-intents");
+    const openRow = within(bars).getByText("답 안 함").closest("li") as HTMLElement;
+    expect(openRow.textContent).toBe("답 안 함3");
+    expect(doorwayFacts(signalled)).toContain("답하지 않은 3번 중 1번은 60분 안에 체결이 있었어요.");
+    expect(within(screen.getAllByTestId("doorway-recent")[0]).getByText(/답 안 함/)).toBeInTheDocument();
   });
 
   it("lists recent answers with the user's own line and the outcome", () => {

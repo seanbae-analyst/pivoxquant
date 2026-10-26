@@ -50,7 +50,7 @@ export function MirrorRadarPanel({
           선언 vs 관찰
         </div>
         <div
-          className="flex items-center gap-3 text-[11.5px]"
+          className="flex items-center gap-3 text-[12px]"
           style={{ color: "rgba(var(--pq-ivory-rgb), 0.55)" }}
         >
           <LegendDot colorVar="--pq-bronze" label="선언(설문)" />
@@ -68,7 +68,7 @@ export function MirrorRadarPanel({
         />
       </div>
 
-      <p className="mt-2 text-center text-[11.5px] leading-relaxed [word-break:keep-all]" style={{ color: "rgba(var(--pq-ivory-rgb), 0.55)" }}>
+      <p className="mt-2 text-center text-[12px] leading-relaxed [word-break:keep-all]" style={{ color: "rgba(var(--pq-ivory-rgb), 0.55)" }}>
         각 축의 % = 최근 30일 관찰값 · — = 아직 잴 기록이 부족 · 브론즈=선언, 아이보리=관찰
       </p>
     </section>

@@ -170,4 +170,33 @@ describe("web door", () => {
     expect(await within(list).findByRole("alert")).toHaveTextContent("지우지 못했어요");
     expect(screen.getByText("열림 7")).toBeInTheDocument();
   });
+
+  it("opened by the automation, records the open first and the answer after it", async () => {
+    window.history.replaceState(null, "", "/pre-trade/door?app=kiwoom&launch=1");
+    const order: string[] = [];
+    let releaseOpen: () => void = () => {};
+    calls.create.mockImplementation(async (body: { intent: string }) => {
+      order.push(body.intent);
+      if (body.intent === "open") await new Promise<void>((r) => { releaseOpen = r; });
+      return reply(body.intent, null, "기록했어요 · 오늘 1번째 열림");
+    });
+    render(<DoorPage />);
+    await waitFor(() => expect(calls.create).toHaveBeenCalledWith({ intent: "open", app: "kiwoom" }));
+    fireEvent.click(screen.getByRole("button", { name: "그냥 보기" }));
+    // The answer waits for its open — sent first, it would be a second row.
+    await new Promise((r) => setTimeout(r, 30));
+    expect(order).toEqual(["open"]);
+    releaseOpen();
+    await waitFor(() => expect(screen.getByTestId("door-done")).toBeInTheDocument());
+    expect(order).toEqual(["open", "look"]);
+    expect(calls.create).toHaveBeenCalledTimes(2);
+  });
+
+  it("a visit without launch=1 (settings, a link) records nothing until an answer", async () => {
+    window.history.replaceState(null, "", "/pre-trade/door?app=kiwoom");
+    render(<DoorPage />);
+    await screen.findByRole("button", { name: "그냥 보기" });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(calls.create).not.toHaveBeenCalled();
+  });
 });

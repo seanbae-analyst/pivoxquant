@@ -233,15 +233,12 @@ function ContactForm() {
         </p>
 
         {/* Submit */}
+        {/* The app's one primary button (filled bronze, 44px on a phone) —
+            this was a 12px outlined caption, smaller than the fields above it. */}
         <button
           type="submit"
           disabled={!canSubmit}
-          className="w-full rounded-[var(--pq-radius-card)] border px-5 py-3 font-mono text-pq-caption uppercase tracking-[0.01em] transition-colors disabled:cursor-not-allowed disabled:opacity-40 hover:bg-[var(--pq-card-veil-strong)]"
-          style={{
-            borderColor: "var(--pq-bronze)",
-            color: "var(--pq-bronze)",
-            background: "var(--pq-card-veil)",
-          }}
+          className="pq-ink-btn-bronze flex w-full"
         >
           {submitting ? "접수 중…" : "문의 접수하기"}
         </button>

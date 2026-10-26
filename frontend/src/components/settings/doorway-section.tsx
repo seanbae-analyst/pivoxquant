@@ -24,6 +24,11 @@
  * Both phone paths are marked 시험 중: the steps follow the OS menus as
  * documented, but were not run on a device for every iOS / MacroDroid version.
  *
+ * App-open signal (2026-10-26): the iPhone shortcut sends {"text":"열림"} first,
+ * before the menu, and the Android door address carries `&launch=1` so the web
+ * door records the open on load. Then an open whose question was closed still
+ * counts, and the answer joins that open (services/doorway/service.py).
+ *
  * Nothing here touches a brokerage account or an order. The token can only
  * add fills to the pending list and leave door answers. Facts only.
  */
@@ -53,9 +58,15 @@ export function doorwayWebhookUrl(origin: string): string {
   return `${origin}${API.doorway.webhook}`;
 }
 
-/** The web door an Android automation (or anyone) opens. */
+/** The web door an Android automation opens. `launch=1` tells the page the
+ *  app was just opened — it records the open before any answer. */
 export function doorPageUrl(origin: string, app: string): string {
-  return `${origin}/pre-trade/door?app=${encodeURIComponent(app)}`;
+  return `${origin}/pre-trade/door?app=${encodeURIComponent(app)}&launch=1`;
+}
+
+/** Body of the first "URL 콘텐츠 가져오기" — the app-open signal, sent before the menu. */
+export function openSignalBody(app: string): string {
+  return `{"text":"열림","app":"${app}"}`;
 }
 
 /** Body of the iOS "URL 콘텐츠 가져오기" — [메뉴 결과] is the menu's output. */
@@ -65,19 +76,25 @@ export function shortcutBody(app: string): string {
 
 const IOS_STEPS: ReadonlyArray<string> = [
   "1. 단축어 앱에서 + 를 눌러 새 단축어를 만들고, '편집' → '자동화' → '앱'을 고릅니다. 앱은 쓰는 증권 앱, '열 때'를 체크합니다. (iOS 26 이하: 아래 '자동화' 탭 → 새로운 자동화 → '앱'에서 같은 값을 고르고 '즉시 실행'을 고릅니다.)",
-  "2. 동작 추가 → '메뉴에서 선택'. 질문에 '뭘 하러 왔어요?'를 넣고 항목을 세 개 만듭니다: 그냥 보기 · 살 게 있음 · 팔 게 있음.",
-  "3. '그냥 보기' 아래에 동작 '텍스트'를 넣고 보기 라고 적습니다.",
-  "4. '살 게 있음' 아래에 '텍스트'를 넣고 살 을 적은 뒤 한 칸 띄우고 변수 '매번 묻기'를 넣습니다 — 실행할 때 종목과 이유 한 줄을 묻습니다. '팔 게 있음' 아래도 같은 방식으로 팔 + '매번 묻기'.",
-  "5. 메뉴가 끝난 아래에 'URL 콘텐츠 가져오기'. URL 에 위 '보낼 주소'를 넣고, 방법을 POST 로 바꾼 뒤 헤더를 추가합니다. 키 Authorization, 값에는 체결 자동 기록에서 쓰는 'Bearer …' 한 줄.",
-  "6. 요청 본문은 JSON → 필드 두 개(텍스트). text 에는 변수 '메뉴 결과', app 에는 위에서 고른 앱 이름을 넣습니다.",
-  "7. (선택) 그 아래에 '사전 값 가져오기'(키: message) → '알림 보기'를 넣으면 '기록했어요 · 오늘 3번째 열림' 같은 한 줄이 뜹니다.",
+  "2. 맨 먼저 동작 'URL 콘텐츠 가져오기'를 넣습니다 — 열림 신호. URL 에 위 '보낼 주소', 방법은 POST, 헤더 키 Authorization 에 체결 자동 기록에서 쓰는 'Bearer …' 한 줄. 요청 본문은 JSON → 필드 두 개(텍스트): text 에 열림, app 에 위에서 고른 앱 이름 (위 '열림 신호 본문'). 질문에 답하지 않고 닫아도 연 횟수가 남습니다.",
+  "3. 동작 추가 → '메뉴에서 선택'. 질문에 '뭘 하러 왔어요?'를 넣고 항목을 세 개 만듭니다: 그냥 보기 · 살 게 있음 · 팔 게 있음.",
+  "4. '그냥 보기' 아래에 동작 '텍스트'를 넣고 보기 라고 적습니다.",
+  "5. '살 게 있음' 아래에 '텍스트'를 넣고 살 을 적은 뒤 한 칸 띄우고 변수 '매번 묻기'를 넣습니다 — 실행할 때 종목과 이유 한 줄을 묻습니다. '팔 게 있음' 아래도 같은 방식으로 팔 + '매번 묻기'.",
+  "6. 메뉴가 끝난 아래에 'URL 콘텐츠 가져오기'를 하나 더 — 2번과 같은 주소·방법·헤더입니다.",
+  "7. 요청 본문은 JSON → 필드 두 개(텍스트). text 에는 변수 '메뉴 결과', app 에는 2번과 같은 앱 이름을 넣습니다. 답은 방금 보낸 열림에 붙어 한 번으로 셉니다.",
+  "8. (선택) 그 아래에 '사전 값 가져오기'(키: message) → '알림 보기'를 넣으면 '기록했어요 · 오늘 3번째 열림' 같은 한 줄이 뜹니다.",
 ];
+
+/** For a shortcut made before the app-open signal existed. */
+const IOS_UPGRADE_NOTE =
+  "이미 단축어를 만들었다면 2번 동작 하나만 맨 위에 더하면 됩니다. 더하기 전에는 답한 열림만 셉니다.";
 
 const ANDROID_STEPS: ReadonlyArray<string> = [
   "1. MacroDroid 에서 '매크로 추가'를 누릅니다.",
   "2. 트리거 → '애플리케이션' → '앱 실행/종료' → '실행 시'를 고르고, 쓰는 증권 앱을 고릅니다.",
-  "3. 액션 → '웹 사이트 열기'(또는 'URL 열기')에 위 '문 주소'를 붙여 넣습니다.",
+  "3. 액션 → '웹 사이트 열기'(또는 'URL 열기')에 위 '문 주소'를 붙여 넣습니다. 주소 끝의 launch=1 이 '방금 증권 앱을 열었다'는 표시라, 답하지 않고 뒤로 가도 연 횟수가 남습니다.",
   "4. 저장합니다. 증권 앱을 열면 브라우저에 질문이 뜨고, 답한 뒤 뒤로 가기를 누르면 증권 앱으로 돌아갑니다. 브라우저에 PivoxQuant 로그인이 되어 있어야 합니다.",
+  "예전에 넣은 주소에 launch=1 이 없으면 위 주소로 바꿔 주세요. 바꾸기 전에는 답한 열림만 셉니다.",
 ];
 
 /** Whether an active token may send door answers (issued after 2026-10-15). */
@@ -129,8 +146,9 @@ export function DoorwaySection() {
           &lsquo;문 앞&rsquo;에 쌓이고, 그 뒤 체결과 나란히 보입니다.
         </Caption>
         <Caption className="mt-2 max-w-xl">
-          증권사 계정이나 주문에는 닿지 않습니다. 폰이 보내는 것은 고른 답, 적은 한 줄, 앱 이름,
-          보낸 시각뿐입니다. 남은 기록은 웹 문 화면 아래 목록에서 하나씩 지울 수 있습니다.
+          증권사 계정이나 주문에는 닿지 않습니다. 폰이 보내는 것은 증권 앱을 연 시각, 고른 답,
+          적은 한 줄, 앱 이름뿐입니다. 답하지 않고 닫은 열림도 연 시각과 앱 이름으로 남습니다. 남은
+          기록은 웹 문 화면 아래 목록에서 하나씩 지울 수 있습니다.
         </Caption>
 
         <div className="mt-5">
@@ -181,7 +199,8 @@ export function DoorwaySection() {
             아이폰 · 단축어 (시험 중)
           </summary>
           <CopyField label="보낼 주소 (URL)" value={doorwayWebhookUrl(origin)} testId="doorway-url" />
-          <CopyField label="본문 (JSON)" value={shortcutBody(app)} testId="doorway-body" />
+          <CopyField label="열림 신호 본문 (JSON) · 2번" value={openSignalBody(app)} testId="doorway-open-body" />
+          <CopyField label="답 본문 (JSON) · 7번" value={shortcutBody(app)} testId="doorway-body" />
           <ol className="mt-4 space-y-1.5">
             {IOS_STEPS.map((s) => (
               <li key={s}>
@@ -189,6 +208,7 @@ export function DoorwaySection() {
               </li>
             ))}
           </ol>
+          <Caption className="mt-3">{IOS_UPGRADE_NOTE}</Caption>
         </details>
 
         <details
@@ -213,6 +233,7 @@ export function DoorwaySection() {
           <RuledKicker>잘 되는지 확인</RuledKicker>
           <Caption className="mt-2 max-w-xl">
             증권 앱을 한 번 열어 답해 보세요. 거울의 &lsquo;문 앞&rsquo;에 열린 횟수가 올라갑니다.
+            답하지 않고 닫아도 올라가면 열림 신호까지 도는 것입니다.
             폰 없이 화면만 보려면{" "}
             <Link
               href={`/pre-trade/door?app=${encodeURIComponent(app)}`}

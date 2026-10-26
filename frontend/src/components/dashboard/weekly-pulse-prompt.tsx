@@ -98,7 +98,7 @@ export function WeeklyPulsePrompt() {
         {t("journal.pulsePrompt.text")}{" "}
         <Link
           href="/journal#weekly-pulse"
-          className="whitespace-nowrap"
+          className="pq-hit whitespace-nowrap"
           style={{
             color: "var(--pq-bronze)",
             textDecoration: "underline",
@@ -113,7 +113,8 @@ export function WeeklyPulsePrompt() {
         onClick={hide}
         aria-label={t("journal.pulsePrompt.dismiss")}
         title={t("journal.pulsePrompt.dismiss")}
-        className="-mr-2 flex h-9 w-9 shrink-0 items-center justify-center text-[var(--pq-ivory-faint)] hover:text-[var(--pq-ivory)]"
+        // 44px target, icon where it was (centre 10px in from the edge).
+        className="-mr-3 flex h-11 w-11 shrink-0 items-center justify-center text-[var(--pq-ivory-faint)] hover:text-[var(--pq-ivory)]"
       >
         <X className="h-4 w-4" aria-hidden="true" />
       </button>

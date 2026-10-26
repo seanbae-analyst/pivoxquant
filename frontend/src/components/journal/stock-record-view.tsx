@@ -61,7 +61,7 @@ const VERDICT_LABEL: Record<string, string> = { right: "맞음", wrong: "틀림"
 function Chip({ children, strong = false }: { children: React.ReactNode; strong?: boolean }) {
   return (
     <span
-      className="inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[11px]"
+      className="inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[12px]"
       style={{
         color: strong ? "var(--pq-bronze)" : DIM,
         border: `1px solid ${strong ? "var(--pq-bronze)" : "var(--pq-ivory-line)"}`,

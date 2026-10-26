@@ -1037,6 +1037,10 @@ def _do_migrations():
     # consent text that names 문 앞의 한 줄 answers. NULL (older tokens) →
     # routes/doorway.py refuses door answers sent with it.
     _add_column_if_missing("import_tokens", "doorway_consent_at", "TIMESTAMP")
+    # doorway_checks.opened_at — 2026-10-26. Alembic twin: 069_doorway_opened_at.
+    # Nullable TIMESTAMP: the row started from an app-open signal sent before
+    # the question (services/doorway/service.py). NULL = an answer alone.
+    _add_column_if_missing("doorway_checks", "opened_at", "TIMESTAMP")
     # company_filings.title — 2026-10-25. Alembic twin: 066_company_filing_title.
     # Nullable VARCHAR(200): the DART report name (한국 공시). A box whose table
     # was created by 065 / create_all before this column existed gets it here.

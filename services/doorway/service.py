@@ -11,7 +11,9 @@ docs/design/doorway-pause_2026-10-15.md · models/doorway_check.py.
 본인 가져오기 토큰으로 보낸다. 근거: one sec 현장실험(PNAS 2023, 280명·6주)
 에서 앱을 열 때의 자기 넛지로 열기 시도의 36% 가 그 자리에서 접혔다.
 
-이 모듈은 그 답을 저장하고, 읽을 때 같은 유저의 체결과 맞춰 **개수만** 센다:
+이 모듈은 그 답을 저장하고, 읽을 때 같은 유저의 체결과 맞춰 **개수만** 센다.
+자동화가 질문을 띄우기 전에 '열림 신호'를 먼저 보내면(2026-10-26) 답하지 않고
+닫은 열림도 행으로 남는다 — 답이 오면 그 행이 답이 된다(``record_check``):
 
 * 그냥 보러 왔다가 체결한 열림 수
 * 살/팔 게 있다고 한 열림 중 — 말한 대로 체결 / 다른 체결 / 체결 없음
@@ -52,9 +54,11 @@ from models.doorway_check import (
     APP_MAX_LEN,
     INTENT_BUY,
     INTENT_LOOK,
+    INTENT_OPEN,
     INTENT_SELL,
     INTENTS,
     MAX_NOTE_CHARS,
+    ROW_INTENTS,
     SOURCES,
     DoorwayCheck,
     offline_name,
@@ -75,6 +79,12 @@ DEFAULT_WINDOW_DAYS = 30
 DAILY_LIMIT = 100
 RECENT_LIMIT = 10
 LIST_LIMIT_MAX = 100
+# 열림 신호 (2026-10-26) — 자동화가 질문을 띄우기 전에 먼저 보내는 한 번. 답하기
+# 전에 이만큼 안에 다시 온 신호는 같은 열림이다 (단축어가 두 번 돌거나 웹 문을 새로
+# 고친 경우).
+OPEN_DEDUPE_SECONDS = 60
+# 답은 이만큼 안의 '답 없는' 열림에 붙는다 — 그 열림의 답이다. 넘으면 새 행.
+ANSWER_WINDOW_MINUTES = 10
 
 # 의도별로 "말한 대로"의 체결 방향. trade_history.action 값과 비교만 한다.
 _SIDE_FOR_INTENT = {INTENT_BUY: "BUY", INTENT_SELL: "SELL"}  # // legal-ok — data values
@@ -86,6 +96,21 @@ CAVEATS = (
     "기록 대기 목록에 아직 있는 체결도 함께 셉니다.",
     "누가 언제 앱을 열지는 무작위가 아니므로, 이 숫자로 질문의 효과를 말할 수는 없습니다.",
 )
+# 무엇을 열림으로 셌나 — 열림 신호를 쓰는지에 따라 맨 앞에 한 줄 (2026-10-26).
+CAVEAT_ANSWERS_ONLY = (
+    "지금은 질문에 답한 열림만 셉니다 — 질문을 닫고 넘어간 열림은 남지 않습니다. "
+    "설정 → 문 앞의 한 줄에서 '열림 신호'를 더하면 답하지 않은 열림도 셉니다."
+)
+CAVEAT_OPENS = (
+    "열림 신호를 보내는 폰에서 증권 앱을 연 횟수입니다. 답하기 전에 1분 안에 다시 연 것은 "
+    "한 번으로 셉니다."
+)
+
+
+def opens_since_caveat(since: datetime) -> str:
+    """창 안에서 열림 신호를 켰을 때 — 그 전 열림은 답한 것만 들어 있다."""
+    d = (since + _KST).date()
+    return f"{d.month}월 {d.day}일 전에는 질문에 답한 열림만 셌습니다."
 
 
 class DoorwayInputError(ValueError):
@@ -241,18 +266,99 @@ def extract_ticker(text: str | None) -> str | None:
     return None
 
 
-def record_check(user_id: int, payload: dict, *, source: str, now: datetime | None = None) -> dict:
-    """열림 하나를 저장한다. ``payload`` = ``{intent?, text?, note?, ticker?, app?}``.
+# 열림 신호의 글 — 단축어 본문 ``{"text": "열림"}``. 답의 머리말과 겹치지 않는다.
+_OPEN_RE = re.compile(r"^\s*(?:열림|열기|열었음|open|opened)\s*$", re.IGNORECASE)
 
-    ``intent`` 가 있으면 그대로, 없으면 ``text`` 의 머리말에서 읽는다.
-    한 줄은 ``MAX_NOTE_CHARS`` 에서 자른다 — 폰 입력창에서 길게 쓴 것을
-    거절하면 문 앞에서 오류만 보게 된다.
+
+def is_open_signal(payload: dict) -> bool:
+    """질문을 띄우기 전에 보내는 열림 신호인가 — ``{"open": true}`` ·
+    ``{"intent": "open"}`` · ``{"text": "열림"}``."""
+    if payload.get("open") is True:
+        return True
+    intent = payload.get("intent")
+    if isinstance(intent, str):
+        return intent.strip().lower() == INTENT_OPEN
+    text = payload.get("text")
+    return isinstance(text, str) and bool(_OPEN_RE.match(text))
+
+
+def _today_count(user_id: int, now: datetime) -> int:
+    return (
+        DoorwayCheck.query
+        .filter(DoorwayCheck.user_id == user_id, DoorwayCheck.created_at >= kst_day_start_utc(now))
+        .count()
+    )
+
+
+def _check_daily_limit(today: int) -> None:
+    if today >= DAILY_LIMIT:
+        raise DoorwayInputError(
+            f"Daily limit of {DAILY_LIMIT} reached.",
+            f"오늘 남길 수 있는 문 앞 기록 {DAILY_LIMIT}건을 모두 썼습니다.",
+            code="DOORWAY_DAILY_LIMIT", status=429,
+        )
+
+
+def _same_app(a: str | None, b: str | None) -> bool:
+    """앱 꼬리표가 없는 쪽은 어느 앱과도 맞는다 — 한쪽만 꼬리표를 붙인 자동화."""
+    return a is None or b is None or a == b
+
+
+def _open_rows(user_id: int, since: datetime, now: datetime) -> list:
+    """``since`` 이후 답이 아직 없는 열림, 최근 것부터."""
+    return (
+        DoorwayCheck.query
+        .filter(
+            DoorwayCheck.user_id == user_id,
+            DoorwayCheck.intent == INTENT_OPEN,
+            DoorwayCheck.created_at >= since,
+            DoorwayCheck.created_at <= now,
+        )
+        .order_by(DoorwayCheck.created_at.desc(), DoorwayCheck.id.desc())
+        .limit(5)
+        .all()
+    )
+
+
+def _record_open(user_id: int, app: str | None, *, source: str, now: datetime) -> dict:
+    """열림 신호 — 답 없는 행 하나. 답하기 전에 ``OPEN_DEDUPE_SECONDS`` 안에 같은
+    앱에서 다시 온 신호는 그 행을 그대로 돌려준다 (새로 세지 않는다)."""
+    today = _today_count(user_id, now)
+    since = now - timedelta(seconds=OPEN_DEDUPE_SECONDS)
+    for dup in _open_rows(user_id, since, now):
+        if _same_app(dup.app, app):
+            return {"check": dup.to_dict(), "today": today, "created": False}
+    _check_daily_limit(today)
+    row = DoorwayCheck(
+        user_id=user_id,
+        intent=INTENT_OPEN,
+        app=app,
+        source=source,
+        created_at=now,
+        opened_at=now,
+    )
+    db.session.add(row)
+    db.session.commit()
+    return {"check": row.to_dict(), "today": today + 1, "created": True}
+
+
+def record_check(user_id: int, payload: dict, *, source: str, now: datetime | None = None) -> dict:
+    """열림 하나를 저장한다. ``payload`` = ``{intent?, text?, note?, ticker?, app?, open?}``.
+
+    열림 신호(``is_open_signal``)면 답 없는 행을 만든다(``opened_at``). 답이면
+    ``intent`` 를 그대로, 없으면 ``text`` 의 머리말에서 읽고 — ``ANSWER_WINDOW_MINUTES``
+    안의 답 없는 열림(같은 앱)이 있으면 그 행을 답으로 바꾸고, 없으면 새 행을
+    만든다. 한 줄은 ``MAX_NOTE_CHARS`` 에서 자른다 — 폰 입력창에서 길게 쓴 것을
+    거절하면 문 앞에서 오류만 보게 된다. ``created`` = 새 행을 만들었나.
     """
     if source not in SOURCES:
         raise DoorwayInputError("bad source", "요청 형식이 올바르지 않습니다.")
     if not isinstance(payload, dict):
         payload = {}
     now = _naive(now)
+    app = normalize_app(payload.get("app"))
+    if is_open_signal(payload):
+        return _record_open(user_id, app, source=source, now=now)
 
     intent = payload.get("intent")
     note = payload.get("note")
@@ -284,35 +390,39 @@ def record_check(user_id: int, payload: dict, *, source: str, now: datetime | No
     if ticker is None and note:
         ticker = extract_ticker(note)
 
-    today_start = kst_day_start_utc(now)
-    today = (
-        DoorwayCheck.query
-        .filter(DoorwayCheck.user_id == user_id, DoorwayCheck.created_at >= today_start)
-        .count()
-    )
-    if today >= DAILY_LIMIT:
-        raise DoorwayInputError(
-            f"Daily limit of {DAILY_LIMIT} reached.",
-            f"오늘 남길 수 있는 문 앞 기록 {DAILY_LIMIT}건을 모두 썼습니다.",
-            code="DOORWAY_DAILY_LIMIT", status=429,
-        )
+    # 이 답의 열림 — 질문 전에 신호가 왔으면 그 행에 답을 붙인다.
+    window = now - timedelta(minutes=ANSWER_WINDOW_MINUTES)
+    pending = next((r for r in _open_rows(user_id, window, now) if _same_app(r.app, app)), None)
+    if pending is not None:
+        pending.intent = intent
+        pending.ticker = ticker
+        pending.note = note or None
+        if pending.app is None:
+            pending.app = app
+        db.session.commit()
+        return {"check": pending.to_dict(), "today": _today_count(user_id, now), "created": False}
+
+    today = _today_count(user_id, now)
+    _check_daily_limit(today)
 
     row = DoorwayCheck(
         user_id=user_id,
         intent=intent,
         ticker=ticker,
         note=note or None,
-        app=normalize_app(payload.get("app")),
+        app=app,
         source=source,
         created_at=now,
     )
     db.session.add(row)
     db.session.commit()
-    return {"check": row.to_dict(), "today": today + 1}
+    return {"check": row.to_dict(), "today": today + 1, "created": True}
 
 
 def reply_line(check: dict, today: int) -> str:
     """자동화가 '알림 보기'로 띄울 한 줄 — 사실만, 판정·지시 없음."""
+    if check.get("intent") == INTENT_OPEN:
+        return f"열림을 기록했어요 · 오늘 {today}번째 열림"
     head = "기록했어요"
     if check.get("name"):
         head = f"{head} · {check['name']}"
@@ -401,10 +511,10 @@ def _same_ticker(a: str | None, b: str | None) -> bool:
 
 
 def _outcome(check, attributed: list[Fill]) -> str:
-    """look → traded | none · buy/sell → as_said | other | none."""
+    """look · 답 없음(open) → traded | none · buy/sell → as_said | other | none."""
     if not attributed:
         return "none"
-    if check.intent == INTENT_LOOK:
+    if check.intent in (INTENT_LOOK, INTENT_OPEN):
         return "traded"
     side = _SIDE_FOR_INTENT.get(check.intent)
     for f in attributed:
@@ -422,6 +532,7 @@ def summarize(
     first_check_at: datetime | None = None,
     start: datetime | None = None,
     end: datetime | None = None,
+    opens_since: datetime | None = None,
 ) -> dict:
     """열림 × 체결 → 개수. 순수 함수 — ``now`` 를 받는다.
 
@@ -429,7 +540,8 @@ def summarize(
     바르게 잇기 위해). 세는 것은 ``created_at >= now - days`` 인 열림뿐이다.
     ``start`` / ``end`` 를 주면 그 [시작, 끝) 으로 센다 — 올해의 기록이 한 해를
     셀 때 (``year_section``). 30일 뒤를 보는 "일어나지 않은 거래" 판정은 언제나
-    ``now`` 까지의 체결로 한다.
+    ``now`` 까지의 체결로 한다. ``opens_since`` = 이 유저가 처음 열림 신호를 보낸
+    시각 — 없으면 셀 수 있는 열림은 답한 것뿐이다(caveats 첫 줄이 그렇게 말한다).
     """
     now = _naive(now)
     window_start = start if start is not None else now - timedelta(days=days)
@@ -439,14 +551,15 @@ def summarize(
     later = timedelta(days=LATER_DAYS)
 
     all_checks = sorted(
-        (c for c in checks if c.created_at is not None and c.intent in INTENTS),
+        (c for c in checks if c.created_at is not None and c.intent in ROW_INTENTS),
         key=lambda c: (c.created_at, c.id or 0),
     )
     all_fills = sorted((f for f in fills if f.traded_at is not None), key=lambda f: f.traded_at)
     attributed = _attribute(all_checks, all_fills)
 
-    intents = {k: 0 for k in INTENTS}
+    intents = {k: 0 for k in ROW_INTENTS}
     look = {"n": 0, "traded": 0}
+    unanswered = {"n": 0, "traded": 0}
     said = {k: {"n": 0, "as_said": 0, "other": 0, "none": 0} for k in (INTENT_BUY, INTENT_SELL)}
     not_happened = {"n": 0, "later": 0, "never": 0, "open": 0}
     by_hour = [0] * 24
@@ -463,6 +576,10 @@ def summarize(
             look["n"] += 1
             if outcome == "traded":
                 look["traded"] += 1
+        elif c.intent == INTENT_OPEN:
+            unanswered["n"] += 1
+            if outcome == "traded":
+                unanswered["traded"] += 1
         else:
             bucket = said[c.intent]
             bucket["n"] += 1
@@ -512,20 +629,32 @@ def summarize(
             "outcome": outcome,
         })
 
+    caveats = list(CAVEATS)
+    if opens_since is None:
+        caveats.insert(0, CAVEAT_ANSWERS_ONLY)
+    else:
+        lead = [CAVEAT_OPENS]
+        if opens_since > window_start:
+            lead.append(opens_since_caveat(opens_since))
+        caveats[0:0] = lead
+
     return {
         "window_days": days,
         "follow_minutes": FOLLOW_MINUTES,
         "later_days": LATER_DAYS,
         "first_check_at": _iso(first_check_at),
+        # 열림 신호를 처음 보낸 시각 — null 이면 total 은 '답한 횟수'다.
+        "opens_since": _iso(opens_since),
         "total": sum(intents.values()),
         "intents": intents,
         "look": look,
+        "unanswered": unanswered,
         "said": said,
         "not_happened": not_happened,
         "fills": {"total": fills_total, "through_door": fills_door},
         "by_hour_kst": by_hour,
         "recent": recent,
-        "caveats": list(CAVEATS),
+        "caveats": caveats,
     }
 
 
@@ -541,14 +670,20 @@ def year_section(
     """올해의 기록(services/year_recap)의 ``doorway`` 칸 — 그해 [start, end) 의
     문 앞 개수. 그해 열림이 없으면 None (화면이 칸을 그리지 않는다). 최근 기록과
     유저의 한 줄은 넣지 않는다 — 연간 화면은 개수만 (legal-kr-fintech 2026-10-15:
-    note 가 본인 화면 밖으로 나가면 재검수)."""
-    s = summarize(checks, fills, now=now, first_check_at=first_check_at, start=start, end=end)
+    note 가 본인 화면 밖으로 나가면 재검수). ``checks`` 는 그 유저의 열림 전부다 —
+    처음 열림 신호를 보낸 시각을 거기서 읽는다."""
+    checks = list(checks)
+    signal = min((c.opened_at for c in checks if getattr(c, "opened_at", None)), default=None)
+    s = summarize(checks, fills, now=now, first_check_at=first_check_at, start=start, end=end,
+                  opens_since=signal)
     if s["total"] == 0:
         return None
     return {
         "total": s["total"],
         "intents": s["intents"],
         "look": s["look"],
+        "unanswered": s["unanswered"],
+        "opens_since": s["opens_since"],
         "said": s["said"],
         "not_happened": s["not_happened"],
         "fills": s["fills"],
@@ -601,6 +736,17 @@ def first_check_at(user_id: int) -> datetime | None:
     )
 
 
+def first_signal_at(user_id: int) -> datetime | None:
+    """이 유저가 처음 열림 신호를 보낸 시각 — 없으면 None."""
+    from sqlalchemy import func
+
+    return (
+        db.session.query(func.min(DoorwayCheck.opened_at))
+        .filter(DoorwayCheck.user_id == user_id)
+        .scalar()
+    )
+
+
 def doorway_summary(user_id: int, *, days: int = DEFAULT_WINDOW_DAYS, now: datetime | None = None) -> dict:
     if days not in WINDOW_DAYS:
         raise DoorwayInputError(
@@ -617,7 +763,8 @@ def doorway_summary(user_id: int, *, days: int = DEFAULT_WINDOW_DAYS, now: datet
         .all()
     )
     fills = load_fills(user_id, window_start - lead)
-    return summarize(checks, fills, now=now, days=days, first_check_at=first_check_at(user_id))
+    return summarize(checks, fills, now=now, days=days, first_check_at=first_check_at(user_id),
+                     opens_since=first_signal_at(user_id))
 
 
 def list_checks(user_id: int, *, limit: int = 50, before_id: int | None = None) -> dict:

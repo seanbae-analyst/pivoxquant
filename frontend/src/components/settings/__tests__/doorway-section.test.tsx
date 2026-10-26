@@ -22,6 +22,7 @@ vi.mock("@/lib/locale", () => ({
 import {
   DoorwaySection,
   doorPageUrl,
+  openSignalBody,
   doorwayWebhookUrl,
   shortcutBody,
 } from "@/components/settings/doorway-section";
@@ -32,7 +33,9 @@ describe("DoorwaySection", () => {
   it("builds the address, body and door URL for the chosen app", () => {
     expect(doorwayWebhookUrl("https://pivoxquant.com")).toBe("https://pivoxquant.com/api/doorway/webhook");
     expect(shortcutBody("kiwoom")).toBe('{"text":"[메뉴 결과]","app":"kiwoom"}');
-    expect(doorPageUrl("https://pivoxquant.com", "toss")).toBe("https://pivoxquant.com/pre-trade/door?app=toss");
+    // launch=1: the automation opened it — the page records the open before any answer.
+    expect(doorPageUrl("https://pivoxquant.com", "toss")).toBe("https://pivoxquant.com/pre-trade/door?app=toss&launch=1");
+    expect(openSignalBody("toss")).toBe('{"text":"열림","app":"toss"}');
   });
 
   it("switches every copy field when another broker app is picked", () => {
@@ -40,7 +43,8 @@ describe("DoorwaySection", () => {
     expect(screen.getByTestId("doorway-body").textContent).toContain('"app":"toss"');
     fireEvent.change(screen.getByTestId("doorway-app"), { target: { value: "mirae" } });
     expect(screen.getByTestId("doorway-body").textContent).toContain('"app":"mirae"');
-    expect(screen.getByTestId("doorway-door-url").textContent).toMatch(/\/pre-trade\/door\?app=mirae$/);
+    expect(screen.getByTestId("doorway-door-url").textContent).toMatch(/\/pre-trade\/door\?app=mirae&launch=1$/);
+    expect(screen.getByTestId("doorway-open-body").textContent).toContain('"app":"mirae"');
     expect(screen.getByTestId("doorway-url").textContent).toMatch(/\/api\/doorway\/webhook$/);
     expect(screen.getByRole("link", { name: "웹 문 열어 보기" })).toHaveAttribute("href", "/pre-trade/door?app=mirae");
   });

@@ -186,7 +186,7 @@ function StorageLine({ onClear, detail = false }: { onClear?: () => void; detail
         )}
       </div>
       {detail && (
-        <p className="mt-1 pl-[18px]" style={{ color: FAINT }}>
+        <p className="mt-1 pl-[18px]" style={{ color: "var(--pq-ivory-faint)" }}>
           그래서 다른 기기에선 보이지 않고, 브라우저 데이터를 지우면 함께 지워져요.
         </p>
       )}
@@ -299,7 +299,8 @@ function PaydayPicker({
           aria-label="월급날"
           value={day}
           onChange={(e) => setDay(Number(e.target.value))}
-          className="rounded-[6px] bg-transparent text-[15px] font-semibold tabular-nums focus:outline-none focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[var(--pq-bronze)]"
+          // Fills the 44px row so the whole field opens the picker, not a 23px word.
+          className="h-full min-w-0 flex-1 self-stretch rounded-[6px] bg-transparent text-[15px] font-semibold tabular-nums focus:outline-none focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[var(--pq-bronze)]"
           style={{ color: IVORY }}
         >
           {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
@@ -574,7 +575,7 @@ function InvestCompare({
         </span>
         {over && (
           <span
-            className="rounded-full px-2.5 py-0.5 text-[11.5px]"
+            className="rounded-full px-2.5 py-0.5 text-[12px]"
             style={{ color: "var(--pq-bronze)", border: "1px solid rgba(var(--pq-bronze-rgb), 0.6)" }}
           >
             몫보다 많음
@@ -870,7 +871,7 @@ function PlanVsActual({
               {r.actual === null ? "—" : `${r.k === "invest" && investApprox ? "약 " : ""}${man(r.actual)}`}
             </span>
           </div>
-          <div className="mt-1 pl-[calc(3.5rem+0.75rem)] text-[11.5px]" style={{ color: DIM }}>
+          <div className="mt-1 pl-[calc(3.5rem+0.75rem)] text-[12px]" style={{ color: DIM }}>
             {r.sub}
           </div>
         </li>
@@ -903,7 +904,7 @@ function LastCycleResult({
         </span>
         <QuietButton onClick={onEdit}>돌아보기 고치기</QuietButton>
       </div>
-      <p className="mt-1 text-[11.5px]" style={{ color: DIM }}>
+      <p className="mt-1 text-[12px]" style={{ color: DIM }}>
         막대는 실제, 세로선은 정한 돈이에요.
       </p>
       <PlanVsActual plan={plan} investPut={put} investApprox={approx} />

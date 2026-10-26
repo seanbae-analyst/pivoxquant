@@ -120,7 +120,7 @@ function PulseForm({
                 aria-pressed={active}
                 type="button"
                 onClick={() => toggleTopic(t)}
-                className="text-pq-mono-sm min-h-[34px] px-3 py-1 rounded-[var(--pq-radius-card)] border transition-colors"
+                className="text-pq-mono-sm min-h-[44px] md:min-h-[34px] px-3 py-1 rounded-[var(--pq-radius-card)] border transition-colors"
                 style={{
                   borderColor: active
                     ? "var(--pq-bronze)"
@@ -140,7 +140,7 @@ function PulseForm({
 
       {/* Folded and optional (2026-10-25). */}
       <details data-testid="pulse-more">
-        <summary className="cursor-pointer select-none text-pq-body-sm text-[var(--pq-bronze-light)]">
+        <summary className="pq-hit cursor-pointer select-none text-pq-body-sm text-[var(--pq-bronze-light)]">
           한 줄 더 (선택) · 마음에 걸리는 것 · 배우고 싶은 것
         </summary>
         <div className="mt-3 space-y-5">
@@ -218,7 +218,7 @@ function LikertRow({
               onClick={() => onChange(n)}
               aria-label={`${label} — 5점 중 ${n}점`}
               aria-pressed={active}
-              className="flex-1 h-9 rounded-[var(--pq-radius-card)] border font-mono text-pq-body-sm transition-colors"
+              className="flex-1 h-11 md:h-9 rounded-[var(--pq-radius-card)] border font-mono text-pq-body-sm transition-colors"
               style={{
                 borderColor: active
                   ? "var(--pq-bronze)"

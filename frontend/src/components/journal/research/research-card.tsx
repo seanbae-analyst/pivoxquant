@@ -102,7 +102,8 @@ export function ResearchReview({
             <p className="text-pq-body-sm text-[var(--pq-ivory-strong)]" style={{ wordBreak: "keep-all" }}>
               {t}
             </p>
-            <div className="mt-2 inline-flex p-0.5" role="group" aria-label={`이유 ${i + 1} 채점`} style={{ border: LINE, borderRadius: "var(--pq-radius-cta)" }}>
+            {/* Phone: the whole width, 44px — one thumb per reason (2026-10-25: 56×32). */}
+            <div className="mt-2 flex w-full p-0.5 md:inline-flex md:w-auto" role="group" aria-label={`이유 ${i + 1} 채점`} style={{ border: LINE, borderRadius: "var(--pq-radius-cta)" }}>
               {VERDICT_ORDER.map((v) => {
                 const on = verdicts[i] === v;
                 return (
@@ -111,7 +112,7 @@ export function ResearchReview({
                     type="button"
                     aria-pressed={on}
                     onClick={() => setVerdicts((cur) => cur.map((x, j) => (j === i ? v : x)))}
-                    className="h-8 min-w-[3.5rem] px-3 text-pq-body-sm transition-colors"
+                    className="h-11 flex-1 px-3 text-pq-body-sm transition-colors md:h-8 md:min-w-[3.5rem] md:flex-none"
                     style={{
                       borderRadius: "calc(var(--pq-radius-cta) - 2px)",
                       background: on ? "var(--pq-bronze)" : "transparent",
@@ -230,7 +231,7 @@ export function ResearchCard({
       {scored && note.review_note && <Field label="채점 한 줄">{note.review_note}</Field>}
 
       <details className="mt-3">
-        <summary className="cursor-pointer select-none text-pq-caption text-[var(--pq-ivory-dim)]">나머지 칸</summary>
+        <summary className="pq-hit cursor-pointer select-none text-pq-caption text-[var(--pq-ivory-dim)]">나머지 칸</summary>
         {!note.invalidation && <Field label="이게 보이면 틀린 것">적지 않음</Field>}
         <Field label="뭘로 돈을 버나">{note.business || "적지 않음"}</Field>
         <Field label="가장 큰 위험">{note.risk ?? "적지 않음"}</Field>
