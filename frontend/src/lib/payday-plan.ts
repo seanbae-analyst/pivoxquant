@@ -380,6 +380,7 @@ const AMOUNT_RE = /^(?:(\d+(?:\.\d+)?)억)?(?:(\d+(?:\.\d+)?)만)?(\d+)?$/;
  *   refused  a minus sign ("-30000"), a decimal point on a plain number
  *            ("150000.5" — 원 has no fraction, and "1.500" could mean 1,500),
  *            a bare number straight after 억 ("1억5" — 1억 5천만, or 5원?),
+ *            a one- or two-digit number after 만 ("3만5" — 3만 5천, or 30,005원?),
  *            other units ("5천", "$100"), anything else.
  *   decimal  only on a 만 / 억 term ("1.5만" = 15,000); the total is rounded
  *            to the nearest won.
@@ -392,6 +393,9 @@ export function parseAmount(text: string): number | null {
   const m = AMOUNT_RE.exec(compact);
   if (!m || (m[1] === undefined && m[2] === undefined && m[3] === undefined)) return null;
   if (m[1] !== undefined && m[2] === undefined && m[3] !== undefined) return null;
+  // "3만5" — 3만 5천 (35,000) or 30,005? Spoken short forms drop the 천, so a
+  // one- or two-digit tail after 만 is a guess either way (2026-10-21).
+  if (m[2] !== undefined && m[3] !== undefined && m[3].length <= 2) return null;
   const won = Math.round(Number(m[1] ?? 0) * 1e8 + Number(m[2] ?? 0) * 1e4 + Number(m[3] ?? 0));
   return Number.isSafeInteger(won) ? won : null;
 }

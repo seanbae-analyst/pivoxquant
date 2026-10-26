@@ -318,7 +318,8 @@ def test_route_create_201_with_disclaimer(client, auth_user):
 
 
 def test_route_bad_input_and_non_object(client, auth_user):
-    for payload in ({**FORM, "theses": []}, [1, 2], "text"):
+    # A typed name is not a symbol (it would never match the user's fills).
+    for payload in ({**FORM, "theses": []}, {**FORM, "ticker": "삼성전자"}, [1, 2], "text"):
         resp = client.post("/api/research-notes", json=payload)
         assert resp.status_code == 400, payload
         assert resp.get_json()["code"] == "RESEARCH_BAD_INPUT"

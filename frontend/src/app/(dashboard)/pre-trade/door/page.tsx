@@ -139,13 +139,18 @@ function ChoiceButton({
 function RecentChecks({ pages }: { pages: ReturnType<typeof useDoorwayPages> }) {
   const { checks, mutate, hasMore, loadingMore, loadMore } = pages;
   const [busy, setBusy] = React.useState<number | null>(null);
+  const [failed, setFailed] = React.useState<string | null>(null);
   if (checks.length === 0) return null;
 
   const remove = async (c: DoorwayCheck) => {
     setBusy(c.id);
+    setFailed(null);
     try {
       await deleteDoorwayCheck(c.id);
       await mutate();
+    } catch (e) {
+      // A failed delete used to be an unhandled rejection — the row just stayed.
+      setFailed(e instanceof ApiError && e.message ? e.message : "지우지 못했어요. 잠시 후 다시 시도해 주세요.");
     } finally {
       setBusy(null);
     }
@@ -186,6 +191,11 @@ function RecentChecks({ pages }: { pages: ReturnType<typeof useDoorwayPages> }) 
           </li>
         ))}
       </ul>
+      {failed && (
+        <p role="alert" className="mt-2 text-[12.5px]" style={{ color: "var(--pq-negative)" }}>
+          {failed}
+        </p>
+      )}
       {hasMore && (
         <button
           type="button"

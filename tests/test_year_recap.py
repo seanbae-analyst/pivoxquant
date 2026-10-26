@@ -252,7 +252,46 @@ def test_rules_count_only_months_after_adoption():
     assert octo["partial"] is True
     assert (freq["within"], freq["outside"]) == (2, 1)
     # 매도 2번 — BBB 는 4일 만에(7일 전), AAA 는 8월 1일 로트부터.
-    assert rules["holding"] == {"min_days": 7.0, "sells": 2, "sooner": 1}
+    assert rules["holding"] == {"min_days": 7.0, "sells": 2, "sooner": 1, "sooner_label": "7일 전에 판 것"}
+
+
+def test_rules_use_the_same_day_rules_as_the_my_rules_card():
+    """2026-10-21 — the year page counted holds in 24-hour blocks and date-only
+    fills by UTC instant, so it contradicted /mirror 내 규칙 on the same rows."""
+    from services.profile.my_rules import compute_my_rules
+
+    answers = {"declared_frequency": "rare", "declared_holding": "days"}
+    # 14:00 KST buy, 10:00 KST sell the next morning — held into the next day.
+    buy = _trade("AAA", "BUY", datetime(2026, 9, 1, 5, 0, 0, 1))
+    sell = _trade("AAA", "SELL", datetime(2026, 9, 2, 1, 0, 0, 1))
+    # Adopted 9/10 14:00 KST; three date-only fills that same day (KST).
+    adopted = datetime(2026, 9, 10, 5, 0)
+    same_day = [_trade("BBB", "BUY", datetime(2026, 9, 10)) for _ in range(3)]
+    trades = [buy, sell, *same_day]
+
+    def card(confirmed_at):
+        out = compute_my_rules(answers, trades, open_positions=0,
+                               now=datetime(2026, 9, 20), confirmed_at=confirmed_at)
+        return {i["id"]: i for i in out["items"]}
+
+    rules = _recap(trades=trades, rules_answers=answers, rules_confirmed_at=datetime(2026, 8, 1))["rules"]
+    assert rules["holding"]["sooner"] == 0 == card(datetime(2026, 8, 1))["holding"]["sooner"]
+    assert rules["holding"]["sooner_label"] == "산 날 판 것"
+
+    rules = _recap(trades=trades, rules_answers=answers, rules_confirmed_at=adopted)["rules"]
+    sep = rules["frequency"]["months"][0]
+    assert sep["month"] == "2026-09" and sep["count"] == 3 and sep["over"] is True
+    assert card(adopted)["frequency"]["status"] == "outside"
+
+
+def test_a_date_only_fill_today_shows_before_09_kst():
+    """A fill entered for today with no time is stored at today 00:00 — later
+    than ``now`` (UTC) until 09:00 KST. It is today's, so it counts."""
+    now = datetime(2026, 10, 20, 20, 0)          # 2026-10-21 05:00 KST
+    today = _trade("AAA", "BUY", datetime(2026, 10, 21))
+    out = _recap(trades=[today], now=now)
+    assert out["fills"]["total"] == 1 and out["empty"] is False
+    assert available_years([today.traded_at], now) == [2026]
 
 
 # ── 해 목록 ─────────────────────────────────────────────────────────────
@@ -281,7 +320,7 @@ def test_route_requires_auth(client):
 
 
 def test_route_validates_year(client, auth_user):
-    for bad in ("abc", "26", "1999", "2019", "3000", "2026.5", "-2026"):
+    for bad in ("abc", "26", "1999", "2019", "3000", "2026.5", "-2026", "²⁰²⁶"):
         resp = client.get(f"/api/mirror-home/year?year={bad}")
         assert resp.status_code == 400, bad
         assert resp.get_json()["code"] == "YEAR_RECAP_BAD_YEAR"

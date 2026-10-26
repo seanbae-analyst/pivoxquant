@@ -73,6 +73,7 @@ import {
 } from "@/components/pre-trade/pre-trade-friction-core";
 import { RelatedObservationNotes } from "@/components/pre-trade/related-observation-notes";
 import { RelatedResearch } from "@/components/pre-trade/related-research";
+import { looksLikeTicker } from "@/lib/research";
 import { TickerSearch } from "@/components/shared/ticker-search";
 import type { BackendPositionRow } from "@/components/portfolio/types";
 import { PORTFOLIO_POSITIONS } from "@/lib/endpoints";
@@ -246,9 +247,11 @@ export default function PreTradePage() {
         {cycle.phase === "setup" && (
           <Link
             href={
-              ticker.trim()
-                ? `/journal/research?ticker=${encodeURIComponent(ticker.trim().toUpperCase())}`
-                : "/journal/research?new=1"
+              // Only a symbol rides along — the search box holds typed text
+              // ("삼성전자") until a pick, and a name is not a ticker.
+              looksLikeTicker(ticker)
+                ? `/journal/research?ticker=${encodeURIComponent(ticker.trim().toUpperCase())}&from=pre_trade`
+                : "/journal/research?new=1&from=pre_trade"
             }
             data-testid="pre-trade-research-link"
             className="flex items-center justify-between gap-3 rounded-[var(--pq-radius-card)] px-4 py-3 transition-colors hover:bg-[var(--pq-card-veil-strong)]"

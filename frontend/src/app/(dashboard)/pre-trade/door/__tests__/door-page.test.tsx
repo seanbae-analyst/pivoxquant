@@ -160,6 +160,17 @@ describe("web door", () => {
     expect(screen.getByText("열림 2")).toBeInTheDocument();
   });
 
+  it("says so when a delete fails instead of dropping the error", async () => {
+    calls.checks = [check(7, "열림 7")];
+    calls.remove.mockReset().mockRejectedValue(new Error("network"));
+    render(<DoorPage />);
+    await screen.findByText("열림 7");
+    const list = screen.getByTestId("door-recent");
+    fireEvent.click(within(list).getByRole("button", { name: /기록 지우기/ }));
+    expect(await within(list).findByRole("alert")).toHaveTextContent("지우지 못했어요");
+    expect(screen.getByText("열림 7")).toBeInTheDocument();
+  });
+
   it("opened by the automation, records the open first and the answer after it", async () => {
     window.history.replaceState(null, "", "/pre-trade/door?app=kiwoom&launch=1");
     const order: string[] = [];

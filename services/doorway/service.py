@@ -209,6 +209,9 @@ _LATIN_STOP = frozenset({
     "AI", "ETF", "ETN", "IPO", "PER", "PBR", "EPS", "ROE", "CEO", "IR", "DCA",
     "FOMC", "CPI", "GDP", "USD", "KRW", "US", "KR", "OK", "VS", "TV", "IT",
     "PC", "EV", "UP", "GO", "ALL", "NEW", "NOW", "ONE", "SO", "AM", "PM",
+    # 2026-10-21 — 미국 마스터에 기호로 있는 흔한 영어 낱말.
+    "A", "FOR", "ARE", "CAN", "ANY", "KEY", "GOOD", "CASH", "LOW", "HIGH",
+    "HOLD",  # // legal-ok — 낱말 거르기용, 화면에 나가지 않는다
 })
 # 이름 끝에 붙는 조사 — "삼성전자를" → "삼성전자".
 _PARTICLES = ("에서", "으로", "까지", "부터", "이랑", "하고", "처럼",
@@ -545,7 +548,6 @@ def summarize(
 
     def in_window(ts: datetime) -> bool:
         return ts >= window_start and (end is None or ts < end)
-    follow = timedelta(minutes=FOLLOW_MINUTES)
     later = timedelta(days=LATER_DAYS)
 
     all_checks = sorted(
@@ -589,7 +591,9 @@ def summarize(
                 side = _SIDE_FOR_INTENT[c.intent]
                 # 함수 인자 start/end 를 덮어쓰지 않는다 — in_window 와 체결 집계가
                 # 그 둘을 읽는다 (2026-10-21: 덮어써서 90일·연간 창이 잘렸다).
-                after, until = c.created_at + follow, c.created_at + later
+                # 창은 열림 바로 뒤부터 — 60분 안의 체결이 그 뒤 다시 연 열림에
+                # 이어졌어도(앱을 다시 열고 "그냥 보기") 그 종목을 산 것은 맞다.
+                after, until = c.created_at, c.created_at + later
                 if any(_same_ticker(f.ticker, c.ticker) and f.side == side and _lands_between(f, after, until)
                        for f in all_fills):
                     not_happened["later"] += 1
@@ -600,8 +604,10 @@ def summarize(
         window_rows.append((c, outcome))
 
     # 문을 거친 체결 — 첫 열림 이후(그 전엔 자동화가 없었다), 창 안의 체결만.
+    # 첫 열림 바로 앞 유예 안의 체결도 그 열림에 이어지므로 함께 센다.
     door_ids = {id(f) for fs in attributed.values() for f in fs}
-    since = max(window_start, first_check_at) if first_check_at else None
+    grace = timedelta(seconds=EARLY_GRACE_SECONDS)
+    since = max(window_start, first_check_at - grace) if first_check_at else None
     fills_total = fills_door = 0
     if since is not None:
         for f in all_fills:

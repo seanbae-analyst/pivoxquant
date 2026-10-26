@@ -212,7 +212,7 @@ function RulesSection({ rules }: { rules: NonNullable<YearRecapResponse["rules"]
       {rules.holding && (
         <p className="mt-4 text-[14px] tabular-nums" style={{ color: IVORY }} data-testid="year-rules-holding">
           {rules.holding.sells > 0
-            ? `매도 ${rules.holding.sells}번 중 ${rules.holding.min_days}일 전에 판 것 ${rules.holding.sooner}번`
+            ? `매도 ${rules.holding.sells}번 중 ${rules.holding.sooner_label ?? `${rules.holding.min_days}일 전에 판 것`} ${rules.holding.sooner}번`
             : "규칙을 정한 뒤 매도 기록 없음"}
         </p>
       )}
@@ -268,6 +268,7 @@ function DoorwaySection({ d }: { d: YearRecapDoorway }) {
           <li>
             종목을 적고 체결 없이 끝난 {d.not_happened.n}번 중 {d.later_days}일 안에 그 종목 체결{" "}
             {d.not_happened.later} · 체결 없음 {d.not_happened.never}
+            {d.not_happened.open > 0 ? ` · 아직 ${d.later_days}일이 안 됨 ${d.not_happened.open}` : ""}
           </li>
         )}
       </ul>

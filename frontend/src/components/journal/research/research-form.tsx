@@ -48,7 +48,7 @@ const INPUT =
 export interface ResearchFormProps {
   /** Pre-picked symbol (e.g. from a /portfolio row). */
   defaultTicker?: { ticker: string; name?: string } | null;
-  surface?: "journal" | "portfolio";
+  surface?: "journal" | "portfolio" | "pre_trade";
   onSaved: (note: ResearchNote) => void;
   onCancel?: () => void;
 }

@@ -171,6 +171,17 @@ const hydrated = new Map<string, HydratedMeta>();
  * `null` removed it (it must not come back).
  */
 let restored = new WeakSet<object>();
+/**
+ * Bumped whenever a session ends. A fetch that began under an earlier session
+ * carried that session's cookie; its answer must not reach the cache (see
+ * persistedCacheMiddleware). 2026-10-21: SWR writes a response into the cache
+ * AFTER onSuccess, so a late answer for user A landed after
+ * sessionEndedElsewhere had cleared memory, and the activation for user B
+ * then kept it as B's "live" value.
+ */
+let sessionGen = 0;
+/** A session ended on this tab — the next activation clears memory first. */
+let dropOnActivate = false;
 const listeners = new Set<() => void>();
 /** Told when another tab ended this tab's session (see onSessionEndedElsewhere). */
 const elsewhereListeners = new Set<() => void>();
@@ -287,6 +298,8 @@ function dropFromMemory(cache: Cache): void {
 function endSession(cache: Cache | undefined, wipe: "all" | number): void {
   if (flushTimer) clearTimeout(flushTimer);
   flushTimer = null;
+  sessionGen += 1;
+  dropOnActivate = true;
   activeUid = null;
   activeCache = null;
   entries = {};
@@ -347,16 +360,19 @@ export function activatePersistedCacheForUser(
   now: number = Date.now(),
 ): void {
   if (activeUid === uid) return;
-  if (activeUid !== null) {
-    // A different user on the same tab: nothing of the previous one may stay —
-    // neither the restored copies nor anything fetched for them in memory
-    // (flushPersistedCache reads the live cache, so it must not see them).
+  if (activeUid !== null || dropOnActivate) {
+    // A different user on the same tab, or a session that ended here: nothing
+    // of the previous one may stay — neither the restored copies nor anything
+    // fetched for them in memory (flushPersistedCache reads the live cache, so
+    // it must not see them). A first activation keeps live values: they were
+    // fetched with this user's own cookie.
     evictHydrated(cache);
     dropFromMemory(cache);
     restored = new WeakSet<object>();
     if (flushTimer) clearTimeout(flushTimer);
     flushTimer = null;
   }
+  dropOnActivate = false;
   removeStorageKeys(persistStorageKey(uid));
   // No owner mark, no on-device copy: without it another tab's sign-out
   // could not reach this one. Storage that refuses a few bytes would refuse
@@ -492,8 +508,27 @@ export const persistedCacheMiddleware: Middleware = (next) => (key, fetcher, con
     ownOnSuccess?.(data, k, c);
   };
   const extra = hydrated.has(key) ? { revalidateOnMount: true } : {};
-  return next(key, fetcher, { ...config, ...extra, onSuccess });
+  return next(key, fetcher ? guardSession(fetcher) : fetcher, { ...config, ...extra, onSuccess });
 };
+
+/** Thrown for an answer that belongs to a session already ended on this tab. */
+export class SessionChangedError extends Error {
+  constructor() {
+    super("session changed while the request was in flight");
+    this.name = "SessionChangedError";
+  }
+}
+
+/** `fetcher`, refusing an answer whose request began under an ended session. */
+function guardSession<F extends (...args: never[]) => unknown>(fetcher: F): F {
+  return ((...args: Parameters<F>) => {
+    const gen = sessionGen;
+    return Promise.resolve(fetcher(...args)).then((data) => {
+      if (gen !== sessionGen) throw new SessionChangedError();
+      return data;
+    });
+  }) as unknown as F;
+}
 
 /* ── Staleness hook ──────────────────────────────────────────────────── */
 
@@ -561,6 +596,8 @@ export function __resetPersistedCacheForTests(): void {
   activeCache = null;
   entries = {};
   restored = new WeakSet<object>();
+  sessionGen = 0;
+  dropOnActivate = false;
   hydrated.clear();
   listeners.clear();
   elsewhereListeners.clear();

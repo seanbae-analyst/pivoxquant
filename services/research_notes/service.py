@@ -49,7 +49,7 @@ from models.research_note import (
     VERDICTS,
 )
 from models.trade_history import REGISTRATION_SOURCES
-from services.imports import is_date_only
+from services.imports import is_date_only, ticker_ok
 from services.ticker_normalizer import normalize_ticker
 
 logger = logging.getLogger(__name__)
@@ -361,6 +361,10 @@ def _validate_ticker(raw) -> str:
         raise ValueError("ticker is required")
     if len(normalized) > TICKER_MAX_LEN:
         raise ValueError(f"ticker must be at most {TICKER_MAX_LEN} characters")
+    if not ticker_ok(normalized):
+        # A typed name ("삼성전자") is not a symbol — stored, it never matched
+        # the user's own fills, so the outcome stayed "아직 안 팖" (2026-10-21).
+        raise ValueError("ticker must be a symbol (e.g. 005930.KS, AAPL)")
     return normalized
 
 
