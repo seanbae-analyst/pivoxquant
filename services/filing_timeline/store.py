@@ -110,13 +110,16 @@ def sync_ticker(key: str, *, source: str = SOURCE_SEC, now_ts: float | None = No
         logger.warning("filing sync: %s fetch failed for %s: %s", source, key, exc)
         return False
     if got is None:
+        logger.info("filing sync: %s gave nothing for %s (no key / no corp code / rejected — see dart: lines)",
+                    source, key)
         return False
     try:
-        _store(source, key, got[0], got[1])
+        new = _store(source, key, got[0], got[1])
     except SQLAlchemyError as exc:
         db.session.rollback()
         logger.warning("filing sync: store failed for %s %s: %s", source, key, exc)
         return False
+    logger.info("filing sync: %s %s — %d rows fetched, %d new", source, key, len(got[1]), new)
     _mark(marker, now_ts, ok=True)
     return True
 

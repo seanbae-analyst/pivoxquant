@@ -193,12 +193,16 @@ def fetch(stock_code: str, *, today: date | None = None) -> tuple[str | None, li
             data = _get("list.json", {**q, "page_no": page}, timeout=TIMEOUT).json()
             status = str(data.get("status") or "")
             if status == "013":  # 조회된 데이터 없음
+                logger.info("dart: list.json %s %s page %d — no data (013)", stock_code, form, page)
                 break
             if status != "000":
                 logger.warning("dart: list.json for %s — %s", stock_code,
                                _status_line(status, str(data.get("message") or "")))
                 return None
-            rows.extend(parse_list(data.get("list"), form))
+            got = parse_list(data.get("list"), form)
+            logger.info("dart: list.json %s %s page %d/%s — %d rows, %d kept",
+                        stock_code, form, page, data.get("total_page"), len(data.get("list") or []), len(got))
+            rows.extend(got)
             if page >= int(data.get("total_page") or 1):
                 break
     return corp, rows
