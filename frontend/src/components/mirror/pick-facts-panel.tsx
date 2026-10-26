@@ -51,7 +51,7 @@ export function PickFactsView({ data, bordered = true }: { data: PickFactsRespon
         <div className="text-[12.5px]" style={{ color: "var(--pq-ivory)" }}>
           내가 고른 회사들
         </div>
-        <span className="text-[11px]" style={{ color: DIM }}>
+        <span className="text-[12px]" style={{ color: DIM }}>
           최근 1년 처음 산 {data.picked}종목
         </span>
       </div>

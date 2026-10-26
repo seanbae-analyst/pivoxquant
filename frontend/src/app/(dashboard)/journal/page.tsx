@@ -298,7 +298,7 @@ function JournalEntry({ r }: { r: PreTradeReflection }) {
         {typeof r.intended_shares === "number" && r.intended_shares > 0 && (
           <span className="font-mono text-pq-caption text-[var(--pq-ivory-dim)]">
             {r.intended_shares.toLocaleString()}
-            <span className="ml-1 opacity-60">
+            <span className="ml-1">
               {t("journal.page.sharesUnit")}
             </span>
           </span>
@@ -307,7 +307,8 @@ function JournalEntry({ r }: { r: PreTradeReflection }) {
           <span className="font-mono text-pq-caption text-[var(--pq-ivory-faint)]">
             {relativeTime(ts, locale, { verbose: true })}
             <span className="mx-1.5 opacity-40">·</span>
-            <span className="opacity-70">{absoluteDate(ts)}</span>
+            {/* faint is the readable floor — no opacity on top (2026-10-25). */}
+            <span>{absoluteDate(ts)}</span>
           </span>
         )}
       </div>
@@ -559,7 +560,7 @@ function FilterChips({
             type="button"
             onClick={() => onChange(v)}
             aria-pressed={active}
-            className="rounded-[var(--pq-radius-card)] border px-3 py-1.5 font-mono text-pq-caption transition-colors"
+            className="min-h-[44px] rounded-[var(--pq-radius-card)] border px-3.5 py-1.5 font-mono text-pq-caption transition-colors md:min-h-0"
             style={{
               borderColor: active
                 ? "var(--pq-bronze)"
@@ -788,7 +789,7 @@ function JournalContent() {
               <span className="mx-1.5 opacity-40">·</span>
               종목 {weekly.tickers}개
               {nextBefore !== null && (
-                <span className="ml-1.5 opacity-70">
+                <span className="ml-1.5">
                   (최근 {OBS_NOTE_FEED_LIMIT}개 기준)
                 </span>
               )}

@@ -106,7 +106,9 @@ export function ObservationNoteCard({
           {/* verbose: "18주 전", like the pre-trade cards beside it — the
               bare "18주 · 2026년 6월 18일" read as a duration. */}
           {relativeTime(note.created_at, locale, { verbose: true })}
-          <span className="opacity-70">
+          {/* No extra opacity: faint (0.50) is already the floor that reads
+              at 4.5:1 — ×0.7 put the date at 2.95:1 (2026-10-25). */}
+          <span>
             {" · "}
             {noteAbsoluteDate(note.created_at)}
           </span>

@@ -222,7 +222,7 @@ export function ResearchForm({ defaultTicker, surface = "journal", onSaved, onCa
 
       {/* Folded (2026-10-25): worth writing, not worth blocking on. */}
       <details className="mt-6" data-testid="research-more">
-        <summary className="cursor-pointer select-none text-pq-body-sm text-[var(--pq-bronze-light)]">
+        <summary className="pq-hit cursor-pointer select-none text-pq-body-sm text-[var(--pq-bronze-light)]">
           더 적기 (선택) · 뭘로 돈을 버나 · 가장 큰 위험 · 확인한 숫자
         </summary>
         <Step n={3} label="이 회사는 뭘로 돈을 버나" optional>

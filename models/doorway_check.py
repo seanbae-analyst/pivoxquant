@@ -9,6 +9,9 @@ docs/design/doorway-pause_2026-10-15.md. 「멈춤」(pre_trade_reflection.py)�
     look   그냥 보기
     buy    살 게 있음  (+ 한 줄)
     sell   팔 게 있음  (+ 한 줄)
+    open   답 없음 — 자동화가 질문 전에 보낸 '열림 신호'만 왔다 (2026-10-26).
+           답이 오면 같은 행이 위 셋 중 하나로 바뀐다. ``opened_at`` 이 그 신호의
+           시각이다 — 신호 없이 답만 온 행은 NULL.
 
 그 열림이 체결로 이어졌는지는 행에 박지 않는다. 읽기 시점에 서비스가 같은
 유저의 체결(trade_history + 대기 중인 pending_trades)과 맞춰 본다
@@ -22,7 +25,7 @@ Privacy / legal
   아니다.
 - 증권 앱에 닿지 않는다. 유저 폰의 OS 자동화가 유저 본인의 가져오기 토큰으로
   보낸다. 시세를 부르지 않는다. 우리가 붙이는 문장은 개수뿐이다.
-- 스키마는 ``migrations/versions/064_doorway_checks.py`` 와 1:1.
+- 스키마는 ``migrations/versions/064_doorway_checks.py`` (+ 069 ``opened_at``) 와 1:1.
 """
 from __future__ import annotations
 
@@ -37,6 +40,9 @@ INTENT_LOOK = "look"
 INTENT_BUY = "buy"
 INTENT_SELL = "sell"
 INTENTS = (INTENT_LOOK, INTENT_BUY, INTENT_SELL)
+# 답이 아직 없는 열림 (열림 신호만 온 행). 답 셋과 따로 둔다 — 답으로 받는 값이 아니다.
+INTENT_OPEN = "open"
+ROW_INTENTS = INTENTS + (INTENT_OPEN,)
 
 # 어디서 왔나 — 폰 자동화(토큰) / 웹의 /door 화면(세션).
 SOURCE_AUTOMATION = "automation"
@@ -65,6 +71,9 @@ class DoorwayCheck(db.Model):
     note = db.Column(EncryptedText, nullable=True)
     app = db.Column(db.String(APP_MAX_LEN), nullable=True)
     source = db.Column(db.String(12), nullable=False, default=SOURCE_AUTOMATION)
+    # 열림 신호가 온 시각 (naive UTC) — 이 행이 신호로 시작했다는 표시.
+    # NULL = 신호 없이 답만 온 행 (069, 2026-10-26).
+    opened_at = db.Column(db.DateTime, nullable=True)
     # 문을 연 시각 = 행이 생긴 시각 (naive UTC).
     created_at = db.Column(
         db.DateTime,
@@ -80,13 +89,14 @@ class DoorwayCheck(db.Model):
     def to_dict(self) -> dict:
         return {
             "id": int(self.id) if self.id is not None else None,
-            "intent": self.intent if self.intent in INTENTS else INTENT_LOOK,
+            "intent": self.intent if self.intent in ROW_INTENTS else INTENT_LOOK,
             "ticker": self.ticker,
             "name": offline_name(self.ticker) if self.ticker else None,
             "note": self.note or None,
             "app": self.app,
             "source": self.source if self.source in SOURCES else SOURCE_AUTOMATION,
             "created_at": self.created_at.isoformat() if self.created_at else None,
+            "opened_at": self.opened_at.isoformat() if self.opened_at else None,
         }
 
 

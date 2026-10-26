@@ -190,14 +190,16 @@ export function ProfileDropdown() {
           className="flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-[rgba(var(--pq-bronze-wash-rgb),0.08)]"
         >
           <span
-            // 36px: a whole Korean name ("배상현", lib/initials) fits inside the
-            // ring at 10px; one or two characters keep the 11px label.
-            className="flex h-9 w-9 items-center justify-center rounded-full font-semibold"
+            // 40px ring inside the 44px target: a whole Korean name ("배상현",
+            // lib/initials) still fits at 11px (10px in a 36px ring was the
+            // smallest text on every screen, 2026-10-25); one or two
+            // characters get 12px.
+            className="flex h-10 w-10 items-center justify-center rounded-full font-semibold"
             style={{
               background: "transparent",
               border: "0.5px solid var(--pq-bronze)",
               color: "var(--pq-bronze)",
-              fontSize: init.length >= 3 ? 10 : 11,
+              fontSize: init.length >= 3 ? 11 : 12,
               letterSpacing: init.length >= 3 ? "-0.02em" : "0.04em",
             }}
           >
