@@ -103,9 +103,12 @@ def _filing_block(key: str, normalized: str, fills: list, events: list[dict[str,
 
     market = market_of(normalized)
     if not filings_enabled() or not source_available(market):
+        logger.info("stock_record: filings skipped for %s — enabled=%s market=%s source_available=%s",
+                    key, filings_enabled(), market, source_available(market))
         return None
     first = _first_day(events)
     if first is None:
+        logger.info("stock_record: filings skipped for %s — no dated record yet", key)
         return None
     points = [
         FillPoint(t.traded_at, _side(t.action) or "", untimed=is_date_only(t.traded_at))
