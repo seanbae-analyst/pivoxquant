@@ -228,12 +228,18 @@ function DoorwaySection({ d }: { d: YearRecapDoorway }) {
     { key: "buy", label: "살 게 있음", n: d.intents.buy },
     { key: "sell", label: "팔 게 있음", n: d.intents.sell },
   ];
+  // With the app-open signal the total is opens, and some had no answer (2026-10-26).
+  if (d.opens_since) rows.push({ key: "open", label: "답 안 함", n: d.intents.open ?? 0 });
   const top = Math.max(1, ...rows.map((r) => r.n));
   const said = d.said.buy.n + d.said.sell.n;
   const asSaid = d.said.buy.as_said + d.said.sell.as_said;
   return (
     <Section id="doorway" title="문 앞">
-      <BigNumber value={d.total} unit="번" label="증권 앱을 열 때 남긴 답" />
+      <BigNumber
+        value={d.total}
+        unit="번"
+        label={d.opens_since ? "증권 앱을 연 횟수" : "증권 앱을 열 때 남긴 답"}
+      />
       <ul className="mt-5 list-none space-y-2 p-0">
         {rows.map((r) => (
           <li key={r.key} className="flex items-center gap-3 text-[12.5px] tabular-nums" style={{ color: DIM }}>
@@ -251,6 +257,11 @@ function DoorwaySection({ d }: { d: YearRecapDoorway }) {
       <ul className="mt-4 list-none space-y-1.5 p-0 text-[13px] tabular-nums" style={{ color: DIM }}>
         {d.look.n > 0 && (
           <li>그냥 보기 {d.look.n}번 중 {d.look.traded}번은 {d.follow_minutes}분 안에 체결이 있었어요.</li>
+        )}
+        {d.unanswered && d.unanswered.n > 0 && (
+          <li>
+            답하지 않은 {d.unanswered.n}번 중 {d.unanswered.traded}번은 {d.follow_minutes}분 안에 체결이 있었어요.
+          </li>
         )}
         {said > 0 && <li>살 게 · 팔 게 있다고 한 {said}번 중 말한 대로 체결 {asSaid}번</li>}
         {d.not_happened.n > 0 && (

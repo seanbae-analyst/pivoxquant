@@ -14,6 +14,12 @@
  * Why here: 「멈춤」 works only when the user remembers to come to us before
  * buying. The door is where the impulse starts; this is the mirror of it.
  *
+ * What the headline counts (2026-10-26): with the app-open signal (the
+ * automation pings before it asks — `opens_since` set) every open on that
+ * phone is a row, answered or not → "증권 앱을 N번 열었어요" plus a 답 안 함
+ * bar. Without it only answered opens exist → "문 앞 질문에 N번 답했어요";
+ * "열었어요" there undercounted every open whose question was closed.
+ *
  * States:
  *  - never set up (`first_check_at` null) → one quiet invite line to the
  *    settings guide (`invite`, desktop column only — the phone row of story
@@ -32,19 +38,20 @@ import Link from "next/link";
 import { useDoorwaySummary } from "@/lib/hooks";
 import { parseIsoUtc } from "@/lib/format";
 import type {
-  DoorwayIntent,
   DoorwayOutcome,
   DoorwayRecent,
+  DoorwayRowIntent,
   DoorwaySummaryResponse,
 } from "@/lib/types";
 
 const DIM = "rgba(var(--pq-ivory-rgb), 0.55)";
 export const DOORWAY_SETTINGS_HREF = "/settings?s=doorway";
 
-export const INTENT_LABEL: Record<DoorwayIntent, string> = {
+export const INTENT_LABEL: Record<DoorwayRowIntent, string> = {
   look: "그냥 보기",
   buy: "살 게 있음",
   sell: "팔 게 있음",
+  open: "답 안 함",
 };
 
 export const OUTCOME_LABEL: Record<DoorwayOutcome, string> = {
@@ -54,7 +61,12 @@ export const OUTCOME_LABEL: Record<DoorwayOutcome, string> = {
   none: "체결 없음",
 };
 
-const INTENT_ORDER: DoorwayIntent[] = ["look", "buy", "sell"];
+const INTENT_ORDER: DoorwayRowIntent[] = ["look", "buy", "sell"];
+
+/** The card's one number, in the words of what was actually counted. */
+export function doorwayHeadline(s: Pick<DoorwaySummaryResponse, "total" | "opens_since">): string {
+  return s.opens_since ? `증권 앱을 ${s.total}번 열었어요` : `문 앞 질문에 ${s.total}번 답했어요`;
+}
 
 /** "10.15 09:05" in KST; naive backend stamps are UTC. */
 export function kstStamp(iso: string | null): string {
@@ -77,6 +89,10 @@ export function doorwayFacts(s: DoorwaySummaryResponse): string[] {
   const out: string[] = [];
   if (s.look.n > 0) {
     out.push(`그냥 보기 ${s.look.n}번 중 ${s.look.traded}번은 ${s.follow_minutes}분 안에 체결이 있었어요.`);
+  }
+  const quiet = s.unanswered;
+  if (quiet && quiet.n > 0) {
+    out.push(`답하지 않은 ${quiet.n}번 중 ${quiet.traded}번은 ${s.follow_minutes}분 안에 체결이 있었어요.`);
   }
   for (const key of ["buy", "sell"] as const) {
     const c = s.said[key];
@@ -123,10 +139,12 @@ export function FactLine({ text }: { text: string }) {
 }
 
 function IntentBars({ s }: { s: DoorwaySummaryResponse }) {
-  const top = Math.max(1, ...INTENT_ORDER.map((k) => s.intents[k] ?? 0));
+  // 답 안 함 exists only once the app-open signal is on.
+  const order: DoorwayRowIntent[] = s.opens_since ? [...INTENT_ORDER, "open"] : INTENT_ORDER;
+  const top = Math.max(1, ...order.map((k) => s.intents[k] ?? 0));
   return (
     <ul className="mt-4 space-y-2" data-testid="doorway-intents">
-      {INTENT_ORDER.map((k) => {
+      {order.map((k) => {
         const n = s.intents[k] ?? 0;
         return (
           <li key={k} className="flex items-center gap-3">
@@ -298,8 +316,12 @@ export function DoorwayPanelView({
         </>
       ) : (
         <>
-          <p className="mt-2 text-[1.35rem] leading-snug tabular-nums" style={{ color: "var(--pq-ivory)" }}>
-            증권 앱을 {data.total}번 열었어요
+          <p
+            className="mt-2 text-[1.35rem] leading-snug tabular-nums"
+            style={{ color: "var(--pq-ivory)" }}
+            data-testid="doorway-headline"
+          >
+            {doorwayHeadline(data)}
           </p>
 
           <IntentBars s={data} />
