@@ -154,7 +154,7 @@
       "deck": "What people ask most before starting the beta.",
       "heading": "Before you begin.",
       "q1": "Is this the same as investment advisory?",
-      "a1": "No. It falls outside licensed investment advisory under Article 6 of the Financial Investment Services and Capital Markets Act. PivoxQuant is an informational research tool that reflects back the record and holdings you entered yourself. It does not pick securities, score them, or tell you to buy or sell. Every decision remains yours.",
+      "a1": "It does not give investment advice. PivoxQuant is not registered or reported as an investment advisory or quasi-advisory business; it is an informational record-keeping tool that reflects back the record and holdings you entered yourself. It does not pick securities, score securities, or tell you to buy or sell. Every decision remains yours.",
       "q2": "What do you do with my trade data — what does the mirror “observe”?",
       "a2": "It places two things side by side: what you said about your own habits in the five onboarding questions, and the behaviour observed in your last 30 days of trades. Nine axes — average holding period, turnover, sector spread and so on — are computed from your own record; no new judgement is manufactured. Raw trade data is stored encrypted and is never used for advertising or sold onward. You can download it from Settings as JSON or CSV at any time, and on account deletion it is fully erased within 30 days.",
       "q3": "Do the declared and observed sides change over time?",
@@ -700,7 +700,7 @@
       },
       "dataSource": {
         "q": "Where does the data come from?",
-        "a": "Company, financial, and disclosure data are sourced exclusively from officially licensed providers (Korea Investment & Securities API, SEC EDGAR, KRX/DART official public data, etc.). Unofficial scraping is not used. Holding amounts are calculated from the average cost you entered; market prices are not displayed."
+        "a": "The outside data the service receives is reference data such as company names and ticker codes, exchange rates, and disclosure lists. Each is used under its provider's terms (Financial Modeling Prep, ExchangeRate-API, Korea Investment & Securities API, KRX public data, SEC EDGAR, DART); unofficial scraping is not used. Holding amounts are calculated from the average cost you entered; market prices are not displayed."
       },
       "pricing": {
         "q": "How are the plans structured?",
@@ -856,7 +856,7 @@
     },
     "notice": {
       "title": "Notice / 면책 고지.",
-      "body": "PivoxQuant reflects back the record you enter yourself. Automatic brokerage linking is not offered — no order routing, no investment advice, no recommendation to buy or sell. 본 서비스는 자본시장과 금융투자업에 관한 법률상의 투자자문업·투자일임업이 아니며, 모든 의사결정과 책임은 이용자 본인에게 있습니다."
+      "body": "PivoxQuant reflects back the record you enter yourself. Automatic brokerage linking is not offered — no order routing, no investment advice, no recommendation to buy or sell. The service is not registered or reported as an investment advisory or discretionary management business and does not provide investment advice. Every decision and its consequences remain your own."
     },
     "toast": {
       "kisSynced": "KIS synchronized.",

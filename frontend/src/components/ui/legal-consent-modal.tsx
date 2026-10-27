@@ -243,8 +243,9 @@ export function LegalConsentModal({
               style={{ color: "rgba(var(--pq-ivory-rgb), 0.78)" }}
             >
               <strong style={{ color: "var(--pq-bronze)" }}>[필수]</strong> PivoxQuant는
-              자본시장법상 투자자문업이 아니며, 본 서비스의 모든 분석·리포트·시그널은
-              정보 제공 목적임을 이해합니다.
+              투자자문업자로 등록·신고되어 있지 않고 투자자문을 제공하지 않으며, 본
+              서비스의 모든 집계·리포트는 정보 제공 목적임을 이해합니다. 투자 판단과 그 결과는
+              이용자 본인의 책임입니다.
             </span>
           </label>
 

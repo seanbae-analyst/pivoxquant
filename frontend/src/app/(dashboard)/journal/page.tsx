@@ -213,14 +213,10 @@ function ObservedContextLine({
 }: {
   ctx: NonNullable<PreTradeReflection["observed_context"]>;
 }) {
+  // signal/score are not rendered (2026-10-27): the signal feature and its
+  // terms definition are gone, so a label kept in an old reflection's
+  // observed_context would be a score with nothing defining it.
   const parts: string[] = [];
-  if (ctx.signal) {
-    parts.push(
-      typeof ctx.score === "number"
-        ? `${ctx.signal} ${Math.round(ctx.score)}`
-        : ctx.signal,
-    );
-  }
   if (typeof ctx.vix === "number") parts.push(`VIX ${ctx.vix}`);
   if (typeof ctx.change_1h_pct === "number") {
     parts.push(`1시간 ${ctx.change_1h_pct > 0 ? "+" : ""}${ctx.change_1h_pct}%`);
