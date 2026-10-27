@@ -62,6 +62,11 @@ MAX_LIST_LIMIT = 200
 # 요약은 최근 노트까지만 본다 — 한 유저가 이 이상 적는 경우는 베타에서 없고,
 # 무한정 읽는 경로를 막는 상한이다.
 OVERVIEW_ROW_CAP = 1000
+# 다시 찾기: 검색어가 있으면 복호화한 본문을 파이썬에서 본다 — 한 요청이 읽는
+# 행의 상한. 넘으면 next_before 로 이어서 읽는다.
+SEARCH_SCAN_CAP = 1000
+MAX_QUERY_CHARS = 100
+STATUSES = ("due", "waiting", "scored")
 
 OUTCOMES = ("gain", "loss", "flat", "open")
 # trade_history.action value for a disposal — a stored data literal, not copy.
@@ -126,28 +131,79 @@ def create_research(user_id: int, data) -> dict:
     return _dicts(int(user_id), [row], today)[0]
 
 
-def list_research(user_id: int, *, limit=DEFAULT_LIST_LIMIT, before=None, ticker=None) -> dict:
+def list_research(
+    user_id: int,
+    *,
+    limit=DEFAULT_LIST_LIMIT,
+    before=None,
+    ticker=None,
+    q=None,
+    source=None,
+    status=None,
+    since=None,
+    until=None,
+) -> dict:
     """The caller's own notes, newest first → ``{notes, next_before}``.
 
     Same id-cursor contract as observation notes (``id desc`` + ``id <
     before``). Each note carries ``due`` and ``outcome``.
+
+    다시 찾기 filters (2026-10-27), all optional and ANDed:
+
+    ``source`` — an info source, or ``none`` for notes without one.
+    ``status`` — ``due`` (review day come, not scored) · ``waiting`` (day
+                 still ahead, not scored) · ``scored``.
+    ``since`` / ``until`` — ``YYYY-MM-DD``, the KST day the note was written,
+                 both ends inclusive.
+    ``q``      — words matched against the ticker, the stock name and every
+                 narrative field (see ``_search_text``). Those fields are
+                 encrypted at rest, so SQL cannot see them: the plaintext
+                 filters above narrow the rows in SQL, then ``q`` is matched
+                 in Python, ``SEARCH_SCAN_CAP`` rows per request. When the cap
+                 is reached before ``limit`` matches, ``next_before`` is the
+                 last row read, so the next page goes on from there.
+
+    Raises ``ValueError`` on an unknown ``source`` / ``status`` or a bad date.
     """
+    uid = int(user_id)
     limit = _clamp_int(limit, default=DEFAULT_LIST_LIMIT, maximum=MAX_LIST_LIMIT)
-    q = ResearchNote.query.filter(ResearchNote.user_id == int(user_id))
+    today = kst_today()
+    query = ResearchNote.query.filter(ResearchNote.user_id == uid)
     cursor = _optional_int(before)
     if cursor is not None:
-        q = q.filter(ResearchNote.id < cursor)
+        query = query.filter(ResearchNote.id < cursor)
     if ticker:
         normalized = normalize_ticker(str(ticker))
         if normalized:
-            q = q.filter(ResearchNote.ticker == normalized)
-    rows = q.order_by(ResearchNote.id.desc()).limit(limit + 1).all()
-    has_more = len(rows) > limit
-    rows = rows[:limit]
-    return {
-        "notes": _dicts(int(user_id), rows, kst_today()),
-        "next_before": int(rows[-1].id) if (has_more and rows) else None,
-    }
+            query = query.filter(ResearchNote.ticker == normalized)
+    query = _filter_source(query, source)
+    query = _filter_status(query, status, today)
+    query = _filter_written(query, since, until)
+    query = query.order_by(ResearchNote.id.desc())
+
+    terms = _search_terms(q)
+    if not terms:
+        rows = query.limit(limit + 1).all()
+        has_more = len(rows) > limit
+        rows = rows[:limit]
+        next_before = int(rows[-1].id) if (has_more and rows) else None
+        return {"notes": _dicts(uid, rows, today), "next_before": next_before}
+
+    scanned = query.limit(SEARCH_SCAN_CAP).all()
+    matched: list[ResearchNote] = []
+    for row in scanned:
+        if all(t in _search_text(row) for t in terms):
+            matched.append(row)
+            if len(matched) > limit:
+                break
+    if len(matched) > limit:
+        matched = matched[:limit]
+        next_before = int(matched[-1].id)
+    elif len(scanned) == SEARCH_SCAN_CAP:
+        next_before = int(scanned[-1].id)
+    else:
+        next_before = None
+    return {"notes": _dicts(uid, matched, today), "next_before": next_before}
 
 
 def research_overview(user_id: int) -> dict:
@@ -417,6 +473,82 @@ def _validate_months(raw) -> int:
     if isinstance(raw, bool) or not isinstance(raw, int) or raw not in REVIEW_MONTHS:
         raise ValueError(f"review_months must be one of {REVIEW_MONTHS}")
     return raw
+
+
+# ── 다시 찾기 ────────────────────────────────────────────────────────
+
+def _search_terms(raw) -> list[str]:
+    """Whitespace-split, lower-cased words of ``q`` (capped) — every one must
+    appear for a note to match."""
+    if not isinstance(raw, str):
+        return []
+    return [t for t in raw[:MAX_QUERY_CHARS].lower().split() if t]
+
+
+def _search_text(row: ResearchNote) -> str:
+    """One lower-cased haystack: ticker, name, and every narrative field the
+    user wrote (business · theses · invalidation · risk · numbers · review
+    note). Decrypted here, in memory only."""
+    d = row.to_dict()
+    parts = [
+        d["ticker"] or "",
+        d["name"] or "",
+        d["business"] or "",
+        *d["theses"],
+        d["invalidation"] or "",
+        d["risk"] or "",
+        d["numbers"] or "",
+        d["review_note"] or "",
+    ]
+    return "\n".join(parts).lower()
+
+
+def _filter_source(query, raw):
+    if raw is None or raw == "":
+        return query
+    if raw == "none":
+        return query.filter(ResearchNote.info_source.is_(None))
+    if raw not in INFO_SOURCES:
+        raise ValueError(f"source must be one of {', '.join((*INFO_SOURCES, 'none'))}")
+    return query.filter(ResearchNote.info_source == raw)
+
+
+def _filter_status(query, raw, today: date):
+    if raw is None or raw == "":
+        return query
+    if raw not in STATUSES:
+        raise ValueError(f"status must be one of {', '.join(STATUSES)}")
+    if raw == "scored":
+        return query.filter(ResearchNote.reviewed_at.isnot(None))
+    query = query.filter(ResearchNote.reviewed_at.is_(None))
+    if raw == "due":
+        return query.filter(ResearchNote.review_on <= today)
+    return query.filter(ResearchNote.review_on > today)
+
+
+def _parse_day(raw, field: str) -> date | None:
+    if raw is None or raw == "":
+        return None
+    try:
+        return date.fromisoformat(str(raw))
+    except ValueError:
+        raise ValueError(f"{field} must be YYYY-MM-DD") from None
+
+
+def _filter_written(query, since, until):
+    """``created_at`` is naive UTC; the bounds are KST calendar days."""
+    start = _parse_day(since, "since")
+    end = _parse_day(until, "until")
+    if start is not None:
+        query = query.filter(
+            ResearchNote.created_at >= datetime.combine(start, datetime.min.time()) - _KST_OFFSET
+        )
+    if end is not None:
+        query = query.filter(
+            ResearchNote.created_at
+            < datetime.combine(end + timedelta(days=1), datetime.min.time()) - _KST_OFFSET
+        )
+    return query
 
 
 # ── Internals ────────────────────────────────────────────────────────

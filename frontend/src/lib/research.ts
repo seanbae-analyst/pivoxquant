@@ -65,3 +65,64 @@ export function kstDateOf(isoUtc: string | null | undefined): string {
 export function looksLikeTicker(value: string | null | undefined): boolean {
   return /^[A-Z0-9][A-Z0-9.-]{0,19}$/.test((value ?? "").trim().toUpperCase());
 }
+
+/* ── 다시 찾기 (2026-10-27) ──────────────────────────────────────────────
+ * The filters `GET /api/research-notes/list` takes on top of the cursor
+ * (services/research_notes/service.py::list_research). Narrative fields are
+ * encrypted at rest, so the server matches `q` after decrypting the user's
+ * own rows; the rest are plain SQL filters. */
+
+export type ResearchStatusFilter = "due" | "waiting" | "scored";
+export const RESEARCH_STATUS_ORDER: ResearchStatusFilter[] = ["due", "waiting", "scored"];
+export const RESEARCH_STATUS_LABEL: Record<ResearchStatusFilter, string> = {
+  due: "다시 볼 날 됨",
+  waiting: "기다리는 중",
+  scored: "채점함",
+};
+
+export type ResearchPeriod = "all" | "1m" | "3m" | "1y";
+export const RESEARCH_PERIOD_ORDER: ResearchPeriod[] = ["all", "1m", "3m", "1y"];
+export const RESEARCH_PERIOD_LABEL: Record<ResearchPeriod, string> = {
+  all: "전체 기간",
+  "1m": "최근 1개월",
+  "3m": "최근 3개월",
+  "1y": "최근 1년",
+};
+const PERIOD_MONTHS: Record<Exclude<ResearchPeriod, "all">, number> = { "1m": 1, "3m": 3, "1y": 12 };
+
+export interface ResearchFilters {
+  q: string;
+  source: ResearchInfoSource | "none" | null;
+  status: ResearchStatusFilter | null;
+  period: ResearchPeriod;
+}
+
+export const EMPTY_RESEARCH_FILTERS: ResearchFilters = { q: "", source: null, status: null, period: "all" };
+
+/** The server caps `q` at 100 characters; the input does the same. */
+export const RESEARCH_MAX_QUERY = 100;
+
+export function researchFiltersActive(f: ResearchFilters): boolean {
+  return f.q.trim() !== "" || f.source !== null || f.status !== null || f.period !== "all";
+}
+
+/** Today's KST calendar date `months` back, "YYYY-MM-DD" (clamped to the month's end). */
+export function kstMonthsAgo(months: number, now: number = Date.now()): string {
+  const kst = new Date(now + 9 * 3600_000);
+  const y = kst.getUTCFullYear();
+  const m = kst.getUTCMonth() - months;
+  const last = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(y, m, Math.min(kst.getUTCDate(), last))).toISOString().slice(0, 10);
+}
+
+/** `&q=…&source=…` for the list URL — "" when no filter is on. */
+export function researchFilterQuery(f: ResearchFilters, now: number = Date.now()): string {
+  const p = new URLSearchParams();
+  const q = f.q.trim().slice(0, RESEARCH_MAX_QUERY);
+  if (q) p.set("q", q);
+  if (f.source) p.set("source", f.source);
+  if (f.status) p.set("status", f.status);
+  if (f.period !== "all") p.set("since", kstMonthsAgo(PERIOD_MONTHS[f.period], now));
+  const s = p.toString();
+  return s ? `&${s}` : "";
+}

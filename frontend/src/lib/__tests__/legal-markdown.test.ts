@@ -61,7 +61,7 @@ describe("renderLegalMarkdown — real legal documents", () => {
     const html = renderLegalMarkdown(
       readFileSync(join(CONTENT_DIR, "terms-ko.md"), "utf8"),
     );
-    expect(html).toContain("투자 추천이 <strong>아닙니다</strong>");
+    expect(html).toContain("수익 보장을 의미하지 <strong>않습니다</strong>");
     expect(html).toMatch(/<strong>(&quot;|")서비스(&quot;|")<\/strong>란/);
   });
 });

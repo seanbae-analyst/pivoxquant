@@ -70,7 +70,7 @@ describe("OAuthFinalizePage — age self-declaration checkbox (PIPA §22 ⑥)", 
 
     await user.click(screen.getByRole("checkbox", { name: /이용약관/ }));
     await user.click(
-      screen.getByRole("checkbox", { name: /자본시장법상 투자자문업/ }),
+      screen.getByRole("checkbox", { name: /투자자문업자로 등록·신고되어 있지 않고/ }),
     );
     await user.click(screen.getByRole("checkbox", { name: /국외 이전에 동의/ }));
 
@@ -86,7 +86,7 @@ describe("OAuthFinalizePage — age self-declaration checkbox (PIPA §22 ⑥)", 
 
     await user.click(screen.getByRole("checkbox", { name: /이용약관/ }));
     await user.click(
-      screen.getByRole("checkbox", { name: /자본시장법상 투자자문업/ }),
+      screen.getByRole("checkbox", { name: /투자자문업자로 등록·신고되어 있지 않고/ }),
     );
     await user.click(screen.getByRole("checkbox", { name: /만 14세/ }));
     await user.click(screen.getByRole("checkbox", { name: /국외 이전에 동의/ }));
@@ -112,7 +112,7 @@ describe("LegalConsentModal — age self-declaration checkbox (PIPA §22 ⑥)", 
 
     await user.click(screen.getByRole("checkbox", { name: /이용약관/ }));
     await user.click(
-      screen.getByRole("checkbox", { name: /자본시장법상 투자자문업/ }),
+      screen.getByRole("checkbox", { name: /투자자문업자로 등록·신고되어 있지 않고/ }),
     );
     await user.click(screen.getByRole("checkbox", { name: /만 14세/ }));
     await user.click(screen.getByRole("checkbox", { name: /국외 이전/ }));

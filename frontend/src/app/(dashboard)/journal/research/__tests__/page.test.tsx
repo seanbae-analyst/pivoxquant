@@ -124,3 +124,65 @@ describe("/journal/research — more than 100 notes", () => {
     );
   });
 });
+
+/**
+ * 다시 찾기 (2026-10-27): the bar's words and chips ride on the list URL, a
+ * search shows every match (due ones included), and a miss says so.
+ */
+describe("/journal/research — 다시 찾기", () => {
+  /** Three notes; `q` matches on the ticker, `source=report` keeps id 2. */
+  function serveSearch(url: string): Promise<ResearchNotesResponse> {
+    const u = new URL(url, "http://x");
+    const q = (u.searchParams.get("q") ?? "").toLowerCase();
+    const source = u.searchParams.get("source");
+    const all = [3, 2, 1].map((id) => ({ ...note(id), info_source: id === 2 ? ("report" as const) : null }));
+    const notes = all.filter(
+      (n) => (!q || n.ticker.toLowerCase().includes(q)) && (!source || n.info_source === source),
+    );
+    return Promise.resolve({ ok: true, notes, next_before: null });
+  }
+
+  beforeEach(() => {
+    fetchMock.mockReset();
+    fetchMock.mockImplementation(serveSearch);
+  });
+  afterEach(cleanup);
+
+  it("sends the typed words once typing pauses, and lists the matches", async () => {
+    renderPage();
+    await waitFor(() => expect(screen.getAllByTestId("research-card")).toHaveLength(3));
+
+    fireEvent.change(screen.getByTestId("research-search"), { target: { value: "t2" } });
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith("/api/research-notes/list?limit=100&q=t2"),
+    );
+    await waitFor(() => expect(screen.getAllByTestId("research-card")).toHaveLength(1));
+    expect(screen.getByRole("heading", { name: /찾은 리서치\s*1개/ })).toBeTruthy();
+    // One request for the word, not one per key.
+    expect(fetchMock.mock.calls.filter(([u]) => u.includes("q=")).length).toBe(1);
+  });
+
+  it("a source chip filters, and 조건 지우기 brings every note back", async () => {
+    renderPage();
+    await waitFor(() => expect(screen.getAllByTestId("research-card")).toHaveLength(3));
+
+    fireEvent.click(screen.getByRole("button", { name: "리포트" }));
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith("/api/research-notes/list?limit=100&source=report"),
+    );
+    await waitFor(() => expect(screen.getAllByTestId("research-card")).toHaveLength(1));
+    expect(screen.getByText("T2")).toBeTruthy();
+
+    fireEvent.click(screen.getByTestId("research-filters-clear"));
+    await waitFor(() => expect(screen.getAllByTestId("research-card")).toHaveLength(3));
+    expect(screen.queryByTestId("research-filters-clear")).toBeNull();
+  });
+
+  it("says so when nothing matches", async () => {
+    renderPage();
+    await waitFor(() => expect(screen.getAllByTestId("research-card")).toHaveLength(3));
+    fireEvent.change(screen.getByTestId("research-search"), { target: { value: "없는말" } });
+    await waitFor(() => expect(screen.getByTestId("research-no-match").textContent).toContain("조건에 맞는 리서치가 없어요"));
+    expect(screen.queryAllByTestId("research-card")).toHaveLength(0);
+  });
+});

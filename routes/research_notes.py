@@ -96,15 +96,26 @@ def create():
 @_scrub
 @general_rate_limit
 def list_own():
-    """Own notes, newest first. ``?limit=`` (≤200) ``?before=<id>`` ``?ticker=``."""
-    return _envelope(
-        list_research(
-            current_user.id,
-            limit=request.args.get("limit", default=None),
-            before=request.args.get("before", default=None),
-            ticker=request.args.get("ticker", default=None),
+    """Own notes, newest first. ``?limit=`` (≤200) ``?before=<id>`` ``?ticker=``
+    + 다시 찾기 ``?q=`` ``?source=`` ``?status=`` ``?since=`` ``?until=``
+    (services/research_notes/service.py::list_research)."""
+    args = request.args
+    try:
+        return _envelope(
+            list_research(
+                current_user.id,
+                limit=args.get("limit", default=None),
+                before=args.get("before", default=None),
+                ticker=args.get("ticker", default=None),
+                q=args.get("q", default=None),
+                source=args.get("source", default=None),
+                status=args.get("status", default=None),
+                since=args.get("since", default=None),
+                until=args.get("until", default=None),
+            )
         )
-    )
+    except ValueError as exc:
+        return _bad_input(exc)
 
 
 @research_notes_bp.route("/overview", methods=["GET"])

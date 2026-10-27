@@ -305,6 +305,125 @@ def test_list_cursor_pagination(app, make_user):
 
 
 # ─────────────────────────────────────────────────────────────────────
+# 다시 찾기 — search + filters on the list
+# ─────────────────────────────────────────────────────────────────────
+
+def _ids(out: dict) -> list[int]:
+    return [n["id"] for n in out["notes"]]
+
+
+def test_search_matches_encrypted_narrative_fields(app, make_user):
+    user = make_user(email="rn-search@test.com")
+    with app.app_context():
+        a = _create(user["id"], business="HBM 공급 계약이 늘어난다")["id"]
+        b = _create(user["id"], theses=["데이터센터 수요가 꺾이지 않는다"])["id"]
+        c = _create(user["id"], invalidation="환율이 1500을 넘으면 틀린 것", risk=None)["id"]
+        uid = user["id"]
+        assert _ids(list_research(uid, q="hbm")) == [a]           # case-insensitive
+        assert _ids(list_research(uid, q="데이터센터")) == [b]
+        assert _ids(list_research(uid, q="환율 1500")) == [c]      # every word must appear
+        assert _ids(list_research(uid, q="환율 HBM")) == []
+        assert _ids(list_research(uid, q="aapl")) == [c, b, a]    # ticker matches too
+        assert _ids(list_research(uid, q="   ")) == [c, b, a]     # blank = no search
+
+
+def test_search_matches_review_note_and_stock_name(app, make_user):
+    user = make_user(email="rn-search-name@test.com")
+    with app.app_context():
+        kr = _create(user["id"], ticker="005930.KS")["id"]
+        us = _create(user["id"])["id"]
+        review_research(us, user["id"], {"verdicts": ["right", "wrong"], "note": "실적 발표 뒤 다시 확인"})
+        assert _ids(list_research(user["id"], q="삼성")) == [kr]
+        assert _ids(list_research(user["id"], q="실적 발표")) == [us]
+
+
+def test_search_is_owner_only(app, make_user):
+    owner = make_user(email="rn-search-owner@test.com")
+    other = make_user(email="rn-search-other@test.com")
+    with app.app_context():
+        _create(owner["id"], business="남의 눈에 안 보일 문장")
+        assert list_research(other["id"], q="남의 눈")["notes"] == []
+
+
+def test_filters_source_status_and_written_days(app, make_user):
+    user = make_user(email="rn-filters@test.com")
+    with app.app_context():
+        uid = user["id"]
+        today = kst_today()
+        report = _create(uid, info_source="report")["id"]
+        none_src = _create(uid, info_source=None)["id"]
+        scored = _create(uid, info_source="youtube")["id"]
+        review_research(scored, uid, {"verdicts": ["right", "unknown"]})
+        # report: due (day came); none_src: waiting; written 40 days ago (KST 10:00).
+        old = datetime(today.year, today.month, today.day, 1, 0) - timedelta(days=40)
+        _backdate(report, written=old, review_on=today)
+
+        assert _ids(list_research(uid, source="report")) == [report]
+        assert _ids(list_research(uid, source="none")) == [none_src]
+        assert _ids(list_research(uid, status="due")) == [report]
+        assert _ids(list_research(uid, status="waiting")) == [none_src]
+        assert _ids(list_research(uid, status="scored")) == [scored]
+
+        old_day = (old + timedelta(hours=9)).date()
+        assert _ids(list_research(uid, since=old_day.isoformat(), until=old_day.isoformat())) == [report]
+        assert _ids(list_research(uid, since=(old_day + timedelta(days=1)).isoformat())) == [scored, none_src]
+        assert _ids(list_research(uid, until=(old_day - timedelta(days=1)).isoformat())) == []
+        # Filters AND with the search words.
+        assert _ids(list_research(uid, q="aapl", status="scored")) == [scored]
+
+
+def test_written_day_is_the_kst_day(app, make_user):
+    user = make_user(email="rn-kst-day@test.com")
+    with app.app_context():
+        note = _create(user["id"])["id"]
+        # 2026-10-14 16:30 UTC = 2026-10-15 01:30 KST.
+        _backdate(note, written=datetime(2026, 10, 14, 16, 30), review_on=date(2027, 1, 15))
+        assert _ids(list_research(user["id"], since="2026-10-15", until="2026-10-15")) == [note]
+        assert _ids(list_research(user["id"], until="2026-10-14")) == []
+
+
+@pytest.mark.parametrize("bad", [
+    {"source": "blog"}, {"status": "open"}, {"since": "2026/10/15"}, {"until": "어제"},
+])
+def test_filters_reject_bad_values(app, make_user, bad):
+    user = make_user(email=f"rn-bad-filter-{sorted(bad)[0]}@test.com")
+    with app.app_context():
+        with pytest.raises(ValueError):
+            list_research(user["id"], **bad)
+
+
+def test_search_pages_by_matches(app, make_user):
+    user = make_user(email="rn-search-pages@test.com")
+    with app.app_context():
+        uid = user["id"]
+        hits = [_create(uid, business=f"반도체 {i}")["id"] for i in range(3)]
+        _create(uid, business="다른 이야기")
+        page1 = list_research(uid, q="반도체", limit=2)
+        assert _ids(page1) == hits[::-1][:2]
+        page2 = list_research(uid, q="반도체", limit=2, before=page1["next_before"])
+        assert _ids(page2) == [hits[0]]
+        assert page2["next_before"] is None
+
+
+def test_search_scan_cap_hands_back_a_cursor(app, make_user, monkeypatch):
+    from services.research_notes import service
+
+    monkeypatch.setattr(service, "SEARCH_SCAN_CAP", 2)
+    user = make_user(email="rn-scan-cap@test.com")
+    with app.app_context():
+        uid = user["id"]
+        hit = _create(uid, business="찾을 문장")["id"]
+        miss = [_create(uid, business="다른 문장")["id"] for _ in range(2)]
+        page1 = list_research(uid, q="찾을")
+        # Two newest rows read, neither matches — the cursor goes on past them.
+        assert page1["notes"] == []
+        assert page1["next_before"] == miss[0]
+        page2 = list_research(uid, q="찾을", before=page1["next_before"])
+        assert _ids(page2) == [hit]
+        assert page2["next_before"] is None
+
+
+# ─────────────────────────────────────────────────────────────────────
 # Route layer
 # ─────────────────────────────────────────────────────────────────────
 
@@ -315,6 +434,20 @@ def test_route_create_201_with_disclaimer(client, auth_user):
     assert body["ok"] is True
     assert "권유가 아닙니다" in body["disclaimer"]
     assert body["note"]["ticker"] == "AAPL"
+
+
+def test_route_list_search_and_bad_filter(client, auth_user):
+    client.post("/api/research-notes", json={**FORM, "business": "검색될 문장"})
+    client.post("/api/research-notes", json={**FORM, "business": "다른 문장"})
+    resp = client.get("/api/research-notes/list?q=%EA%B2%80%EC%83%89&source=report")
+    assert resp.status_code == 200, resp.data
+    body = resp.get_json()
+    assert [n["business"] for n in body["notes"]] == ["검색될 문장"]
+    assert "권유가 아닙니다" in body["disclaimer"]
+
+    bad = client.get("/api/research-notes/list?status=nope")
+    assert bad.status_code == 400
+    assert bad.get_json()["code"] == "RESEARCH_BAD_INPUT"
 
 
 def test_route_bad_input_and_non_object(client, auth_user):

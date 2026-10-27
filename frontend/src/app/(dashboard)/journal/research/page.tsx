@@ -9,7 +9,9 @@
  *   2. 새 리서치 — the five-field form (open by default when there is nothing
  *      yet, or when arriving with ?ticker= from a /portfolio row).
  *   3. 채점 결과 — 판단 × 결과 and 출처별, counts only.
- *   4. 내 리서치 — every note, newest first, 100 at a time ("더 보기").
+ *   4. 내 리서치 — every note, newest first, 100 at a time ("더 보기"),
+ *      under the 다시 찾기 bar (2026-10-27): words + 출처 · 상태 · 기간. With
+ *      any filter on, the list is the server's matches, due notes included.
  *
  * The page is a sub-screen of 기록 (bottom-nav subRoutes, top-bar ‹). Nothing
  * here reads a quote or says anything about a stock we did not hear from the
@@ -21,12 +23,20 @@ import { useSearchParams } from "next/navigation";
 import useSWRInfinite from "swr/infinite";
 import { API } from "@/lib/endpoints";
 import { fetcher, useResearchOverview } from "@/lib/hooks";
-import { looksLikeTicker, researchDate } from "@/lib/research";
+import {
+  EMPTY_RESEARCH_FILTERS,
+  looksLikeTicker,
+  researchDate,
+  researchFilterQuery,
+  researchFiltersActive,
+  type ResearchFilters,
+} from "@/lib/research";
 import type { ResearchNotesResponse } from "@/lib/types";
 import { Caption, EditorialHead, RuledKicker } from "@/components/ui/editorial";
 import { ResearchForm } from "@/components/journal/research/research-form";
 import { ResearchCard } from "@/components/journal/research/research-card";
 import { ResearchSummary } from "@/components/journal/research/research-summary";
+import { ResearchFinder } from "@/components/journal/research/research-finder";
 
 /** One read of 내 리서치 (the server allows up to 200). */
 const RESEARCH_PAGE_SIZE = 100;
@@ -37,15 +47,18 @@ const RESEARCH_PAGE_SIZE = 100;
  * `?limit=100` and dropped `next_before`, so the 101st note on was neither
  * shown nor deletable here. `mutate()` re-reads every loaded page, so a
  * delete or a score never leaves a stale page behind.
+ *
+ * `filterQuery` (lib/research.ts) rides on every page's URL, so a new filter
+ * is a new key and starts again from page 1.
  */
-function useResearchPages() {
+function useResearchPages(filterQuery = "") {
   const swr = useSWRInfinite<ResearchNotesResponse>(
     (_index, prev: ResearchNotesResponse | null) => {
       // `== null` — a body without the field (demo `{}`) is the end, not
       // `?before=undefined` re-reading page 1.
       if (prev && prev.next_before == null) return null;
       const before = prev ? `&before=${prev.next_before}` : "";
-      return `${API.research.list}?limit=${RESEARCH_PAGE_SIZE}${before}`;
+      return `${API.research.list}?limit=${RESEARCH_PAGE_SIZE}${before}${filterQuery}`;
     },
     fetcher,
     { revalidateOnFocus: false, dedupingInterval: 30_000 },
@@ -78,7 +91,9 @@ function ResearchPageInner() {
   const from = params.get("from");
   const surface = from === "portfolio" || from === "pre_trade" ? from : "journal";
   const overview = useResearchOverview();
-  const list = useResearchPages();
+  const [filters, setFilters] = useState<ResearchFilters>(EMPTY_RESEARCH_FILTERS);
+  const filtering = researchFiltersActive(filters);
+  const list = useResearchPages(researchFilterQuery(filters));
   const [formOpen, setFormOpen] = useState<boolean | null>(rawTicker || params.get("new") ? true : null);
   const [saved, setSaved] = useState<string | null>(null);
 
@@ -88,13 +103,16 @@ function ResearchPageInner() {
   };
 
   const loaded = !overview.isLoading && !list.isLoading;
-  const empty = loaded && list.notes.length === 0;
+  // "No notes at all" — a filter that matches nothing is not that.
+  const empty = loaded && !filtering && list.notes.length === 0;
   // Open by default for a first visit; after that it is a button.
   const showForm = formOpen ?? empty;
   const due = overview.data?.due ?? [];
   const dueIds = new Set(due.map((n) => n.id));
   // The due ones are shown (with scoring open) above; the list holds the rest.
-  const rest = list.notes.filter((n) => !dueIds.has(n.id));
+  // A search shows every match, due ones too — that is what was asked for.
+  const rest = filtering ? list.notes : list.notes.filter((n) => !dueIds.has(n.id));
+  const hasNotes = (overview.data?.counts?.notes ?? 0) > 0 || list.notes.length > 0 || filtering;
 
   return (
     <div className="mx-auto w-full max-w-2xl px-0 pb-8 md:px-6 md:py-8" data-testid="research-page">
@@ -181,11 +199,28 @@ function ResearchPageInner() {
       )}
 
       {/* 4. 내 리서치 */}
-      {(rest.length > 0 || list.hasMore) && (
+      {/* Shown whenever there is anything to look through — also when every
+          note is due and sits above, so the bar is never out of reach. */}
+      {hasNotes && (
         <section aria-labelledby="research-all" className="pt-6" style={{ borderTop: "1px solid var(--pq-ivory-line)" }}>
           <SectionTitle id="research-all">
-            {due.length > 0 ? "그 밖의 리서치" : "내 리서치"} <span className="tabular-nums">{rest.length}</span>개
+            {!filtering && rest.length === 0 && !list.hasMore ? (
+              "리서치 찾기"
+            ) : (
+              <>
+                {filtering ? "찾은 리서치" : due.length > 0 ? "그 밖의 리서치" : "내 리서치"}{" "}
+                <span className="tabular-nums">{rest.length}</span>개
+              </>
+            )}
           </SectionTitle>
+          <div className="mt-3">
+            <ResearchFinder filters={filters} onChange={setFilters} />
+          </div>
+          {filtering && loaded && rest.length === 0 && (
+            <p className="mt-4 text-pq-body-sm text-[var(--pq-ivory-dim)]" data-testid="research-no-match">
+              {list.hasMore ? "아직 못 찾았어요. 더 이전 리서치에서 찾아볼 수 있어요." : "조건에 맞는 리서치가 없어요."}
+            </p>
+          )}
           <ul className="mt-3 list-none space-y-3 p-0">
             {rest.map((n) => (
               <li key={n.id}>
@@ -201,7 +236,7 @@ function ResearchPageInner() {
               className="mt-4 inline-flex h-10 items-center text-pq-body-sm text-[var(--pq-bronze-light)] underline-offset-4 hover:underline disabled:opacity-60"
               data-testid="research-load-more"
             >
-              {list.loadingMore ? "불러오는 중…" : "이전 리서치 더 보기"}
+              {list.loadingMore ? "불러오는 중…" : filtering ? "이전 리서치에서 더 찾기" : "이전 리서치 더 보기"}
             </button>
           )}
         </section>

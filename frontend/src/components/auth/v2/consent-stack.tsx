@@ -144,10 +144,10 @@ const COPY = {
     privacy: "개인정보처리방침",
     termsAfter: "에 동의합니다.",
     nonAdvisory:
-      "PivoxQuant는 자본시장법상 투자자문업이 아니며, 본 서비스의 모든 분석·리포트·시그널은 정보 제공 목적임을 이해합니다. 투자 판단과 그 결과는 이용자 본인의 책임입니다.",
+      "PivoxQuant는 투자자문업자로 등록·신고되어 있지 않고 투자자문을 제공하지 않으며, 본 서비스의 모든 집계·리포트는 정보 제공 목적임을 이해합니다. 투자 판단과 그 결과는 이용자 본인의 책임입니다.",
     age: "만 14세 이상임을 확인합니다. (개인정보보호법 §22 ⑥)",
     crossBorder:
-      "개인정보의 국외 이전에 동의합니다. (PIPA §28-8 — Supabase(데이터는 서울 리전 보관) / Render / Vercel / Google / SendGrid 외 8개 위탁처, 상세 목록과 각 위탁처의 이전 항목은 개인정보처리방침 참조)",
+      "개인정보의 국외 이전에 동의합니다. (PIPA §28-8 — Supabase(데이터는 서울 리전 보관) / Render / Vercel / Google / SendGrid 등 총 8개 사업자, 상세 목록과 각 위탁처의 이전 항목은 개인정보처리방침 참조)",
     crossBorderLink: "보기",
     marketing: "마케팅 정보(이벤트, 신기능 안내) 수신에 동의합니다.",
   },
@@ -161,7 +161,7 @@ const COPY = {
     privacy: "Privacy Policy",
     termsAfter: ".",
     nonAdvisory:
-      "I understand that PivoxQuant is not a licensed investment advisory business under the Financial Investment Services and Capital Markets Act, and that every analysis, report and signal is provided for informational purposes only. Investment decisions and their outcomes remain my own responsibility.",
+      "I understand that PivoxQuant is not registered or reported as an investment advisory business and does not provide investment advice, and that every summary and report is provided for informational purposes only. Investment decisions and their outcomes remain my own responsibility.",
     age: "I confirm that I am 14 years of age or older. (PIPA Article 22 ⑥)",
     crossBorder:
       "I consent to the cross-border transfer of my personal data. (PIPA Article 28-8 — Supabase (data stored in the Seoul region) / Render / Vercel / Google / SendGrid and 8 processors in total; the full list and the items transferred to each are in the Privacy Policy.)",
