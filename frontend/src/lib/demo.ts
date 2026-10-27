@@ -706,6 +706,12 @@ function matchDemoGet(path: string): unknown | undefined {
     return _demoResearchByTicker(base);
   if (base === "/api/research-notes/overview") return DEMO_RESEARCH_OVERVIEW;
   if (base.startsWith("/api/stock-record/")) return _demoStockRecord(base);
+  // One demo note — the 적은 뒤 screen (/journal/research/[id]).
+  const researchId = /^\/api\/research-notes\/(\d+)$/.exec(base);
+  if (researchId) {
+    const note = DEMO_RESEARCH_NOTES.find((n) => n.id === Number(researchId[1]));
+    return note ? { ok: true, note } : undefined;
+  }
   if (base === "/api/doorway/summary") return DEMO_DOORWAY_SUMMARY;
   if (base === "/api/pick-facts") return DEMO_PICK_FACTS;
 

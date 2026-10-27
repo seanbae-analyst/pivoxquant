@@ -429,6 +429,16 @@ export function useResearchOverview() {
   return { data: swr.data ?? null, isLoading: swr.isLoading, error: swr.error as Error | undefined, mutate: swr.mutate };
 }
 
+/** One research note by id — the 적은 뒤 screen (/journal/research/[id]).
+ *  `null` disables the fetch. */
+export function useResearchNote(id: number | null) {
+  const swr = useSWR<ResearchNoteResponse>(id != null ? API.research.detail(id) : null, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30_000,
+  });
+  return { note: swr.data?.note ?? null, isLoading: swr.isLoading, error: swr.error as Error | undefined, mutate: swr.mutate };
+}
+
 /** The user's own research notes, newest first. */
 export function useResearchNotes(limit = 50) {
   const swr = useSWR<ResearchNotesResponse>(`${API.research.list}?limit=${limit}`, fetcher, {

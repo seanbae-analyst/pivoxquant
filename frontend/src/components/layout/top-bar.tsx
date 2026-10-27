@@ -78,6 +78,10 @@ export function subScreen(pathname: string | null, pane: SettingsPane | null): S
   if (pathname === "/pre-trade/door") {
     return { title: "문 앞", parent: "/pre-trade", parentLabel: "멈춤" };
   }
+  // One note's 적은 뒤 screen — back goes to the research list, not 기록.
+  if (/^\/journal\/research\/\d+$/.test(pathname)) {
+    return { title: "리서치", parent: "/journal/research", parentLabel: "리서치" };
+  }
   if (pathname === "/journal/research" || pathname.startsWith("/journal/research/")) {
     return { title: "리서치", parent: "/journal", parentLabel: "기록" };
   }
