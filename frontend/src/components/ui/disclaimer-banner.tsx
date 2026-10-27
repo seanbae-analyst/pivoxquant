@@ -16,8 +16,8 @@ const DISCLAIMER_CONTENT = {
   // user is responsible. "ai-analysis" and "backtest" had no route mapped to
   // them and were removed at the same time.
   record: {
-    ko: "본 화면은 이용자가 직접 입력하거나 가져온 기록을 정리해 보여줍니다. 특정 종목의 매수 또는 매도를 권유하지 않으며 개인별 투자자문이 아닙니다. 표시된 정보의 정확성을 보장하지 않으며, 투자 판단의 책임은 이용자 본인에게 있습니다.",
-    en: "This screen organizes records you entered or imported yourself. It does not recommend buying or selling any specific security and is not personalized investment advice. The accuracy of the displayed information is not guaranteed. All investment decisions are your sole responsibility.",
+    ko: "본 화면은 이용자가 직접 입력하거나 가져온 기록을 정리해 보여줍니다. 특정 종목의 매수 또는 매도를 권유하지 않으며 개인별 투자자문을 제공하지 않습니다. 표시된 정보의 정확성을 보장하지 않으며, 투자 판단의 책임은 이용자 본인에게 있습니다.",
+    en: "This screen organizes records you entered or imported yourself. It does not recommend buying or selling any specific security and does not provide personalized investment advice. The accuracy of the displayed information is not guaranteed. All investment decisions are your sole responsibility.",
   },
   // Behavior-Mirror section — factual statistics computed from the user's own
   // trade records (disposition mirror) AND current holdings (concentration
@@ -32,9 +32,11 @@ const DISCLAIMER_CONTENT = {
   // REMOVED 2026-05-10 per legal: "auto-trade" kind retired (autotrader.py 2026-05-05 물리 삭제, 표시광고법 §3 ① 4호 기만광고 회피)
 } as const;
 
+// 2026-10-27 (CEO): a statement of what the service does, not a legal
+// classification — the same wording as the FAQ and the signup consent.
 const COMMON_DISCLAIMER = {
-  ko: "본 서비스는 투자자문이 아니며, 투자 판단의 책임은 이용자에게 있습니다.",
-  en: "This service does not constitute investment advice. All investment decisions are your own responsibility.",
+  ko: "본 서비스는 투자자문을 제공하지 않으며, 투자 판단의 책임은 이용자에게 있습니다.",
+  en: "This service does not provide investment advice. All investment decisions are your own responsibility.",
 };
 
 type DisclaimerType = keyof typeof DISCLAIMER_CONTENT;
