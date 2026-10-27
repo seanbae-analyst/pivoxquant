@@ -12,6 +12,8 @@
  * Counts and facts only; no grade, no verdict of ours.
  */
 import * as React from "react";
+import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import { ApiError } from "@/lib/api";
 import { deleteResearchNote, reviewResearchNote } from "@/lib/hooks";
 import { displayName } from "@/lib/format";
@@ -166,11 +168,17 @@ export function ResearchCard({
   note,
   onChanged,
   startOpen = false,
+  detailLink = true,
+  onDeleted,
 }: {
   note: ResearchNote;
   onChanged: () => void;
   /** Open the scoring right away (the due list). */
   startOpen?: boolean;
+  /** Link to the 적은 뒤 screen — off on that screen itself. */
+  detailLink?: boolean;
+  /** After a delete, instead of `onChanged` (the detail screen leaves). */
+  onDeleted?: () => void;
 }) {
   const [reviewing, setReviewing] = React.useState(startOpen && !note.reviewed_at);
   const scored = Boolean(note.reviewed_at);
@@ -180,7 +188,7 @@ export function ResearchCard({
     if (typeof window !== "undefined" && !window.confirm("이 리서치를 지울까요? 되돌릴 수 없어요.")) return;
     try {
       await deleteResearchNote(note.id);
-      onChanged();
+      (onDeleted ?? onChanged)();
     } catch {
       /* the list refetch shows the truth either way */
       onChanged();
@@ -237,6 +245,17 @@ export function ResearchCard({
         <Field label="가장 큰 위험">{note.risk ?? "적지 않음"}</Field>
         <Field label="직접 확인한 숫자">{note.numbers ?? "안 봄"}</Field>
       </details>
+
+      {detailLink && (
+        <Link
+          href={`/journal/research/${note.id}`}
+          className="pq-hit mt-3 inline-flex items-center gap-0.5 text-pq-caption text-[var(--pq-bronze-light)] underline-offset-4 hover:underline"
+          data-testid="research-detail-link"
+        >
+          적은 뒤 이 종목에서 한 일
+          <ChevronRight aria-hidden className="h-3.5 w-3.5" />
+        </Link>
+      )}
 
       {reviewing && !scored ? (
         <ResearchReview

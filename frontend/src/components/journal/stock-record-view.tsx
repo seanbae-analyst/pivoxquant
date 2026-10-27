@@ -34,7 +34,7 @@ export function monthKey(iso: string | null): string {
   return d.toLocaleDateString("ko-KR", { year: "numeric", month: "long", timeZone: "Asia/Seoul" });
 }
 
-function dayLabel(iso: string | null): string {
+export function dayLabel(iso: string | null): string {
   const d = kst(iso);
   if (!d) return "—";
   return d.toLocaleDateString("ko-KR", { month: "long", day: "numeric", timeZone: "Asia/Seoul" });
@@ -72,7 +72,7 @@ function Chip({ children, strong = false }: { children: React.ReactNode; strong?
   );
 }
 
-function kindTitle(e: StockRecordEvent): string {
+export function kindTitle(e: StockRecordEvent): string {
   switch (e.kind) {
     case "fill":
       return e.side === "buy" ? "샀어요" : "팔았어요";
@@ -89,7 +89,7 @@ function kindTitle(e: StockRecordEvent): string {
   }
 }
 
-function EventBody({ e }: { e: StockRecordEvent }) {
+export function EventBody({ e }: { e: StockRecordEvent }) {
   switch (e.kind) {
     case "fill":
       return (
@@ -125,6 +125,13 @@ function EventBody({ e }: { e: StockRecordEvent }) {
               틀렸다고 볼 신호 · {e.invalidation}
             </p>
           )}
+          <Link
+            href={`/journal/research/${e.id}`}
+            className="pq-hit inline-flex items-center gap-0.5 text-[12.5px] text-[var(--pq-bronze-light)] underline-offset-4 hover:underline"
+          >
+            적은 뒤 한 일 보기
+            <ChevronRight aria-hidden className="h-3.5 w-3.5" />
+          </Link>
         </div>
       );
     case "note":
@@ -158,7 +165,7 @@ function EventBody({ e }: { e: StockRecordEvent }) {
   }
 }
 
-function EventChips({ e }: { e: StockRecordEvent }) {
+export function EventChips({ e }: { e: StockRecordEvent }) {
   if (e.kind === "fill" && e.after_pause) return <Chip>멈춤 뒤</Chip>;
   if (e.kind === "filing") return <Chip>공시</Chip>;
   if (e.kind === "pause") {

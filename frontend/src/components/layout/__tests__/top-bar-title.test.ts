@@ -25,6 +25,10 @@ describe("subScreen (phone app bar back + title)", () => {
     expect(subScreen("/support/inbox/42", null)).toMatchObject({ title: "문의 내용", parent: "/support/inbox" });
     expect(subScreen("/settings", "notifications")).toMatchObject({ title: "알림", parent: "/settings", pane: "notifications" });
   });
+  it("one research note goes back to the research list; the list goes back to 기록", () => {
+    expect(subScreen("/journal/research/42", null)).toMatchObject({ title: "리서치", parent: "/journal/research" });
+    expect(subScreen("/journal/research", null)).toMatchObject({ title: "리서치", parent: "/journal" });
+  });
   it("top-level screens have no back", () => {
     for (const p of ["/mirror", "/pre-trade", "/journal", "/portfolio", "/settings", "/support/inbox", "/support/contact"]) {
       expect(subScreen(p, null)).toBeNull();
