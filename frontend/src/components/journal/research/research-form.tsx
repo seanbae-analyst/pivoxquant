@@ -39,11 +39,9 @@ import {
   type ReviewMonths,
 } from "@/lib/research";
 import { Caption, FieldLabel } from "@/components/ui/editorial";
+import { Chip, INPUT } from "@/components/journal/research/research-controls";
 import { TickerSearch, type TickerSearchResult } from "@/components/shared/ticker-search";
 import type { ResearchInfoSource, ResearchNote } from "@/lib/types";
-
-const INPUT =
-  "w-full rounded-[var(--pq-radius-card)] border border-[var(--pq-ivory-line)] bg-transparent px-3 py-2 text-pq-body-sm text-[var(--pq-ivory)] outline-none placeholder:text-[var(--pq-ivory-faint)] focus:border-[var(--pq-bronze)]";
 
 export interface ResearchFormProps {
   /** Pre-picked symbol (e.g. from a /portfolio row). */
@@ -51,32 +49,6 @@ export interface ResearchFormProps {
   surface?: "journal" | "portfolio" | "pre_trade";
   onSaved: (note: ResearchNote) => void;
   onCancel?: () => void;
-}
-
-function Chip({
-  on,
-  onClick,
-  children,
-}: {
-  on: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={on}
-      onClick={onClick}
-      className="min-h-[36px] rounded-full border px-3 text-pq-body-sm transition-colors"
-      style={{
-        borderColor: on ? "var(--pq-bronze)" : "var(--pq-ivory-line)",
-        background: on ? "rgba(var(--pq-bronze-rgb), 0.14)" : "transparent",
-        color: on ? "var(--pq-bronze-light)" : "var(--pq-ivory-dim)",
-      }}
-    >
-      {children}
-    </button>
-  );
 }
 
 function Step({ n, label, optional, children }: { n: number; label: string; optional?: boolean; children: React.ReactNode }) {

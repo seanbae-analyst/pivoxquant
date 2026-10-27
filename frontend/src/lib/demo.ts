@@ -452,6 +452,32 @@ const DEMO_RESEARCH_OVERVIEW = {
   },
 };
 
+/** 다시 찾기 on the demo notes — the same rules as the server's
+ *  list_research (words ANDed over ticker · name · narrative; source; status;
+ *  since as a KST day). */
+function _demoResearchList(query: string) {
+  const p = new URLSearchParams(query);
+  const terms = (p.get("q") ?? "").toLowerCase().split(/\s+/).filter(Boolean);
+  const source = p.get("source");
+  const status = p.get("status");
+  const since = p.get("since");
+  const notes = DEMO_RESEARCH_NOTES.filter((n) => {
+    const hay = [n.ticker, n.name, n.business, ...n.theses, n.invalidation, n.risk, n.numbers, n.review_note]
+      .filter(Boolean)
+      .join("\n")
+      .toLowerCase();
+    if (!terms.every((t) => hay.includes(t))) return false;
+    if (source && (source === "none" ? n.info_source !== null : n.info_source !== source)) return false;
+    if (status === "scored" && !n.reviewed_at) return false;
+    if (status === "due" && !n.due) return false;
+    if (status === "waiting" && (n.reviewed_at || n.due)) return false;
+    if (since && new Date(Date.parse(`${n.created_at}Z`) + 9 * 3600_000).toISOString().slice(0, 10) < since)
+      return false;
+    return true;
+  });
+  return { ok: true, notes, next_before: null };
+}
+
 function _demoResearchByTicker(base: string) {
   const ticker = decodeURIComponent(base.slice("/api/research-notes/by-ticker/".length)).toUpperCase();
   const hits = DEMO_RESEARCH_NOTES.filter((n) => n.ticker === ticker || n.ticker.replace(/\.(KS|KQ)$/, "") === ticker);
@@ -684,8 +710,7 @@ function matchDemoGet(path: string): unknown | undefined {
   if (base === "/api/pick-facts") return DEMO_PICK_FACTS;
 
   if (base === "/api/sell-moment") return _demoSellMoment(query);
-  if (base === "/api/research-notes/list")
-    return { ok: true, notes: DEMO_RESEARCH_NOTES, next_before: null };
+  if (base === "/api/research-notes/list") return _demoResearchList(query);
   if (base === "/api/portfolio/history")
     return _demoEquity(new URLSearchParams(query).get("period") || "1mo");
 
