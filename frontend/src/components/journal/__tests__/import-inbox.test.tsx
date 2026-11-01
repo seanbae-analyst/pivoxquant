@@ -31,7 +31,7 @@ vi.mock("@/lib/api", async (importOriginal) => {
 
 import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
-import { ImportInbox, thesisOk, fmtPrice } from "@/components/journal/import-inbox";
+import { ImportInbox, approveAllLines, thesisOk, fmtPrice } from "@/components/journal/import-inbox";
 
 const apiFetchMock = vi.mocked(apiFetch);
 import type { PendingTradeDTO, PreTradeReflection } from "@/lib/types";
@@ -300,5 +300,25 @@ describe("ImportInbox — /journal?pending=<id>", () => {
     hooks.usePendingImports.mockReturnValue({ pending: ROWS, isLoading: false, error: undefined, mutate: vi.fn() });
     render(<ImportInbox />);
     expect(document.activeElement?.id ?? "").not.toMatch(/^import-thesis-/);
+  });
+});
+
+describe("approveAllLines", () => {
+  const t = (k: string) => `${k}:{n}`;
+  const base = { ok: true, approved: 6, duplicate: 0, needs_review: 0, predates_holding: 0, failed: 0, remaining: 0, first_error: null };
+
+  it("says only what happened", () => {
+    expect(approveAllLines(base, t)).toEqual(["journal.import.approveAllDone:6"]);
+  });
+
+  it("reports what was left and uses the server's reason for a refusal", () => {
+    expect(
+      approveAllLines({ ...base, needs_review: 2, predates_holding: 1, failed: 1, first_error: "보유 내역이 없습니다" }, t),
+    ).toEqual([
+      "journal.import.approveAllDone:6",
+      "journal.import.approveAllReview:2",
+      "journal.import.approveAllPredates:1",
+      "보유 내역이 없습니다",
+    ]);
   });
 });

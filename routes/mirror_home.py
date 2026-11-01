@@ -34,10 +34,13 @@ from datetime import datetime, timezone
 from flask import Blueprint, jsonify
 from flask_login import current_user
 
+from sqlalchemy import or_
+
 from extensions import db
 from models import InvestmentProfile, Position, TradeHistory
 from models.import_batch import STATUS_PENDING, PendingTrade
-
+from models.trade_history import HOLDING_SEED_SOURCE
+from services import funnel
 from services.profile import (
     classify_persona_multi,
     compute_drift,
@@ -272,6 +275,15 @@ def get_mirror_home():
     # showed the observed overlay at 5 — P2 fix 2026-06-15.)
     has_observed = trade_count >= _MIN_TRADES_FOR_OBSERVED
     stage = "observed" if has_observed else "new"
+    if has_observed:
+        funnel.record_once(user_id, "mirror_seen")
+    # Every recorded fill, not just the window: a file of older trades leaves
+    # stage="new", and the nudge says so instead of asking for fills it has.
+    total_fills = TradeHistory.query.filter(
+        TradeHistory.user_id == user_id,
+        TradeHistory.action.in_(("BUY", "SELL")),  # // legal-ok — trade action data value, not user copy
+        or_(TradeHistory.source.is_(None), TradeHistory.source != HOLDING_SEED_SOURCE),
+    ).count()
 
     # (3) The gap — only meaningful once behaviour is observed.
     gap: list[dict] = []
@@ -303,6 +315,7 @@ def get_mirror_home():
     return jsonify({
         "ok": True,
         "stage": stage,
+        "total_fills": total_fills,
         # 2026-09-29: declared.label / declared.tagline / observed.label /
         # observed.bucket_changed removed — they carried 3-bucket type labels
         # the mirror no longer shows. The headline is built from ``gap``.

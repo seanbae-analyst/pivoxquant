@@ -1121,6 +1121,8 @@ export interface ConfirmMyRulesResponse {
 export interface MirrorHomeResponse {
   ok: boolean;
   stage: MirrorStage;
+  /** Every recorded fill, including those outside the 30-day window. */
+  total_fills?: number;
   /**
    * 2026-09-29: `declared.label` / `declared.tagline` / `observed.label` /
    * `observed.bucket_changed` removed — they carried the 3-bucket type labels
@@ -1223,6 +1225,19 @@ export interface ImportApproveResponse {
   pending: PendingTradeDTO;
   trade_id: number;
   position_id: number;
+}
+
+export interface ImportApproveAllResponse {
+  ok: boolean;
+  approved: number;
+  duplicate: number;
+  /** No ticker yet, or OCR values still to confirm: these stay one-by-one. */
+  needs_review: number;
+  /** Older than a registered holding, whose quantity already includes them. */
+  predates_holding: number;
+  failed: number;
+  remaining: number;
+  first_error: string | null;
 }
 
 /* Phase 2 v3-A — personal access tokens for the import webhook. The raw

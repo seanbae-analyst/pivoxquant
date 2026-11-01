@@ -63,6 +63,7 @@ from models import (
     Watchlist,
     WeeklyPulse,
 )
+from services import funnel
 from services.error_responses import api_error
 from services.serializers import serialize_trade
 from services.profile import (
@@ -217,10 +218,13 @@ def submit_onboarding():
     # with an empty book — the skip path (``{}``) included. The client gates
     # the same thing on /onboarding/broker; this keeps a direct POST, or
     # /onboarding opened by URL, from walking around it.
-    if Position.query.filter_by(user_id=current_user.id).first() is None:
+    # 2026-11-01: recorded fills count too. A user who starts from a fills file
+    # may have sold everything in it and hold nothing, and is not an empty book.
+    if (Position.query.filter_by(user_id=current_user.id).first() is None
+            and TradeHistory.query.filter_by(user_id=current_user.id).first() is None):
         return api_error(
-            en="Add at least one holding before finishing onboarding.",
-            kr="보유 종목을 1개 이상 올린 뒤 시작할 수 있습니다.",
+            en="Add at least one holding or fill before finishing onboarding.",
+            kr="보유 종목이나 체결을 1건 이상 올린 뒤 시작할 수 있습니다.",
             code="ONBOARDING_HOLDINGS_REQUIRED", status=400,
         )
 
@@ -355,6 +359,7 @@ def submit_onboarding():
             code="ONBOARDING_SAVE_FAILED", status=500,
         )
 
+    funnel.record_once(current_user.id, "onboarding_done")
     return jsonify({
         "ok": True,
         "questionnaire_version": 3 if is_v3_submission else None,

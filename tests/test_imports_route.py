@@ -447,7 +447,8 @@ class TestPatchAndApprove:
         assert r.get_json()["code"] == "IMPORT_NOT_PENDING"
 
     def test_buy_more_weighted_average_and_fx(self, client, auth_user, app, add_position):
-        add_position(auth_user["id"], ticker="AAPL", shares=10.0, avg_cost=100.0, buy_fx=1000.0)
+        add_position(auth_user["id"], ticker="AAPL", shares=10.0, avg_cost=100.0, buy_fx=1000.0,
+                     added_at=datetime(2026, 1, 1))
         pid = _paste(client, "Bought 10 AAPL @ $200.00 2026-09-01 10:00").get_json()["pending"][0]["id"]
         r = _approve(client, pid)
         assert r.status_code == 200, r.data
@@ -487,7 +488,8 @@ class TestPatchAndApprove:
         assert r.get_json()["code"] == "IMPORT_SELL_EXCEEDS_HOLDING"
 
     def test_sell_partial_and_full_close(self, client, auth_user, app, add_position):
-        add_position(auth_user["id"], ticker="005930.KS", shares=10.0, avg_cost=70000.0, buy_fx=0.0)
+        add_position(auth_user["id"], ticker="005930.KS", shares=10.0, avg_cost=70000.0, buy_fx=0.0,
+                     added_at=datetime(2026, 1, 1))
         pid = _paste(client, "삼성전자 4주 매도 체결 71,200원 2026-09-02 10:00").get_json()["pending"][0]["id"]
         out = _approve(client, pid).get_json()
         from extensions import db

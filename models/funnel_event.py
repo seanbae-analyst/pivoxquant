@@ -32,6 +32,9 @@ ALLOWED_EVENTS = frozenset({
     "landing_view",       # 비로그인 랜딩 노출 (퍼널 최상단 / acquisition)
     "signup",             # 가입 완료
     "onboarding_done",    # 온보딩 완료 (activation 직전)
+    "import_done",        # 첫 체결 가져오기 저장
+    "fill_approved",      # 가져온 체결을 처음 기록으로 승인
+    "mirror_seen",        # /mirror 가 처음 관찰 단계로 열림
     "artifact_opened",    # 아티팩트 열람 (engagement)
     "share_clicked",      # 공유 버튼 클릭 (viral — invites)
     "referral_signup",    # 추천 링크 경유 가입 (viral — conversions)

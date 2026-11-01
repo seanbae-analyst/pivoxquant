@@ -78,6 +78,10 @@ describe("statusKind", () => {
 });
 
 describe("deepLinkPage", () => {
+  it("opens the habits page from the end of an import", () => {
+    expect(deepLinkPage("", "#habits")).toBe("habits");
+  });
+
   it("opens the record page by default", () => {
     expect(deepLinkPage("", "")).toBe("record");
   });
