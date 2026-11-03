@@ -10,7 +10,7 @@ import { mutate as swrMutate } from "swr";
 import { useAuth } from "@/lib/auth";
 import { ApiError, apiFetch } from "@/lib/api";
 import { usePortfolioPositions } from "@/lib/hooks";
-import { API } from "@/lib/endpoints";
+import { API, PORTFOLIO_TRADES } from "@/lib/endpoints";
 import { PQ_EASE, PQ_DUR_BASE, PQ_DUR_SLOW } from "@/lib/motion";
 import { useLocale } from "@/lib/locale";
 import { currentLocationPath, loginHref } from "@/lib/login-redirect";
@@ -721,11 +721,21 @@ function OnboardingWizard() {
 
   // Holdings come first (2026-09-28): opened by URL with an empty book, the
   // questions send the user back to step 0. The server refuses to complete
-  // onboarding without a holding either (ONBOARDING_HOLDINGS_REQUIRED).
+  // onboarding without a holding either (ONBOARDING_HOLDINGS_REQUIRED). Recorded
+  // fills count too (2026-11-01): a file whose stocks were all sold holds nothing.
   const { data: posData } = usePortfolioPositions<{ positions?: unknown[] }>();
   useEffect(() => {
     if (!user || user.onboarding_completed === true || posData === undefined) return;
-    if ((posData.positions ?? []).length === 0) router.replace("/onboarding/broker");
+    if ((posData.positions ?? []).length > 0) return;
+    let stale = false;
+    apiFetch<{ trades?: unknown[] }>(`${PORTFOLIO_TRADES}?limit=1`)
+      .catch(() => null)
+      .then((res) => {
+        if (!stale && !res?.trades?.length) router.replace("/onboarding/broker");
+      });
+    return () => {
+      stale = true;
+    };
   }, [user, posData, router]);
 
   // Restore saved step from answers — server draft wins if present so
