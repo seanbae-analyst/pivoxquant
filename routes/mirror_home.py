@@ -39,7 +39,7 @@ from sqlalchemy import or_
 from extensions import db
 from models import InvestmentProfile, Position, TradeHistory
 from models.import_batch import STATUS_PENDING, PendingTrade
-from models.trade_history import HOLDING_SEED_SOURCE
+from models.trade_history import REGISTRATION_SOURCES
 from services import funnel
 from services.profile import (
     classify_persona_multi,
@@ -282,7 +282,7 @@ def get_mirror_home():
     total_fills = TradeHistory.query.filter(
         TradeHistory.user_id == user_id,
         TradeHistory.action.in_(("BUY", "SELL")),  # // legal-ok — trade action data value, not user copy
-        or_(TradeHistory.source.is_(None), TradeHistory.source != HOLDING_SEED_SOURCE),
+        or_(TradeHistory.source.is_(None), TradeHistory.source.notin_(REGISTRATION_SOURCES)),
     ).count()
 
     # (3) The gap — only meaningful once behaviour is observed.

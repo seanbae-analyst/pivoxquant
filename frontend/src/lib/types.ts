@@ -1237,7 +1237,9 @@ export interface ImportApproveAllResponse {
   predates_holding: number;
   failed: number;
   remaining: number;
+  /** One refused row's reason, in Korean (the count is in ``failed``). */
   first_error: string | null;
+  first_error_en?: string | null;
 }
 
 /* Phase 2 v3-A — personal access tokens for the import webhook. The raw

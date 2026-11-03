@@ -311,14 +311,24 @@ describe("approveAllLines", () => {
     expect(approveAllLines(base, t)).toEqual(["journal.import.approveAllDone:6"]);
   });
 
-  it("reports what was left and uses the server's reason for a refusal", () => {
+  it("reports what was left, then one refusal's reason", () => {
     expect(
-      approveAllLines({ ...base, needs_review: 2, predates_holding: 1, failed: 1, first_error: "보유 내역이 없습니다" }, t),
+      approveAllLines({ ...base, needs_review: 2, predates_holding: 1, failed: 3, first_error: "보유 내역이 없습니다" }, t),
     ).toEqual([
       "journal.import.approveAllDone:6",
       "journal.import.approveAllReview:2",
       "journal.import.approveAllPredates:1",
+      "journal.import.approveAllFailed:3",
       "보유 내역이 없습니다",
+    ]);
+  });
+
+  it("gives the reason in the reader's language", () => {
+    const res = { ...base, failed: 1, first_error: "보유 내역이 없습니다", first_error_en: "No holding to sell" };
+    expect(approveAllLines(res, t, "en")).toEqual([
+      "journal.import.approveAllDone:6",
+      "journal.import.approveAllFailed:1",
+      "No holding to sell",
     ]);
   });
 });

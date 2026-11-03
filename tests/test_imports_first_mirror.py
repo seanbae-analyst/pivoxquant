@@ -90,6 +90,23 @@ class TestApproveAll:
         assert _approve_all(client)["approved"] == 2
         assert _positions(app) == {}
 
+    def test_a_timed_sell_after_a_date_only_buy_goes_second(self, client, auth_user, app):
+        # 08:00 KST is 23:00 UTC the day before; the date-only buy sits at
+        # 00:00 of its KST day. Compared raw, the sell went first and failed.
+        _upload(client, "2026-09-01,애플,AAPL,매수,10,200,2000,0")
+        r = client.post(f"{BASE}/", json={
+            "text": "Sold 10 AAPL @ $210.00 2026-09-01 08:00", "source": "screenshot_text", "consent": True,
+        })
+        assert r.status_code == 201, r.get_json()
+        assert _approve_all(client)["approved"] == 2
+        assert _positions(app) == {}
+
+    def test_a_refusal_comes_in_both_languages(self, client, auth_user):
+        _upload(client, "2026-08-03,삼성전자,005930,매도,10,70000,700000,0")
+        body = _approve_all(client)
+        assert "삼성전자" in body["first_error"]
+        assert body["first_error_en"] and body["first_error_en"] != body["first_error"]
+
     def test_sell_with_no_buy_stays_pending_and_the_rest_land(self, client, auth_user):
         _upload(
             client,
@@ -137,6 +154,28 @@ class TestRegisteredHoldingIsNotCountedTwice:
         assert body["approved"] == 0
         assert body["predates_holding"] == 1
         assert body["remaining"] == 1
+        assert _positions(app) == {"005930.KS": 10.0}
+
+    def test_still_refused_after_the_holding_is_sold(self, client, auth_user, app):
+        from datetime import datetime, timedelta, timezone
+        _register(client)
+        today = (datetime.now(timezone.utc) + timedelta(hours=9)).date().isoformat()
+        _upload(client, self.ROW, f"{today},삼성전자,005930,매도,10,75000,750000,0")
+        assert _approve_all(client)["predates_holding"] == 1
+        assert _positions(app) == {}
+        # The position is gone; the August buy must not come back as 10 shares.
+        body = _approve_all(client)
+        assert body["approved"] == 0 and body["predates_holding"] == 1
+        assert _positions(app) == {}
+
+    def test_a_purchase_date_does_not_open_the_gate(self, client, auth_user, app):
+        r = client.post("/api/portfolio/positions", json={
+            "ticker": "005930", "shares": 10, "avg_cost": 70000, "name": "삼성전자",
+            "purchase_date": "2026-01-02",
+        })
+        assert r.status_code == 200, r.get_json()
+        _upload(client, self.ROW)
+        assert _approve_all(client)["predates_holding"] == 1
         assert _positions(app) == {"005930.KS": 10.0}
 
     def test_a_dateless_fill_today_is_not_older_than_a_holding_registered_today(
@@ -209,6 +248,11 @@ def test_mirror_home_reports_every_fill(client, auth_user):
     assert body["total_fills"] == 1
 
 
-def test_mirror_home_does_not_count_a_registered_holding_as_a_fill(client, auth_user):
+def test_mirror_home_does_not_count_a_registered_holding_as_a_fill(client, auth_user, app):
+    from extensions import db
+    from services.position_writes import add_holding_adjust
     _register(client)
+    with app.app_context():
+        add_holding_adjust(auth_user["id"], "005930.KS", 4, 70000, "KRW", "삼성전자")
+        db.session.commit()
     assert client.get("/api/mirror-home").get_json()["total_fills"] == 0

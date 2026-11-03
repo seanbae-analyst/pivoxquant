@@ -595,13 +595,17 @@ export function PendingTradeList({
 export function approveAllLines(
   res: ImportApproveAllResponse,
   t: (k: string) => string,
+  locale: "ko" | "en" = "ko",
 ): string[] {
   const line = (key: string, n: number) => t(key).replace("{n}", String(n));
+  // The count first: the server's reason is one row's, not every refusal's.
+  const reason = locale === "en" ? res.first_error_en : res.first_error;
   return [
     line("journal.import.approveAllDone", res.approved),
     res.needs_review > 0 ? line("journal.import.approveAllReview", res.needs_review) : "",
     res.predates_holding > 0 ? line("journal.import.approveAllPredates", res.predates_holding) : "",
-    res.failed > 0 ? (res.first_error ?? line("journal.import.approveAllFailed", res.failed)) : "",
+    res.failed > 0 ? line("journal.import.approveAllFailed", res.failed) : "",
+    res.failed > 0 ? (reason ?? "") : "",
   ].filter(Boolean);
 }
 
@@ -667,7 +671,7 @@ export function ApproveAllButton({
 
 export function ImportInbox() {
   const t = useT();
-  useLocale();
+  const { locale } = useLocale();
   const { pending, isLoading, error, mutate } = usePendingImports();
   const [bulkLines, setBulkLines] = useState<string[]>([]);
 
@@ -729,7 +733,7 @@ export function ImportInbox() {
       <ApproveAllButton
         count={pending.length}
         onDone={(res) => {
-          setBulkLines(approveAllLines(res, t));
+          setBulkLines(approveAllLines(res, t, locale));
           void mutate();
         }}
       />

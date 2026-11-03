@@ -106,7 +106,7 @@ function prefersReducedMotion(): boolean {
 
 function ImportPageInner() {
   const t = useT();
-  useLocale();
+  const { locale } = useLocale();
   const params = useSearchParams();
   const { user } = useAuth();
   const storageKey = consentKey(user?.id);
@@ -222,7 +222,7 @@ function ImportPageInner() {
   }
 
   async function onApprovedAll(res: ImportApproveAllResponse) {
-    setBulkLines(approveAllLines(res, t));
+    setBulkLines(approveAllLines(res, t, locale));
     const left = await apiFetch<{ pending: PendingTradeDTO[] }>(API.imports.pending);
     setRows(left.pending);
     void mutate(API.imports.pending);

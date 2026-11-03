@@ -1105,16 +1105,20 @@ def approve_all_pending():
     user_id = current_user.id
     far_future = datetime.max
     rows = PendingTrade.query.filter_by(user_id=user_id, status=STATUS_PENDING).all()
-    rows.sort(key=lambda r: (r.traded_at or far_future, r.action != "BUY", r.id))  # // legal-ok — trade action data value, not user copy
+    rows.sort(key=lambda r: (_utc_order(r.traded_at) or far_future, r.action != "BUY", r.id))  # // legal-ok — trade action data value, not user copy
     ids = [r.id for r in rows]
 
     counts = {"approved": 0, "duplicate": 0, "needs_review": 0, "predates_holding": 0, "failed": 0}
     first_error = None
     for pid in ids:
+        # populate_existing: the rows above are already in the session, and a
+        # second approve-all that committed meanwhile must be seen here, or its
+        # approved row reads as pending and gets flagged a duplicate.
         row = (
             db.session.query(PendingTrade)
             .filter_by(id=pid, user_id=user_id)
             .with_for_update()
+            .populate_existing()
             .first()
         )
         if row is None or row.status != STATUS_PENDING:
@@ -1146,7 +1150,7 @@ def approve_all_pending():
         except (LedgerError, ReflectionLinkError) as exc:
             db.session.rollback()
             counts["failed"] += 1
-            first_error = first_error or exc.kr
+            first_error = first_error or {"kr": exc.kr, "en": exc.en}
         except Exception:
             db.session.rollback()
             logger.exception("imports.approve_all failed pid=%s", pid)
@@ -1155,7 +1159,19 @@ def approve_all_pending():
     if counts["approved"]:
         funnel.record_once(user_id, "fill_approved")
     remaining = PendingTrade.query.filter_by(user_id=user_id, status=STATUS_PENDING).count()
-    return jsonify({"ok": True, **counts, "remaining": remaining, "first_error": first_error})
+    return jsonify({
+        "ok": True, **counts, "remaining": remaining,
+        "first_error": first_error and first_error["kr"],
+        "first_error_en": first_error and first_error["en"],
+    })
+
+
+def _utc_order(traded_at):
+    """A sortable UTC instant: a date-only fill is stored as 00:00 of its KST
+    day (no offset applied), a timed one in UTC."""
+    if traded_at is None:
+        return None
+    return traded_at - KST_OFFSET if is_date_only(traded_at) else traded_at
 
 
 def _predates_registered_holding(user_id: int, row: PendingTrade) -> bool:
@@ -1164,23 +1180,31 @@ def _predates_registered_holding(user_id: int, row: PendingTrade) -> bool:
 
     That holding's quantity is already today's total, so applying an older
     fill on top counts it twice (10 registered + a 10-share buy from August
-    became 20). A position an import opened is fine: its ``added_at`` is that
-    first fill's ``traded_at``.
+    became 20). The registration time is the ``holding_seed`` row's
+    ``traded_at`` — not ``Position.added_at``, which a purchase date backdates
+    and a full sell deletes. A position an import opened has no seed.
     """
-    pos = Position.query.filter_by(user_id=user_id, ticker=(row.ticker or "").strip().upper()).first()
-    if pos is None or pos.added_at is None or row.traded_at is None:
+    from models import TradeHistory
+    from models.trade_history import HOLDING_SEED_SOURCE
+
+    if row.traded_at is None:
+        return False
+    registered = (
+        db.session.query(func.min(TradeHistory.traded_at))
+        .filter(
+            TradeHistory.user_id == user_id,
+            TradeHistory.ticker == (row.ticker or "").strip().upper(),
+            TradeHistory.source == HOLDING_SEED_SOURCE,
+        )
+        .scalar()
+    )
+    if registered is None:
         return False
     # A date-only fill has no time to compare: it sits at 00:00 of its KST day,
     # so a holding registered later that day must not read as newer than it.
     if is_date_only(row.traded_at):
-        if row.traded_at.date() >= (pos.added_at + KST_OFFSET).date():
-            return False
-    elif row.traded_at >= pos.added_at:
-        return False
-    opened_by_import = PendingTrade.query.filter_by(
-        user_id=user_id, ticker=pos.ticker, status=STATUS_APPROVED, traded_at=pos.added_at,
-    ).first()
-    return opened_by_import is None
+        return row.traded_at.date() < (registered + KST_OFFSET).date()
+    return row.traded_at < registered
 
 
 def _mark_duplicate(row: PendingTrade, pid: int):
