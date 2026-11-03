@@ -30,7 +30,7 @@ from flask_login import current_user
 from sqlalchemy import func
 
 from extensions import db
-from models import Position, User
+from models import User
 from models.import_batch import (
     ImportBatch,
     PendingTrade,
