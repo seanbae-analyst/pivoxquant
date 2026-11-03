@@ -230,6 +230,10 @@ export default function DoorPage() {
   React.useEffect(() => {
     if (openSent.current || !readLaunch()) return;
     openSent.current = createDoorwayCheck({ intent: "open", app: readApp() }).catch(() => undefined);
+    // Sent — drop `launch` so a reload or a restored tab doesn't send another open.
+    const url = new URL(window.location.href);
+    url.searchParams.delete("launch");
+    window.history.replaceState(window.history.state, "", url.toString());
   }, []);
 
   const save = async (which: DoorwayIntent, note?: string) => {

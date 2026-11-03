@@ -16,8 +16,13 @@ research_notes)는 "틀렸다고 볼 신호"와 다시 볼 날을 적어 둔다.
   있는데 ``alerts.body`` 는 평문이다 — 링크(종목 기록)에서 본인이 본다.
 * **벨 + 푸시.** 알림 설정의 "가설 다시 보기" 줄(``research_filing`` —
   models/user.py, 2026-10-25 CEO "푸시도 켜")로 앱 안·푸시를 따로 끈다.
-* **한 공시에 한 번.** 제목에 공시 날짜가 들어가고 400일 안 같은 제목은 다시
-  만들지 않는다. 같은 종목에 리서치가 여럿이어도 알림은 하나.
+* **한 공시에 한 번.** 제목에 공시 날짜가 들어가고, 그 공시일 이후에 만든 같은
+  제목이 있으면 다시 만들지 않는다 — 제목엔 연도가 없어서, 고정 창(예전 400일)
+  으로 막으면 이듬해 같은 날짜의 새 공시까지 삼켰다(2026-11-03). 같은 종목에
+  리서치가 여럿이어도 알림은 하나.
+* **탈퇴 유예 중인 계정은 건너뛴다** (PIPA §21 — services/alert.py 의 스윕과 같다).
+* 종목 동기화 예산(``TICKER_BUDGET``)은 마지막으로 받은 지 오래된 종목부터 쓴다 —
+  정렬 앞쪽만 자르면 41번째부터는 크론이 영영 받지 않았다(2026-11-03).
 * 원천은 종목 기록과 같다: ``FILINGS_ENABLED``, 한국은 ``DART_API_KEY`` 도.
 """
 from __future__ import annotations
@@ -34,7 +39,6 @@ logger = logging.getLogger(__name__)
 
 KIND = "research_filing"
 TICKER_BUDGET = 40
-DEDUP_HOURS = 24 * 400
 _KST = timedelta(hours=9)
 _PERIODIC_SEC = frozenset({"10-K", "10-Q", "20-F", "40-F"})
 
@@ -69,13 +73,14 @@ def _display(normalized: str) -> str:
 
 
 def run_once(*, now: datetime | None = None, ticker_budget: int = TICKER_BUDGET) -> dict[str, int]:
-    from models import ResearchNote
+    from models import Alert, ResearchNote, User
     from services.alert import create_alert
     from services.pre_trade.friction_outcome import ticker_key
     from services.ticker_normalizer import normalize_ticker
 
     from . import filings_enabled, market_of, source_available
     from .reaction import MARKET_KR
+    from . import store
     from .store import stored_filings, sync_ticker
 
     summary = {"notes": 0, "tickers": 0, "synced": 0, "alerts": 0}
@@ -86,7 +91,12 @@ def run_once(*, now: datetime | None = None, ticker_budget: int = TICKER_BUDGET)
 
     # (user, 종목) → 채점 전 리서치 중 가장 이른 작성일 (KST)
     earliest: dict[tuple[int, str], tuple[date, str, str]] = {}
-    for n in ResearchNote.query.filter(ResearchNote.reviewed_at.is_(None)).all():
+    notes = (
+        ResearchNote.query.join(User, User.id == ResearchNote.user_id)
+        .filter(ResearchNote.reviewed_at.is_(None), User.deletion_requested_at.is_(None))
+        .all()
+    )
+    for n in notes:
         normalized = normalize_ticker(n.ticker or "")
         market = market_of(normalized)
         if not normalized or not source_available(market) or n.created_at is None:
@@ -100,6 +110,11 @@ def run_once(*, now: datetime | None = None, ticker_budget: int = TICKER_BUDGET)
 
     tickers = sorted({(key, src) for (_u, key), (_w, _n, src) in earliest.items()})
     summary["tickers"] = len(tickers)
+    # 마지막 시도가 오래된 종목부터 (한 번도 안 받은 종목이 맨 앞). 방금 받은 종목은
+    # 뒤로 가므로, 예산보다 종목이 많아도 다음 정각에 나머지 차례가 온다.
+    with store._LOCK:
+        last_try = {m: ts for m, (ts, _ok) in store._SYNCED.items()}
+    tickers.sort(key=lambda t: last_try.get(f"{t[1]}:{t[0]}", 0.0))
     for key, src in tickers[:ticker_budget]:
         try:
             if sync_ticker(key, source=src):
@@ -117,10 +132,17 @@ def run_once(*, now: datetime | None = None, ticker_budget: int = TICKER_BUDGET)
         r = max(fresh, key=lambda x: (x.filed_on, x.id or 0))
         title = f"새 공시 · {_display(normalized)} {_label(r)} ({r.filed_on.month}/{r.filed_on.day})"
         body = f"{written.month}월 {written.day}일에 쓴 리서치가 있어요. 종목 기록에서 공시와 함께 볼 수 있어요."
+        # 이 공시일(한국 날짜 00:00) 이후의 같은 제목만 같은 공시다. 작년 같은 날짜의
+        # 공시 알림은 그 전에 만들어졌다. push_only 행도 여기서 보인다.
+        filed_from = datetime.combine(r.filed_on, datetime.min.time()) - _KST
+        if Alert.query.filter(
+            Alert.user_id == user_id, Alert.kind == KIND, Alert.ticker == normalized,
+            Alert.title == title, Alert.created_at >= filed_from,
+        ).first() is not None:
+            continue
         made = create_alert(
             user_id, KIND, title, body=body, ticker=normalized,
             link=f"/journal/stock/{normalized}",
-            dedup_window_hours=DEDUP_HOURS, dedup_title_prefix=title,
         )
         if made is not None:
             summary["alerts"] += 1

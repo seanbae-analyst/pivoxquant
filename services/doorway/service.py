@@ -282,10 +282,18 @@ def is_open_signal(payload: dict) -> bool:
     return isinstance(text, str) and bool(_OPEN_RE.match(text))
 
 
-def _today_count(user_id: int, now: datetime) -> int:
+def _today_count(user_id: int, at: datetime) -> int:
+    """``at`` 이 속한 KST 하루의 열림 수. 이미 있던 행을 돌려줄 땐 그 행의
+    ``created_at`` 을 준다 — 자정 직전에 연 열림의 답이 자정 뒤에 오면 '오늘'로
+    세어 0번째가 됐다 (2026-11-03)."""
+    start = kst_day_start_utc(at)
     return (
         DoorwayCheck.query
-        .filter(DoorwayCheck.user_id == user_id, DoorwayCheck.created_at >= kst_day_start_utc(now))
+        .filter(
+            DoorwayCheck.user_id == user_id,
+            DoorwayCheck.created_at >= start,
+            DoorwayCheck.created_at < start + timedelta(days=1),
+        )
         .count()
     )
 
@@ -323,11 +331,12 @@ def _open_rows(user_id: int, since: datetime, now: datetime) -> list:
 def _record_open(user_id: int, app: str | None, *, source: str, now: datetime) -> dict:
     """열림 신호 — 답 없는 행 하나. 답하기 전에 ``OPEN_DEDUPE_SECONDS`` 안에 같은
     앱에서 다시 온 신호는 그 행을 그대로 돌려준다 (새로 세지 않는다)."""
-    today = _today_count(user_id, now)
     since = now - timedelta(seconds=OPEN_DEDUPE_SECONDS)
     for dup in _open_rows(user_id, since, now):
         if _same_app(dup.app, app):
-            return {"check": dup.to_dict(), "today": today, "created": False}
+            return {"check": dup.to_dict(), "today": _today_count(user_id, dup.created_at),
+                    "created": False}
+    today = _today_count(user_id, now)
     _check_daily_limit(today)
     row = DoorwayCheck(
         user_id=user_id,
@@ -400,7 +409,8 @@ def record_check(user_id: int, payload: dict, *, source: str, now: datetime | No
         if pending.app is None:
             pending.app = app
         db.session.commit()
-        return {"check": pending.to_dict(), "today": _today_count(user_id, now), "created": False}
+        return {"check": pending.to_dict(), "today": _today_count(user_id, pending.created_at),
+                "created": False}
 
     today = _today_count(user_id, now)
     _check_daily_limit(today)
