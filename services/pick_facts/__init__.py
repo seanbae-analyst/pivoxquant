@@ -97,11 +97,13 @@ def pick_facts(user_id: int, now: datetime | None = None) -> dict[str, Any]:
         source = SOURCE_DART if market == MARKET_KR else SOURCE_SEC
         stored = facts_for(source, key)
         if budget > 0:
+            # 예산은 원천에 물은 횟수다 — 받았든 못 받았든 (store.sync_facts).
             try:
                 if sync_facts(source, key):
                     budget -= 1
                     stored = facts_for(source, key)
             except Exception as exc:  # 한 종목 실패가 카드를 막지 않게
+                budget -= 1
                 db.session.rollback()
                 logger.warning("pick_facts: sync failed for %s %s: %s", source, key, exc)
         hit = as_of(stored, day)
