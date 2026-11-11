@@ -244,8 +244,9 @@ def test_alert_serializer_strips_signal_bracket_prefix():
     assert not out["message"].startswith("[POSITIVE]"), (
         f"message still leaks bracket prefix: {out['message']!r}"
     )
-    # Structured signal must still be exposed for the UI badge.
-    assert out["signal"] == "POSITIVE"
+    # 2026-11-11: the structured signal / score / rec_* keys are dropped —
+    # no reader left in frontend/src (the badge went with the signal pages).
+    assert not {"signal", "score", "rec_shares", "rec_investment"} & set(out)
 
 
 # ===========================================================================

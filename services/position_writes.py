@@ -64,8 +64,8 @@ def holds_ticker(user_id: int, ticker: str) -> bool:
     # 2026-11-11: any spelling of the same stock (035760.KS / .KQ, BRK.B /
     # BRK-B) — one stock is one symbol for the cap.
     return (
-        Position.query.filter(Position.user_id == user_id,
-                              Position.ticker.in_(same_stock_variants(ticker)))
+        Position.query.filter_by(user_id=user_id)
+        .filter(Position.ticker.in_(same_stock_variants(ticker)))
         .filter(Position.shares > 0)
         .first()
         is not None
@@ -82,8 +82,8 @@ def same_stock_ticker(user_id: int, ticker: str) -> str:
     from models import Position
     from services.pre_trade.friction_outcome import same_stock_variants
     rows = (
-        Position.query.filter(Position.user_id == user_id,
-                              Position.ticker.in_(same_stock_variants(ticker)))
+        Position.query.filter_by(user_id=user_id)
+        .filter(Position.ticker.in_(same_stock_variants(ticker)))
         .order_by(Position.id)
         .all()
     )

@@ -136,14 +136,15 @@ class TestRaceRecovery:
         call_count = {"n": 0}
 
         def patched_filter_by(*args, **kwargs):
-            # The first two (user, ticker) lookups — the free-cap
-            # holds_ticker check and the SELECT before INSERT — yield
-            # .first() == None. Later calls (recovery + count checks) use the
-            # real implementation.
+            # The first (user, ticker) lookup — the SELECT before INSERT —
+            # yields .first() == None. Later calls (recovery + count checks)
+            # use the real implementation. (2026-11-11: holds_ticker and
+            # same_stock_ticker match every spelling via filter_by(user_id)
+            # .filter(ticker IN …), so they no longer pass ``ticker=``.)
             q = original_first(*args, **kwargs)
             if "ticker" in kwargs:
                 call_count["n"] += 1
-            if "ticker" in kwargs and call_count["n"] <= 2:
+            if "ticker" in kwargs and call_count["n"] <= 1:
                 class _Empty:
                     def first(self_inner):
                         return None
