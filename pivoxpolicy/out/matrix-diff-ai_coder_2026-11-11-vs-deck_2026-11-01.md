@@ -9,7 +9,7 @@
 | KR | kill_switch | 2 | 1 | `kr-efsr-art13` | `kr-fsi-agent-criteria-2026-10` |
 | US | unique_id | 2 | 1 | `us-nydfs-part500` | `us-nist-csf-2-0`, `us-nist-nccoe-agent-identity-2026-02` |
 | US | human_approval | 2 | 0 | `us-nydfs-part500` | `us-nydfs-part500`, `us-fed-sr-26-2`, `us-nist-csf-2-0` |
-| US | kill_switch | 2 | 0 | `us-cisa-bod-22-01`, `us-nydfs-part500` | `us-nydfs-part500`, `us-fed-sr-26-2`, `us-nist-csf-2-0` |
+| US | kill_switch | 2 | 0 | `us-nydfs-part500` | `us-nydfs-part500`, `us-fed-sr-26-2`, `us-nist-csf-2-0` |
 | EU | inventory | 0 | ? | `eu-ai-act-art14` | – |
 | EU | vendors | 0 | ? | `eu-ai-act-art14` | – |
 | EU | unique_id | 0 | ? | `eu-ai-act-art14` | – |

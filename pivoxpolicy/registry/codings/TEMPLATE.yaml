@@ -1,22 +1,484 @@
-# 두 번째 코더용 템플릿. 복사해서 codings/<이름>.yaml 로 저장하고 채운다.
+# 코더용 빈 양식 — 코드북 v2 (두 층). 복사해서 codings/<이름>.yaml 로 저장하고 채운다.
 #
-# covered:  true  — 문서가 이 통제를 (사람이든 에이전트든 대상으로) 요구·권고한다
-#           false — 다루지 않는다
-#           null  — 아직 안 봤다 (매트릭스에서 '코딩 필요'로 집계)
-# evidence: covered true 면 필수 — 조문·항목 번호·쪽. "~라고 함" 같은 2차 인용이면 그렇게 적는다.
+# 판정 기준은 registry/controls.yaml 하나다 — 층 정의(layers) · 공통 규칙 G1~G8(rules) · 통제별 true_if / false_if.
+# 읽을 원문은 고정 코퍼스(문서 id 마다 텍스트 한 개 · snapshots/corpus.json 에 출처와 sha256). 다른 코더의 코딩을 보지 않고 채운다.
+# 아래 문서 21건이 코퍼스 전부다. ISO/IEC 27001 · 42001 은 원문이 유료라 코퍼스에 없다 — 코딩하지 않는다.
 #
-# 문서의 binding·names_agents 는 documents/*.yaml 에 있고 코더가 바꾸지 않는다.
-# 셀 점수 = covered × (binding, names_agents) 로 자동 계산된다 (pivoxpolicy/schema.py).
+# 통제마다 두 층을 따로 적는다:
+#   analog — 일반 통제: 조항의 대상이 사람·계정·일반 정보시스템/자산·제3자 일반
+#   agent  — AI·에이전트 적용: 조항의 대상이 AI 시스템·모델·AI 에이전트
+#   covered: true 다룸 / false 다루지 않음 / null 원문을 못 읽음(안 봄)
+#   evidence: covered true 면 필수 — 위치(조·항·호, 절, 통제 ID, 쪽) + 원문 그대로의 인용
+#   subject (agent 층만): covered true 면 agent(근거 조항이 AI 에이전트를 명시) 또는 ai(AI 시스템·모델 일반), 아니면 null
+#   note: 경계 사례는 "borderline:" 으로 시작
+#
+# 구속력(binding)은 documents/*.yaml 에 있고 코더가 정하지 않는다. 점수는 층마다 자동 계산된다 (pivoxpolicy/schema.py).
+# 다 채우면:  python3 -m pivoxpolicy.cli check  →  python3 -m pivoxpolicy.cli kappa <이름> <다른 코더>
 coder: CODER_NAME
-coded_at: 2026-01-01
-basis: 원문 직접 독해 / 2차 자료 / 덱 노트 중 무엇을 봤는지
+coded_at: "2026-01-01"
+codebook: 2
+basis: 고정 코퍼스 원문 직접 독해
 provisional: true
 items:
+  kr-ai-basic-act:
+    inventory:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    vendors:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    unique_id:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    least_privilege:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    human_approval:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    audit_trail:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    kill_switch:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
   kr-efsr-art13:
-    inventory:       {covered: null, evidence: ""}
-    vendors:         {covered: null, evidence: ""}
-    unique_id:       {covered: null, evidence: ""}
-    least_privilege: {covered: null, evidence: ""}
-    human_approval:  {covered: null, evidence: ""}
-    audit_trail:     {covered: null, evidence: ""}
-    kill_switch:     {covered: null, evidence: ""}
+    inventory:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    vendors:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    unique_id:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    least_privilege:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    human_approval:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    audit_trail:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    kill_switch:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+  kr-efsr-art37-2:
+    inventory:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    vendors:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    unique_id:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    least_privilege:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    human_approval:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    audit_trail:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    kill_switch:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+  kr-fsc-ai-guidelines-2026-06:
+    inventory:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    vendors:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    unique_id:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    least_privilege:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    human_approval:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    audit_trail:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    kill_switch:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+  kr-fsc-frontier-ai-guide-2026-07:
+    inventory:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    vendors:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    unique_id:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    least_privilege:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    human_approval:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    audit_trail:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    kill_switch:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+  kr-fsi-agent-criteria-2026-10:
+    inventory:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    vendors:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    unique_id:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    least_privilege:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    human_approval:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    audit_trail:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    kill_switch:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+  kr-fss-fsi-pentest-standards-2026:
+    inventory:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    vendors:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    unique_id:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    least_privilege:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    human_approval:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    audit_trail:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    kill_switch:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+  kr-outsourcing-regulation:
+    inventory:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    vendors:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    unique_id:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    least_privilege:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    human_approval:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    audit_trail:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    kill_switch:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+  eu-ai-act-art14:
+    inventory:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    vendors:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    unique_id:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    least_privilege:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    human_approval:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    audit_trail:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    kill_switch:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+  intl-fsb-ai-sound-practices-2026-10:
+    inventory:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    vendors:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    unique_id:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    least_privilege:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    human_approval:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    audit_trail:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    kill_switch:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+  intl-fsb-ai-sound-practices-consultation-2026-06:
+    inventory:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    vendors:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    unique_id:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    least_privilege:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    human_approval:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    audit_trail:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    kill_switch:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+  us-cisa-bod-26-04:
+    inventory:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    vendors:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    unique_id:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    least_privilege:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    human_approval:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    audit_trail:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    kill_switch:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+  us-fed-sr-26-2:
+    inventory:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    vendors:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    unique_id:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    least_privilege:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    human_approval:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    audit_trail:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    kill_switch:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+  us-nist-csf-2-0:
+    inventory:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    vendors:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    unique_id:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    least_privilege:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    human_approval:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    audit_trail:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    kill_switch:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+  us-nist-ir-8596-cyber-ai-profile:
+    inventory:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    vendors:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    unique_id:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    least_privilege:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    human_approval:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    audit_trail:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    kill_switch:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+  us-nist-nccoe-agent-identity-2026-02:
+    inventory:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    vendors:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    unique_id:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    least_privilege:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    human_approval:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    audit_trail:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    kill_switch:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+  us-nydfs-letter-2024-10-16:
+    inventory:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    vendors:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    unique_id:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    least_privilege:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    human_approval:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    audit_trail:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    kill_switch:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+  us-nydfs-letter-2026-09-10:
+    inventory:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    vendors:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    unique_id:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    least_privilege:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    human_approval:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    audit_trail:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    kill_switch:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+  us-nydfs-letters-2026-05-21:
+    inventory:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    vendors:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    unique_id:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    least_privilege:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    human_approval:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    audit_trail:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    kill_switch:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+  us-nydfs-part500:
+    inventory:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    vendors:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    unique_id:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    least_privilege:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    human_approval:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    audit_trail:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    kill_switch:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+  us-treasury-fs-ai-rmf-2026-02:
+    inventory:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    vendors:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    unique_id:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    least_privilege:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    human_approval:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    audit_trail:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}
+    kill_switch:
+      analog: {covered: null, evidence: ""}
+      agent: {covered: null, subject: null, evidence: ""}

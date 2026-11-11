@@ -71,6 +71,41 @@ def coding_yaml(result: dict[str, Any], coder: str, basis: str, coded_at: str) -
     return "\n".join(lines) + "\n"
 
 
+def coding_yaml_v2(result: dict[str, Any], coder: str, basis: str, coded_at: str, header: list[str] | None = None) -> str:
+    """두 층 코딩 — 에이전트 JSON({items:{doc:{ctl:{analog:{covered,evidence}, agent:{covered,subject,evidence}, note}}}})
+    → codings YAML 글(codebook: 2). 빠진 통제·층은 null(미코딩)."""
+    lines = [f"# {h}" for h in (header or [])] + [
+        f"coder: {_q(coder)}",
+        f"coded_at: {_q(coded_at)}",
+        "codebook: 2",
+        f"basis: {_q(basis)}",
+        "provisional: true",
+        "items:",
+    ]
+    for doc_id, cells in sorted((result.get("items") or {}).items()):
+        lines.append(f"  {_q(doc_id)}:")
+        for cid in CONTROL_IDS:
+            c = (cells or {}).get(cid) or {}
+            lines.append(f"    {cid}:")
+            for layer in ("analog", "agent"):
+                sub = c.get(layer) if isinstance(c.get(layer), dict) else {}
+                cov = _tri(sub.get("covered"), f"{doc_id}.{cid}.{layer}")
+                parts = [f"covered: {'true' if cov is True else 'false' if cov is False else 'null'}"]
+                if layer == "agent":
+                    subj = sub.get("subject") if cov is True else None
+                    if cov is True and subj not in ("agent", "ai"):
+                        raise ValueError(f"{doc_id}.{cid}.agent: covered true 면 subject 는 agent/ai (받음: {subj!r})")
+                    parts.append(f"subject: {subj if subj else 'null'}")
+                if cov is True:
+                    if not sub.get("evidence"):
+                        raise ValueError(f"{doc_id}.{cid}.{layer}: covered true 인데 evidence 없음")
+                    parts.append(f"evidence: {_q(sub['evidence'])}")
+                lines.append(f"      {layer}: {{{', '.join(parts)}}}")
+            if c.get("note"):
+                lines.append(f"      note: {_q(c['note'])}")
+    return "\n".join(lines) + "\n"
+
+
 class IncidentCodingError(ValueError):
     pass
 

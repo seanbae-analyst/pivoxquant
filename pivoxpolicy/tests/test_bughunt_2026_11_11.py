@@ -289,7 +289,7 @@ def test_truncated_intel_jsonl_line_is_skipped(tmp_path):
 
 def test_zero_score_ties_credit_every_document():
     docs, controls = load_documents(), load_controls()
-    us = [d for d, x in docs.items() if x.jurisdiction == "US" and x.binding > 0][:3]
+    us = [d for d, x in docs.items() if x.jurisdiction == "US" and x.binding > 0 and x.status != "superseded"][:3]
     coding = {"items": {d: {"inventory": {"covered": False}} for d in us}}
     cell = matrix.build_matrix(docs, controls, coding)["US"]["inventory"]
     assert cell.score == 0 and cell.top_docs == us

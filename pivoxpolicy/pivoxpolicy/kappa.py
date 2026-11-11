@@ -9,7 +9,7 @@ from collections import Counter
 from dataclasses import dataclass
 from typing import Any, Hashable, Sequence
 
-from .schema import Control, Document, cell_score
+from .schema import LAYERS, Control, Document, cell_score, coding_version, layer_view
 
 
 @dataclass
@@ -81,21 +81,21 @@ def paired_cells(
     items_a = coding_a.get("items") or {}
     items_b = coding_b.get("items") or {}
     for doc_id in sorted(set(items_a) & set(items_b)):
-        doc = docs[doc_id]
-        if doc.binding == 0:
+        doc = docs.get(doc_id)
+        if doc is None or doc.binding == 0:
             continue
         for c in controls:
             ca = (items_a[doc_id] or {}).get(c.id)
             cb = (items_b[doc_id] or {}).get(c.id)
-            if not ca or not cb:
+            if not isinstance(ca, dict) or not isinstance(cb, dict):
                 continue
             va, vb = ca.get("covered"), cb.get("covered")
-            if va is None or vb is None:
+            if not isinstance(va, bool) or not isinstance(vb, bool):
                 continue
             keys.append((doc_id, c.id))
-            cov_a.append(bool(va))
-            cov_b.append(bool(vb))
-            sa, sb = cell_score(doc, va), cell_score(doc, vb)
+            cov_a.append(va)
+            cov_b.append(vb)
+            sa, sb = cell_score(doc, va, ca.get("names_agent")), cell_score(doc, vb, cb.get("names_agent"))
             assert sa is not None and sb is not None
             sc_a.append(sa)
             sc_b.append(sb)
@@ -117,7 +117,95 @@ def compare_coders(
         "coverage": cohen_kappa(cov_a, cov_b),
         "score": cohen_kappa(sc_a, sc_b),
         "disagreements": disagreements,
+        # 방향: (문서, 통제, a 의 값) — a 가 true 면 'a 만 다룸'
+        "directions": [(k[0], k[1], x) for k, x, y in zip(keys, cov_a, cov_b) if x != y],
+        "n_true_a": sum(cov_a), "n_true_b": sum(cov_b),
+        "n_both_true": sum(1 for x, y in zip(cov_a, cov_b) if x and y),
     }
+
+
+VIEW_KO = {"": "커버 여부", "analog": "일반 통제 층", "agent": "AI·에이전트 층",
+           "either": "둘 중 하나 (일반 ∨ AI) — v1 의 covered 와 견주는 값"}
+
+
+def compare(
+    coding_a: dict[str, Any], coding_b: dict[str, Any], docs: dict[str, Document], controls: list[Control]
+) -> dict[str, Any]:
+    """두 코딩을 견줄 수 있는 모든 단위로 비교한다.
+    둘 다 두 층(v2) → analog · agent · either / 한쪽만 v2 → either(v2) vs covered(v1) / 둘 다 v1 → covered."""
+    va, vb = coding_version(coding_a), coding_version(coding_b)
+    if va == 2 and vb == 2:
+        labels = list(LAYERS) + ["either"]
+    elif va == 2 or vb == 2:
+        labels = ["either"]
+    else:
+        labels = [""]
+    views: dict[str, dict[str, Any]] = {}
+    for lab in labels:
+        a = layer_view(coding_a, lab) if lab else coding_a
+        b = layer_view(coding_b, lab) if lab else coding_b
+        views[lab] = compare_coders(a, b, docs, controls)
+    out: dict[str, Any] = {"coder_a": coding_a.get("coder"), "coder_b": coding_b.get("coder"),
+                           "versions": (va, vb), "views": views}
+    if va == 2 and vb == 2:
+        out["subject"] = _subject_agreement(coding_a, coding_b, docs, controls)
+    return out
+
+
+def _subject_agreement(a: dict[str, Any], b: dict[str, Any], docs: dict[str, Document], controls: list[Control]) -> dict[str, Any]:
+    """둘 다 agent 층을 true 로 본 칸에서 subject(agent / ai)가 같은가."""
+    same = 0
+    diff: list[tuple[str, str, Any, Any]] = []
+    ia, ib = a.get("items") or {}, b.get("items") or {}
+    for doc_id in sorted(set(ia) & set(ib)):
+        doc = docs.get(doc_id)
+        if doc is None or doc.binding == 0:
+            continue
+        for c in controls:
+            ga = ((ia[doc_id] or {}).get(c.id) or {}).get("agent") or {}
+            gb = ((ib[doc_id] or {}).get(c.id) or {}).get("agent") or {}
+            if ga.get("covered") is True and gb.get("covered") is True:
+                if ga.get("subject") == gb.get("subject"):
+                    same += 1
+                else:
+                    diff.append((doc_id, c.id, ga.get("subject"), gb.get("subject")))
+    return {"n": same + len(diff), "same": same, "diff": diff}
+
+
+def render_compare(result: dict[str, Any]) -> str:
+    a, b = result["coder_a"], result["coder_b"]
+
+    def f(x: float | None) -> str:
+        return "n/a" if x is None else f"{x:.3f}"
+
+    lines = [f"# 코더 간 일치도 — `{a}` vs `{b}`", "", f"A = `{a}` · B = `{b}`", ""]
+    va, vb = result["versions"]
+    if va != vb:
+        lines += ["한쪽은 한 칸(v1 covered), 한쪽은 두 층(v2) 코딩이다 — v2 는 '일반 또는 AI 중 하나라도 다룸' 으로 접어 견준다. "
+                  "기준이 다른 두 코딩의 비교라 κ 는 참고용이다.", ""]
+    lines += ["| 단위 | 칸 | A 참 | B 참 | 둘 다 참 | 관측 일치율 | κ | 점수 κ (가중) | Landis–Koch |",
+              "|---|---|---|---|---|---|---|---|---|"]
+    for lab, r in result["views"].items():
+        cov, sc = r["coverage"], r["score"]
+        lines.append(f"| {VIEW_KO[lab]} | {r['n_cells']} | {r['n_true_a']} | {r['n_true_b']} | {r['n_both_true']} | "
+                     f"{f(cov.observed_agreement)} | **{f(cov.kappa)}** | {f(sc.kappa)} ({f(sc.weighted_kappa)}) | {cov.landis_koch()} |")
+    lines += ["", "칸 = 둘 다 true/false 로 코딩한 문서 × 통제. 점수 κ 는 문서의 binding 이 같아 커버 κ 보다 높게 나온다 — 커버 κ 가 재현성 지표다.", ""]
+    subj = result.get("subject")
+    if subj:
+        lines += [f"AI·에이전트 층을 둘 다 true 로 본 {subj['n']}칸 중 대상(agent / ai)이 같은 칸 **{subj['same']}**"
+                  + (" · 다른 칸: " + ", ".join(f"`{d}`×{c} ({x}/{y})" for d, c, x, y in subj["diff"]) if subj["diff"] else "") + ".", ""]
+    for lab, r in result["views"].items():
+        if lab == "either" and len(result["views"]) > 1:
+            continue  # 층별 목록이 이미 있다
+        title = VIEW_KO[lab].split(" — ")[0]
+        if not r["directions"]:
+            lines += [f"## 불일치 — {title}", "", "없음.", ""]
+            continue
+        lines += [f"## 불일치 {len(r['directions'])}칸 — {title}", ""]
+        for doc_id, cid, a_true in r["directions"]:
+            lines.append(f"- `{doc_id}` × `{cid}` — {'A 만 다룸' if a_true else 'B 만 다룸'}")
+        lines.append("")
+    return "\n".join(lines)
 
 
 def render_markdown(result: dict[str, Any]) -> str:

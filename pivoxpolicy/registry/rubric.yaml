@@ -163,7 +163,7 @@ dimensions:
       - {id: relayed_to_action, level: 2, min_evidence: primary, question: "경고→부서 전달→조치 결정 경로가 구체적으로 확인되는가"}
       - {id: verified_action_taken, level: 3, min_evidence: primary, question: "조치 이행이 제3자·감독기관 자료로 확인되는가"}
     public_evidence_sources: [보도자료, 국회 제출자료, 제재 공개안, 사고 경위 발표]
-    basis: ["덱 슬라이드 5 '경고→조치 연결 실패'(FSC 09-03 경고, 09-17 세미나, 09-27 공격)", "COSO Information and Communication", "Basel PSMOR P8 monitoring and reporting", "CISA BOD 22-01(KEV 패치 기한 선례 — 레지스트리 us-cisa-bod-22-01)", "NYDFS 500.4(d)(3) senior governing body regularly receiving reports", "전자금융감독규정 §37-2(이행계획만, 기한 없음)"]
+    basis: ["덱 슬라이드 5 '경고→조치 연결 실패'(FSC 09-03 경고, 09-17 세미나, 09-27 공격)", "COSO Information and Communication", "Basel PSMOR P8 monitoring and reporting", "CISA BOD 26-04(2026-06-10 — BOD 22-01 을 대체한 현행 패치 기한 지침, 레지스트리 us-cisa-bod-26-04)", "NYDFS 500.4(d)(3) senior governing body regularly receiving reports", "전자금융감독규정 §37-2(이행계획만, 기한 없음)"]
 
   - id: escalation
     num: 9
@@ -236,7 +236,7 @@ dimensions:
       - {id: specifies_patch_deadline, level: 2, min_evidence: primary, question: "패치 기한·재점검 절차를 구체화하는가"}
       - {id: verified_timely_remediation, level: 3, min_evidence: primary, question: "기한 내 조치·재점검 완료가 수치로 확인되는가(미조치 건수 등)"}
     public_evidence_sources: [FSS 미조치 취약점 자료, 제재 공개안(패치 미실시)]
-    basis: ["덱 슬라이드 15 ③ 사후조치(패치 기한+재테스트)", "CISA BOD 22-01 (KEV 2주 기한 선례)", "NYDFS 500.5 Vulnerability management · 2026-10-22 PHP Alert", "Basel PSMOR P7 change management", "전자금융감독규정 §37-2(기한 없음)", "COSO Monitoring Activities"]
+    basis: ["덱 슬라이드 15 ③ 사후조치(패치 기한+재테스트)", "CISA BOD 26-04 (노출·KEV·자동화·영향 4변수로 3일/14일/60일 — BOD 22-01 의 '2주' 를 2026-06-10 대체)", "NYDFS 500.5 Vulnerability management · 2026-10-22 PHP Alert", "Basel PSMOR P7 change management", "전자금융감독규정 §37-2(기한 없음)", "COSO Monitoring Activities"]
 
   - id: test_coverage
     num: 13

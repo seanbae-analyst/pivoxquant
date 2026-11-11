@@ -1,15 +1,16 @@
 id: us-cisa-bod-22-01
-title: CISA Binding Operational Directive 22-01 — Reducing the Significant Risk of Known Exploited Vulnerabilities
+title: CISA Binding Operational Directive 22-01 — Reducing the Significant Risk of Known Exploited Vulnerabilities (폐지 2026-06-10)
 issuer: CISA
 jurisdiction: US
 doc_type: regulation
-status: in_force
+status: superseded
+superseded_by: us-cisa-bod-26-04
 binding: 2
 names_agents: false
 date: 2021-11-03
 url: https://www.cisa.gov/news-events/directives/bod-22-01-reducing-significant-risk-known-exploited-vulnerabilities
 url_verified: 2026-11-11
-url_note: curl 은 403, urllib(pivoxpolicy fetch) 은 200 — 봇 차단이 UA 에 따라 다름.
-summary: 연방 민간기관 대상(민간 금융사엔 적용 안 됨). KEV 목록 취약점을 기한 내 패치 — 2021 년 이후 CVE 기본 2주. 덱 제안 ② '패치 기한' 의 선례. 7개 통제 밖.
+url_note: "curl 은 403, urllib(pivoxpolicy fetch) 은 200 — 봇 차단이 UA 에 따라 다름. 2026-11-11 실측: 페이지 제목이 '(Revoked)', 본문 'This Directive has been revoked. It is superseded by BOD 26-04.' (페이지 날짜 2026-06-10)."
+summary: "폐지됨(2026-06-10, BOD 26-04 가 대체) — 매트릭스에서 뺀다. 연방 민간기관 대상(민간 금융사엔 적용 안 됨). KEV 목록 취약점을 기한 내 패치 — 2021 년 이후 CVE 기본 2주. 덱 제안 ② '패치 기한' 의 선례였다 → 논문에서는 현행 BOD 26-04 를 인용하고 22-01 은 '전신' 으로만."
 topics: [testing]
 source_note: 덱 슬라이드 15 노트.

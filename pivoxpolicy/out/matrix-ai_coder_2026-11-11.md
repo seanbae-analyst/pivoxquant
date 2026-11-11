@@ -28,13 +28,13 @@
 
 ### US
 
-- 1 인벤토리: **2** ← `us-cisa-bod-22-01`, `us-nydfs-part500`
-- 2 공급자 관리: **2** ← `us-cisa-bod-22-01`, `us-nydfs-part500`
+- 1 인벤토리: **2** ← `us-nydfs-part500`
+- 2 공급자 관리: **2** ← `us-nydfs-part500`
 - 3 고유 식별자: **2†** ← `us-nydfs-part500` · 에이전트 명시 자율문서: `us-nist-nccoe-agent-identity-2026-02`
 - 4 최소 권한: **2†** ← `us-nydfs-part500` · 에이전트 명시 자율문서: `us-nist-nccoe-agent-identity-2026-02`
 - 5 사람 승인: **2†** ← `us-nydfs-part500` · 에이전트 명시 자율문서: `us-nist-nccoe-agent-identity-2026-02`
 - 6 감사 기록: **2†** ← `us-nydfs-part500` · 에이전트 명시 자율문서: `us-nist-nccoe-agent-identity-2026-02`
-- 7 즉시 중단: **2†** ← `us-cisa-bod-22-01`, `us-nydfs-part500` · 에이전트 명시 자율문서: `us-nist-nccoe-agent-identity-2026-02`
+- 7 즉시 중단: **2†** ← `us-nydfs-part500` · 에이전트 명시 자율문서: `us-nist-nccoe-agent-identity-2026-02`
 
 ### EU
 
@@ -48,10 +48,10 @@
 
 ### INTL
 
-- 1 인벤토리: **1*** ← `intl-fsb-ai-sound-practices-2026-10`, `intl-fsb-ai-sound-practices-consultation-2026-06` · 에이전트 명시 자율문서: `intl-fsb-ai-sound-practices-2026-10`, `intl-fsb-ai-sound-practices-consultation-2026-06`
-- 2 공급자 관리: **1*** ← `intl-fsb-ai-sound-practices-2026-10`, `intl-fsb-ai-sound-practices-consultation-2026-06`, `intl-iso-iec-42001-2023` · 에이전트 명시 자율문서: `intl-fsb-ai-sound-practices-2026-10`, `intl-fsb-ai-sound-practices-consultation-2026-06`
-- 3 고유 식별자: **1*** ← `intl-fsb-ai-sound-practices-2026-10`, `intl-fsb-ai-sound-practices-consultation-2026-06` · 에이전트 명시 자율문서: `intl-fsb-ai-sound-practices-2026-10`, `intl-fsb-ai-sound-practices-consultation-2026-06`
-- 4 최소 권한: **1*** ← `intl-fsb-ai-sound-practices-2026-10`, `intl-fsb-ai-sound-practices-consultation-2026-06` · 에이전트 명시 자율문서: `intl-fsb-ai-sound-practices-2026-10`, `intl-fsb-ai-sound-practices-consultation-2026-06`
-- 5 사람 승인: **1*** ← `intl-fsb-ai-sound-practices-2026-10`, `intl-fsb-ai-sound-practices-consultation-2026-06` · 에이전트 명시 자율문서: `intl-fsb-ai-sound-practices-2026-10`, `intl-fsb-ai-sound-practices-consultation-2026-06`
-- 6 감사 기록: **1*** ← `intl-fsb-ai-sound-practices-2026-10`, `intl-fsb-ai-sound-practices-consultation-2026-06` · 에이전트 명시 자율문서: `intl-fsb-ai-sound-practices-2026-10`, `intl-fsb-ai-sound-practices-consultation-2026-06`
-- 7 즉시 중단: **1*** ← `intl-fsb-ai-sound-practices-2026-10`, `intl-fsb-ai-sound-practices-consultation-2026-06` · 에이전트 명시 자율문서: `intl-fsb-ai-sound-practices-2026-10`, `intl-fsb-ai-sound-practices-consultation-2026-06`
+- 1 인벤토리: **1*** ← `intl-fsb-ai-sound-practices-2026-10` · 에이전트 명시 자율문서: `intl-fsb-ai-sound-practices-2026-10`
+- 2 공급자 관리: **1*** ← `intl-fsb-ai-sound-practices-2026-10`, `intl-iso-iec-42001-2023` · 에이전트 명시 자율문서: `intl-fsb-ai-sound-practices-2026-10`
+- 3 고유 식별자: **1*** ← `intl-fsb-ai-sound-practices-2026-10` · 에이전트 명시 자율문서: `intl-fsb-ai-sound-practices-2026-10`
+- 4 최소 권한: **1*** ← `intl-fsb-ai-sound-practices-2026-10` · 에이전트 명시 자율문서: `intl-fsb-ai-sound-practices-2026-10`
+- 5 사람 승인: **1*** ← `intl-fsb-ai-sound-practices-2026-10` · 에이전트 명시 자율문서: `intl-fsb-ai-sound-practices-2026-10`
+- 6 감사 기록: **1*** ← `intl-fsb-ai-sound-practices-2026-10` · 에이전트 명시 자율문서: `intl-fsb-ai-sound-practices-2026-10`
+- 7 즉시 중단: **1*** ← `intl-fsb-ai-sound-practices-2026-10` · 에이전트 명시 자율문서: `intl-fsb-ai-sound-practices-2026-10`

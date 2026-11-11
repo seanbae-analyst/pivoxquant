@@ -87,7 +87,7 @@
 ### 8. 경고 수신·전달 (Warning receipt & relay)
 - 질문: 감독기관·AI회사의 경고가 내부로 전달되고 조치로 이어진 기록이 있는가
 - 어디서 보나: 보도자료, 국회 제출자료, 제재 공개안, 사고 경위 발표
-- 근거: 덱 슬라이드 5 '경고→조치 연결 실패'(FSC 09-03 경고, 09-17 세미나, 09-27 공격), COSO Information and Communication, Basel PSMOR P8 monitoring and reporting, CISA BOD 22-01(KEV 패치 기한 선례 — 레지스트리 us-cisa-bod-22-01), NYDFS 500.4(d)(3) senior governing body regularly receiving reports, 전자금융감독규정 §37-2(이행계획만, 기한 없음)
+- 근거: 덱 슬라이드 5 '경고→조치 연결 실패'(FSC 09-03 경고, 09-17 세미나, 09-27 공격), COSO Information and Communication, Basel PSMOR P8 monitoring and reporting, CISA BOD 26-04(2026-06-10 — BOD 22-01 을 대체한 현행 패치 기한 지침, 레지스트리 us-cisa-bod-26-04), NYDFS 500.4(d)(3) senior governing body regularly receiving reports, 전자금융감독규정 §37-2(이행계획만, 기한 없음)
 - 신호:
     - **L1** `acknowledged_warning`: 감독기관·AI회사 경고를 인지·공유했다고 언급하는가
     - **L2** `relayed_to_action` `[primary 필요]`: 경고→부서 전달→조치 결정 경로가 구체적으로 확인되는가
@@ -129,7 +129,7 @@
 ### 12. 사후조치 (Remediation follow-up)
 - 질문: 발견한 취약점을 기한 내 조치하고 재점검하는가
 - 어디서 보나: FSS 미조치 취약점 자료, 제재 공개안(패치 미실시)
-- 근거: 덱 슬라이드 15 ③ 사후조치(패치 기한+재테스트), CISA BOD 22-01 (KEV 2주 기한 선례), NYDFS 500.5 Vulnerability management · 2026-10-22 PHP Alert, Basel PSMOR P7 change management, 전자금융감독규정 §37-2(기한 없음), COSO Monitoring Activities
+- 근거: 덱 슬라이드 15 ③ 사후조치(패치 기한+재테스트), CISA BOD 26-04 (노출·KEV·자동화·영향 4변수로 3일/14일/60일 — BOD 22-01 의 '2주' 를 2026-06-10 대체), NYDFS 500.5 Vulnerability management · 2026-10-22 PHP Alert, Basel PSMOR P7 change management, 전자금융감독규정 §37-2(기한 없음), COSO Monitoring Activities
 - 신호:
     - **L1** `mentions_remediation_plan`: 취약점 보완조치 계획을 세운다고 언급하는가
     - **L2** `specifies_patch_deadline` `[primary 필요]`: 패치 기한·재점검 절차를 구체화하는가

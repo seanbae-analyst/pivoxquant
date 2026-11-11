@@ -49,6 +49,41 @@ def render_gaps(matrix: dict[str, dict[str, matrix_mod.Cell]], controls: list[Co
     return "\n".join(lines)
 
 
+def render_layer_gaps(ma: dict[str, dict[str, matrix_mod.Cell]], mg: dict[str, dict[str, matrix_mod.Cell]],
+                      controls: list[Control], coder: str) -> str:
+    """두 층 코딩의 공백 — AI·에이전트 층이 구속력 2 미만인 칸. 옆에 일반 층 점수를 둔다."""
+    lines = [f"# 공백 — AI·에이전트 층이 구속력 2 미만인 칸 (코더 `{coder}`)", "",
+             "| 관할 | # | 통제 | 일반 통제 층 | AI·에이전트 층 | 뜻 |", "|---|---|---|---|---|---|"]
+    for j, cid, cell in matrix_mod.gaps(mg, controls):
+        c = next(x for x in controls if x.id == cid)
+        a = ma[j][cid]
+        if cell.score is None:
+            m = f"{cell.n_uncoded} 문서 코딩 필요" if cell.n_uncoded else "평가된 문서 없음"
+        elif cell.score == 0:
+            m = "AI 를 대상으로 한 요구가 없음"
+        else:
+            m = "자율 문서만" + (" (에이전트 명시)" if cell.agent_specific_voluntary else "")
+        if (a.score or 0) >= 2:
+            m += " — 일반 통제는 구속력 있음(간극)"
+        lines.append(f"| {j} | {c.num} | {c.name_ko} | {matrix_mod._fmt_cell(a)} | {matrix_mod._fmt_cell(cell)} | {m} |")
+    lines += ["", "INTL(FSB·ISO) 은 구속력 있는 발행 주체가 없어 설계상 최대 1 이다 — 공백이 아니라 기준점이다.", ""]
+    return "\n".join(lines)
+
+
+def render_kappa_summary(rows: list[tuple[str, str, str, dict[str, Any]]]) -> str:
+    def f(x: float | None) -> str:
+        return "n/a" if x is None else f"{x:.3f}"
+
+    lines = ["# 코더 간 일치도 — 한눈에", "",
+             "| A | B | 단위 | 칸 | 관측 일치율 | κ | Landis–Koch | 불일치 |", "|---|---|---|---|---|---|---|---|"]
+    for a, b, lab, r in rows:
+        cov = r["coverage"]
+        lines.append(f"| `{a}` | `{b}` | {kappa_mod.VIEW_KO[lab].split(' — ')[0]} | {r['n_cells']} | {f(cov.observed_agreement)} | "
+                     f"**{f(cov.kappa)}** | {cov.landis_koch()} | {len(r['disagreements'])} |")
+    lines += ["", "모양이 다른 코딩(v1 한 칸 ↔ v2 두 층)의 비교는 v2 를 '일반 또는 AI' 로 접은 것이라 참고용이다. 자세한 것은 각 kappa-*.md.", ""]
+    return "\n".join(lines)
+
+
 def render_documents_index(docs: dict[str, Document]) -> str:
     lines = ["# 문서 색인", ""]
     for j in JURISDICTIONS:
@@ -82,19 +117,33 @@ def write_all(
     w("timeline.md", render_timeline(docs))
     w("documents.md", render_documents_index(docs))
     for coder, coding in codings.items():
-        m = matrix_mod.build_matrix(docs, controls, coding)
-        w(f"matrix-{coder}.md", matrix_mod.render_markdown(m, controls, coder, docs))
-        w(f"matrix-{coder}.csv", matrix_mod.render_csv(m, controls))
-        w(f"gaps-{coder}.md", render_gaps(m, controls, coder))
+        ms = matrix_mod.layer_matrices(docs, controls, coding)
+        if "" in ms:  # v1 — 한 칸
+            m = ms[""]
+            w(f"matrix-{coder}.md", matrix_mod.render_markdown(m, controls, coder, docs))
+            w(f"matrix-{coder}.csv", matrix_mod.render_csv(m, controls))
+            w(f"gaps-{coder}.md", render_gaps(m, controls, coder))
+        else:         # v2 — 두 층: 본 표(두 층 나란히) + 층별 표 + 간극
+            w(f"matrix-{coder}.md", matrix_mod.render_layers(ms["analog"], ms["agent"], controls, coder))
+            for layer, m in ms.items():
+                w(f"matrix-{coder}-{layer}.md", matrix_mod.render_markdown(m, controls, coder, docs, layer))
+                w(f"matrix-{coder}-{layer}.csv", matrix_mod.render_csv(m, controls))
+            w(f"gaps-{coder}.md", render_layer_gaps(ms["analog"], ms["agent"], controls, coder))
     names = sorted(codings)
+    summary: list[tuple[str, str, str, dict[str, Any]]] = []
     for i in range(len(names)):
         for j in range(i + 1, len(names)):
-            res = kappa_mod.compare_coders(codings[names[i]], codings[names[j]], docs, controls)
-            w(f"kappa-{names[i]}-vs-{names[j]}.md", kappa_mod.render_markdown(res))
-            ma = matrix_mod.build_matrix(docs, controls, codings[names[i]])
-            mb = matrix_mod.build_matrix(docs, controls, codings[names[j]])
-            w(f"matrix-diff-{names[i]}-vs-{names[j]}.md",
-              matrix_mod.render_diff(ma, mb, controls, names[i], names[j]))
+            a, b = names[i], names[j]
+            res = kappa_mod.compare(codings[a], codings[b], docs, controls)
+            w(f"kappa-{a}-vs-{b}.md", kappa_mod.render_compare(res))
+            for lab, r in res["views"].items():
+                summary.append((a, b, lab, r))
+            ma, mb = matrix_mod.layer_matrices(docs, controls, codings[a]), matrix_mod.layer_matrices(docs, controls, codings[b])
+            if set(ma) == set(mb):  # 같은 모양의 코딩끼리만 매트릭스를 견준다
+                parts = [matrix_mod.render_diff(ma[k], mb[k], controls, a, b, k) for k in ma]
+                w(f"matrix-diff-{a}-vs-{b}.md", "\n".join(parts))
+    if summary:
+        w("kappa-summary.md", render_kappa_summary(summary))
 
     # 내부통제 평가 루브릭·프로필
     try:

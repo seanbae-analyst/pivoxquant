@@ -17,7 +17,7 @@ from . import matrix as matrix_mod
 from . import rubric as rubric_mod
 from .intel import load_items
 from .registry import OUT_DIR, SNAPSHOT_DIR, load_codings, load_controls, load_documents
-from .schema import JURISDICTIONS
+from .schema import JURISDICTIONS, coding_version
 
 TEMPLATES = Path(__file__).resolve().parent / "templates"
 REPO_URL = "https://github.com/seanbae-analyst/pivoxpolicy"
@@ -149,9 +149,98 @@ def _matrix_section(docs, controls, coding, inc_counts=None, alt=None) -> tuple[
     return head + body, m
 
 
+def _duo_span(cell, layer_ko: str, other=None) -> str:
+    """두 층 칸의 반쪽. other = 다른 코더의 같은 칸 — 점수가 다르면 ‡."""
+    txt = _cell_text(cell.score, cell.names_agents)
+    mark = ""
+    title = f"{layer_ko}: {'미확인' if cell.score is None else cell.score}" + (" (에이전트 명시)" if cell.names_agents and (cell.score or 0) > 0 else "")
+    if other is not None and other.score != cell.score:
+        o = "?" if other.score is None else other.score
+        mark = f'<sup class="fine" title="다른 코더: {o}">‡</sup>'
+        title += f" · 다른 코더 {o}"
+    return f'<span class="{_cell_class(cell.score)}" title="{_e(title)}">{_e(txt)}{mark}</span>'
+
+
+def _matrix_section_v2(docs, controls, coding, inc_counts=None, alt=None):
+    """두 층(v2) 코딩 — 관할 칸 하나에 왼쪽 = 일반 통제 층, 오른쪽 = AI·에이전트 층."""
+    ms = matrix_mod.layer_matrices(docs, controls, coding)
+    ma, mg = ms["analog"], ms["agent"]
+    alt_ms = matrix_mod.layer_matrices(docs, controls, alt) if alt else None
+    inc_counts = inc_counts or {}
+    head = ("<thead><tr><th>통제</th>"
+            + "".join(f"<th>{j}<small>일반 · AI</small></th>" for j in JURISDICTIONS)
+            + ('<th class="num" title="이 통제가 실패했거나 관련된 AI 에이전트 사건 수 (1차 증거)">사건</th>' if inc_counts else "")
+            + "</tr></thead>")
+    rows = []
+    for c in controls:
+        tds = [f"<th scope=\"row\">{c.num}. {_e(c.name_ko)}</th>"]
+        for j in JURISDICTIONS:
+            a, g = ma[j][c.id], mg[j][c.id]
+            oa = alt_ms["analog"][j][c.id] if alt_ms else None
+            og = alt_ms["agent"][j][c.id] if alt_ms else None
+            tds.append(f'<td class="duo">{_duo_span(a, "일반 통제 층", oa)}{_duo_span(g, "AI·에이전트 층", og)}</td>')
+        if inc_counts:
+            r = inc_counts.get(c.id, {"total": 0, "primary": 0})
+            tds.append(f'<td class="num">{r["total"]}<span class="fine"> ({r["primary"]})</span></td>')
+        rows.append("<tr>" + "".join(tds) + "</tr>")
+    return head + "<tbody>" + "\n".join(rows) + "</tbody>", (ma, mg)
+
+
+def _gaps_section_v2(ma, mg, controls) -> str:
+    """AI·에이전트 층이 2 미만인 칸. 일반 통제는 구속력(2)인데 AI 층이 비는 '간극' 을 먼저."""
+    rows = []
+    for j, cid, cell in matrix_mod.gaps(mg, controls):
+        c = next(x for x in controls if x.id == cid)
+        a = ma[j][cid]
+        if cell.score is None:
+            txt = f"{cell.n_uncoded}개 문서 코딩 필요" if cell.n_uncoded else "평가된 문서 없음"
+        elif cell.score == 0:
+            txt = "AI 를 대상으로 한 요구 없음"
+        else:
+            txt = "자율 문서만" + (" (에이전트 명시)" if cell.agent_specific_voluntary else "")
+        is_gap = (a.score or 0) >= 2
+        cur = "?" if cell.score is None else str(cell.score)
+        acur = "?" if a.score is None else str(a.score)
+        rows.append((not is_gap, f'<li><time>{_e(j)}</time><div><div class="k">통제 {c.num} · {_e(c.name_ko)}'
+                                 + (" · 간극" if is_gap else "") + "</div>"
+                                 f'<div class="t">AI·에이전트 층 {cur} — {_e(txt)} · 일반 통제 층 {acur}</div></div></li>'))
+    rows.sort(key=lambda r: r[0])  # 안정 정렬 — 간극 먼저
+    return "\n".join(r[1] for r in rows)
+
+
+def _agreement_note_v2(docs, controls, coding, alt, name, alt_name, codings) -> str:
+    from . import kappa as kappa_mod
+    out = []
+    if alt:
+        res = kappa_mod.compare(coding, alt, docs, controls)
+        va, vg = res["views"]["analog"], res["views"]["agent"]
+
+        def k(r):
+            x = r["coverage"].kappa
+            return "n/a" if x is None else f"{x:.2f}"
+
+        n_marks = 0
+        ms, ams = matrix_mod.layer_matrices(docs, controls, coding), matrix_mod.layer_matrices(docs, controls, alt)
+        for layer in ("analog", "agent"):
+            n_marks += len(matrix_mod.diff(ms[layer], ams[layer], controls))
+        out.append(f"<li>문서 코딩은 두 층이다 — 일반 통제(사람·계정·시스템 대상)와 AI·에이전트 적용을 따로 본다. "
+                   f"같은 원문 묶음을 독립으로 코딩한 두 AI 코더({_e(name)} · {_e(alt_name)})의 일치도: "
+                   f"일반 층 κ {k(va)} ({va['n_cells']}칸) · AI·에이전트 층 κ {k(vg)} ({vg['n_cells']}칸). "
+                   f"관할 점수가 코더에 따라 다른 칸 {n_marks}개 = ‡.</li>")
+    else:
+        out.append("<li>문서 코딩은 두 층이다 — 일반 통제(사람·계정·시스템 대상)와 AI·에이전트 적용을 따로 본다. 두 번째 코더 전.</li>")
+    out.append("<li>두 코더는 같은 모델 계열의 AI 다. κ 는 '같은 코드북을 두 번 독립 적용했을 때의 재현성' 이지 사람 코더 간 신뢰도가 아니다.</li>")
+    v1 = sorted(k_ for k_, c in codings.items() if c.get("codebook") != 2)
+    if len(v1) >= 2:
+        r1 = kappa_mod.compare(codings[v1[0]], codings[v1[1]], docs, controls)["views"][""]
+        x = r1["coverage"].kappa
+        out.append(f"<li>두 층으로 나누기 전의 한 칸 코딩({_e(v1[0])} vs {_e(v1[1])})은 κ {'n/a' if x is None else f'{x:.2f}'} — "
+                   f"불일치 {len(r1['disagreements'])}칸이 모두 '직원 통제를 에이전트 통제로 볼 것인가' 에서 갈려 층을 나눴다.</li>")
+    return "".join(out)
+
+
 def _agreement_note(docs, controls, coding, alt, alt_name, incs) -> str:
     """방법 섹션의 '이 숫자로 말할 수 없는 것' 첫 줄들 — 코더 일치도를 실제 값으로."""
-    from . import agreement as agreement_mod
     from . import kappa as kappa_mod
     if not alt:
         return "<li>1차 코딩은 발표 덱(2026-11-01)의 2차 인용 — provisional. 2차 코딩 전.</li>"
@@ -164,16 +253,24 @@ def _agreement_note(docs, controls, coding, alt, alt_name, incs) -> str:
            f"{'n/a' if k is None else f'{k:.2f}'}. 관할 점수가 다른 칸 {len(rows)}개 = ‡ (판단이 갈림 {n_judged} · 1차 미코딩 {len(rows) - n_judged}). "
            "불일치는 대부분 '직원 통제(계정 정지·결재)를 에이전트 통제로 볼 것인가' 의 판정 규칙 차이다.</li>",
            "<li>2차 코더는 1차와 같은 모델 계열의 AI 다. κ 는 입력이 다른 두 AI 판단의 일치이지 사람 코더 간 신뢰도가 아니다.</li>"]
+    return "".join(out) + _incident_note(controls, incs)
+
+
+def _incident_note(controls, incs) -> str:
+    """사건 × 통제 코딩의 일치도 한 줄 — registry/incident_codings 의 첫 코더와 1차(related_controls)."""
+    from . import agreement as agreement_mod
+    from . import kappa as kappa_mod
     raws = agreement_mod.load_incident_codings()
-    if incs and alt_name in raws:
-        first = {i.id: list(i.related_controls) for i in incs}
-        second = agreement_mod.second_controls(raws[alt_name], set(first))
-        a, b, _, per = agreement_mod.incident_vectors(first, second)
-        ki = kappa_mod.cohen_kappa(a, b).kappa
-        both = " · ".join(f"{c.id} {sum(1 for x, y in zip(*per[c.id]) if x and y)}" for c in controls)
-        out.append(f"<li>사건 열은 1차 코더 기준. 사건 × 통제 κ {'n/a' if ki is None else f'{ki:.2f}'}. "
-                   f"두 코더가 모두 실패를 본 사건 — {_e(both)}.</li>")
-    return "".join(out)
+    if not incs or not raws:
+        return ""
+    coder = sorted(raws)[0]
+    first = {i.id: list(i.related_controls) for i in incs}
+    second = agreement_mod.second_controls(raws[coder], set(first))
+    a, b, _, per = agreement_mod.incident_vectors(first, second)
+    ki = kappa_mod.cohen_kappa(a, b).kappa
+    both = " · ".join(f"{c.name_ko} {sum(1 for x, y in zip(*per[c.id]) if x and y)}" for c in controls)
+    return (f"<li>사건 열은 1차 코더 기준. 사건 × 통제 κ {'n/a' if ki is None else f'{ki:.2f}'} ({_e(coder)} 와 비교). "
+            f"두 코더가 모두 실패를 본 사건 — {_e(both)}.</li>")
 
 
 def _gaps_section(m, controls) -> str:
@@ -245,8 +342,13 @@ def build(out_dir: Path = OUT_DIR, snapshot_dir: Path = SNAPSHOT_DIR, now: datet
     controls = load_controls()
     docs = load_documents()
     codings = load_codings()
-    coding = codings.get("deck_2026-11-01") or next(iter(codings.values()))
-    alt_name = next((n for n in sorted(codings) if codings[n] is not coding), None)
+    v2 = sorted(k for k, c in codings.items() if coding_version(c) == 2)
+    if v2:   # 두 층 코딩이 있으면 그것이 대표 — 다른 두 층 코더가 있으면 ‡ 비교 대상
+        name, alt_name = v2[0], (v2[1] if len(v2) > 1 else None)
+    else:
+        name = "deck_2026-11-01" if "deck_2026-11-01" in codings else sorted(codings)[0]
+        alt_name = next((n for n in sorted(codings) if n != name), None)
+    coding = codings[name]
     alt = codings.get(alt_name) if alt_name else None
     rub = rubric_mod.load_rubric()
     try:
@@ -270,9 +372,15 @@ def build(out_dir: Path = OUT_DIR, snapshot_dir: Path = SNAPSHOT_DIR, now: datet
                     + (f'<li class="more"><details><summary>피드에 새로 들어온 것</summary><ul class="rows">{inc_html}</ul></details></li>'
                        if inc_html and "수집된 항목이 없습니다" not in inc_html else ""))
         inc_src = ["registry/incidents.yaml"] + inc_src
-    matrix_html, m = _matrix_section(docs, controls, coding, inc_counts, alt)
-    agree_html = _agreement_note(docs, controls, coding, alt, alt_name, incs)
-    gaps_html = _gaps_section(m, controls)
+    if v2:
+        matrix_html, (m_a, m_g) = _matrix_section_v2(docs, controls, coding, inc_counts, alt)
+        agree_html = _agreement_note_v2(docs, controls, coding, alt, name, alt_name, codings)
+        agree_html += _incident_note(controls, incs)
+        gaps_html = _gaps_section_v2(m_a, m_g, controls)
+    else:
+        matrix_html, m = _matrix_section(docs, controls, coding, inc_counts, alt)
+        agree_html = _agreement_note(docs, controls, coding, alt, alt_name, incs)
+        gaps_html = _gaps_section(m, controls)
     cards_html, profile_html = _profile_section(rub)
     timeline_html, tl_range = _timeline_section(docs)
     docs_html = _docs_section(docs)
@@ -285,7 +393,7 @@ def build(out_dir: Path = OUT_DIR, snapshot_dir: Path = SNAPSHOT_DIR, now: datet
         n_feeds = 0
 
     method = (
-        "<p>세 층을 잰다. <strong>규제</strong>(문서 × 7통제, 구속력 0~3) · "
+        "<p>세 가지를 잰다. <strong>규제</strong>(문서 × 7통제 × 두 층 — 일반 통제 / AI·에이전트 적용, 구속력 0~3) · "
         "<strong>동향</strong>(발행 주체 피드에서 AI 에이전트 규제·위협을 바로) · "
         "<strong>평가</strong>(공개 자료로 재는 16개 차원). 점수·레벨은 '공개 증거 수준' 이지 "
         "'통제가 있다/없다' 가 아니다.</p>"
@@ -319,8 +427,15 @@ def build(out_dir: Path = OUT_DIR, snapshot_dir: Path = SNAPSHOT_DIR, now: datet
         "NOW_ASOF_ISO": today, "NOW_ASOF": today,
         "INCIDENTS": inc_html, "INCIDENTS_SOURCES": " · ".join(inc_src[:6]) or "공식 공지·보고서",
         "INCIDENTS_ASOF_ISO": today, "INCIDENTS_ASOF": today,
-        "MATRIX_RUBRIC_ONE_LINE": "0 미다룸 · 1 자율 · 2 구속력 · 3 에이전트 명시 · ? 미확인",
-        "MATRIX_CAPTION": "행 = 7개 에이전트 통제 · 열 = 관할. 칸 = 그 관할에서 그 통제를 요구하는 가장 센 문서의 구속력(1차 코더). ‡ = 2차 코더에선 점수가 다름. 마지막 열 = 그 통제가 실패했거나 관련된 AI 에이전트 사건 수(괄호 = 1차 증거).",
+        "MATRIX_RUBRIC_ONE_LINE": ("칸 = 일반 통제 · AI 적용 — 0 미다룸 · 1 자율 · 2 구속력 · 3 에이전트 명시" if v2
+                                   else "0 미다룸 · 1 자율 · 2 구속력 · 3 에이전트 명시 · ? 미확인"),
+        "MATRIX_CAPTION": (
+            "행 = 7개 통제 · 열 = 관할. 칸 왼쪽 = 일반 통제 층(사람·계정·시스템이 대상), 오른쪽 = AI·에이전트 적용 층(AI 가 대상) — "
+            "각각 그 관할에서 그 통제를 요구하는 가장 센 문서의 구속력. * = 근거 조항이 에이전트를 명시. ‡ = 다른 코더에선 점수가 다름. "
+            "마지막 열 = 그 통제가 실패했거나 관련된 AI 에이전트 사건 수(괄호 = 1차 증거)."
+            if v2 else
+            "행 = 7개 에이전트 통제 · 열 = 관할. 칸 = 그 관할에서 그 통제를 요구하는 가장 센 문서의 구속력(1차 코더). ‡ = 2차 코더에선 점수가 다름. "
+            "마지막 열 = 그 통제가 실패했거나 관련된 AI 에이전트 사건 수(괄호 = 1차 증거)."),
         "MATRIX": matrix_html,
         "H0_LABEL": _H_LABEL[0], "H1_LABEL": _H_LABEL[1], "H2_LABEL": _H_LABEL[2], "H3_LABEL": _H_LABEL[3],
         "MATRIX_SOURCES": "registry/documents · codings", "MATRIX_ASOF_ISO": today, "MATRIX_ASOF": today,

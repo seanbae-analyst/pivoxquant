@@ -1,7 +1,74 @@
 # 7개 에이전트 통제 — 직원 통제 생애주기(배치 전·사용 중·사후)를 에이전트에 1:1 로 대응시킨 것.
 # 출처: 발표 덱(2026-11-01) 슬라이드 14. 7 은 표준이 아니라 매핑의 결과다.
 #
-# 점수 척도는 pivoxpolicy/schema.py 참조 (0 미다룸 · 1 자율 · 2 구속력 · 3 구속력+에이전트 명시).
+# ── 코드북 v2 (2026-11-11) — 두 층 ─────────────────────────────────────────────────────────
+# v1 은 통제마다 covered 한 칸이었다. 1차(덱)와 2차(AI, 원문) 코더의 불일치 12칸이 전부
+# '직원 통제의 유사물이 있으면 다룸인가' 에서 갈려서(out/kappa-ai_coder_2026-11-11-vs-deck_2026-11-01.md),
+# 통제마다 두 층을 따로 코딩한다:
+#   analog — 일반 통제: 대상이 사람·계정·일반 시스템
+#   agent  — AI·에이전트 적용: 대상이 AI 시스템·모델·AI 에이전트
+# 점수는 층마다 자동 계산된다 (pivoxpolicy/schema.py):
+#   analog 층  0 미다룸 · 1 자율 · 2 구속력
+#   agent 층   0 미다룸 · 1 자율 · 2 구속력(AI 일반) · 3 구속력 + 에이전트 명시(subject: agent)
+# 아래 rules·통제별 true_if/false_if 는 코더에게 그대로 준다. 특정 문서·조문을 이름 붙이지 않고 조항 유형으로만 쓴다
+# (코드북이 특정 칸의 답을 알려 주면 κ 가 부풀려진다).
+codebook_version: 2
+
+layers:
+  analog:
+    name_ko: 일반 통제
+    question: 문서가 이 통제를 사람(임직원·사용자·관리자) · 계정 · 일반 정보시스템/자산 · 제3자 일반을 대상으로 요구·권고하는가
+  agent:
+    name_ko: AI·에이전트 적용
+    question: 문서가 이 통제를 AI 시스템 · AI 모델 · AI 에이전트(또는 AI 공급자·AI 구성요소)를 대상으로 요구·권고하는가
+    subject: "true 일 때만 적는다 — agent = 근거 조항이 AI 에이전트·에이전트형(agentic) AI·자율 에이전트를 이름 붙임 / ai = AI 시스템·모델·생성형 AI 일반"
+
+rules:
+  - id: G1
+    title: 범위와 근거
+    text: >-
+      코퍼스 파일 머리말의 '범위' 가 정한 본문만 본다. 조문 하나로 범위가 정해진 문서는 그 조문만 본다(그 조문이 가리키는 다른 조문은 범위 밖).
+      근거는 규범 본문에서만 — 조문, required actions, control objectives, sound practices, considerations, 점검 항목, 대응 요령, 별표·부록.
+      배경 설명, 용어 정의, 독자에게 던진 질문(의견 요청), 향후 계획, FAQ 는 근거가 아니다.
+      초안·개념 문서가 '다루겠다' 고 제시한 실무 영역(areas of interest, scope)은 제시된 실무로 본다.
+      머리말에 '보도자료가 본문' 이라고 적힌 문서는 보도자료의 조치·항목 서술이 본문이다.
+  - id: G2
+    title: 요구의 형태
+    text: >-
+      의무(shall·must·하여야 한다), 권고(should·바람직하다), 기대(expect), 제시된 실무(sound practice, control objective, consideration, 점검 항목, 예시로 든 조치)는
+      모두 '다룸(true)' 이다. 구속력의 세기는 문서 단위 binding 이 따로 잰다 — 코더는 세기를 보지 않는다.
+  - id: G3
+    title: 층은 조항의 대상으로 가른다
+    text: >-
+      analog = 조항이 통제하려는 대상이 사람·계정·일반 정보시스템/자산·제3자 일반.
+      agent = 대상이 AI 시스템·AI 모델·AI 에이전트·AI 서비스/공급자/구성요소 — 조항(또는 그 조항이 속한 절의 표제)이 AI 를 이름 붙여야 한다.
+      '정보시스템에는 AI 도 포함되니까' 라는 해석으로 agent 를 true 로 하지 않는다.
+      AI 문서 안에서도 조항의 대상이 사람이면 analog 다(AI 시스템을 운영·이용하는 사람의 계정·권한·접속 기록).
+      AI 가 행위 주체 — 권한을 받는 쪽, 기록되는 쪽, 멈춰지는 쪽, 승인을 받는 쪽 — 일 때가 agent 다.
+      AI 위협에 대응하려고 일반 IT 통제(계정·패치·자산 관리)를 강화하라는 조항은 analog 다. AI 를 쓰는 자동화·AI 서비스 자체를 통제하라는 조항이 agent 다.
+      두 층은 독립이다 — 한 문서에서 둘 다 true, 둘 다 false, 한쪽만 true 모두 가능하다. 한 조항이 사람과 AI 를 함께 이름 붙이면 두 층 모두 true.
+      법률 용어 agent(대리인·수탁자·중개인)는 AI 에이전트가 아니다.
+      문서가 생성형·에이전트형 AI 를 적용 범위에서 명시적으로 빼면 그 문서의 agent 층은 전부 false 이고 note 에 그 조항을 적는다. 남는 일반 통제는 analog 로 코딩한다.
+  - id: G4
+    title: 통제의 기본형이면 true
+    text: >-
+      각 통제의 agent_requirement(덱이 제안한 강한 형태)를 다 채우지 않아도 된다. 통제의 기본형이 그 대상에 요구되면 true.
+      강한 형태까지 있으면 note 에 'strong:' 으로 적는다.
+  - id: G5
+    title: 증거
+    text: >-
+      true 마다 위치(조·항·호, 절 번호, 통제 ID, 쪽)와 원문 그대로의 인용(대략 30~200자)을 적는다. 층마다 따로.
+      false 는 근거가 필요 없다. 가까운 조항을 보고 false 로 정했으면 note 에 한 줄 남긴다.
+  - id: G6
+    title: 못 읽은 것은 null
+    text: 코퍼스에 본문이 없거나 잘려 있으면 null. 기억·2차 자료·요약으로 채우지 않는다.
+  - id: G7
+    title: 경계 사례
+    text: 헷갈리면 통제별 false_if 목록을 먼저 본다. 그래도 경계면 가까운 쪽으로 정하고 note 를 'borderline:' 으로 시작한다.
+  - id: G8
+    title: 한 조항, 여러 통제
+    text: 같은 조항이 여러 통제의 근거가 될 수 있다.
+
 controls:
   - id: inventory
     num: 1
@@ -10,6 +77,23 @@ controls:
     name_en: Inventory
     employee_analog: 인사 명부 (HR roster)
     agent_requirement: 에이전트·접근권한·책임자(owner)를 등록
+    analog:
+      true_if:
+        - "자기 조직의 자산·정보시스템·전산자료·계정·(통계·ML) 모델을 목록(대장·현황·inventory·register)으로 만들어 유지·관리하라"
+        - "목록 관리와 함께 자산의 책임자(owner)를 지정하라"
+      false_if:
+        - "감독당국에 현황을 보고·제출하라는 것만"
+        - "위탁계약·제3자 목록 (→ vendors)"
+        - "한 번 식별·분류·평가하라는 절차 (목록을 유지하라는 말이 없음)"
+        - "위험·취약점 목록(risk register)"
+    agent:
+      true_if:
+        - "AI 시스템·모델·에이전트·AI 사용사례(use case)를 목록으로 유지·관리하라"
+        - "자산 목록에 AI(모델·에이전트·API·키 등)를 넣으라"
+      false_if:
+        - "AI 가 고위험·고영향인지 사전 검토·분류하라는 것만"
+        - "AI 기술문서·모델 문서의 작성 (목록이 아님)"
+        - "제3자 AI 공급자 목록 (→ vendors)"
 
   - id: vendors
     num: 2
@@ -18,6 +102,18 @@ controls:
     name_en: Vendors / third-party
     employee_analog: 아웃소싱 계약
     agent_requirement: 취약점 통지·로그 제공을 계약에 명시
+    analog:
+      true_if:
+        - "제3자(위탁·외주·공급자·클라우드 등 서비스 제공자)에 대한 실사·위험평가·계약 조항·모니터링·감사권·사고/취약점 통지·현황 관리 가운데 하나 이상"
+      false_if:
+        - "업무(평가 등)를 외부 전문기관에 맡길 수 있다는 허용 규정"
+        - "제3자에게 협조를 요청할 수 있다는 규정"
+        - "제3자 경유 공격을 위협으로 설명만 함"
+    agent:
+      true_if:
+        - "제3자 AI(외부 모델·AI 서비스·AI 공급자·플러그인/도구 등 에이전트 구성요소·AI 공급망)에 대한 실사·검증·계약 조항·모니터링·통지 요구"
+      false_if:
+        - "AI 와 무관한 일반 위탁 규정을 지키라는 재진술뿐 (→ analog)"
 
   - id: unique_id
     num: 3
@@ -26,6 +122,23 @@ controls:
     name_en: Unique ID
     employee_analog: 직원 ID
     agent_requirement: 에이전트별 계정 + 책임자 연결 (공유·직원 계정 금지)
+    analog:
+      true_if:
+        - "사용자·계정마다 개별(고유) 식별자나 인증수단을 부여하라"
+        - "공유계정을 금지·제한하라 (불가피하면 개인별 사용내역 기록)"
+        - "사용자·서비스·기기의 신원(identity)·자격증명을 발급·관리·폐기하라 (신원 관리)"
+      false_if:
+        - "다중인증(MFA) 등 인증 강도만 요구"
+        - "정책이 다뤄야 할 주제 목록에 'identity management' 가 이름만 올라 있음"
+        - "고객 본인확인(KYC)·실명확인"
+    agent:
+      true_if:
+        - "AI 시스템·에이전트에 고유 식별자·계정·자격증명을 부여하라 / 사람·다른 시스템과 구별되게 식별하라"
+        - "에이전트의 행위를 그 식별자·책임자에게 귀속(연결)시키라"
+      false_if:
+        - "인벤토리의 등록 번호(시스템 ID)뿐 — 접근 신원이 아님"
+        - "에이전트 간 통신 보안·메모리 격리 (신원 부여가 아님)"
+        - "AI 를 이용하는 사람의 인증 (→ analog)"
 
   - id: least_privilege
     num: 4
@@ -34,6 +147,21 @@ controls:
     name_en: Least privilege
     employee_analog: 직무 범위
     agent_requirement: 신뢰할 수 없는 입력이 섞이면 이체·외부 전송 차단 (출처 기반 규칙)
+    analog:
+      true_if:
+        - "접근권한을 업무상 필요한 최소로 부여·제한하라 (least privilege, need-to-know)"
+        - "권한(특히 특권 계정)을 주기적으로 검토하고 불필요한 권한을 회수하라"
+      false_if:
+        - "'접근통제를 한다/수립한다' 뿐이고 최소화·필요 범위 개념이 없음"
+        - "정보의 목적 외 이용 금지(용도 제한)"
+        - "망분리·네트워크 구간 분리만"
+    agent:
+      true_if:
+        - "AI 시스템·에이전트에 주는 권한·도구·데이터 접근·행위 범위를 필요한 최소로 제한하라 (도구 권한 제어, 샌드박스·격리 실행, 자율 실행 범위 제한)"
+        - "신뢰할 수 없는 입력에 따른 고위험 행위를 막으라"
+      false_if:
+        - "AI 모델·데이터에 접근하는 사람의 권한 관리 (→ analog)"
+        - "AI 로 보안을 강화하라는 것 (AI 가 통제 대상이 아님)"
 
   - id: human_approval
     num: 5
@@ -42,6 +170,20 @@ controls:
     name_en: Human approval
     employee_analog: 결재
     agent_requirement: 고위험 행위에만 승인 (모든 행위 승인은 confirmation fatigue)
+    analog:
+      true_if:
+        - "개별 건(거래·시스템 변경·관리자 주요 작업·예외·보완통제·위험 수용)에 책임자의 사전 승인·결재·이중확인을 요구"
+      false_if:
+        - "정책·계획·보고서의 주기적 이사회·경영진 승인"
+        - "검토 의견 제출 · 경영진 보고"
+        - "감독(oversight)·모니터링 일반"
+    agent:
+      true_if:
+        - "AI 시스템·에이전트의 결정·출력·행위에 사람의 승인·확인·개입을 요구 (human-in-the-loop, 사람이 최종 결정, 고위험 행위 전 승인, override 할 수 있는 human oversight)"
+        - "AI 에 대한 사람의 관리·감독 의무 (승인 절차가 문언에 없으면 note 에 'oversight only')"
+      false_if:
+        - "AI 거버넌스 조직·책임자 지정만"
+        - "AI 결과물의 테스트·검증만 (사람의 승인·개입 언급 없음)"
 
   - id: audit_trail
     num: 6
@@ -50,6 +192,20 @@ controls:
     name_en: Audit trail
     employee_analog: 접근 로그
     agent_requirement: 입력·출처·도구 호출을 기록 (답만으로는 원인을 못 찾는다)
+    analog:
+      true_if:
+        - "접속·이용·작업·거래의 기록(로그)을 생성·보존하라 / audit trail 을 유지하라"
+        - "공유계정 등의 개인별 사용내역을 기록하라"
+      false_if:
+        - "모니터링·탐지만 요구 (기록·보존 문언 없음)"
+        - "정책·평가결과·계약 등 문서 보관"
+        - "감독당국 자료 제출"
+    agent:
+      true_if:
+        - "AI 시스템·에이전트의 입력·출력·결정·도구 호출·행위(또는 그에 대한 사람 개입 결과)를 기록·보존하라 / 추적 가능하게(traceability) 하라"
+      false_if:
+        - "AI 기술문서·조치내용 문서·모델 문서화의 작성·보관"
+        - "AI 를 운영·이용하는 사람의 접속 기록 (→ analog)"
 
   - id: kill_switch
     num: 7
@@ -58,6 +214,21 @@ controls:
     name_en: Kill switch
     employee_analog: 계정 정지
     agent_requirement: 즉시 중단 + 권한 회수, 정기 테스트
+    analog:
+      true_if:
+        - "계정·접근권한을 지체 없이 정지·삭제·회수하라 (퇴직·인사이동·불필요해졌을 때·침해 시)"
+        - "침해·취약 자산을 격리·차단하거나 네트워크에서 제거하라"
+      false_if:
+        - "'사고를 억제·대응한다' 는 결과 문장뿐 (정지·차단·회수·격리 수단이 문언에 없음)"
+        - "사고대응계획 수립·훈련 일반"
+        - "감독당국의 중지 명령 권한"
+    agent:
+      true_if:
+        - "AI 시스템·에이전트의 동작을 즉시 중단(stop·kill switch·긴급정지·비상정지)하라"
+        - "AI 시스템·에이전트의 권한·자율성을 회수·제한·격리하라 / 에이전트 자격증명을 폐기(revoke)하라"
+      false_if:
+        - "정부가 정지 기능 기술을 지원·연구한다는 조항"
+        - "AI 모델의 폐기·교체 계획(decommissioning)만"
 
 # 7개 통제 밖의 주제 태그 (문서의 topics 필드에 쓴다)
 topics:

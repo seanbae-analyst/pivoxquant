@@ -27,10 +27,10 @@
 - `kr-fsc-press-2026-11-05` **금융위 보도자료 (2026-11-05) — 全금융권 간담회, 외부접점·내부통제 전수점검, 망분리 전면해제 논의** · 금융위원회 (FSC) · 2026-11-05 · binding 0 — <https://www.fsc.go.kr/no010101/88086>
   - 11-03 기준 37개사 40건 침해 신고, 약 47.3만 건 유출. 약 580개사 외부접점·내부통제 전수점검, 대형사부터 취약점 분석·평가 연 2회 이상 의무화, "AI 공격은 AI 로 방어" 위해 망분리 규제 전면해제·新보안체계 논의. 덱(2026-11-01) 이후 문서 — 피해 규모 수치(16개사→37개사) 갱신 필요.
 
-## US (13)
+## US (14)
 
-- `us-cisa-bod-22-01` **CISA Binding Operational Directive 22-01 — Reducing the Significant Risk of Known Exploited Vulnerabilities** · CISA · 2021-11-03 · binding 2 — <https://www.cisa.gov/news-events/directives/bod-22-01-reducing-significant-risk-known-exploited-vulnerabilities>
-  - 연방 민간기관 대상(민간 금융사엔 적용 안 됨). KEV 목록 취약점을 기한 내 패치 — 2021 년 이후 CVE 기본 2주. 덱 제안 ② '패치 기한' 의 선례. 7개 통제 밖.
+- `us-cisa-bod-22-01` **CISA Binding Operational Directive 22-01 — Reducing the Significant Risk of Known Exploited Vulnerabilities (폐지 2026-06-10)** · CISA · 2021-11-03 · binding 2 — <https://www.cisa.gov/news-events/directives/bod-22-01-reducing-significant-risk-known-exploited-vulnerabilities>
+  - 폐지됨(2026-06-10, BOD 26-04 가 대체) — 매트릭스에서 뺀다. 연방 민간기관 대상(민간 금융사엔 적용 안 됨). KEV 목록 취약점을 기한 내 패치 — 2021 년 이후 CVE 기본 2주. 덱 제안 ② '패치 기한' 의 선례였다 → 논문에서는 현행 BOD 26-04 를 인용하고 22-01 은 '전신' 으로만.
 - `us-nydfs-part500` **NYDFS Cybersecurity Regulation, 23 NYCRR Part 500 (2023 amendment)** · New York Department of Financial Services (NYDFS) · 2023-11-01 · binding 2 — <https://www.dfs.ny.gov/industry_guidance/cybersecurity>
   - 500.13 자산 인벤토리(2025-11-01 의무화), 500.11 제3자 서비스 제공자, 500.7 접근권한(최소권한), 500.6 감사기록. 2024-10-16 서한이 AI 시스템도 인벤토리에 포함하라고 해석. 에이전트 언급 없음.
 - `us-nist-csf-2-0` **NIST Cybersecurity Framework (CSF) 2.0 — CSWP 29** · NIST · 2024-02-26 · binding 1 — <https://nvlpubs.nist.gov/nistpubs/CSWP/NIST.CSWP.29.pdf>
@@ -53,6 +53,8 @@
   - 은행이 생성형·에이전틱 AI 를 신중히 도입 중이며 고유한 과제가 있다고 언급. 규범 아님.
 - `us-nydfs-letters-2026-05-21` **NYDFS Industry Letters (2) — Frontier AI Models advisory + Heightened Threat Environment guidance** · NYDFS · 2026-05-21 · binding 1 — <https://www.dfs.ny.gov/industry-guidance/industry-letters/20260521-heightened-cybersecurity-risks-assoc-with-frontier-ai-models>
   - 비구속. 프런티어 AI 모델이 취약점 발견·악용을 가속 → "최선의 준비는 적시·포괄적 취약점 식별·조치". 새 법적 요구 없음. 테스트·패치 주제.
+- `us-cisa-bod-26-04` **CISA Binding Operational Directive 26-04 — Prioritizing Security Updates Based on Risk** · CISA · 2026-06-10 · binding 2 — <https://www.cisa.gov/news-events/directives/bod-26-04-prioritizing-security-updates-based-risk>
+  - 연방 민간기관(FCEB) 대상 — 민간 금융사엔 적용 안 됨. BOD 22-01(KEV)·BOD 19-02 를 대체·폐지. 취약점마다 4변수(외부 노출 · KEV 등재 · 공격 자동화 가능 · 기술적 영향)로 조치 기한을 정한다(Table 1, 달력일): 3일 + 포렌식 트리아지 / 3일 / 14일 / 60일 / 시스템 업그레이드 때. 가장 급한 줄 = KEV 등재 + 자동화 가능 + 완전 장악(노출 여부 무관) 3일. 배경 문단이 '공격자의 AI 사용이 패치 공개와 악용 사이의 시간을 더 줄일 수 있다' 고 적고, CISA 가 매 회계연도 기한을 데이터로 재평가한다. 덱 제안 ② '패치 기한' 의 현행 선례. 위탁 환경(FedRAMP·CSP) 시스템의 인벤토리·준수 확인을 기관 책임으로 둔다.
 - `us-nydfs-letter-2026-09-10` **NYDFS Industry Letter — Guidance on How to Conduct and Use Risk Assessments Required by Part 500** · NYDFS · 2026-09-10 · binding 1 — <https://www.dfs.ny.gov/industry_guidance/industry_letters/il20260910-cyber-risk-assessment>
   - Part 500 리스크 평가 수행·활용 안내. 덱에 없던 문서 — AI 시스템을 리스크 평가에 어떻게 넣는지 코딩 필요.
 

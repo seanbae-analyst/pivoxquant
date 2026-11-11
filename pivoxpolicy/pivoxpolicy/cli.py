@@ -16,7 +16,7 @@ from . import report as report_mod
 from . import rubric as rubric_mod
 from . import site as site_mod
 from .registry import SNAPSHOT_DIR, load_codings, load_controls, load_documents, load_sources
-from .schema import SchemaError, validate_coding
+from .schema import SchemaError, coding_version, primary_coder, validate_coding
 
 
 def _load_all() -> tuple[Any, Any, Any]:
@@ -54,26 +54,43 @@ def _pick_coder(codings: dict[str, Any], name: str | None) -> tuple[str, Any]:
         if name not in codings:
             raise SystemExit(f"코더 {name!r} 없음. 있는 코더: {', '.join(codings)}")
         return name, codings[name]
-    k = sorted(codings)[0]
+    k = primary_coder(codings)
+    assert k is not None
     return k, codings[k]
 
 
 def cmd_matrix(args: argparse.Namespace) -> int:
     controls, docs, codings = _load_all()
     coder, coding = _pick_coder(codings, args.coder)
-    m = matrix_mod.build_matrix(docs, controls, coding)
+    ms = matrix_mod.layer_matrices(docs, controls, coding)
+    layer = getattr(args, "layer", None)
+    if "" in ms:  # v1 코딩 — 층이 없다
+        if layer:
+            print(f"`{coder}` 는 한 칸(v1) 코딩이라 층이 없다 — --layer 를 빼라.")
+            return 2
+        m = ms[""]
+        sys.stdout.write(matrix_mod.render_csv(m, controls) if args.csv else matrix_mod.render_markdown(m, controls, coder, docs) + "\n")
+        return 0
+    if layer:
+        m = ms[layer]
+        sys.stdout.write(matrix_mod.render_csv(m, controls) if args.csv
+                         else matrix_mod.render_markdown(m, controls, coder, docs, layer) + "\n")
+        return 0
     if args.csv:
-        sys.stdout.write(matrix_mod.render_csv(m, controls))
-    else:
-        print(matrix_mod.render_markdown(m, controls, coder, docs))
+        print("두 층 코딩의 CSV 는 층을 골라야 한다: --layer analog | agent")
+        return 2
+    print(matrix_mod.render_layers(ms["analog"], ms["agent"], controls, coder))
     return 0
 
 
 def cmd_gaps(args: argparse.Namespace) -> int:
     controls, docs, codings = _load_all()
     coder, coding = _pick_coder(codings, args.coder)
-    m = matrix_mod.build_matrix(docs, controls, coding)
-    print(report_mod.render_gaps(m, controls, coder))
+    ms = matrix_mod.layer_matrices(docs, controls, coding)
+    if "" in ms:
+        print(report_mod.render_gaps(ms[""], controls, coder))
+    else:
+        print(report_mod.render_layer_gaps(ms["analog"], ms["agent"], controls, coder))
     return 0
 
 
@@ -88,10 +105,15 @@ def cmd_kappa(args: argparse.Namespace) -> int:
     if len(codings) < 2:
         print("코더가 둘 이상 필요. registry/codings/TEMPLATE.yaml 을 복사해 두 번째 코더 파일을 만들어라.")
         return 2
-    a = args.a or sorted(codings)[0]
-    b = args.b or sorted(codings)[1]
-    res = kappa_mod.compare_coders(codings[a], codings[b], docs, controls)
-    print(kappa_mod.render_markdown(res))
+    # 인자가 없으면 두 층(v2) 코더 둘을 먼저, 없으면 이름순 첫 둘
+    v2 = sorted(k for k, c in codings.items() if coding_version(c) == 2)
+    default = v2[:2] if len(v2) >= 2 else sorted(codings)[:2]
+    a = args.a or default[0]
+    b = args.b or default[1]
+    if a not in codings or b not in codings:
+        print(f"있는 코더: {', '.join(sorted(codings))}")
+        return 2
+    print(kappa_mod.render_compare(kappa_mod.compare(codings[a], codings[b], docs, controls)))
     return 0
 
 
@@ -240,6 +262,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     m = sub.add_parser("matrix", help="통제 × 관할 점수 매트릭스")
     m.add_argument("--coder")
+    m.add_argument("--layer", choices=["analog", "agent"], help="두 층(v2) 코딩에서 한 층만 — 없으면 두 층을 나란히")
     m.add_argument("--csv", action="store_true")
     m.set_defaults(fn=cmd_matrix)
 

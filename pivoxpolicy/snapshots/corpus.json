@@ -1,0 +1,238 @@
+{
+ "built_at": "2026-11-11",
+ "retrieved_at": "2026-11-11",
+ "note": "코더 두 팀이 읽은 고정 원문. sha256 은 머리말을 뺀 본문(UTF-8)의 해시.",
+ "documents": {
+  "kr-ai-basic-act": {
+   "batch": "KR",
+   "title": "「인공지능 발전과 신뢰 기반 조성 등에 관한 기본법」 (법률 제21311호, 시행 2026-07-21)",
+   "issuer": "대한민국 국회·과학기술정보통신부",
+   "date": "2026-07-21",
+   "source": "https://www.law.go.kr/LSW/lsInfoR.do?lsiSeq=282791&efYd=20260721&chrClsCd=010202",
+   "scope": "법률 전문(부칙 포함). law.go.kr 본문 HTML 에서 글자만.",
+   "chars": 27338,
+   "bytes": 64552,
+   "sha256": "b147bb1295915a5d07773e6d7bf892f053cc9fa1266807c0faae00f983029222"
+  },
+  "kr-efsr-art13": {
+   "batch": "KR",
+   "title": "「전자금융감독규정」 제13조 (금융위원회고시 제2026-29호, 시행 2026-07-15)",
+   "issuer": "금융위원회",
+   "date": "2026-07-15",
+   "source": "https://www.law.go.kr/LSW/admRulLsInfoR.do?admRulSeq=2100000282622&admRulId=21828",
+   "scope": "범위 = 제13조만. 다른 조(제28조 등)는 범위 밖.",
+   "chars": 1497,
+   "bytes": 3267,
+   "sha256": "6131c93324ec85bce19bfbf5739a4554fade3d052d5fdcc62ccae796434cac59"
+  },
+  "kr-efsr-art37-2": {
+   "batch": "KR",
+   "title": "「전자금융감독규정」 제37조의2 (금융위원회고시 제2026-29호, 시행 2026-07-15)",
+   "issuer": "금융위원회",
+   "date": "2026-07-15",
+   "source": "https://www.law.go.kr/LSW/admRulLsInfoR.do?admRulSeq=2100000282622&admRulId=21828",
+   "scope": "범위 = 제37조의2만.",
+   "chars": 1024,
+   "bytes": 2458,
+   "sha256": "8f02866ca387a0e9ddb1e4ad252e817b036550a049018fa26464c6a570a080d1"
+  },
+  "kr-outsourcing-regulation": {
+   "batch": "KR",
+   "title": "「금융회사의 정보처리 업무 위탁에 관한 규정」 (금융위원회고시 제2021-9호, 시행 2021-03-25)",
+   "issuer": "금융위원회",
+   "date": "2021-03-25",
+   "source": "https://www.law.go.kr/LSW/admRulLsInfoR.do?admRulSeq=2100000200327&admRulId=42702",
+   "scope": "규정 전문.",
+   "chars": 7052,
+   "bytes": 15036,
+   "sha256": "67ac6fc189259826359c497a4aebc83b0260c92c6b0342f3d0a8bcb8a051e54c"
+  },
+  "kr-fsc-ai-guidelines-2026-06": {
+   "batch": "KR",
+   "title": "금융위원회 「금융분야 인공지능 가이드라인」 (2026.6 개정)",
+   "issuer": "금융위원회",
+   "date": "2026-06-18",
+   "source": "https://www.fsc.go.kr/no010101/87142 (첨부 [별첨2-2] PDF)",
+   "scope": "가이드라인 PDF 91쪽 전문. =====PAGE n===== 은 PDF 쪽 번호.",
+   "chars": 75336,
+   "bytes": 177148,
+   "sha256": "9d24f312ddd7f143169d02cea7d2e1b386ca709ca596bfc3a1ced89918022a98"
+  },
+  "kr-fsc-frontier-ai-guide-2026-07": {
+   "batch": "KR",
+   "title": "금융보안원 「프런티어 AI 보안 위협 금융분야 대응 요령」 v1.0 (2026-07-01) + 금융위원회 보도자료 (2026-07-02)",
+   "issuer": "금융위원회·금융보안원",
+   "date": "2026-07-02",
+   "source": "https://www.fsc.go.kr/no010101/87240 (첨부 hwpx)",
+   "scope": "두 부분 모두 범위 안: [A] 대응 요령 본문(hwpx) · [B] 금융위 보도자료 본문(면책 조치 포함).",
+   "chars": 20528,
+   "bytes": 45330,
+   "sha256": "dbbd3e4b3f0720147f739b783f408826e56094448423d059f5ef9bc3f639cd25"
+  },
+  "kr-fsi-agent-criteria-2026-10": {
+   "batch": "KR",
+   "title": "금융보안원 보도자료 — 「금융분야 AI 에이전트 보안 평가기준」 마련 (2026-10-07 배포)",
+   "issuer": "금융보안원",
+   "date": "2026-10-08",
+   "source": "https://www.fsec.or.kr/bbs/detail?menuNo=69&bbsNo=12122 (첨부 PDF 4쪽)",
+   "scope": "평가기준 세부 전문은 비공개 — 이 보도자료(점검 항목 목록 포함)가 공개된 본문이다.",
+   "chars": 3525,
+   "bytes": 7452,
+   "sha256": "14e1b2984f0919d618ea9fbd477b74930975b08889b8a23b921676ebea808816"
+  },
+  "kr-fss-fsi-pentest-standards-2026": {
+   "batch": "KR",
+   "title": "금융감독원·금융보안원 공동 보도자료 — 2026년 금융권 블라인드 모의해킹 훈련 (2026-04-29 배포)",
+   "issuer": "금융감독원·금융보안원",
+   "date": "2026-04-29",
+   "source": "https://www.fsec.or.kr/bbs/detail?menuNo=69&bbsNo=11944 (첨부 PDF 2쪽)",
+   "scope": "별도 운영기준 문서는 공개되지 않았다 — 이 보도자료가 본문이다.",
+   "chars": 1512,
+   "bytes": 3658,
+   "sha256": "ea0492c0813afded09010d0e3d931fa34f0f9dd9953162181d6df9f2e74beac1"
+  },
+  "us-cisa-bod-26-04": {
+   "batch": "US1",
+   "title": "CISA Binding Operational Directive 26-04 — Prioritizing Security Updates Based on Risk (2026-06-10)",
+   "issuer": "CISA",
+   "date": "2026-06-10",
+   "source": "https://www.cisa.gov/news-events/directives/bod-26-04-prioritizing-security-updates-based-risk",
+   "scope": "Directive web text incl. Appendix A. Separate Implementation Guidance page is out of scope.",
+   "chars": 20484,
+   "bytes": 20617,
+   "sha256": "54be4e8a63f4d7e0688285c2fb9a4b10b5e24d86ba9dcdcb1b412554f8b1d856"
+  },
+  "us-fed-sr-26-2": {
+   "batch": "US1",
+   "title": "Federal Reserve SR 26-2 letter + Attachment: Supervisory Guidance on Model Risk Management (2026-04-17)",
+   "issuer": "Federal Reserve Board · FDIC · OCC",
+   "date": "2026-04-17",
+   "source": "https://www.federalreserve.gov/supervisionreg/srletters/sr2602.htm (+ SR2602a1.pdf)",
+   "scope": "[A] SR letter · [B] attachment PDF (12 pp.). Both in scope.",
+   "chars": 23922,
+   "bytes": 24028,
+   "sha256": "f186d4ec310507b1168c95389606d96817396df2f4f66876b1df74f7ef36245d"
+  },
+  "us-nist-csf-2-0": {
+   "batch": "US1",
+   "title": "NIST Cybersecurity Framework (CSF) 2.0 — NIST CSWP 29 (2024-02-26)",
+   "issuer": "NIST",
+   "date": "2024-02-26",
+   "source": "https://nvlpubs.nist.gov/nistpubs/CSWP/NIST.CSWP.29.pdf",
+   "scope": "Full PDF text (32 pp.) incl. Appendix A CSF Core.",
+   "chars": 69032,
+   "bytes": 69330,
+   "sha256": "2dd414eaceda6dc66b5acee41680cf9ccc8f3e6339d428775935e64fc049daab"
+  },
+  "us-nist-nccoe-agent-identity-2026-02": {
+   "batch": "US1",
+   "title": "NIST NCCoE Concept Paper (draft) — Accelerating the Adoption of Software and AI Agent Identity and Authorization (Feb 2026)",
+   "issuer": "NIST NCCoE",
+   "date": "2026-02-05",
+   "source": "https://csrc.nist.gov/pubs/other/2026/02/05/accelerating-the-adoption-of-software-and-ai-agent/ipd",
+   "scope": "Full concept paper PDF text (11 pp.).",
+   "chars": 20123,
+   "bytes": 20235,
+   "sha256": "2dcede229788bbd216efb16ceea7e579bf2e2daa70ef9fc7a34b2b71f8259f69"
+  },
+  "us-nydfs-letter-2024-10-16": {
+   "batch": "US1",
+   "title": "NYDFS Industry Letter — Cybersecurity Risks Arising from Artificial Intelligence and Strategies to Combat Related Risks (2024-10-16)",
+   "issuer": "NYDFS",
+   "date": "2024-10-16",
+   "source": "https://www.dfs.ny.gov/industry-guidance/industry-letters/il20241016-cyber-risks-ai-and-strategies-combat-related-risks",
+   "scope": "Letter text (HTML).",
+   "chars": 31052,
+   "bytes": 31254,
+   "sha256": "de919599f2ad7e627ddf06432dc22dc9baae551f873f7a29ab3034bb0b3c34d9"
+  },
+  "us-nydfs-letter-2026-09-10": {
+   "batch": "US1",
+   "title": "NYDFS Industry Letter — Guidance on How to Conduct and Use Risk Assessments Required by the DFS Cybersecurity Regulation (2026-09-10)",
+   "issuer": "NYDFS",
+   "date": "2026-09-10",
+   "source": "https://www.dfs.ny.gov/industry-guidance/industry-letters (il20260910)",
+   "scope": "Letter text (HTML).",
+   "chars": 22464,
+   "bytes": 22585,
+   "sha256": "44f8f75933dd60370e16c48508cc35dc33ae42b1b553efcc46ae2fd0562197e2"
+  },
+  "us-nydfs-letters-2026-05-21": {
+   "batch": "US1",
+   "title": "NYDFS Industry Letters (2), 2026-05-21 — [A] Heightened Cybersecurity Risks Associated with Frontier AI Models · [B] Measures Regulated Entities Should Consider in a Heightened Cybersecurity Threat Environment",
+   "issuer": "NYDFS",
+   "date": "2026-05-21",
+   "source": "https://www.dfs.ny.gov/industry-guidance/industry-letters (il20260521 ×2)",
+   "scope": "Two letters issued the same day. Both in scope.",
+   "chars": 12435,
+   "bytes": 12472,
+   "sha256": "79ce3a02d87a7107ac3891d55d2fda13027daf662b58a3050e4eac30816ca93a"
+  },
+  "us-nydfs-part500": {
+   "batch": "US1",
+   "title": "NYDFS Cybersecurity Regulation, 23 NYCRR Part 500 (Second Amendment text)",
+   "issuer": "NYDFS",
+   "date": "2023-11-01",
+   "source": "https://www.dfs.ny.gov/cybersecurity/23-NYCRR-Part-500 (PDF)",
+   "scope": "Full text PDF (21 pp.). DFS marks this PDF as not the official version.",
+   "chars": 47927,
+   "bytes": 48071,
+   "sha256": "2a6636728fe7ab249880bf6198a115011865ee85dc42d60cf96a41638a7a380e"
+  },
+  "us-nist-ir-8596-cyber-ai-profile": {
+   "batch": "US2",
+   "title": "NIST IR 8596 (initial preliminary draft, Dec 2025) — Cybersecurity Framework Profile for Artificial Intelligence (Cyber AI Profile)",
+   "issuer": "NIST",
+   "date": "2025-12-16",
+   "source": "https://csrc.nist.gov/pubs/ir/8596/iprd",
+   "scope": "Full PDF text (107 pp.). =====PAGE n===== = PDF page.",
+   "chars": 251589,
+   "bytes": 252011,
+   "sha256": "c4a7f6d6c5520c8409bae90b89020b6cf612c4fdd3d756d50dca187d692a7e08"
+  },
+  "us-treasury-fs-ai-rmf-2026-02": {
+   "batch": "US2",
+   "title": "Financial Services AI Risk Management Framework (FS AI RMF) v1.0 — 230 control objectives (Cyber Risk Institute, with FSSCC and US Treasury, Feb 2026)",
+   "issuer": "US Treasury · FSSCC · Cyber Risk Institute",
+   "date": "2026-02-19",
+   "source": "https://cyberriskinstitute.org/artificial-intelligence-risk-management (Guidebook v1.0 docx)",
+   "scope": "The 230 control objectives from the Guidebook, one per line: ID | Title: text. Guidebook narrative chapters are not included.",
+   "chars": 101523,
+   "bytes": 101567,
+   "sha256": "65963ebd8a9844495e15f79d4af2a2f9c2e7d05088d0c2818e697efd79e1d9ee"
+  },
+  "eu-ai-act-art14": {
+   "batch": "EUINTL",
+   "title": "Regulation (EU) 2024/1689 (Artificial Intelligence Act) — Article 14",
+   "issuer": "European Union",
+   "date": "2024-07-12",
+   "source": "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=OJ:L_202401689",
+   "scope": "Scope = Article 14 only (paragraphs 1–5). Other articles are out of scope.",
+   "chars": 3148,
+   "bytes": 3154,
+   "sha256": "ec5364aa79a0c00b273fb324622bd342b12a079720825dcd968dd09b21b7b98c"
+  },
+  "intl-fsb-ai-sound-practices-2026-10": {
+   "batch": "EUINTL",
+   "title": "Financial Stability Board — Sound Practices for Responsible Adoption of Artificial Intelligence (AI), Final report (2026-10-15)",
+   "issuer": "FSB",
+   "date": "2026-10-15",
+   "source": "https://www.fsb.org/uploads/P151026-1.pdf",
+   "scope": "Full PDF text (75 pp.). =====PAGE n===== = PDF page (printed page = PDF page − 4).",
+   "chars": 216611,
+   "bytes": 217686,
+   "sha256": "08cb1aa089b5c4d1fca6533632cf2e8772fae523c1cda229c1950452577896f3"
+  },
+  "intl-fsb-ai-sound-practices-consultation-2026-06": {
+   "batch": "EUINTL",
+   "title": "Financial Stability Board — Sound Practices for Responsible Adoption of Artificial Intelligence (AI), Consultation report (2026-06-10)",
+   "issuer": "FSB",
+   "date": "2026-06-10",
+   "source": "https://www.fsb.org/uploads/P100626.pdf",
+   "scope": "Full PDF text (66 pp.). =====PAGE n===== = PDF page.",
+   "chars": 179926,
+   "bytes": 180805,
+   "sha256": "7c9e340063a2e0fdaa44898d55f34679a197c8db4d0509601f8d9d594826f961"
+  }
+ }
+}

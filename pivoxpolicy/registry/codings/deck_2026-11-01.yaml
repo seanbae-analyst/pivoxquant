@@ -171,6 +171,16 @@ items:
     audit_trail:     {covered: false}
     kill_switch:     {covered: false, note: 패치 기한 지시 — 테스트 주제}
 
+  # 덱(2026-11-01)에 없던 문서 — BOD 22-01 이 2026-06-10 폐지되고 이것으로 대체된 것을 2026-11-11 에 확인해 등록. 1차 코더는 코딩하지 않았다.
+  us-cisa-bod-26-04:
+    inventory:       {covered: null}
+    vendors:         {covered: null}
+    unique_id:       {covered: null}
+    least_privilege: {covered: null}
+    human_approval:  {covered: null}
+    audit_trail:     {covered: null}
+    kill_switch:     {covered: null}
+
   # ── EU ──────────────────────────────────────────────────────────────
   eu-ai-act-art14:
     inventory:       {covered: null,  note: 고위험 AI 등록(Art. 49·71 EU DB) 은 제14조 밖 — 문서 범위를 넓히면 true 후보}

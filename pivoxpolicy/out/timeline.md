@@ -2,7 +2,7 @@
 
 | 날짜 | 관할 | 발행 | 문서 | 유형 | 구속력 | 에이전트 명시 | 상태 |
 |---|---|---|---|---|---|---|---|
-| 2021-11-03 | US | CISA | [CISA Binding Operational Directive 22-01 — Reducing the Significant Risk of Known Exploited Vulnerabilities](https://www.cisa.gov/news-events/directives/bod-22-01-reducing-significant-risk-known-exploited-vulnerabilities) | regulation | 2 | 아니오 | in_force |
+| 2021-11-03 | US | CISA | [CISA Binding Operational Directive 22-01 — Reducing the Significant Risk of Known Exploited Vulnerabilities (폐지 2026-06-10)](https://www.cisa.gov/news-events/directives/bod-22-01-reducing-significant-risk-known-exploited-vulnerabilities) | regulation | 2 | 아니오 | superseded |
 | 2022-10-25 | INTL | ISO/IEC | [ISO/IEC 27001:2022 — Information security management systems (Annex A controls)](https://www.iso.org/standard/27001) | standard | 1 | 아니오 | final |
 | 2023-11-01 | US | New York Department of Financial Services (NYDFS) | [NYDFS Cybersecurity Regulation, 23 NYCRR Part 500 (2023 amendment)](https://www.dfs.ny.gov/industry_guidance/cybersecurity) | regulation | 2 | 아니오 | in_force |
 | 2023-12-18 | INTL | ISO/IEC | [ISO/IEC 42001:2023 — AI management system](https://www.iso.org/standard/42001) | standard | 1 | 확인 필요 | final |
@@ -21,6 +21,7 @@
 | 2026-05-07 | US | OCC | [OCC Semiannual Risk Perspective (Spring 2026) — banks adopting generative/agentic AI cautiously](https://www.occ.gov/publications-and-resources/publications/semiannual-risk-perspective/index-semiannual-risk-perspective.html) | report | 0 | 예 | final |
 | 2026-05-21 | US | NYDFS | [NYDFS Industry Letters (2) — Frontier AI Models advisory + Heightened Threat Environment guidance](https://www.dfs.ny.gov/industry-guidance/industry-letters/20260521-heightened-cybersecurity-risks-assoc-with-frontier-ai-models) | supervisory_guidance | 1 | 확인 필요 | final |
 | 2026-06-10 | INTL | Financial Stability Board (FSB) | [FSB — Sound Practices for Responsible Adoption of AI, Consultation report](https://www.fsb.org/2026/06/sound-practices-for-responsible-adoption-of-artificial-intelligence-ai-consultation-report/) | draft | 1 | 예 | superseded |
+| 2026-06-10 | US | CISA | [CISA Binding Operational Directive 26-04 — Prioritizing Security Updates Based on Risk](https://www.cisa.gov/news-events/directives/bod-26-04-prioritizing-security-updates-based-risk) | regulation | 2 | 아니오 | in_force |
 | 2026-06-18 | KR | 금융위원회 (FSC) | [금융분야 AI 가이드라인 (개정) — 7원칙, 보조적 역할·사람 개입](https://www.fsc.go.kr/no010101/87142) | guideline | 1 | 확인 필요 | in_force |
 | 2026-06-18 | KR | 금융위원회 (FSC) | 금융위 보도자료 (2026-06-18) — AI 가이드라인 개정 발표, 에이전트 거버넌스 TF 예고 | press_release | 0 | 예 | announced |
 | 2026-07-02 | KR | 금융위원회 (FSC) | [프런티어 AI 보안위협 금융분야 대응요령 + AI 보안테스트·패치 전산장애 면책](https://www.fsc.go.kr/no010101/87240) | guideline | 1 | 확인 필요 | in_force |
