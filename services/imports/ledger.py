@@ -25,8 +25,8 @@ from models import Position, PreTradeReflection, TradeHistory
 from models.import_batch import PendingTrade
 from services import fx_service
 from services.kr_stock_registry import get_name
-from services.position_writes import FREE_POSITION_CAP
-from services.pre_trade.friction_outcome import _KR_SUFFIXES, ticker_key
+from services.position_writes import FREE_POSITION_CAP, same_stock_ticker
+from services.pre_trade.friction_outcome import _is_buy_side, same_stock_variants, ticker_key
 from services.ticker_normalizer import is_korean_ticker
 
 from . import KST_OFFSET, is_date_only, utcnow_naive
@@ -70,6 +70,9 @@ def apply_pending(user_id: int, pending: PendingTrade, thesis: str) -> tuple[int
     # User lock because seed capital is never touched, so no cycle). SQLite
     # no-ops the lock; on Postgres it serialises a webhook batch against a
     # manual trade on the same position.
+    # 2026-11-11: a fill on another spelling of a held stock (".KS" for a
+    # ".KQ" position) lands on that position, not a second one.
+    ticker = same_stock_ticker(user_id, ticker)
     pos = (
         db.session.query(Position)
         .filter_by(user_id=user_id, ticker=ticker)
@@ -184,8 +187,7 @@ def _ticker_variants(ticker: str) -> list[str]:
     one same-stock rule with ``pre_trade.link.same_ticker``). The first-dot
     split used here before missed a pause on ``035720.KQ`` for a fill on
     ``035720.KS`` and took ``BRK`` for ``BRK.B``."""
-    key = ticker_key(ticker)
-    return [key] + [key + suffix for suffix in _KR_SUFFIXES]
+    return same_stock_variants(ticker)
 
 
 def _reflection_ceiling(traded_at: datetime) -> datetime:
@@ -222,10 +224,17 @@ class PreTradeIndex:
             .all()
         )
         for r in found:
+            # 2026-11-11: only a pause before buying can precede a buy — an
+            # EXIT pause (side "SELL") showed as "멈춤 기록 있음" on a buy fill.
+            if not _is_buy_side(r):
+                continue
             self.rows.setdefault(ticker_key(r.intended_ticker), []).append((r.created_at, r.id))
 
-    def match(self, ticker: str | None, traded_at: datetime | None) -> int | None:
-        if not ticker or traded_at is None:
+    def match(self, ticker: str | None, traded_at: datetime | None,
+              action: str | None = "BUY") -> int | None:  # // legal-ok — trade action data value
+        # The pause link is buy-only (pre_trade.link refuses a sell), so a sell
+        # fill never "matches" — it would show a pause record that cannot link.
+        if not ticker or traded_at is None or str(action or "").upper() != "BUY":  # // legal-ok
             return None
         ceiling = _reflection_ceiling(traded_at)
         best: tuple[datetime, int] | None = None
@@ -236,12 +245,14 @@ class PreTradeIndex:
         return best[1] if best else None
 
 
-def match_pre_trade(user_id: int, ticker: str | None, traded_at: datetime | None) -> int | None:
-    """Latest reflection for the same ticker in the 7 days before the fill
-    (a date-only fill: up to the end of its KST day)."""
-    if not ticker or traded_at is None:
+def match_pre_trade(user_id: int, ticker: str | None, traded_at: datetime | None,
+                    action: str | None = "BUY") -> int | None:  # // legal-ok — trade action data value
+    """Latest buy-side reflection for the same ticker in the 7 days before a
+    buy fill (a date-only fill: up to the end of its KST day). A sell fill
+    never matches — the pause link is buy-only."""
+    if not ticker or traded_at is None or str(action or "").upper() != "BUY":  # // legal-ok
         return None
-    row = (
+    rows = (
         PreTradeReflection.query
         .filter(
             PreTradeReflection.user_id == user_id,
@@ -250,9 +261,9 @@ def match_pre_trade(user_id: int, ticker: str | None, traded_at: datetime | None
             PreTradeReflection.created_at >= traded_at - PRE_TRADE_WINDOW,
         )
         .order_by(PreTradeReflection.created_at.desc())
-        .first()
+        .all()
     )
-    return row.id if row else None
+    return next((r.id for r in rows if _is_buy_side(r)), None)
 
 
 __all__ = ["apply_pending", "match_pre_trade", "PreTradeIndex", "LedgerError", "FREE_POSITION_CAP"]

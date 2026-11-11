@@ -7,6 +7,9 @@ from flask_login import current_user
 from services.legal_filter import scrub_response
 
 
+_ERROR_KEYS = frozenset({"error"})
+
+
 def _deep_scrub(obj, skip_keys=None):
     """Recursively walk a JSON-shaped structure, scrubbing every string leaf.
 
@@ -62,7 +65,18 @@ def legal_scrub_response(f=None, *, skip_keys=None):
                     data = resp.get_json()
                 except Exception:
                     return result
-                return jsonify(_deep_scrub(data, skip)), status
+                # 2026-11-11: an error body's English ``error`` is a system
+                # message ("period must be one of …"), not prose — the bare
+                # "Must" rule turned it into "period is recorded as be one
+                # of". Error responses keep that one key as written.
+                eff = skip
+                try:
+                    is_error = int(status) >= 400
+                except (TypeError, ValueError):
+                    is_error = False
+                if is_error and isinstance(data, dict):
+                    eff = (skip or frozenset()) | _ERROR_KEYS
+                return jsonify(_deep_scrub(data, eff)), status
             return result
         return wrapped
 

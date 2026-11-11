@@ -105,7 +105,10 @@ def start_cooldown(
     # Canonicalise before any storage / lookup so a bare "035760" lands as
     # "035760.KQ" (registry-guided) instead of a naked code that the Journal
     # would later render without a company name. Mirrors the portfolio routes.
-    ticker = normalize_ticker(str(ticker))
+    if not isinstance(ticker, str):
+        # 123 / ["AAPL"] / {"a": 1} were stored as "123" / "['AAPL']" (2026-11-11)
+        raise ValueError("ticker must be text")
+    ticker = normalize_ticker(ticker)
     if not ticker:
         raise ValueError("ticker is required")
     if len(ticker) > _TICKER_MAX_LEN:
@@ -525,13 +528,19 @@ def _load_owned(
     return row
 
 
+_SIDE_ALIASES = {"BUY": "BUY", "SELL": "SELL", "매수": "BUY", "매도": "SELL"}  # // legal-ok — stored side codes
+
+
 def _normalise_side(side: Any) -> str | None:
-    if side is None:
+    """``None`` / ``""`` → no side. 2026-11-11: anything else that is not a
+    side ("HOLD", 1, "매도") was stored as NULL, which friction_outcome reads
+    as a pause before buying — an exit pause counted as a buy pause. Korean
+    labels map; the rest is refused."""
+    if side is None or (isinstance(side, str) and not side.strip()):
         return None
-    s = str(side).strip().upper()
-    if s in ("BUY", "SELL"):
-        return s
-    return None
+    if not isinstance(side, str) or side.strip().upper() not in _SIDE_ALIASES:
+        raise ValueError("side must be BUY or SELL")
+    return _SIDE_ALIASES[side.strip().upper()]
 
 
 def _sane_volatility(v: Any) -> float | None:

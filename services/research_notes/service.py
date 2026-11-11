@@ -50,7 +50,7 @@ from models.research_note import (
 )
 from models.trade_history import REGISTRATION_SOURCES
 from services.imports import is_date_only, ticker_ok
-from services.pre_trade.friction_outcome import _KR_SUFFIXES, ticker_key
+from services.pre_trade.friction_outcome import same_stock_variants, ticker_key
 from services.ticker_normalizer import normalize_ticker
 
 logger = logging.getLogger(__name__)
@@ -81,8 +81,7 @@ def _same_stock(ticker: str) -> list[str]:
     """Every stored spelling of one stock: a note on ``035760.KS`` and a sell
     on ``035760.KQ`` are the same name (``ticker_key``, the rule the rest of
     the journal uses). Exact-match lookups split them (2026-11-11)."""
-    key = ticker_key(ticker)
-    return [key] + [key + suffix for suffix in _KR_SUFFIXES]
+    return same_stock_variants(ticker)
 
 def kst_today(now: datetime | None = None) -> date:
     now = now or datetime.now(timezone.utc)
@@ -335,7 +334,9 @@ def review_research(note_id: int, user_id: int, data) -> dict:
     """
     if not isinstance(data, dict):
         raise ValueError("body must be a JSON object")
-    row = _load_owned(note_id, user_id)
+    # 2026-11-11: row lock, as pre-trade proceed takes — two concurrent
+    # scorings both passed the "already scored" check (Postgres; SQLite no-op).
+    row = _load_owned(note_id, user_id, lock=True)
     if row.reviewed_at is not None:
         raise ValueError("this note is already scored")
     verdicts = data.get("verdicts")
@@ -567,12 +568,15 @@ def _filter_written(query, since, until):
 
 # ── Internals ────────────────────────────────────────────────────────
 
-def _load_owned(note_id, user_id) -> ResearchNote:
+def _load_owned(note_id, user_id, *, lock: bool = False) -> ResearchNote:
     nid = _optional_int(note_id)
+    q = ResearchNote.query.filter(
+        ResearchNote.id == nid, ResearchNote.user_id == int(user_id)
+    )
+    if lock:
+        q = q.with_for_update()
     row = (
-        ResearchNote.query.filter(
-            ResearchNote.id == nid, ResearchNote.user_id == int(user_id)
-        ).first()
+        q.first()
         if nid is not None
         else None
     )
@@ -596,6 +600,8 @@ def _optional_int(raw) -> int | None:
 
 def _clamp_int(raw, *, default: int, maximum: int) -> int:
     val = _optional_int(raw)
-    if val is None:
+    # 2026-11-11: a non-positive limit means "default", as the observation-
+    # note and pre-trade lists treat it (it returned 1 row here).
+    if val is None or val <= 0:
         return default
-    return max(1, min(val, maximum))
+    return min(val, maximum)

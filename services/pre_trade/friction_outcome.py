@@ -66,6 +66,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import statistics
 from datetime import datetime, timedelta, timezone
 from collections.abc import Iterable
@@ -138,7 +139,28 @@ def ticker_key(ticker: Any) -> str:
     for suffix in _KR_SUFFIXES:
         if t.endswith(suffix):
             return t[: -len(suffix)]
+    # 2026-11-11: a US class share is written both ways — "BRK.B" and
+    # "BRK-B" are one stock (two positions, two free-plan slots before).
+    m = _CLASS_SHARE.match(t)
+    if m:
+        return f"{m.group(1)}-{m.group(2)}"
     return t
+
+
+# "BRK.B" / "BRK-B" / "BF.A" — 1–5 letters, a dot or dash, one class letter.
+_CLASS_SHARE = re.compile(r"^([A-Z]{1,5})[.\-]([A-Z])$")
+
+
+def same_stock_variants(ticker: Any) -> list[str]:
+    """Every stored spelling :func:`ticker_key` treats as ``ticker`` — for a
+    SQL ``IN`` lookup (the key itself, each KR suffix, and both class-share
+    spellings)."""
+    key = ticker_key(ticker)
+    out = [key] + [key + suffix for suffix in _KR_SUFFIXES]
+    m = _CLASS_SHARE.match(key)
+    if m:
+        out.append(f"{m.group(1)}.{m.group(2)}")
+    return out
 
 
 def _median_mean(values: list[float]) -> tuple[float | None, float | None]:

@@ -189,10 +189,9 @@ def serialize_alert(a) -> dict:
         "read_at": (a.read_at.isoformat() + "Z") if getattr(a, "read_at", None) else None,
         # Legacy fields
         "message": message,
-        "signal": a.signal,
-        "score": a.score,
-        "rec_shares": a.rec_shares,
-        "rec_investment": a.rec_investment,
+        # 2026-11-11: signal / score / rec_shares / rec_investment dropped —
+        # always null or 0 since the signal surfaces were deleted, no reader
+        # in frontend/src, and "rec_*" is recommendation vocabulary.
         "created_at": (a.created_at.isoformat() + "Z") if a.created_at else None,
         "is_read": a.is_read,
     }

@@ -331,6 +331,13 @@ def submit_onboarding():
     if is_v3_submission:
         _apply_questionnaire_v3(profile, answers, profile_v3_result)
 
+    # 2026-11-11: an empty (skip) submission after V3 answers left the
+    # answers and declared vector in place but reset the type to "balanced"
+    # — half a reset. A skip only sets the type when nothing was answered.
+    keep_answered = (not is_v3_submission and profile.questionnaire_version == 3
+                     and bool(profile.onboarding_answers()))
+    if keep_answered:
+        profile_type = profile.profile_type or profile_type
     # Set profile type and apply quant presets
     profile.profile_type = profile_type
     profile.apply_preset()
@@ -634,11 +641,21 @@ def update_profile():
         )
 
     from services.profile.questionnaire import (
+        V3_QUESTION_IDS,
         calculate_profile_v3,
         invalid_v3_answer_field,
         is_v3_answers,
     )
     is_v3_submission = is_v3_answers(answers)
+    if is_v3_submission and isinstance(answers, dict):
+        # 2026-11-11: a payload carrying one answer replaced the whole set —
+        # the other axes vanished from declared_vector and a free change was
+        # spent. Questions the payload leaves out keep the stored answer.
+        _existing = InvestmentProfile.query.filter_by(user_id=current_user.id).first()
+        if _existing is not None:
+            kept = {k: v for k, v in _existing.onboarding_answers().items()
+                    if k in V3_QUESTION_IDS and k not in answers}
+            answers = {**kept, **answers}
     if not is_v3_submission:
         return api_error(
             en="Unrecognised questionnaire payload. Reload the app and try again.",

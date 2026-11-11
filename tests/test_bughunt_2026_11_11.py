@@ -152,3 +152,149 @@ def test_unresolved_codes_are_not_duplicates(client, auth_user):
 def test_inbox_unauthenticated_is_json_401(app):
     r = app.test_client().get("/api/inbox")
     assert r.status_code == 401 and r.is_json
+
+
+# ═════ round 2 ("다 고쳐") ═══════════════════════════════════════════
+
+RATIONALE = "실적 발표 전에 숫자를 확인하고 분할로 들어가려는 계획이다"
+
+
+def _positions(client):
+    rows = client.get("/api/portfolio/positions").get_json()
+    return rows if isinstance(rows, list) else rows.get("positions") or rows.get("data")
+
+
+# ── import matching respects the pause side (frozen: imports/ledger.py) ──
+
+def test_sell_fill_never_matches_a_pause(client, auth_user):
+    client.post("/api/pre-trade/start", json={"ticker": "005930.KS", "side": "BUY", "rationale": RATIONALE})
+    r = client.post("/api/portfolio/imports/", json={
+        "text": "삼성전자 10주 매도 체결 71,200원", "source": "screenshot_text", "consent": True})
+    assert r.status_code == 201, r.get_json()
+    assert r.get_json()["pending"][0]["pre_trade_reflection_id"] is None
+
+
+def test_buy_fill_does_not_match_an_exit_pause(client, auth_user):
+    client.post("/api/pre-trade/start", json={"ticker": "035720.KS", "side": "SELL", "rationale": RATIONALE})
+    r = client.post("/api/portfolio/imports/", json={
+        "text": "카카오 5주 매수 체결 50,000원", "source": "screenshot_text", "consent": True})
+    assert r.status_code == 201, r.get_json()
+    assert r.get_json()["pending"][0]["pre_trade_reflection_id"] is None
+
+
+# ── /pre-trade/start input types (frozen: pre_trade/friction.py) ─────
+
+@pytest.mark.parametrize("ticker", [123, ["AAPL"], {"a": 1}])
+def test_pre_trade_rejects_non_string_ticker(client, auth_user, ticker):
+    r = client.post("/api/pre-trade/start", json={"ticker": ticker, "side": "BUY", "rationale": RATIONALE})
+    assert r.status_code == 400
+
+
+@pytest.mark.parametrize("side", ["HOLD", 1, "sideways"])
+def test_pre_trade_rejects_unknown_side(client, auth_user, side):
+    r = client.post("/api/pre-trade/start", json={"ticker": "AAPL", "side": side, "rationale": RATIONALE})
+    assert r.status_code == 400
+
+
+def test_pre_trade_maps_korean_side(app, client, auth_user):
+    r = client.post("/api/pre-trade/start", json={"ticker": "AAPL", "side": "매도", "rationale": RATIONALE})
+    assert r.status_code in (200, 201), r.get_json()
+    with app.app_context():
+        assert PreTradeReflection.query.filter_by(user_id=auth_user["id"]).one().intended_side == "SELL"
+
+
+# ── reflection_id 1.5 is refused, not truncated (frozen: pre_trade/link.py) ──
+
+def test_reflection_id_float_is_refused(client, auth_user):
+    from services.pre_trade.link import ReflectionLinkError, resolve_reflection_link
+    with pytest.raises(ReflectionLinkError):
+        resolve_reflection_link(auth_user["id"], 1.5, ticker="AAPL", action="buy")
+
+
+# ── one stock is one position ────────────────────────────────────────
+
+@pytest.mark.parametrize("a,b", [("035760.KQ", "035760.KS"), ("BRK.B", "brk-b")])
+def test_second_spelling_merges_into_one_position(client, auth_user, no_cache, a, b):
+    client.post("/api/portfolio/positions", json={"symbol": a, "quantity": 2, "price": 100})
+    client.post("/api/portfolio/positions", json={"symbol": b, "quantity": 4, "price": 100})
+    rows = _positions(client)
+    assert len(rows) == 1 and float(rows[0]["shares"]) == 6
+
+
+def test_ticker_key_class_shares():
+    from services.pre_trade.friction_outcome import ticker_key
+    assert ticker_key("BRK.B") == ticker_key("BRK-B")
+    assert ticker_key("BRK.A") != ticker_key("BRK.B")
+    assert ticker_key("005930.KQ") == ticker_key("005930.KS") == "005930"
+
+
+def test_fifo_sell_on_other_spelling_closes_the_lot():
+    from types import SimpleNamespace as N
+    from services.profile.fifo_util import fifo_match_closed_trades
+    t0 = datetime(2026, 1, 1)
+    trades = [
+        N(id=1, ticker="035760.KS", action="BUY", shares=1, price_per_share=100, traded_at=t0, pnl=0, source=None),
+        N(id=2, ticker="035760.KQ", action="SELL", shares=1, price_per_share=120, traded_at=t0 + timedelta(days=5), pnl=20, source=None),
+    ]
+    pairs = fifo_match_closed_trades(trades)
+    assert len(pairs) == 1
+
+
+# ── error strings are not rewritten by the legal scrub ───────────────
+
+def test_error_message_keeps_must(client, auth_user):
+    r = client.get("/api/behavior/holding-mirror?period=ALL")
+    assert r.status_code == 400
+    assert "is recorded as" not in r.get_json()["error"]
+
+
+# ── onboarding: skip keeps V3 answers whole; partial PUT merges ─────
+
+def _v3_answers(**over):
+    from services.profile.questionnaire import LEGAL_BLOCK, QUESTIONNAIRE_V3
+    ans = {q["id"]: q["options"][0]["value"] for q in QUESTIONNAIRE_V3 if q["id"] != "legal_confirmations"}
+    ans.update(over)
+    ans["legal_confirmations"] = [o["value"] for o in LEGAL_BLOCK["options"]]
+    return ans
+
+
+def test_skip_after_v3_keeps_profile_type(client, auth_user, add_position):
+    add_position(auth_user["id"], ticker="ONBOARD", shares=0.0)  # holdings gate
+    assert client.post("/api/profile/onboarding", json={"answers": _v3_answers()}).status_code == 200
+    before = client.get("/api/profile").get_json()
+    client.post("/api/profile/onboarding", json={})
+    after = client.get("/api/profile").get_json()
+    pick = lambda j: (j.get("profile") or j).get("profile_type")  # noqa: E731
+    assert pick(after) == pick(before)
+
+
+def test_partial_put_keeps_other_answers(app, client, auth_user, add_position):
+    from models import InvestmentProfile
+    from services.profile.questionnaire import LEGAL_BLOCK, V3_QUESTION_IDS
+    add_position(auth_user["id"], ticker="ONBOARD", shares=0.0)  # holdings gate
+    assert client.post("/api/profile/onboarding", json={"answers": _v3_answers()}).status_code == 200
+    one = sorted(V3_QUESTION_IDS)[0]
+    r = client.put("/api/profile", json={"answers": {
+        one: _v3_answers()[one],
+        "legal_confirmations": [o["value"] for o in LEGAL_BLOCK["options"]]}})
+    assert r.status_code == 200, r.get_json()
+    with app.app_context():
+        stored = InvestmentProfile.query.filter_by(user_id=auth_user["id"]).one().onboarding_answers()
+    assert set(stored) == set(V3_QUESTION_IDS)
+
+
+# ── smaller ones ─────────────────────────────────────────────────────
+
+def test_normalize_ticker_strips_nul():
+    from services.ticker_normalizer import normalize_ticker
+    assert normalize_ticker("AAPL\x00") == "AAPL"
+
+
+def test_alert_serializer_drops_rec_keys():
+    from types import SimpleNamespace as N
+    from services.serializers import serialize_alert
+    a = N(id=1, kind="concentration", ticker="AAPL", title="t", message="m", signal=None, score=0,
+          rec_shares=None, rec_investment=None, created_at=None, is_read=False, read_at=None,
+          alert_type="concentration", body="m", name=None, stock_name=None, data_json=None)
+    out = serialize_alert(a)
+    assert not {"rec_shares", "rec_investment", "signal", "score"} & set(out)

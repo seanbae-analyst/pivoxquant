@@ -768,7 +768,12 @@ def doorway_summary(user_id: int, *, days: int = DEFAULT_WINDOW_DAYS, now: datet
 
 
 def list_checks(user_id: int, *, limit: int = 50, before_id: int | None = None) -> dict:
-    limit = max(1, min(int(limit or 50), LIST_LIMIT_MAX))
+    try:
+        limit = int(limit or 50)
+    except (TypeError, ValueError):
+        limit = 50
+    # non-positive → default, as the other journal lists do (2026-11-11)
+    limit = min(limit if limit > 0 else 50, LIST_LIMIT_MAX)
     q = DoorwayCheck.query.filter(DoorwayCheck.user_id == user_id)
     if before_id:
         q = q.filter(DoorwayCheck.id < before_id)

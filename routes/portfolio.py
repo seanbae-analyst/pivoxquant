@@ -666,9 +666,12 @@ def create_position_alias():
     # unchanged. SQLite no-ops the lock.
     from services.position_writes import (
         FREE_POSITION_CAP, blocks_new_symbol, lock_user_row, merge_buy_into,
+        same_stock_ticker,
     )
     # Resolved before the User lock (may hit a registry / KIS) — used for the
     # holding seed row and the response.
+    # 2026-11-11: one stock is one position — a second spelling merges.
+    symbol = same_stock_ticker(current_user.id, symbol)
     resolved_name = resolve_stock_name(symbol)
     lock_user_row(current_user.id)
     # 2026-09-29: the cap limits symbols — adding to an already-held ticker

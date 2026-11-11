@@ -60,12 +60,38 @@ def holds_ticker(user_id: int, ticker: str) -> bool:
     checks this first and applies the cap only to a new symbol (the holdings
     import already exempted merges)."""
     from models import Position
+    from services.pre_trade.friction_outcome import same_stock_variants
+    # 2026-11-11: any spelling of the same stock (035760.KS / .KQ, BRK.B /
+    # BRK-B) — one stock is one symbol for the cap.
     return (
-        Position.query.filter_by(user_id=user_id, ticker=ticker)
+        Position.query.filter(Position.user_id == user_id,
+                              Position.ticker.in_(same_stock_variants(ticker)))
         .filter(Position.shares > 0)
         .first()
         is not None
     )
+
+
+def same_stock_ticker(user_id: int, ticker: str) -> str:
+    """The spelling ``user_id``'s existing position uses for ``ticker``'s
+    stock, else ``ticker``. Every add path canonicalises on this first, so a
+    second spelling ("035760.KS" after "035760.KQ", "BRK-B" after "BRK.B")
+    merges into the held row instead of opening a second position and a
+    second free-plan slot (2026-11-11). A held row wins over a zero-share
+    one; the exact spelling wins within each."""
+    from models import Position
+    from services.pre_trade.friction_outcome import same_stock_variants
+    rows = (
+        Position.query.filter(Position.user_id == user_id,
+                              Position.ticker.in_(same_stock_variants(ticker)))
+        .order_by(Position.id)
+        .all()
+    )
+    held = [p for p in rows if p.shares and p.shares > 0]
+    for group in (held, rows):
+        if group:
+            return next((p.ticker for p in group if p.ticker == ticker), group[0].ticker)
+    return ticker
 
 
 def merge_buy_into(ex_row, quantity: float, price: float, *, is_kr: bool,

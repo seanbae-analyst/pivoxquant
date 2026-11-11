@@ -108,6 +108,15 @@ class MatchedPair(NamedTuple):
         return max(0.0, delta_seconds / 86400.0)
 
 
+def _stock_key(ticker) -> str:
+    """Lots are matched per stock, not per spelling (2026-11-11): a sell on
+    ``035760.KQ`` closes a buy on ``035760.KS``, ``BRK-B`` one on ``BRK.B``.
+    Same rule as ``friction_outcome.ticker_key`` (imported lazily — that
+    module imports this one)."""
+    from services.pre_trade.friction_outcome import ticker_key
+    return ticker_key(ticker)
+
+
 def is_holding_seed(t) -> bool:
     """True when ``t`` is a holding-registration seed row, not a fill.
 
@@ -182,7 +191,7 @@ def fifo_match_closed_trades(
 
     for t in ordered:
         action = (t.action or "").upper()
-        key = t.ticker.upper()
+        key = _stock_key(t.ticker)
         shares = float(t.shares or 0.0)
         if shares <= 0:
             continue
@@ -204,7 +213,7 @@ def fifo_match_closed_trades(
             take = min(buy_sh, remaining)
             pairs.append(
                 MatchedPair(
-                    ticker=key,
+                    ticker=t.ticker.upper(),
                     quantity=take,
                     buy_time=buy_time,
                     sell_time=t.traded_at,
@@ -270,7 +279,7 @@ def fifo_match_closed_trades_with_pnl(
 
     for t in ordered:
         action = (t.action or "").upper()
-        key = t.ticker.upper()
+        key = _stock_key(t.ticker)
         shares = float(t.shares or 0.0)
         if shares <= 0:
             continue
@@ -296,7 +305,7 @@ def fifo_match_closed_trades_with_pnl(
             take = min(buy_sh, remaining)
             attributed.append((
                 MatchedPair(
-                    ticker=key,
+                    ticker=t.ticker.upper(),
                     quantity=take,
                     buy_time=buy_time,
                     sell_time=t.traded_at,
@@ -442,7 +451,7 @@ def fifo_open_position_ages(
     opens: dict[str, list[list]] = {}  # ticker → [[buy_time, remaining_sh, is_seed], …]
     for t in ordered:
         action = (t.action or "").upper()
-        key = t.ticker.upper()
+        key = _stock_key(t.ticker)
         shares = float(t.shares or 0.0)
         if shares <= 0:
             continue
