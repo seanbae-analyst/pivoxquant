@@ -3,6 +3,13 @@
 규칙: 날짜 · 무엇 · 어디서 알았나 · 다음 행동. 문서로 올리면 여기서 지운다.
 "웹 검색" 은 2차 자료(법무법인·언론) 요약이라 원문 확인 전까지 수치·문구를 인용하지 않는다.
 
+## ⚠️ 덱 정정 — 발표 자료에 틀린 문장이 있었다 (2026-11-11 원문 대조)
+
+- **슬라이드 14 노트 "FSB 최종본(10-15)에서 개별 식별자 문구가 빠졌다" 는 틀렸다.** 원문 PDF(https://www.fsb.org/uploads/P151026-1.pdf, 75쪽) §2.3 Attribution, PDF p.30:
+  "Visibility assigns individual unique identifiers to each AI agent … Unique identifiers for agents allow them to be easily differentiated from human users".
+  빠진 것은 협의안의 '합성 직원(synthetic employee)' 문구뿐(최종본 0건). → 코딩 `intl-fsb-ai-sound-practices-2026-10.unique_id` 를 true 로, 인벤토리(p.30·31)도 true 로 정정. 매트릭스 INTL 칸 점수는 그대로(1 — FSB 는 자율).
+  **논문·제출본에서 이 문장을 고쳐야 한다.** 같은 PDF 로 확인: 위험기반 승인 트리거 p.56, kill-switch 구현·테스트 p.57, 목표·권한·데이터 분리 p.41.
+
 ## 덱(2026-11-01) 이후 — 논문 수치 갱신 필요
 
 | 날짜 | 무엇 | 어디서 | 다음 행동 |

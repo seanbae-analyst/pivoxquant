@@ -202,6 +202,11 @@ def validate_assessment(a: dict[str, Any], rubric: Rubric) -> list[str]:
                     problems.append(f"{did}.{sid}: observed true 면 evidence 필요")
                 if cell.get("evidence_level") not in EVIDENCE_LEVELS:
                     problems.append(f"{did}.{sid}: evidence_level 은 {EVIDENCE_LEVELS} 중 하나")
+    # 레벨 0 = '찾아봤으나 없음' — 찾아본 출처가 적혀 있어야 한다. 없으면 미평가(null)로 둬야 한다.
+    zeros = [d.id for d in rubric.dimensions
+             if derive_level(d, (a.get("scores") or {}).get(d.id) or {}).level == 0]
+    if zeros and not a.get("sources_checked"):
+        problems.append(f"레벨 0 차원 {len(zeros)}개({', '.join(zeros[:4])}…) — 찾아본 출처를 sources_checked 에 적어야 한다")
     return problems
 
 

@@ -49,8 +49,12 @@ def iri_to_uri(url: str) -> str:
     return urllib.parse.urlunsplit((parts.scheme, host, path, query, parts.fragment))
 
 
-def http_fetch(url: str, timeout: int = 30) -> FetchResult:
-    req = urllib.request.Request(iri_to_uri(url), headers={"User-Agent": USER_AGENT, "Accept": "*/*"})
+def http_fetch(url: str, timeout: int = 30, method: str = "GET", body: bytes | None = None,
+               headers: dict[str, str] | None = None) -> FetchResult:
+    h = {"User-Agent": USER_AGENT, "Accept": "*/*"}
+    if headers:
+        h.update(headers)
+    req = urllib.request.Request(iri_to_uri(url), data=body, headers=h, method=method)
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310 — 레지스트리의 http(s) URL 만
             return FetchResult(resp.status, resp.read(), resp.headers.get("Content-Type", ""))

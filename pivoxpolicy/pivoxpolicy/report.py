@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from . import assess as assess_mod
+from . import incidents as incidents_mod
 from . import kappa as kappa_mod
 from . import matrix as matrix_mod
 from . import rubric as rubric_mod
@@ -103,4 +104,7 @@ def write_all(
         for name, a in asmts.items():
             w(f"assessment-{name}.md", assess_mod.render_profile(assess_mod.build_profile(a, rub), rub))
         w("scoring-method.md", rubric_mod.render_codebook(rub))
+    incs = incidents_mod.load_incidents(control_ids={c.id for c in controls})
+    if incs:
+        w("incidents.md", incidents_mod.render_markdown(incs, controls))
     return written

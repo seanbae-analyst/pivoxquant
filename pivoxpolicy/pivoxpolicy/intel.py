@@ -14,7 +14,7 @@ import json
 import re
 import xml.etree.ElementTree as ET
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Any, Callable
@@ -235,6 +235,90 @@ def _now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+# ── 커스텀 API 어댑터 ─────────────────────────────────────────────────
+# JSON Feed 가 아닌 공공 API 를 피드처럼 읽는다. feeds.yaml 의 `adapter:` 로 고른다.
+# 각 어댑터 = (요청 만들기, 응답 → Item 목록). 2026-11-11 실측한 응답 모양 기준.
+
+def _request_for(feed: dict[str, Any], today: datetime) -> tuple[str, dict[str, Any]]:
+    """(url, fetcher kwargs). NVD 는 최근 90일 창을 붙이고, 금보원은 POST 본문을 만든다."""
+    url = feed["url"]
+    ad = feed.get("adapter")
+    if ad == "nvd":
+        # NVD 기본 정렬은 오래된 순 — 최근 공개 창을 지정해야 새 CVE 를 본다(최대 120일).
+        import urllib.parse as up
+        parts = up.urlsplit(url)
+        q = [(k, v) for k, v in up.parse_qsl(parts.query, keep_blank_values=True)
+             if k not in ("pubStartDate", "pubEndDate")]
+        start = (today - timedelta(days=90)).strftime("%Y-%m-%dT00:00:00.000")
+        end = today.strftime("%Y-%m-%dT23:59:59.999")
+        q += [("pubStartDate", start), ("pubEndDate", end)]
+        url = up.urlunsplit((parts.scheme, parts.netloc, parts.path, up.urlencode(q), ""))
+        return url, {}
+    if ad == "fsi_bbs":
+        body = json.dumps({"menuNo": str(feed.get("menu_no", "69")),
+                           "pagingSearchDto": {"page": 1, "pageSize": 20, "searchContents": "", "searchType": ""}})
+        return url, {"method": "POST", "body": body.encode("utf-8"),
+                     "headers": {"Content-Type": "application/json", "Accept": "application/json"}}
+    return url, {}
+
+
+def _jload(body: bytes) -> Any:
+    try:
+        return json.loads(body.decode("utf-8", errors="replace"))
+    except json.JSONDecodeError:
+        return None
+
+
+def parse_adapter(adapter: str, body: bytes, feed_id: str, feed: dict[str, Any] | None = None) -> list[Item]:
+    d = _jload(body)
+    if d is None:
+        return []
+    out: list[Item] = []
+    if adapter == "kev":
+        for v in d.get("vulnerabilities") or []:
+            cve = v.get("cveID", "")
+            title = f"{cve} · {v.get('vendorProject', '')} {v.get('product', '')} — {v.get('vulnerabilityName', '')}".strip()
+            out.append(Item(feed_id, title, f"https://nvd.nist.gov/vuln/detail/{cve}",
+                            parse_date(v.get("dateAdded")), _strip(v.get("shortDescription", ""))[:600]))
+    elif adapter == "nvd":
+        for v in d.get("vulnerabilities") or []:
+            c = v.get("cve") or {}
+            desc = next((x.get("value", "") for x in c.get("descriptions", []) if x.get("lang") == "en"), "")
+            cid = c.get("id", "")
+            out.append(Item(feed_id, f"{cid} — {desc[:120]}", f"https://nvd.nist.gov/vuln/detail/{cid}",
+                            parse_date((c.get("published") or "")[:19]), desc[:600]))
+    elif adapter == "federalregister":
+        for r in d.get("results") or []:
+            out.append(Item(feed_id, _strip(r.get("title", "")), r.get("html_url", ""),
+                            parse_date(r.get("publication_date")), _strip(r.get("abstract") or "")[:600]))
+    elif adapter == "assembly":
+        # {서비스ID: [{head:[...]}, {row:[...]}]}
+        blocks = next(iter(d.values()), []) if isinstance(d, dict) else []
+        rows: list[dict[str, Any]] = []
+        for b in blocks if isinstance(blocks, list) else []:
+            if isinstance(b, dict) and "row" in b:
+                rows = b["row"] or []
+        for r in rows:
+            name = r.get("BILL_NAME", "")
+            res = r.get("PROC_RESULT") or "계류"
+            summary = " · ".join(x for x in (r.get("COMMITTEE"), r.get("PROPOSER"), res) if x)
+            out.append(Item(feed_id, f"{name} ({res})", r.get("DETAIL_LINK", ""),
+                            parse_date(r.get("PROPOSE_DT")), summary))
+    elif adapter == "fsi_bbs":
+        menu = str((feed or {}).get("menu_no", "69"))
+        for r in d.get("resultData") or []:
+            no = r.get("bbsNo")
+            out.append(Item(feed_id, _strip(html_unescape(r.get("title", ""))),
+                            f"https://www.fsec.or.kr/bbs/detail?menuNo={menu}&bbsNo={no}",
+                            parse_date(r.get("regDate")), _strip(html_unescape(r.get("contents") or ""))[:600]))
+    return out
+
+
+def html_unescape(s: str) -> str:
+    import html as _h
+    return _h.unescape(s or "")
+
+
 def collect(
     feeds: list[dict[str, Any]],
     known: list[Item],
@@ -247,18 +331,24 @@ def collect(
     new: list[Item] = []
     status: list[dict[str, Any]] = []
     ts = now or _now()
+    try:
+        today_dt = datetime.strptime(ts[:10], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    except ValueError:
+        today_dt = datetime.now(timezone.utc)
     for feed in feeds:
         fid, url = feed["id"], feed["url"]
         if feed.get("enabled") is False:
             status.append({"id": fid, "url": url, "status": "disabled"})
             continue
-        res = fetcher(url)
+        req_url, kw = _request_for(feed, today_dt)
+        res = fetcher(req_url, **kw) if kw else fetcher(req_url)
         st: dict[str, Any] = {"id": fid, "url": url, "http_status": res.status, "parsed": 0, "new": 0, "matched": 0}
         if res.status != 200 or not res.body:
             st["error"] = res.error or f"HTTP {res.status}"
             status.append(st)
             continue
-        items = parse_feed(res.body, fid)
+        ad = feed.get("adapter")
+        items = parse_adapter(ad, res.body, fid, feed) if ad else parse_feed(res.body, fid)
         if not items and feed.get("type") == "html":
             # HTML 목록은 fetch.extract_links 로 — intel 은 피드만 다룬다
             st["error"] = "html list — use `watch`"

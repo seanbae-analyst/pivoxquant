@@ -12,6 +12,10 @@ period: "2026"
 assessor: example
 provisional: true
 basis: 합성 예시. 실제 공개 자료 아님.
+sources_checked:
+  - "(예시) 2025 사업보고서 · 정보보호 현황"
+  - "(예시) 금감원 제재내용 공개안 검색 2024-01~2026-10"
+  - "(예시) 회사 보도자료 2025-2026"
 scores:
   inventory:
     mentions_ai_governance: {observed: true,  evidence: "사업보고서에 'AI 거버넌스 체계 운영' 원칙 언급(예시)", evidence_level: primary}

@@ -183,9 +183,9 @@ items:
 
   # ── INTL ────────────────────────────────────────────────────────────
   intl-fsb-ai-sound-practices-2026-10:
-    inventory:       {covered: null}
+    inventory:       {covered: true,  evidence: "원문 대조 정정(2026-11-11) — PDF p.30 사례 '조직 전체 AI inventory' · p.31 에이전트 인증 상태·허용 범위를 'inventory attributes' 로 기록"}
     vendors:         {covered: true,  evidence: "제3자 AI 의존 관리 (덱 슬라이드 14 노트)"}
-    unique_id:       {covered: false, note: 협의안의 '개별 에이전트 식별자' 가 최종본에서 빠짐 (덱 노트) — 최종본 재확인 필요}
+    unique_id:       {covered: true,  evidence: "원문 대조 정정(2026-11-11) — §2.3 Attribution, PDF p.30 'Visibility assigns individual unique identifiers to each AI agent … differentiated from human users'. 덱 노트('최종본에서 빠짐')는 틀렸다 — 빠진 것은 '합성 직원' 문구뿐"}
     least_privilege: {covered: true,  evidence: "에이전트 행위 제한 (덱 슬라이드 14 노트)"}
     human_approval:  {covered: true,  evidence: "위험기반 승인 트리거 (덱 슬라이드 14 노트)"}
     audit_trail:     {covered: true,  evidence: "에이전트 거래 감사기록 (덱 슬라이드 14 노트)"}

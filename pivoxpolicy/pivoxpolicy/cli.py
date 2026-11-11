@@ -8,6 +8,7 @@ from typing import Any
 
 from . import assess as assess_mod
 from . import fetch as fetch_mod
+from . import incidents as incidents_mod
 from . import intel as intel_mod
 from . import kappa as kappa_mod
 from . import matrix as matrix_mod
@@ -190,6 +191,12 @@ def cmd_assess_kappa(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_incidents(_: argparse.Namespace) -> int:
+    controls = load_controls()
+    print(incidents_mod.render_markdown(incidents_mod.load_incidents(control_ids={c.id for c in controls}), controls))
+    return 0
+
+
 def cmd_site(_: argparse.Namespace) -> int:
     p = site_mod.build()
     print(f"wrote {p}")
@@ -251,6 +258,7 @@ def build_parser() -> argparse.ArgumentParser:
     ak.add_argument("b")
     ak.set_defaults(fn=cmd_assess_kappa)
     sub.add_parser("report", help="out/ 에 매트릭스·연표·공백·kappa 전부 쓰기").set_defaults(fn=cmd_report)
+    sub.add_parser("incidents", help="AI 에이전트 보안 사건 × 통제 교차표").set_defaults(fn=cmd_incidents)
     sub.add_parser("site", help="out/index.html 정적 대시보드 생성 (Pivox 디자인)").set_defaults(fn=cmd_site)
     return p
 

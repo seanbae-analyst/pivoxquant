@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from . import incidents as incidents_mod
 from . import matrix as matrix_mod
 from . import rubric as rubric_mod
 from .intel import load_items
@@ -100,15 +101,33 @@ def _now_and_incidents(items: list) -> tuple[str, str, list[str], list[str]]:
     return now_html, inc_html, now_src, inc_src
 
 
-def _matrix_section(docs, controls, coding) -> tuple[str, str]:
+def _incident_rows(incs) -> str:
+    rows = []
+    for i in sorted(incs, key=lambda x: x.date, reverse=True):
+        k = " · ".join(x for x in (incidents_mod.AI_ROLE_KO.get(i.ai_role, i.ai_role), i.jurisdiction,
+                                    {"primary": "1차", "vendor": "벤더 분석", "press": "보도"}[i.evidence_level]) if x)
+        ctl = ", ".join(i.related_controls)
+        rows.append(f'<li><time datetime="{_e(i.date)}">{_e(i.date)}</time><div><div class="k">{_e(k)}</div>'
+                    f'<div class="t"><a href="{_e(i.source_url)}" target="_blank" rel="noopener">{_e(i.title)}</a></div>'
+                    + (f'<div class="s">관련 통제 — {_e(ctl)}</div>' if ctl else "") + "</div></li>")
+    return "\n".join(rows)
+
+
+def _matrix_section(docs, controls, coding, inc_counts=None) -> tuple[str, str]:
     m = matrix_mod.build_matrix(docs, controls, coding)
-    head = "<thead><tr><th>통제</th>" + "".join(f"<th>{j}</th>" for j in JURISDICTIONS) + "</tr></thead>"
+    inc_counts = inc_counts or {}
+    head = ("<thead><tr><th>통제</th>" + "".join(f"<th>{j}</th>" for j in JURISDICTIONS)
+            + ('<th class="num" title="이 통제가 실패했거나 관련된 AI 에이전트 사건 수 (1차 증거)">사건</th>' if inc_counts else "")
+            + "</tr></thead>")
     rows = []
     for c in controls:
         tds = [f"<th scope=\"row\">{c.num}. {_e(c.name_ko)}</th>"]
         for j in JURISDICTIONS:
             cell = m[j][c.id]
             tds.append(f'<td class="{_cell_class(cell.score)}">{_e(_cell_text(cell.score, cell.names_agents))}</td>')
+        if inc_counts:
+            r = inc_counts.get(c.id, {"total": 0, "primary": 0})
+            tds.append(f'<td class="num">{r["total"]}<span class="fine"> ({r["primary"]})</span></td>')
         rows.append("<tr>" + "".join(tds) + "</tr>")
     body = "<tbody>" + "\n".join(rows) + "</tbody>"
     return head + body, m
@@ -194,7 +213,17 @@ def build(out_dir: Path = OUT_DIR, snapshot_dir: Path = SNAPSHOT_DIR, now: datet
     today = now.strftime("%Y-%m-%d")
 
     now_html, inc_html, now_src, inc_src = _now_and_incidents(items)
-    matrix_html, m = _matrix_section(docs, controls, coding)
+    incs = incidents_mod.load_incidents(control_ids={c.id for c in controls})
+    inc_counts = incidents_mod.control_counts(incs)
+    if incs:
+        cur = sorted(incs, key=lambda x: x.date, reverse=True)
+        inc_html = (_incident_rows(cur[:12])
+                    + (f'<li class="more"><details><summary>사건 {len(cur) - 12}건 더 보기</summary><ul class="rows">'
+                       + _incident_rows(cur[12:]) + "</ul></details></li>" if len(cur) > 12 else "")
+                    + (f'<li class="more"><details><summary>피드에 새로 들어온 것</summary><ul class="rows">{inc_html}</ul></details></li>'
+                       if inc_html and "수집된 항목이 없습니다" not in inc_html else ""))
+        inc_src = ["registry/incidents.yaml"] + inc_src
+    matrix_html, m = _matrix_section(docs, controls, coding, inc_counts)
     gaps_html = _gaps_section(m, controls)
     cards_html, profile_html = _profile_section(rub)
     timeline_html, tl_range = _timeline_section(docs)
@@ -240,10 +269,10 @@ def build(out_dir: Path = OUT_DIR, snapshot_dir: Path = SNAPSHOT_DIR, now: datet
         "CHECKS": "점수·레벨 = 증거 수준",
         "NOW": now_html, "NOW_SOURCES": " · ".join(now_src) or "발행 주체 피드",
         "NOW_ASOF_ISO": today, "NOW_ASOF": today,
-        "INCIDENTS": inc_html, "INCIDENTS_SOURCES": " · ".join(inc_src) or "공식 공지·보고서",
+        "INCIDENTS": inc_html, "INCIDENTS_SOURCES": " · ".join(inc_src[:6]) or "공식 공지·보고서",
         "INCIDENTS_ASOF_ISO": today, "INCIDENTS_ASOF": today,
         "MATRIX_RUBRIC_ONE_LINE": "0 미다룸 · 1 자율 · 2 구속력 · 3 에이전트 명시 · ? 미확인",
-        "MATRIX_CAPTION": "행 = 7개 에이전트 통제 · 열 = 관할. 칸 = 그 관할에서 그 통제를 요구하는 가장 센 문서의 구속력.",
+        "MATRIX_CAPTION": "행 = 7개 에이전트 통제 · 열 = 관할. 칸 = 그 관할에서 그 통제를 요구하는 가장 센 문서의 구속력. 마지막 열 = 그 통제가 실패했거나 관련된 AI 에이전트 사건 수(괄호 = 1차 증거).",
         "MATRIX": matrix_html,
         "H0_LABEL": _H_LABEL[0], "H1_LABEL": _H_LABEL[1], "H2_LABEL": _H_LABEL[2], "H3_LABEL": _H_LABEL[3],
         "MATRIX_SOURCES": "registry/documents · codings", "MATRIX_ASOF_ISO": today, "MATRIX_ASOF": today,

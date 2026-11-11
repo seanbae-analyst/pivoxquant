@@ -4,3 +4,6 @@ td.h-1,.h-1{background:rgba(184,149,106,0.12);color:var(--pq-ivory-soft)}
 td.h-2,.h-2{background:rgba(184,149,106,0.28);color:var(--pq-ivory)}
 td.h-3,.h-3{background:rgba(184,149,106,0.50);color:var(--pq-ivory);font-weight:700}
 td.h-x,.h-x{background:transparent;color:var(--pq-ivory-dim);outline:1px dashed var(--pq-ivory-line-strong);outline-offset:-4px}
+.rows>li.more{display:block;padding:10px 0}
+.rows>li.more>details>summary{cursor:pointer;font-size:14px;color:var(--pq-bronze)}
+.rows>li.more>details>.rows{margin-top:10px}

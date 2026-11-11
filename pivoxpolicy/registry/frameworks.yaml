@@ -1,0 +1,68 @@
+# 평가 루브릭의 basis 가 가리키는 프레임워크 — pivoxpolicy-research 워크플로(2026-11-11)가 원문·공식 페이지를 받아 확인.
+# verified=true 는 그 에이전트가 URL 을 받아 봤다는 뜻. [press] 표시는 원문 미확보(보도로만).
+# FSB 최종본은 이 세션이 PDF(75쪽)를 다시 받아 쪽 번호를 대조했다.
+frameworks:
+  - name: "FSB — Sound Practices for Responsible Adoption of AI, Final report (2026-10-15), 12 sound practices"
+    url: "https://www.fsb.org/uploads/P151026-1.pdf"
+    verified: true
+    contributes: "curl 2026-11-11: 랜딩 200 HTML → PDF 200 application/pdf 940KB (pdftotext 3,993행). Annex(p.65) 12개 실제 독해 — SP1 Strategic direction and oversight · SP2 Governance and accountability · SP3 Incorporation of AI risks into RMF and documentation of AI use · SP4 Organisational adaptability · SP5 Materiality and risk assessment · SP6 Selection process · SP7 Data governance · SP8 Explainability and transparency · SP9 Performance management · SP10 Human oversight · SP11 Cyber and ICT risk management · SP12 Third-party AI risk management. 'agentic' 104회. §2.3 p.26: 'Visibility assigns individual unique identifiers to each AI agent' + Traceability(무엇이 촉발·어떤 도구·권한 안에서 행동했나) + 에이전트 인벤토리 속성(식별자·접근 도구·가드레일·agent certification 사례). §3.7: 'risk-based triggers for when an agent must seek human approval', 'implementing and testing risk-based kill-switch mechanisms to pause, limit, override or remove an agent's access', red teaming으로 'stop safely' 검증. ⚠ 레지스트리 요약(intl-fsb-ai-sound-practices-2026-10)의 '개별 식별자 문구는 최종본에서 빠짐'은 원문과 다르다 — 식별자는 최종본 §2.3에 남아 있다(사라진 것은 '합성 직원' 비유). 차원: inventory·unique_id·least_privilege·human_approval·audit_trail·kill_switch·vendors(SP12)·test_regime(SP11 'AI cyber scenarios into tests')."
+
+  - name: "NIST NCCoE Concept Paper (draft) — Accelerating the Adoption of Software and AI Agent Identity and Authorization (2026-02-05)"
+    url: "https://csrc.nist.gov/pubs/other/2026/02/05/accelerating-the-adoption-of-software-and-ai-agent/ipd"
+    verified: true
+    contributes: "curl 200 HTML 41KB. 본문: 에이전트에 '데이터셋·도구·애플리케이션 접근'을 줄 때 identification·authorization 통제 적용, 사용자 ID 연결. 차원: unique_id·least_privilege·audit_trail(데이터 흐름 추적)."
+
+  - name: "NIST IR 8596 (initial public draft, 2025-12) — Cyber AI Profile: Secure / Defend / Thwart"
+    url: "https://nvlpubs.nist.gov/nistpubs/ir/2025/NIST.IR.8596.iprd.pdf"
+    verified: true
+    contributes: "CSRC 페이지 200 + PDF 200 2.3MB. 원문 표기 순서는 Secure(Securing AI System Components) · Defend(Conducting AI-Enabled Cyber Defense) · Thwart(Thwarting AI-Enabled Cyber Attacks). 루브릭의 그룹 매핑: agent_control = Secure, testing/response = Defend+Thwart. 에이전트 명시 여부는 코딩 필요(names_agents null 유지)."
+
+  - name: "OWASP Top 10 for Agentic Applications 2026 (OWASP GenAI Security Project, Dec 2025)"
+    url: "https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/"
+    verified: true
+    contributes: "랜딩 200 HTML(본문에 ASI 문자열 0건 — 목록은 PDF) → https://genai.owasp.org/download/52117/ 200 PDF 8쪽. 실제 목록: ASI01 Agent Goal Hijack · ASI02 Tool Misuse and Exploitation · ASI03 Identity and Privilege Abuse · ASI04 Agentic Supply Chain Vulnerabilities · ASI05 Unexpected Code Execution · ASI06 Memory & Context Poisoning · ASI07 Insecure Inter-Agent Communication · ASI08 Cascading Failures · ASI09 Human-Agent Trust · ASI10 Rogue Agents. 차원 근거: unique_id/least_privilege(ASI03) · human_approval(ASI09) · vendors(ASI04) · kill_switch(ASI08·10) · audit_trail(ASI01·06 — 입력 출처 기록)."
+
+  - name: "CSA — Agentic AI Red Teaming Guide (2025) · MAESTRO threat modeling (2025-02-06)"
+    url: "https://cloudsecurityalliance.org/artifacts/agentic-ai-red-teaming-guide"
+    verified: true
+    contributes: "가이드 페이지 200 HTML 73KB(메타 설명: permission escalation·hallucination·memory manipulation 테스트). 본문에 12개 범주 전체 목록은 없음 → 12범주·4단계(preparation→execution→analysis→reporting) 수치는 2차 요약 기준, 미검증. MAESTRO 블로그 200: Layer 1 Foundation Models ~ Layer 7 Agent Ecosystem(7층) 실측. 차원: test_regime(에이전트 레드티밍 범위 기준), audit_trail(Untraceability는 2차 명칭)."
+
+  - name: "금융보안원 — 금융분야 AI 에이전트 보안 평가기준 (AI 레드티밍 17개 점검항목, 2026-10) [press]"
+    url: "https://www.fnnews.com/news/202610070845223704"
+    verified: true
+    contributes: "원문 미확보: fsec.or.kr/bbs/221·/bbs/1035 는 200이지만 목록이 스크립트 렌더링(data-page 속성만, 링크 0건). 보도 3건 200 실측 — fnnews 10-07 2건: '6개 분야 17개 점검 항목', 주요 항목 '실행 권한 및 격리 관리 · 도구 실행 및 승인 통제 · 작업 범위 및 결과 확인 · 자율 실행 제한 및 중단 여부', 올해 말 시범 검증 → 2027 정식. SBS Biz(biz.sbs.co.kr/amp/article/20000338699): '5개 분야 17개 항목'. ⚠ 분야 수 5 vs 6 보도 불일치 — 원문 확인 전 인용 금지. 차원: least_privilege·human_approval·kill_switch·test_regime(evidence_level=press)."
+
+  - name: "NYDFS 23 NYCRR Part 500 (2023 amendment text)"
+    url: "https://www.dfs.ny.gov/cybersecurity/23-NYCRR-Part-500"
+    verified: true
+    contributes: "200 application/pdf 1.0MB(pdftotext). 조문 실측: 500.4(b) CISO 연 1회 이상 senior governing body 서면보고(material cybersecurity events·remediation plans 포함), 500.4(c) 중대 이슈 적시 보고, 500.4(d) 이사회 감독(보고서 정기 수령·자원 확인) · 500.5(a)(1) 내·외부 penetration testing · 500.6 Audit trail · 500.7 Access privileges · 500.11 Third-party service provider · 500.13 Asset management(인벤토리: owner·location·classification·support expiration·RTO + 갱신 주기) · 500.16 Incident response · 500.17(a) 72시간 내 superintendent 통지. 에이전트 미언급. 차원: inventory·vendors·least_privilege·audit_trail·ciso_to_board·test_regime·disclosure_reporting. (2024-10-16 AI 서한 URL 추측분은 404 — 레지스트리 us-nydfs-letter-2024-10-16 의 URL 재확인 필요)"
+
+  - name: "COSO Internal Control — Integrated Framework (2013) Executive Summary"
+    url: "https://www.coso.org/_files/ugd/3059fc_1df7d5dd38074006bce8fdf621a942cf.pdf"
+    verified: true
+    contributes: "coso.org/guidance-on-ic 200 → Executive Summary PDF 200 463KB. 5 components 실측: Control Environment · Risk Assessment · Control Activities · Information and Communication · Monitoring Activities. 루브릭 매핑: agent_control=Control Activities, connection=Information and Communication, testing=Monitoring Activities, response=Monitoring+Information. 17 principles 수치는 페이지 포스터 제목에만 — 미검증."
+
+  - name: "BCBS — Revisions to the Principles for the Sound Management of Operational Risk (2021-03, 12 principles)"
+    url: "https://www.bis.org/publications/202103-guidelines-revisions-principles-sound-management-operational-risk.pdf"
+    verified: true
+    contributes: "d515.htm 200 → PDF 200 370KB 44쪽. Principle 1 board risk culture · P6 comprehensive identification and assessment · P8 monitoring and reporting · P9 strong control environment · P10 ICT risk management programme · P12 public disclosures should allow stakeholders to assess. 차원: ciso_to_board(P1·P8), test_regime(P6), disclosure_reporting(P12), recurrence_prevention(P7 change management)."
+
+  - name: "EU AI Act (Reg. 2024/1689) Art. 9 Risk management · Art. 12 Record-keeping · Art. 14 Human oversight"
+    url: "https://artificialintelligenceact.eu/article/14/"
+    verified: true
+    contributes: "eur-lex 는 202 + 0바이트(봇 차단) → 비공식 조문 사이트 3개 200 실측. Art.9(1) 'risk management system shall be established, implemented, documented and maintained', (2)(a) 'identification and analysis of the known and reasonably foreseeable risks'; Art.12(1) 'automatic recording of events (logs) over the lifetime of the system'; Art.14(4)(e) 'intervene on the operation ... or interrupt the system through a stop button ... come to a halt in a safe state'. 차원: audit_trail(Art.12), kill_switch(Art.14(4)(e)), test_regime(Art.9). 고위험 AI 기준, 에이전트 명시 없음."
+
+  - name: "SEC Regulation S-K Item 106 (17 CFR 229.106) — 10-K Item 1C Cybersecurity"
+    url: "https://www.law.cornell.edu/cfr/text/17/229.106"
+    verified: true
+    contributes: "ecfr.gov 는 'Request Access' 벽(10KB) → LII 미러 200 36KB. (b) Risk management and strategy, (c) Governance — (c)(1) 이사회 감독·위원회·보고 절차, (c)(2) 경영진 역할. 미국 공개 증거의 열쇠: 차원 전부의 US 공시 출처. 사건 공시는 8-K Item 1.05(중대성 판단 후 4영업일). EDGAR full-text search API(efts.sec.gov/LATEST/search-index) 200 JSON 실측 — 'agentic' 10-K 436 hits(2026-11-11)."
+
+  - name: "금감원 제재내용 공개안 — 롯데카드㈜ 수시검사 검사서(제재조치일 2026-07-31) [1차, 차원의 현실 근거]"
+    url: "https://www.fss.or.kr/fss/job/openInfo/view.do?menuNo=200476&examMgmtNo=202500566&emOpenSeq=1"
+    verified: true
+    contributes: "목록·상세 200, PDF 200 285KB(pdftotext). 제재대상사실 5항 실측: (1) 패치 미실시 (2) 침입차단·탐지시스템 미설치(웹방화벽 등록 누락) (3) 주민번호·비밀번호 암호화 미이행(로그 평문) (4) 백신 미설치 — ※ 2025-06-20 CISO가 경영진에 'SKT와 동일한 상황' 보고했으나 보완 조치 없음 (5) 법규 준수 점검 소홀 — 상시평가에서 온라인결제시스템 미점검, 100점으로 대표이사·이사회 보고. 각주: 금보원 패치 권고 3회(2018~2024), 2022 금감원 정기검사 지적. → ciso_to_board(4)·warning_to_action(각주)·test_regime(5)·remediation_followup(1) 차원이 '제재 공개안'에서 레벨 3 증거로 잡힌 실례."
+
+  - name: "공개 증거 출처 접속 실측 — 금융위 보도자료 · 개인정보위 · OpenDART · CISA KEV · KISA 정보보호공시"
+    url: "https://www.kisa.or.kr/"
+    verified: true
+    contributes: "fsc.go.kr/no010101/87455 200(롯데카드 제재 보도참고) · pipc.go.kr nttId=11878 200(의결 보도자료, 첨부 hwpx) · opendart.fss.or.kr 200 · CISA KEV JSON 200 1.85MB(catalogVersion 2026.11.10, 1,779건; cisa.gov 는 UA 'Mozilla/5.0' 로 200). ⚠ KISA 정보보호 공시포털(isds.kisa.or.kr)은 2026-11-11 실측 '보안 점검으로 서비스 임시 중단' — 공시 데이터는 kisa.or.kr 공지 첨부 '정보보호 공시 현황(26.11.11).xlsx'(1MB, JS 다운로드 함수)로 임시 제공. 2027-01-01부터 금융회사 공시 의무(시행령 개정) — 그 전 해는 자율 공시 26곳 자기선택 표본."

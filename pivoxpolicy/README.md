@@ -42,6 +42,7 @@ python3 -m pivoxpolicy.cli rubric --check   # 내부통제 평가 루브릭·평
 python3 -m pivoxpolicy.cli assess example-worked_2026   # 기관 평가 프로필 (단일 등급 없음)
 python3 -m pivoxpolicy.cli assess --compare             # 기관 × 차원 격자
 python3 -m pivoxpolicy.cli report  # out/ 에 전부 쓰기 (매트릭스·연표·공백·κ·평가 프로필)
+python3 -m pivoxpolicy.cli incidents  # AI 에이전트 보안 사건 45건 × 7통제 교차표
 python3 -m pivoxpolicy.cli site    # out/index.html 정적 대시보드 (Pivox 블랙·골드 — matrix·동향·사건·프로필 한 장)
 python3 -m pytest -q
 ```
@@ -54,9 +55,17 @@ python3 -m pytest -q
 섹션: 지금 바뀐 것(규제 동향) · 사건(AI 에이전트 보안) · 통제×관할 매트릭스(브론즈 알파 히트, AA 대비 확인) · 공백 · 평가 프로필(16차원) · 연표 · 문서 색인 · 출처·방법.
 빨강·초록은 안 쓴다(가격색은 가격에만). 대시보드의 동향·사건은 AI 에이전트 관련성 필터를 거친다(intel.jsonl 전체 수집과 별개).
 
-## 두 가지 측정 — 혼동하지 말 것
+## 커스텀 API 어댑터
+
+JSON Feed 가 아닌 공공 API 는 `feeds.yaml` 의 `adapter:` 로 읽는다(`pivoxpolicy/intel.py::parse_adapter`, 2026-11-11 실측 응답 모양):
+`kev`(CISA KEV — AI 플랫폼 벤더·제품명으로 걸러 '실제 악용된 AI 플랫폼 취약점') · `nvd`(prompt injection CVE, 실행 때 최근 90일 창) ·
+`federalregister`(연방관보 AI agents) · `assembly`(국회 의안 — 전자금융거래법·인공지능) · `fsi_bbs`(금보원 보도자료·소식 POST 엔드포인트).
+
+## 세 가지 측정 — 혼동하지 말 것
 
 - **통제 × 관할 매트릭스** (`matrix`): *규제·가이드라인이 무엇을 요구하나.* 문서 × 7통제, 구속력 0~3.
+- **사건 × 통제** (`incidents`): *실제 AI 에이전트 사건에서 어느 통제가 실패했나.* 45건, 증거 수준(1차·벤더·보도)별로 센다.
+  매트릭스 옆에 놓으면 '사건이 몰린 통제(최소권한 23·감사기록 20·즉시중단 14)' 와 '구속력이 약한 칸(US 사람승인·즉시중단 0)' 이 보인다. related_controls 는 finder 판단 — 2차 코딩 대상.
 - **내부통제 평가 프로필** (`assess`): *한 금융회사가 공개 자료상 무엇을 하는가.* 기관 × 16차원, 증거 수준 0~3.
   - 16차원 = 7통제(agent_control) + 경고→조치 연결(connection 2) + 모의해킹 4요소(testing 4) + 사고 대응(response 3).
   - **단일 등급으로 뭉치지 않는다.** 차원별 레벨 프로필 + 그룹 분포만. 레벨은 "증거 수준" 이지 "통제 유무" 가 아니다.
@@ -71,6 +80,8 @@ python3 -m pytest -q
 registry/
   controls.yaml          7개 통제 정의 + 주제 태그
   feeds.yaml             intel 이 읽는 RSS/Atom/JSON 피드 77곳 (KISA 보호나라·금융위·과기정통부·개인정보위·NIST·연준·FDIC·재무부·SEC·FSB·EBA·ESMA·ECB·FCA·BoE·NCSC·JFSA + AI 위협 벤더·arXiv·보안매체). pivoxpolicy-research 워크플로(2026-11-11)가 찾아 검증
+  incidents.yaml         AI 에이전트 보안 사건 45건(2025-01~) — ai_role · evidence_level · 관련 통제. source_url 전부 2026-11-11 HTTP 200 재확인
+  frameworks.yaml        루브릭 basis 가 가리키는 13개 프레임워크(FSB·NCCoE·IR 8596·OWASP ASI·CSA MAESTRO·NYDFS·COSO·BCBS·EU AI Act·SEC S-K 106 …)
   sources.yaml           watch 가 보는 발표 목록 페이지 (금융위·금보원·금감원·NIST·연준·OCC·FDIC·NYDFS·재무부·FINRA·FSB)
   documents/<id>.yaml    문서 1건 = 파일 1개 (30건, 2026-11-11)
   codings/<coder>.yaml   코더 1명 = 파일 1개. TEMPLATE.yaml 을 복사해 2차 코더를 만든다

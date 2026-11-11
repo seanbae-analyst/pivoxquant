@@ -6,7 +6,7 @@
 
 | # | 통제 | KR | US | EU | INTL |
 |---|---|---|---|---|---|
-| 1 | 인벤토리 (Inventory) | 0 | 2 | ? (1 코딩 필요) | 1 |
+| 1 | 인벤토리 (Inventory) | 0 | 2 | ? (1 코딩 필요) | 1* |
 | 2 | 공급자 관리 (Vendors / third-party) | 2 | 2 | ? (1 코딩 필요) | 1* |
 | 3 | 고유 식별자 (Unique ID) | 2 | 1* | ? (1 코딩 필요) | 1* |
 | 4 | 최소 권한 (Least privilege) | 2† | 2 | ? (1 코딩 필요) | 1* |
@@ -42,9 +42,9 @@
 
 ### INTL
 
-- 1 인벤토리: **1** ← `intl-iso-iec-27001-2022`
+- 1 인벤토리: **1*** ← `intl-fsb-ai-sound-practices-2026-10`, `intl-iso-iec-27001-2022` · 에이전트 명시 자율문서: `intl-fsb-ai-sound-practices-2026-10`
 - 2 공급자 관리: **1*** ← `intl-fsb-ai-sound-practices-2026-10`, `intl-fsb-ai-sound-practices-consultation-2026-06`, `intl-iso-iec-27001-2022` · 에이전트 명시 자율문서: `intl-fsb-ai-sound-practices-2026-10`, `intl-fsb-ai-sound-practices-consultation-2026-06`
-- 3 고유 식별자: **1*** ← `intl-fsb-ai-sound-practices-consultation-2026-06`, `intl-iso-iec-27001-2022` · 에이전트 명시 자율문서: `intl-fsb-ai-sound-practices-consultation-2026-06`
+- 3 고유 식별자: **1*** ← `intl-fsb-ai-sound-practices-2026-10`, `intl-fsb-ai-sound-practices-consultation-2026-06`, `intl-iso-iec-27001-2022` · 에이전트 명시 자율문서: `intl-fsb-ai-sound-practices-2026-10`, `intl-fsb-ai-sound-practices-consultation-2026-06`
 - 4 최소 권한: **1*** ← `intl-fsb-ai-sound-practices-2026-10`, `intl-fsb-ai-sound-practices-consultation-2026-06`, `intl-iso-iec-27001-2022` · 에이전트 명시 자율문서: `intl-fsb-ai-sound-practices-2026-10`, `intl-fsb-ai-sound-practices-consultation-2026-06`
 - 5 사람 승인: **1*** ← `intl-fsb-ai-sound-practices-2026-10` · 에이전트 명시 자율문서: `intl-fsb-ai-sound-practices-2026-10`
 - 6 감사 기록: **1*** ← `intl-fsb-ai-sound-practices-2026-10`, `intl-fsb-ai-sound-practices-consultation-2026-06`, `intl-iso-iec-27001-2022` · 에이전트 명시 자율문서: `intl-fsb-ai-sound-practices-2026-10`, `intl-fsb-ai-sound-practices-consultation-2026-06`

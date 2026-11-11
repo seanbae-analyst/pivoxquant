@@ -14,6 +14,9 @@ period: "2026"
 assessor: CODER_NAME
 provisional: true
 basis: 어떤 공개 자료를 봤는지 요약
+sources_checked:            # 레벨 0 을 주려면 필수 — 찾아봤으나 없었던 출처
+  - "예: 2025 사업보고서 정보보호 항목"
+  - "예: 금감원 제재내용 공개안 검색(2024-01~2026-10)"
 scores:
   # 신호 id 는 rubric.yaml 의 각 차원 signals 참조. 아래는 inventory 예시 — 16차원 모두 채운다.
   inventory:

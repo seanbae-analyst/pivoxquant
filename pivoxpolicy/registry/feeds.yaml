@@ -10,9 +10,10 @@ feeds:
     topic: regulation
     type: json
     url: "https://open.assembly.go.kr/portal/openapi/nzmimeepazxkubdpn?AGE=22&pSize=20&Type=json&BILL_NAME=%EC%A0%84%EC%9E%90%EA%B8%88%EC%9C%B5%EA%B1%B0%EB%9E%98%EB%B2%95"
-    enabled: false
+    adapter: assembly
+    keep_all: true
     keywords: ["전자금융거래법", "인공지능", "AI", "인공지능 발전과 신뢰 기반 조성", "정보통신망법", "신용정보법", "개인정보 보호법", "일부개정법률안"]
-    note: "커스텀 JSON API — 파서가 JSON Feed 가 아니라 못 읽음. 어댑터 필요(enabled:false) — 의안 목록 API(nzmimeepazxkubdpn). 2026-11-11 KEY 파라미터 없이 정상 응답(RESULT CODE INFO-000) — 무키 호출 한도는 미확인, 운영 시 발급 KEY 권장. Content-Type 은 text/html 이지만 본문은 JSON. 필드 BILL_ID·BILL_NO·BILL_NAME·PROPOSE_DT·PROC_RE"
+    note: "어댑터 assembly — 22대 국회 의안명 '전자금융거래법'. 2026-11-11 14건(RESULT INFO-000, 키 없이 응답)"
 
   - id: fsc-cardnews-rss
     issuer: "금융위원회 (FSC)"
@@ -31,9 +32,10 @@ feeds:
     topic: incident
     type: json
     url: "https://www.fsec.or.kr/bbs/list"
-    enabled: false
+    adapter: fsi_bbs
+    keep_all: true
     keywords: ["정보 유출", "침해", "해킹", "보안", "AI", "에이전트", "평가", "클라우드", "사칭"]
-    note: "커스텀 JSON API — 파서가 JSON Feed 가 아니라 못 읽음. 어댑터 필요(enabled:false) — 금융보안원 보도자료(menuNo=69). 목록 HTML(https://www.fsec.or.kr/bbs/69, 200)은 스크립트 렌더링이지만 /static/assets/js/bbs/bbs.js 가 호출하는 XHR 을 직접 쓸 수 있음: POST https://www.fsec.or.kr/bbs/list, Content-Type: application/jso"
+    note: "어댑터 fsi_bbs — 금보원 보도자료 menuNo=69 POST /bbs/list, 상세 /bbs/detail?menuNo=69&bbsNo=N(200 확인). 2026-11-11 최신 '상시평가 시스템 정보 유출 긴급 차단'"
 
   - id: kisa-boho-alert-level-rss
     issuer: "KISA 보호나라&KrCERT/CC"
@@ -142,9 +144,9 @@ feeds:
     topic: incident
     type: json
     url: "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
-    enabled: false
-    keywords: ["Langflow", "LiteLLM", "n8n", "MLflow", "Flowise", "Copilot", "MCP"]
-    note: "커스텀 JSON API — 파서가 JSON Feed 가 아니라 못 읽음. 어댑터 필요(enabled:false) — 피드 등록 가치 있음: vendor/product 키워드 필터로 '실제 악용된 AI 플랫폼 취약점' 피드가 됨 — 2025-01 이후 11건(Langflow 6, LiteLLM 3, n8n 1, MLflow 1). dateAdded 로 신규 감지. CISA RSS 4종은 프록시에서 403(별도 항목)."
+    adapter: kev
+    keywords: ["langflow", "litellm", "langchain", "llama", "ollama", "mcp", "llm", "copilot", "openai", "anthropic", "ai agent", "agentic", "triton", "anyscale", "comfyui", "gradio", "hugging face", "flowise", "dify", "n8n", "mlflow", "kubeflow"]
+    note: "어댑터 kev — CISA KEV 카탈로그(실제 악용 확인). 키워드 = AI·에이전트 플랫폼 벤더/제품명 → '실제 악용된 AI 플랫폼 취약점'. 2026-11-11 HTTP 200·1,779건"
 
   - id: crowdstrike-blog-rss
     issuer: "CrowdStrike"
@@ -203,9 +205,10 @@ feeds:
     topic: regulation
     type: json
     url: "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22AI+agents%22+OR+%22agentic%22&order=newest&per_page=20"
-    enabled: false
+    adapter: federalregister
+    keep_all: true
     keywords: ["AI agents", "agentic", "artificial intelligence", "request for information", "RFI", "notice", "proposed rule", "Commerce Department", "NIST", "Treasury"]
-    note: "커스텀 JSON API — 파서가 JSON Feed 가 아니라 못 읽음. 어댑터 필요(enabled:false) — 공식 JSON API. 결과 1건 = Commerce/NIST CAISI 에이전트 보안 RFI(레지스트리 us-caisi-agent-rfi-2026-01 과 동일 문서) → 검색어가 좁다. 운영 시 term 을 'artificial intelligence' + agencies[]=treasury-department 등으로 넓힐 것. 같은 조건의 RSS(do"
+    note: "어댑터 federalregister — 연방관보 '\"AI agents\" OR agentic' 검색, 최신순. 2026-11-11 1건(CAISI 에이전트 보안 RFI)"
 
   - id: gtig-rss
     issuer: "Google Threat Intelligence Group (Google Cloud blog)"
@@ -274,9 +277,10 @@ feeds:
     topic: incident
     type: json
     url: "https://services.nvd.nist.gov/rest/json/cves/2.0?keywordSearch=prompt%20injection&resultsPerPage=20"
-    enabled: false
+    adapter: nvd
+    keep_all: true
     keywords: ["prompt injection", "AI agent", "MCP", "LLM"]
-    note: "커스텀 JSON API — 파서가 JSON Feed 가 아니라 못 읽음. 어댑터 필요(enabled:false) — totalResults 222. 기본 정렬이 오래된 순 → pubStartDate/pubEndDate 창을 지정해야 최신 감지. 키 없이 5req/30s. NVD RSS(nvd-rss.xml) 404 폐지. cveId 조회(CVE-2025-32711) 200."
+    note: "어댑터 nvd — keywordSearch=prompt injection, 최근 90일 공개 창을 실행 때 붙인다(기본 정렬이 오래된 순). 키 없이 5req/30s. 2026-11-11 창 08-01~11-11 66건"
 
   - id: openai-news-rss
     issuer: "OpenAI"
@@ -778,3 +782,27 @@ feeds:
     keywords: ["AI agent", "agentic", "OpenAI", "Anthropic", "prompt injection"]
     note: "finder 확인·2차 미완 (HTTP 200·항목 50) — 기사 페이지 200(Fireworks AI, DIVD, Taiwan, OpenClaw)."
 
+  - id: assembly-ai-bill-api-json
+    issuer: "국회 열린국회정보 (의안)"
+    jurisdiction: KR
+    kind: primary
+    topic: regulation
+    type: json
+    url: "https://open.assembly.go.kr/portal/openapi/nzmimeepazxkubdpn?AGE=22&pSize=20&Type=json&BILL_NAME=%EC%9D%B8%EA%B3%B5%EC%A7%80%EB%8A%A5"
+    adapter: assembly
+    keep_all: true
+    keywords: ["인공지능", "AI"]
+    note: "어댑터 assembly — 22대 국회 의안명 '인공지능'(AI기본법 개정안 등). 2026-11-11 추가"
+
+  - id: fsi-news-json
+    issuer: "금융보안원 (FSI)"
+    jurisdiction: KR
+    kind: primary
+    topic: mixed
+    type: json
+    url: "https://www.fsec.or.kr/bbs/list"
+    adapter: fsi_bbs
+    menu_no: 221
+    keep_all: true
+    keywords: ["AI", "에이전트"]
+    note: "어댑터 fsi_bbs — 금보원 '보안원 소식' menuNo=221(AI 에이전트 평가기준·세미나가 여기 나온다). sources.yaml fsi-news(HTML, 링크 0건)의 대체"

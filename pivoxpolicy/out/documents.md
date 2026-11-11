@@ -70,4 +70,4 @@
 - `intl-fsb-ai-sound-practices-consultation-2026-06` **FSB — Sound Practices for Responsible Adoption of AI, Consultation report** · Financial Stability Board (FSB) · 2026-06-10 · binding 1 — <https://www.fsb.org/2026/06/sound-practices-for-responsible-adoption-of-artificial-intelligence-ai-consultation-report/>
   - 협의안. HR 통제를 적용해 에이전트를 "합성 직원"처럼 다루라는 제안, 개별 에이전트 식별자 부여·문서화(③). 최종본(10-15)에서 '합성 직원' 문구 삭제.
 - `intl-fsb-ai-sound-practices-2026-10` **FSB — Sound Practices for Responsible Adoption of AI, Final report (12 sound practices)** · Financial Stability Board (FSB) · 2026-10-15 · binding 1 — <https://www.fsb.org/2026/10/sound-practices-for-responsible-adoption-of-artificial-intelligence-ai-final-report/>
-  - 자율. 제3자 AI 의존 관리(②), 에이전트 행위 제한(④), 위험기반 승인 트리거(⑤), 거래 감사기록(⑥), 안전 중단 메커니즘 테스트(⑦). 협의문서(06-10)에 있던 '합성 직원'·'개별 식별자' 문구는 최종본에서 빠짐 — 에이전트는 사람처럼 추론하지 않는다고 명시.
+  - 자율. 제3자 AI 의존 관리(②), 에이전트 행위 제한(④), 위험기반 승인 트리거(⑤), 거래 감사기록(⑥), 안전 중단 메커니즘 테스트(⑦). 협의문서(06-10)의 '합성 직원' 문구는 최종본에서 빠졌다(원문 0건). 개별 식별자는 최종본 §2.3 Attribution 에 남아 있다(PDF p.30 — 2026-11-11 원문 대조로 덱 노트 정정). 인벤토리 p.30·31, 위험기반 승인 트리거 p.56, kill-switch 구현·테스트 p.57.
