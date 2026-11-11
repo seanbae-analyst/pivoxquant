@@ -1,0 +1,14 @@
+id: kr-outsourcing-regulation
+title: 금융회사의 정보처리 업무 위탁에 관한 규정
+issuer: 금융위원회 (FSC)
+jurisdiction: KR
+doc_type: regulation
+status: in_force
+binding: 2
+names_agents: false
+url: https://www.law.go.kr/행정규칙/금융회사의정보처리업무위탁에관한규정
+url_verified: 2026-11-11
+url_note: law.go.kr 은 1.3KB JS 셸만 내려줘 fetch 해시로는 개정을 감지할 수 없다 — 개정 확인은 사람이.
+summary: IT 아웃소싱 규정. 공급자 통제(②)의 한국 측 근거. 에이전트 언급 없음.
+topics: [governance]
+source_note: 덱 슬라이드 14 "Korea today ② Outsourcing rule".

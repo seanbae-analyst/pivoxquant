@@ -1,0 +1,219 @@
+# 1차 코딩 — 발표 덱(2026-11-01) 슬라이드 11·14 와 그 노트에서 옮긴 것.
+# provisional: 원문을 직접 대조한 코딩이 아니다. 2차 코더가 원문으로 다시 코딩하고 kappa 를 내야 논문에 쓸 수 있다.
+# evidence 에 "(덱 노트)" 가 붙은 셀은 2차 인용. "원문 대조 필요" 는 코더의 기억·일반 지식에 의존한 셀.
+coder: deck_2026-11-01
+coded_at: 2026-11-11
+basis: 덱 슬라이드 14 표 + 노트, 슬라이드 11 노트. NIST CSF 2.0 · ISO 27001 Annex A 는 코더 지식 — 원문 대조 필요.
+provisional: true
+items:
+
+  # ── KR ──────────────────────────────────────────────────────────────
+  kr-efsr-art13:
+    inventory:       {covered: false, note: 에이전트·시스템 인벤토리 요구 없음 (덱 ① Korea today = None)}
+    vendors:         {covered: false, note: 위탁은 별도 규정}
+    unique_id:       {covered: true,  evidence: "제13조①1 개인별 인증수단 (덱 노트). '개인별'로 쓰여 사람 기준"}
+    least_privilege: {covered: true,  evidence: "제13조①1 최소권한 접근 (덱 노트)"}
+    human_approval:  {covered: false, note: ③ 관리자 이중확인은 관리자 작업 기준 — 덱은 ⑤ Korea today 를 'Guideline only' 로 분류}
+    audit_trail:     {covered: true,  evidence: "제13조①9 자동 로그 1년 이상 보존, ② 공유계정 개인별 사용기록 (덱 노트)"}
+    kill_switch:     {covered: false}
+
+  kr-efsr-art37-2:
+    inventory:       {covered: false}
+    vendors:         {covered: false}
+    unique_id:       {covered: false}
+    least_privilege: {covered: false}
+    human_approval:  {covered: false}
+    audit_trail:     {covered: false}
+    kill_switch:     {covered: false, note: 테스트 주제 문서 — 7개 통제 밖}
+
+  kr-outsourcing-regulation:
+    inventory:       {covered: false}
+    vendors:         {covered: true,  evidence: "IT 위탁 규정 자체 (덱 ② Korea today = Outsourcing rule). 취약점 통지·로그 제공 조항 여부는 원문 대조 필요"}
+    unique_id:       {covered: false}
+    least_privilege: {covered: false}
+    human_approval:  {covered: false}
+    audit_trail:     {covered: false}
+    kill_switch:     {covered: false}
+
+  kr-ai-basic-act:
+    inventory:       {covered: null}
+    vendors:         {covered: null}
+    unique_id:       {covered: null}
+    least_privilege: {covered: null}
+    human_approval:  {covered: null, note: 고영향 AI 사람 관리·감독 조항 여부 확인}
+    audit_trail:     {covered: null}
+    kill_switch:     {covered: null}
+
+  kr-fsc-ai-guidelines-2026-06:
+    inventory:       {covered: null}
+    vendors:         {covered: null}
+    unique_id:       {covered: null}
+    least_privilege: {covered: null}
+    human_approval:  {covered: true,  evidence: "보조적 역할 원칙 — 최종 판단·책임은 직원, 사람 개입 원칙 (덱 슬라이드 11 노트)"}
+    audit_trail:     {covered: null}
+    kill_switch:     {covered: null}
+
+  kr-fsc-frontier-ai-guide-2026-07:
+    inventory:       {covered: null}
+    vendors:         {covered: null}
+    unique_id:       {covered: null}
+    least_privilege: {covered: null}
+    human_approval:  {covered: null}
+    audit_trail:     {covered: null}
+    kill_switch:     {covered: null, note: 2026-11-11 발견. 본문 미독}
+
+  kr-fsi-agent-criteria-2026-10:
+    inventory:       {covered: false, note: 덱 — ① 은 규정에도 FSI 17개 항목에도 없음}
+    vendors:         {covered: null}
+    unique_id:       {covered: null}
+    least_privilege: {covered: true,  evidence: "도구 권한 통제·샌드박싱 항목 (덱 슬라이드 10 노트)"}
+    human_approval:  {covered: true,  evidence: "사람 승인 항목 (덱 슬라이드 10 노트)"}
+    audit_trail:     {covered: true,  evidence: "로깅 항목 (덱 슬라이드 10 노트)"}
+    kill_switch:     {covered: true,  evidence: "항목 ⑯ 킬스위치 (덱 슬라이드 14 노트)"}
+
+  kr-fss-fsi-pentest-standards-2026:
+    inventory:       {covered: false}
+    vendors:         {covered: false}
+    unique_id:       {covered: false}
+    least_privilege: {covered: false}
+    human_approval:  {covered: false}
+    audit_trail:     {covered: false}
+    kill_switch:     {covered: false, note: 테스트 주제 문서}
+
+  # ── US ──────────────────────────────────────────────────────────────
+  us-nydfs-part500:
+    inventory:       {covered: true,  evidence: "500.13 자산 인벤토리, 2025-11-01 의무화 (덱 노트)"}
+    vendors:         {covered: true,  evidence: "500.11 제3자 서비스 제공자 (덱 노트)"}
+    unique_id:       {covered: null,  note: 500.7 접근권한·500.12 MFA 가 식별자 고유성을 요구하는지 원문 확인}
+    least_privilege: {covered: true,  evidence: "500.7 접근권한 — 최소권한 (덱 노트)"}
+    human_approval:  {covered: false}
+    audit_trail:     {covered: true,  evidence: "500.6 감사기록 (덱 노트)"}
+    kill_switch:     {covered: false}
+
+  us-nydfs-letter-2024-10-16:
+    inventory:       {covered: true,  evidence: "AI 시스템을 포함한 데이터·자산 인벤토리 (덱 노트)"}
+    vendors:         {covered: true,  evidence: "제3자 서비스 제공자 관리 (덱 노트)"}
+    unique_id:       {covered: null}
+    least_privilege: {covered: true,  evidence: "접근통제 (덱 노트)"}
+    human_approval:  {covered: null}
+    audit_trail:     {covered: null}
+    kill_switch:     {covered: null}
+
+  us-nydfs-letters-2026-05-21:
+    inventory:       {covered: null}
+    vendors:         {covered: null}
+    unique_id:       {covered: null}
+    least_privilege: {covered: null}
+    human_approval:  {covered: null}
+    audit_trail:     {covered: null}
+    kill_switch:     {covered: null, note: 테스트·패치 주제. 본문 미독}
+
+  us-nydfs-letter-2026-09-10:
+    inventory:       {covered: null}
+    vendors:         {covered: null}
+    unique_id:       {covered: null}
+    least_privilege: {covered: null}
+    human_approval:  {covered: null}
+    audit_trail:     {covered: null}
+    kill_switch:     {covered: null, note: 2026-11-11 발견. 본문 미독}
+
+  us-fed-sr-26-2:
+    inventory:       {covered: false, note: 모델 인벤토리는 다루지만 생성형·에이전틱 AI 를 범위에서 명시 제외 — 에이전트 통제로 세지 않음}
+    vendors:         {covered: false}
+    unique_id:       {covered: false}
+    least_privilege: {covered: false}
+    human_approval:  {covered: false}
+    audit_trail:     {covered: false}
+    kill_switch:     {covered: false}
+
+  us-treasury-fs-ai-rmf-2026-02:
+    inventory:       {covered: true,  evidence: "AI 사용사례 인벤토리 (덱 슬라이드 14 노트)"}
+    vendors:         {covered: true,  evidence: "제3자 AI (덱 슬라이드 14 노트)"}
+    unique_id:       {covered: null}
+    least_privilege: {covered: null}
+    human_approval:  {covered: null}
+    audit_trail:     {covered: null}
+    kill_switch:     {covered: null, note: 230+ 통제목표 매트릭스 미독 — 전부 코딩 필요}
+
+  us-nist-csf-2-0:
+    inventory:       {covered: true,  evidence: "ID.AM-01/02 하드웨어·소프트웨어 인벤토리 — 원문 대조 필요"}
+    vendors:         {covered: true,  evidence: "GV.SC 공급망 리스크 관리 — 원문 대조 필요"}
+    unique_id:       {covered: true,  evidence: "PR.AA-01 사용자·서비스·하드웨어의 신원·자격증명 관리 — 원문 대조 필요"}
+    least_privilege: {covered: true,  evidence: "PR.AA-05 접근권한·최소권한·직무분리 — 원문 대조 필요"}
+    human_approval:  {covered: false}
+    audit_trail:     {covered: true,  evidence: "PR.PS-04 로그 생성·모니터링 제공 — 원문 대조 필요"}
+    kill_switch:     {covered: false}
+
+  us-nist-ir-8596-cyber-ai-profile:
+    inventory:       {covered: null}
+    vendors:         {covered: null}
+    unique_id:       {covered: null}
+    least_privilege: {covered: null}
+    human_approval:  {covered: null}
+    audit_trail:     {covered: null}
+    kill_switch:     {covered: null}
+
+  us-nist-nccoe-agent-identity-2026-02:
+    inventory:       {covered: null}
+    vendors:         {covered: null}
+    unique_id:       {covered: true,  evidence: "에이전트를 사람과 구별해 식별하고 사용자 신원에 연결 (덱 슬라이드 14 노트)"}
+    least_privilege: {covered: null,  note: 인가(authorization) 가 최소권한을 포함하는지 원문 확인}
+    human_approval:  {covered: null}
+    audit_trail:     {covered: true,  evidence: "데이터 흐름·출처 추적 (덱 슬라이드 14 노트)"}
+    kill_switch:     {covered: null}
+
+  us-cisa-bod-22-01:
+    inventory:       {covered: false}
+    vendors:         {covered: false}
+    unique_id:       {covered: false}
+    least_privilege: {covered: false}
+    human_approval:  {covered: false}
+    audit_trail:     {covered: false}
+    kill_switch:     {covered: false, note: 패치 기한 지시 — 테스트 주제}
+
+  # ── EU ──────────────────────────────────────────────────────────────
+  eu-ai-act-art14:
+    inventory:       {covered: null,  note: 고위험 AI 등록(Art. 49·71 EU DB) 은 제14조 밖 — 문서 범위를 넓히면 true 후보}
+    vendors:         {covered: null}
+    unique_id:       {covered: null}
+    least_privilege: {covered: null}
+    human_approval:  {covered: null,  note: "Art.14(4)(d) 출력 무시·무효화·되돌리기 권한 — '고위험 행위 승인 게이트' 로 볼지 판단 필요"}
+    audit_trail:     {covered: null,  note: 로그 보존은 Art. 12·19 — 제14조 밖}
+    kill_switch:     {covered: true,  evidence: "Art. 14(4)(e) 'stop' 버튼으로 중단 가능해야 함 (덱 슬라이드 14)"}
+
+  # ── INTL ────────────────────────────────────────────────────────────
+  intl-fsb-ai-sound-practices-2026-10:
+    inventory:       {covered: null}
+    vendors:         {covered: true,  evidence: "제3자 AI 의존 관리 (덱 슬라이드 14 노트)"}
+    unique_id:       {covered: false, note: 협의안의 '개별 에이전트 식별자' 가 최종본에서 빠짐 (덱 노트) — 최종본 재확인 필요}
+    least_privilege: {covered: true,  evidence: "에이전트 행위 제한 (덱 슬라이드 14 노트)"}
+    human_approval:  {covered: true,  evidence: "위험기반 승인 트리거 (덱 슬라이드 14 노트)"}
+    audit_trail:     {covered: true,  evidence: "에이전트 거래 감사기록 (덱 슬라이드 14 노트)"}
+    kill_switch:     {covered: true,  evidence: "안전 중단 메커니즘 테스트 권고 (덱 슬라이드 14 노트)"}
+
+  intl-fsb-ai-sound-practices-consultation-2026-06:
+    inventory:       {covered: null}
+    vendors:         {covered: true,  evidence: "제3자 AI 의존 관리 (덱 노트)"}
+    unique_id:       {covered: true,  evidence: "개별 에이전트 식별자 부여·문서화 (덱 슬라이드 14 노트)"}
+    least_privilege: {covered: true,  evidence: "외부 환경 접근 제한 (덱 슬라이드 14 노트)"}
+    human_approval:  {covered: null}
+    audit_trail:     {covered: true,  evidence: "감사기록 (덱 노트)"}
+    kill_switch:     {covered: null}
+
+  intl-iso-iec-27001-2022:
+    inventory:       {covered: true,  evidence: "Annex A 5.9 정보 및 관련 자산 인벤토리 — 원문 대조 필요"}
+    vendors:         {covered: true,  evidence: "Annex A 5.19~5.23 공급자 관계 보안 — 원문 대조 필요"}
+    unique_id:       {covered: true,  evidence: "Annex A 5.16 신원 관리 — 원문 대조 필요"}
+    least_privilege: {covered: true,  evidence: "Annex A 5.15 접근통제, 8.3 정보 접근 제한 — 원문 대조 필요"}
+    human_approval:  {covered: false}
+    audit_trail:     {covered: true,  evidence: "Annex A 8.15 로깅 — 원문 대조 필요"}
+    kill_switch:     {covered: false}
+
+  intl-iso-iec-42001-2023:
+    inventory:       {covered: null}
+    vendors:         {covered: null}
+    unique_id:       {covered: null}
+    least_privilege: {covered: null}
+    human_approval:  {covered: null}
+    audit_trail:     {covered: null}
+    kill_switch:     {covered: null, note: 미독}

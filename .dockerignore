@@ -73,3 +73,6 @@ BUG_SWEEP_*.md
 .obsidian
 .vercel
 .bkit
+
+# ── pivoxpolicy — 별도 연구 도구(AI 에이전트 규제 레지스트리). 웹 서비스가 읽지 않음 ──
+pivoxpolicy

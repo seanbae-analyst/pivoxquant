@@ -1,0 +1,15 @@
+id: kr-efsr-art37-2
+title: 전자금융감독규정 제37조의2 — 취약점 분석·평가 (보완조치 계획, 기한 없음)
+issuer: 금융위원회 (FSC)
+jurisdiction: KR
+doc_type: regulation
+status: in_force
+binding: 2
+names_agents: false
+url: https://www.law.go.kr/행정규칙/전자금융감독규정
+url_verified: 2026-11-11
+url_note: law.go.kr 은 1.3KB JS 셸만 내려줘 fetch 해시로는 개정을 감지할 수 없다 — 개정 확인은 사람이.
+summary: 취약점 분석·평가 후 보완조치 계획만 요구, 이행 기한 규정 없음. 7개 통제 밖(테스트 주제).
+topics: [testing]
+related: [kr-efsr-art13]
+source_note: 덱 슬라이드 15 노트.

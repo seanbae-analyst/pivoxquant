@@ -1,0 +1,16 @@
+id: us-nydfs-letters-2026-05-21
+title: NYDFS Industry Letters (2) — Frontier AI Models advisory + Heightened Threat Environment guidance
+issuer: NYDFS
+jurisdiction: US
+doc_type: supervisory_guidance
+status: final
+binding: 1
+names_agents: null
+date: 2026-05-21
+url: https://www.dfs.ny.gov/industry-guidance/industry-letters/20260521-heightened-cybersecurity-risks-assoc-with-frontier-ai-models
+url_verified: 2026-11-11
+url_note: 짝이 되는 서한 — https://www.dfs.ny.gov/industry-guidance/industry-letters/20260521-guidance-on-measures-reg-entities-should-consider-in-a-hcte (Measures Regulated Entities Should Consider in a Heightened Cybersecurity Threat Environment). 둘 다 `watch` 가 2026-11-11 리소스 센터 링크에서 찾음.
+summary: 비구속. 프런티어 AI 모델이 취약점 발견·악용을 가속 → "최선의 준비는 적시·포괄적 취약점 식별·조치". 새 법적 요구 없음. 테스트·패치 주제.
+topics: [testing]
+related: [us-nydfs-part500]
+source_note: 덱 슬라이드 11 + 2026-11-11 웹 검색.

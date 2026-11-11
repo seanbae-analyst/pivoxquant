@@ -1,0 +1,15 @@
+id: eu-ai-act-art14
+title: EU AI Act (Regulation (EU) 2024/1689) Art. 14 — Human oversight of high-risk AI, incl. stop button (Art. 14(4)(e))
+issuer: European Parliament & Council
+jurisdiction: EU
+doc_type: law
+status: in_force
+binding: 2
+names_agents: false
+date: 2024-07-12
+url: https://eur-lex.europa.eu/eli/reg/2024/1689/oj
+url_verified: null
+url_note: EUR-Lex 는 2026-11-11 HTTP 202(본문 0바이트, 봇 차단) — 사람 브라우저로만 열림. 비공식 조문 보기 artificialintelligenceact.eu 는 200.
+summary: 고위험 AI 에 사람 감독 의무 — 개입·중단('stop' 버튼) 가능해야 함. '에이전트'가 아니라 '고위험 AI 시스템' 기준. 비공식 조문 보기 https://artificialintelligenceact.eu/article/14/
+topics: [governance]
+source_note: 덱 슬라이드 14 (⑦ kill switch 의 구속력 있는 유일한 근거). 고위험 AI 의무 적용 시점은 원문 확인 필요.

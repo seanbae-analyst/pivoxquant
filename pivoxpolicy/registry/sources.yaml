@@ -1,0 +1,101 @@
+# `pivoxpolicy watch` 가 보는 발표 목록 페이지.
+# keywords: 앵커 텍스트에 이 중 하나가 들어간 링크만 추적한다 (대소문자 무시). 없으면 agent/agentic/에이전트.
+# 2026-11-11 실측: ok 로 표시한 것은 HTTP 200 + 링크 추출 확인. js 는 목록이 스크립트로 그려져 링크를 못 뽑는다.
+sources:
+  - id: fsc-press
+    issuer: 금융위원회 (FSC)
+    jurisdiction: KR
+    url: https://www.fsc.go.kr/no010101?srchCtgry=&curPage=1&srchKey=sj&srchText=AI
+    keywords: [AI, 인공지능, 에이전트, 보안, 침해]
+    note: 제목에 'AI' 가 든 보도자료 1쪽. ok
+
+  - id: fsc-press-security
+    issuer: 금융위원회 (FSC)
+    jurisdiction: KR
+    url: https://www.fsc.go.kr/no010101?srchCtgry=&curPage=1&srchKey=sj&srchText=%EB%B3%B4%EC%95%88
+    keywords: [보안, 침해, 망분리, AI]
+    note: 제목에 '보안' 이 든 보도자료 1쌍. ok
+
+  - id: fsi-news
+    issuer: 금융보안원 (FSI)
+    jurisdiction: KR
+    url: https://www.fsec.or.kr/bbs/221
+    keywords: [AI, 에이전트, 레드팀, 평가, 가이드]
+    note: 알림마당 > 보안원 소식. js — 목록이 스크립트로 그려져 링크 추출 불가. 해시 변경만 감지. 사람 확인 필요
+
+  - id: fss-press
+    issuer: 금융감독원 (FSS)
+    jurisdiction: KR
+    url: https://www.fss.or.kr/fss/bbs/B0000188/list.do?menuNo=200218
+    keywords: [AI, 인공지능, 에이전트, 보안, 침해, 취약점]
+    note: 보도자료 목록. 2026-11-11 HTTP 200 이지만 링크 0건 추출 — 목록이 스크립트 렌더링인 듯. 사람 확인 필요
+
+  - id: law-efsr
+    issuer: 국가법령정보센터
+    jurisdiction: KR
+    url: https://www.law.go.kr/행정규칙/전자금융감독규정
+    keywords: [개정, 시행, 전자금융감독규정]
+    note: 전자금융감독규정 현행. 2026-11-11 실측 — JS 셸(1.3KB)만 내려와 해시가 개정을 반영하지 않음. 자리만 지킴
+
+  - id: nist-news
+    issuer: NIST
+    jurisdiction: US
+    url: https://www.nist.gov/news-events/news
+    keywords: [agent, agentic, AI, cybersecurity, identity]
+    note: ok
+
+  - id: csrc-news
+    issuer: NIST CSRC
+    jurisdiction: US
+    url: https://csrc.nist.gov/news
+    keywords: [agent, agentic, AI, profile, identity]
+    note: ok
+
+  - id: fed-sr-letters
+    issuer: Federal Reserve
+    jurisdiction: US
+    url: https://www.federalreserve.gov/supervisionreg/srletters/srletters.htm
+    keywords: [model, AI, artificial, agent, technology, cyber]
+    note: SR letters 목록. ok
+
+  - id: occ-bulletins
+    issuer: OCC
+    jurisdiction: US
+    url: https://www.occ.gov/news-issuances/bulletins/index-bulletins.html
+    keywords: [model, AI, artificial, agent, technology, cyber, third-party]
+    note: ok (2026-11-11 첫 watch 7 links)
+
+  - id: fdic-fil
+    issuer: FDIC
+    jurisdiction: US
+    url: https://www.fdic.gov/news/financial-institution-letters/2026/
+    keywords: [model, AI, artificial, agent, technology, cyber, third-party]
+    note: 2026 FIL 목록. ok
+
+  - id: nydfs-cyber
+    issuer: NYDFS
+    jurisdiction: US
+    url: https://www.dfs.ny.gov/industry_guidance/cybersecurity
+    keywords: [AI, artificial, frontier, cyber, risk assessment, Part 500]
+    note: Cybersecurity Resource Center. ok — 2026-09-10 risk-assessment 안내서한, 10-22 PHP 패치 경보가 보임
+
+  - id: treasury-press
+    issuer: US Treasury
+    jurisdiction: US
+    url: https://home.treasury.gov/news/press-releases
+    keywords: [AI, artificial, agent, financial services, cyber]
+    note: ok
+
+  - id: finra-reports
+    issuer: FINRA
+    jurisdiction: US
+    url: https://www.finra.org/rules-guidance/guidance/reports
+    keywords: [oversight report, AI, artificial, agent]
+    note: ok (2026-11-11 첫 watch 8 links)
+
+  - id: fsb-publications
+    issuer: FSB
+    jurisdiction: INTL
+    url: https://www.fsb.org/publications/
+    keywords: [artificial intelligence, AI, agent, cyber, third-party]
+    note: ok

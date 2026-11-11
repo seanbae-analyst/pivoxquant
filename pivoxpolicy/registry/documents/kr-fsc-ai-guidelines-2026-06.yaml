@@ -1,0 +1,16 @@
+id: kr-fsc-ai-guidelines-2026-06
+title: 금융분야 AI 가이드라인 (개정) — 7원칙, 보조적 역할·사람 개입
+issuer: 금융위원회 (FSC)
+jurisdiction: KR
+doc_type: guideline
+status: in_force
+binding: 1
+names_agents: null
+date: 2026-06-18
+effective: 2026-06-22
+url: null
+url_note: 확인 필요 — 금융위 보도자료 목록(제목 'AI' 검색) 1~3쪽에서 06-18 건을 못 찾음. 금감원 AI 리스크관리 프레임워크·금보원 AI 보안가이드와 함께 발표.
+summary: 자율. 7원칙(거버넌스·적법성·보조적 역할·신뢰성·금융안정·신의성실·보안). 보조적 역할 = 최종 판단·책임은 직원(사람 개입 원칙) → ⑤ 사람 승인의 자율 근거. 같은 날 보도자료에서 에이전트 거버넌스 TF(하반기)를 예고.
+topics: [governance]
+related: [kr-fsc-press-2026-06-18]
+source_note: 덱 슬라이드 11 노트. 가이드라인 본문이 '에이전트'를 명시하는지 미확인(null).

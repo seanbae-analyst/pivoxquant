@@ -1,0 +1,15 @@
+id: us-nist-ir-8596-cyber-ai-profile
+title: NIST IR 8596 (initial public draft) — Cybersecurity Framework Profile for AI (Cyber AI Profile)
+issuer: NIST
+jurisdiction: US
+doc_type: draft
+status: draft
+binding: 1
+names_agents: null
+date: 2025-12-16
+url: https://csrc.nist.gov/pubs/ir/8596/iprd
+url_verified: 2026-11-11
+summary: Thwart(외부 공격 AI) · Secure(자사 AI 보호) · Defend(AI 로 방어). 덱 슬라이드 3 의 외부/내부 구분이 이 틀에 대응. 7개 통제 커버 여부 코딩 필요.
+topics: [governance]
+related: [us-nist-csf-2-0]
+source_note: 덱 슬라이드 3·16.

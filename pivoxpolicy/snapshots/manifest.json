@@ -1,0 +1,998 @@
+{
+  "documents": {
+    "eu-ai-act-art14": {
+      "fetched_at": "2026-11-11T14:13:14Z",
+      "first_seen": "2026-11-11T14:13:14Z",
+      "status": 202,
+      "url": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj"
+    },
+    "intl-fsb-ai-sound-practices-2026-10": {
+      "agent_mentions": 1,
+      "bytes": 420552,
+      "content_type": "text/html",
+      "fetched_at": "2026-11-11T14:13:17Z",
+      "first_seen": "2026-11-11T14:13:17Z",
+      "sha256": "e138fe107d981fe7ce5c3c7d336ba820ba132f7c07dfa3fc8f8fb1c01267448f",
+      "status": 200,
+      "url": "https://www.fsb.org/2026/10/sound-practices-for-responsible-adoption-of-artificial-intelligence-ai-final-report/"
+    },
+    "intl-fsb-ai-sound-practices-consultation-2026-06": {
+      "agent_mentions": 1,
+      "bytes": 421560,
+      "content_type": "text/html",
+      "fetched_at": "2026-11-11T14:13:18Z",
+      "first_seen": "2026-11-11T14:13:18Z",
+      "sha256": "0f61c4b7be9bc28f9daab44f15e8b8044f51eacd9bb430e3e9686601465aaaed",
+      "status": 200,
+      "url": "https://www.fsb.org/2026/06/sound-practices-for-responsible-adoption-of-artificial-intelligence-ai-consultation-report/"
+    },
+    "intl-iso-iec-27001-2022": {
+      "error": "HTTP Error 403: Forbidden",
+      "fetched_at": "2026-11-11T14:13:18Z",
+      "first_seen": "2026-11-11T14:13:18Z",
+      "status": 403,
+      "url": "https://www.iso.org/standard/27001"
+    },
+    "intl-iso-iec-42001-2023": {
+      "error": "HTTP Error 403: Forbidden",
+      "fetched_at": "2026-11-11T14:13:19Z",
+      "first_seen": "2026-11-11T14:13:19Z",
+      "status": 403,
+      "url": "https://www.iso.org/standard/42001"
+    },
+    "kr-ai-basic-act": {
+      "agent_mentions": 0,
+      "bytes": 1318,
+      "content_type": "text/html",
+      "fetched_at": "2026-11-11T14:13:20Z",
+      "first_seen": "2026-11-11T14:13:20Z",
+      "sha256": "274881056bc7039f627a2491d078255555ad912507b5f20171d6cc4d1807beb0",
+      "status": 200,
+      "url": "https://www.law.go.kr/법령/인공지능발전과신뢰기반조성등에관한기본법"
+    },
+    "kr-efsr-art13": {
+      "agent_mentions": 0,
+      "bytes": 1243,
+      "content_type": "text/html",
+      "fetched_at": "2026-11-11T14:13:22Z",
+      "first_seen": "2026-11-11T14:13:22Z",
+      "sha256": "abb52b7245fc0612036a2a73869ddf508947a8d16fdaca23ac72ed838f33c608",
+      "status": 200,
+      "url": "https://www.law.go.kr/행정규칙/전자금융감독규정"
+    },
+    "kr-efsr-art37-2": {
+      "agent_mentions": 0,
+      "bytes": 1243,
+      "content_type": "text/html",
+      "fetched_at": "2026-11-11T14:13:24Z",
+      "first_seen": "2026-11-11T14:13:24Z",
+      "sha256": "abb52b7245fc0612036a2a73869ddf508947a8d16fdaca23ac72ed838f33c608",
+      "status": 200,
+      "url": "https://www.law.go.kr/행정규칙/전자금융감독규정"
+    },
+    "kr-fsc-frontier-ai-guide-2026-07": {
+      "agent_mentions": 0,
+      "bytes": 123351,
+      "content_type": "text/html",
+      "fetched_at": "2026-11-11T14:13:27Z",
+      "first_seen": "2026-11-11T14:13:27Z",
+      "sha256": "89b35d8f2d3167285a3b69c94a954fb63388faa9e780baf4dc90ddf6227bfda2",
+      "status": 200,
+      "url": "https://www.fsc.go.kr/no010101/87240"
+    },
+    "kr-fsc-press-2026-09-03": {
+      "agent_mentions": 0,
+      "bytes": 117946,
+      "content_type": "text/html",
+      "fetched_at": "2026-11-11T14:13:30Z",
+      "first_seen": "2026-11-11T14:13:30Z",
+      "sha256": "da9ad82bd7f19a993681e8789cb94e5ea45c0d0bdcccf926e0430e30457ba941",
+      "status": 200,
+      "url": "https://www.fsc.go.kr/no010101/87646"
+    },
+    "kr-fsc-press-2026-10-14": {
+      "agent_mentions": 0,
+      "bytes": 165439,
+      "content_type": "text/html",
+      "fetched_at": "2026-11-11T14:13:33Z",
+      "first_seen": "2026-11-11T14:13:33Z",
+      "sha256": "2494894d2d5b5f8b92627a7de7214c962a8ff4a2a01c8db289b2adf09de6d966",
+      "status": 200,
+      "url": "https://www.fsc.go.kr/no010101/87927"
+    },
+    "kr-fsc-press-2026-11-05": {
+      "agent_mentions": 0,
+      "bytes": 189288,
+      "content_type": "text/html",
+      "fetched_at": "2026-11-11T14:13:36Z",
+      "first_seen": "2026-11-11T14:13:36Z",
+      "sha256": "7378d5ab9fa91677672576364106c6381550dc236dd980c6fd2f7d8d069b1d9e",
+      "status": 200,
+      "url": "https://www.fsc.go.kr/no010101/88086"
+    },
+    "kr-outsourcing-regulation": {
+      "agent_mentions": 0,
+      "bytes": 1273,
+      "content_type": "text/html",
+      "fetched_at": "2026-11-11T14:13:39Z",
+      "first_seen": "2026-11-11T14:13:39Z",
+      "sha256": "26961c165cabae6d77ff8a5c8b4b4883fff5470a9b51e2a27b91683f86a8f4a7",
+      "status": 200,
+      "url": "https://www.law.go.kr/행정규칙/금융회사의정보처리업무위탁에관한규정"
+    },
+    "us-caisi-agent-rfi-2026-01": {
+      "agent_mentions": 57,
+      "bytes": 20434,
+      "content_type": "text/html",
+      "fetched_at": "2026-11-11T14:13:39Z",
+      "first_seen": "2026-11-11T14:13:39Z",
+      "sha256": "d044771f06d76cd83747ab327b721cfea97cd6b8cf68323d357140adab6d5987",
+      "status": 200,
+      "url": "https://www.govinfo.gov/content/pkg/FR-2026-01-08/html/2026-00206.htm"
+    },
+    "us-cisa-bod-22-01": {
+      "agent_mentions": 0,
+      "bytes": 87678,
+      "content_type": "text/html",
+      "fetched_at": "2026-11-11T14:13:39Z",
+      "first_seen": "2026-11-11T14:13:39Z",
+      "sha256": "32c0e601426cc16ca88895b45d9b193bd118ab6040eed773b6b117fe08e88ad4",
+      "status": 200,
+      "url": "https://www.cisa.gov/news-events/directives/bod-22-01-reducing-significant-risk-known-exploited-vulnerabilities"
+    },
+    "us-fed-sr-26-2": {
+      "agent_mentions": 0,
+      "bytes": 87347,
+      "content_type": "text/html",
+      "fetched_at": "2026-11-11T14:13:39Z",
+      "first_seen": "2026-11-11T14:13:39Z",
+      "sha256": "05d92fe470676b1d2a51ce1fe9586eca4aa5d9902f9d2096c03a641b728d726e",
+      "status": 200,
+      "url": "https://www.federalreserve.gov/supervisionreg/srletters/sr2602.htm"
+    },
+    "us-finra-2026-oversight-report": {
+      "agent_mentions": 0,
+      "bytes": 84351,
+      "content_type": "text/html",
+      "fetched_at": "2026-11-11T14:13:40Z",
+      "first_seen": "2026-11-11T14:13:40Z",
+      "sha256": "ab5d3fdffa97df6c2438a29b11780f5373b2cd377223051b4183828cdde0bd27",
+      "status": 200,
+      "url": "https://www.finra.org/rules-guidance/guidance/reports/2026-finra-annual-regulatory-oversight-report"
+    },
+    "us-nist-csf-2-0": {
+      "agent_mentions": 0,
+      "bytes": 1518858,
+      "content_type": "application/pdf",
+      "fetched_at": "2026-11-11T14:13:40Z",
+      "first_seen": "2026-11-11T14:13:40Z",
+      "sha256": "3c31f46fee98cac0c4323453e5109291a213b4de7fef8c058af9bf67f717433c",
+      "status": 200,
+      "url": "https://nvlpubs.nist.gov/nistpubs/CSWP/NIST.CSWP.29.pdf"
+    },
+    "us-nist-ir-8596-cyber-ai-profile": {
+      "agent_mentions": 0,
+      "bytes": 50031,
+      "content_type": "text/html",
+      "fetched_at": "2026-11-11T14:13:40Z",
+      "first_seen": "2026-11-11T14:13:40Z",
+      "sha256": "048d4d367e879c4a29abbe2d2d801fc6a80c3f9149af9945ce292d54c8d21176",
+      "status": 200,
+      "url": "https://csrc.nist.gov/pubs/ir/8596/iprd"
+    },
+    "us-nist-nccoe-agent-identity-2026-02": {
+      "agent_mentions": 9,
+      "bytes": 41671,
+      "content_type": "text/html",
+      "fetched_at": "2026-11-11T14:13:40Z",
+      "first_seen": "2026-11-11T14:13:40Z",
+      "sha256": "1c4c6bf985dde5043f2e6e8e6dd06ee38307130792b46185c4f80086772402e7",
+      "status": 200,
+      "url": "https://csrc.nist.gov/pubs/other/2026/02/05/accelerating-the-adoption-of-software-and-ai-agent/ipd"
+    },
+    "us-nydfs-letter-2024-10-16": {
+      "agent_mentions": 0,
+      "bytes": 72580,
+      "content_type": "text/html",
+      "fetched_at": "2026-11-11T14:13:41Z",
+      "first_seen": "2026-11-11T14:13:41Z",
+      "sha256": "a41122e514a5011b994295955005749824bc19b6521faad108c4a7900a31c076",
+      "status": 200,
+      "url": "https://www.dfs.ny.gov/industry-guidance/industry-letters/il20241016-cyber-risks-ai-and-strategies-combat-related-risks"
+    },
+    "us-nydfs-letter-2026-09-10": {
+      "agent_mentions": 0,
+      "bytes": 60604,
+      "content_type": "text/html",
+      "fetched_at": "2026-11-11T14:13:41Z",
+      "first_seen": "2026-11-11T14:13:41Z",
+      "sha256": "ad305c71ec85d533ac73bb6b59cc30335e870eeb20d1ea720f1f996840f9565e",
+      "status": 200,
+      "url": "https://www.dfs.ny.gov/industry_guidance/industry_letters/il20260910-cyber-risk-assessment"
+    },
+    "us-nydfs-letters-2026-05-21": {
+      "agent_mentions": 0,
+      "bytes": 42320,
+      "content_type": "text/html",
+      "fetched_at": "2026-11-11T14:17:40Z",
+      "first_seen": "2026-11-11T14:17:40Z",
+      "sha256": "f7f9570834466d2efdf824da81b741de93de1d1bb3ade63645102d03fe408abf",
+      "status": 200,
+      "url": "https://www.dfs.ny.gov/industry-guidance/industry-letters/20260521-heightened-cybersecurity-risks-assoc-with-frontier-ai-models"
+    },
+    "us-nydfs-part500": {
+      "agent_mentions": 0,
+      "bytes": 86884,
+      "content_type": "text/html",
+      "fetched_at": "2026-11-11T14:13:42Z",
+      "first_seen": "2026-11-11T14:13:42Z",
+      "sha256": "6b21bf52d15f5b1c17120c646e9ee4a0e65008f1457f46451b5fa82c7138eccc",
+      "status": 200,
+      "url": "https://www.dfs.ny.gov/industry_guidance/cybersecurity"
+    },
+    "us-occ-semiannual-risk-2026-05": {
+      "agent_mentions": 0,
+      "bytes": 90978,
+      "content_type": "text/html",
+      "fetched_at": "2026-11-11T14:13:43Z",
+      "first_seen": "2026-11-11T14:13:43Z",
+      "sha256": "e0d2ece944179a9cbc97cdd0a8198347fb8f542178385984ae06cb97b7072001",
+      "status": 200,
+      "url": "https://www.occ.gov/publications-and-resources/publications/semiannual-risk-perspective/index-semiannual-risk-perspective.html"
+    },
+    "us-treasury-fs-ai-rmf-2026-02": {
+      "agent_mentions": 0,
+      "bytes": 4784,
+      "content_type": "text/html",
+      "fetched_at": "2026-11-11T14:13:43Z",
+      "first_seen": "2026-11-11T14:13:43Z",
+      "sha256": "8aeb1d6cb37eea5dc1c9e5d9cd44d80af420a240b567b7e13b5f85bd5828ff20",
+      "status": 200,
+      "url": "https://home.treasury.gov/policy-issues/financial-markets-financial-institutions-and-fiscal-service/artificial-intelligence"
+    }
+  },
+  "sources": {
+    "csrc-news": {
+      "fetched_at": "2026-11-11T14:14:25Z",
+      "first_seen": "2026-11-11T14:14:25Z",
+      "issuer": "NIST CSRC",
+      "links": [
+        {
+          "text": "Subscribe to our email updates",
+          "url": "https://public.govdelivery.com/accounts/USNIST/subscriber/new?qsp=USNIST_3"
+        },
+        {
+          "text": "Draft Revision of SP 800-185 Available for Comment",
+          "url": "https://csrc.nist.gov/News/2026/draft-revision-of-sp-800-185-available-for-comment"
+        },
+        {
+          "text": "NIST O-RAN CSF Profile for Federal Agencies",
+          "url": "https://csrc.nist.gov/News/2026/nist-o-ran-csf-profile-for-federal-agencies"
+        },
+        {
+          "text": "Using AI for CSF 2 Analysis Reporting | Draft QSG",
+          "url": "https://csrc.nist.gov/News/2026/using-ai-for-csf-2-analysis-reporting-draft-qsg"
+        },
+        {
+          "text": "Transit Cybersecurity Framework Community Profile",
+          "url": "https://csrc.nist.gov/News/2026/transit-cybersecurity-framework-community-profile"
+        }
+      ],
+      "sha256": "4892faf7c93e01ff2599cf6ee3c8ca6a9c694c767b12cf42cebf837539db3bfb",
+      "status": 200,
+      "url": "https://csrc.nist.gov/news"
+    },
+    "fdic-fil": {
+      "fetched_at": "2026-11-11T14:14:29Z",
+      "first_seen": "2026-11-11T14:14:29Z",
+      "issuer": "FDIC",
+      "links": [
+        {
+          "text": "International Seminars and Training",
+          "url": "https://www.fdic.gov/international-affairs/international-seminars"
+        },
+        {
+          "text": "Media Campaigns",
+          "url": "https://www.fdic.gov/news/campaigns"
+        },
+        {
+          "text": "Supervisory Relief to Help Financial Institutions and Facilitate Recovery in Areas of Hawaii Affected by an Earthquake",
+          "url": "https://www.fdic.gov/news/financial-institution-letters/2026/supervisory-relief-help-financial-institutions-and-15"
+        },
+        {
+          "text": "Supervisory Relief to Help Financial Institutions and Facilitate Recovery in Areas of Indiana Affected by Severe Storms, Straight-Line Winds, Tornadoes, and Flooding",
+          "url": "https://www.fdic.gov/news/financial-institution-letters/2026/supervisory-relief-help-financial-institutions-and-13"
+        },
+        {
+          "text": "Supervisory Relief to Help Financial Institutions and Facilitate Recovery for the Oglala Sioux Tribe of the Pine Ridge Reservation in South Dakota Affected by Severe Storms, Straight-Line Winds, and F",
+          "url": "https://www.fdic.gov/news/financial-institution-letters/2026/supervisory-relief-help-financial-institutions-and-14"
+        },
+        {
+          "text": "Proposed Interagency Third-Party Risk Management Guidance and Issuance of Joint Statement on Community Banks’ Engagement with Core Service Providers",
+          "url": "https://www.fdic.gov/news/financial-institution-letters/2026/proposed-interagency-third-party-risk-management-guidance"
+        },
+        {
+          "text": "Supervisory Relief to Help Financial Institutions and Facilitate Recovery in Areas of Mississippi Affected by Severe Storms, Straight-Line Winds, Tornadoes, and Flooding",
+          "url": "https://www.fdic.gov/news/financial-institution-letters/2026/supervisory-relief-help-financial-institutions-and-6"
+        },
+        {
+          "text": "Supervisory Relief to Help Financial Institutions and Facilitate Recovery for the Fort Peck Assiniboine and Sioux Tribes and the Crow Tribe of Montana Affected by Severe Storm and Straight-Line Winds",
+          "url": "https://www.fdic.gov/news/financial-institution-letters/2026/supervisory-relief-help-financial-institutions-and-4"
+        },
+        {
+          "text": "Supervisory Relief to Help Financial Institutions and Facilitate Recovery in Areas of Hawaii Affected by Low Weather Systems",
+          "url": "https://www.fdic.gov/news/financial-institution-letters/2026/supervisory-relief-help-financial-institutions-and-2"
+        },
+        {
+          "text": "Supervisory Relief to Help Financial Institutions and Facilitate Recovery in Areas of Washington Affected by Severe Storms, Straight-line Winds, Flooding, Landslides, and Mudslides",
+          "url": "https://www.fdic.gov/news/financial-institution-letters/2026/supervisory-relief-help-financial-institutions-and"
+        },
+        {
+          "text": "Agencies Revise the Interagency Model Risk Management Guidance",
+          "url": "https://www.fdic.gov/news/financial-institution-letters/2026/agencies-revise-interagency-model-risk-management-guidance"
+        },
+        {
+          "text": "Rescission of Statement of Policy on Qualifications for Failed Bank Acquisitions",
+          "url": "https://www.fdic.gov/news/financial-institution-letters/2026/rescission-statement-policy-qualifications-failed-bank"
+        },
+        {
+          "text": "Plain Writing",
+          "url": "https://www.fdic.gov/about/plain-writing-act-2010"
+        }
+      ],
+      "sha256": "8265118460efda60a25331128f550e0e3e850aea2750a3129dc8ab7f9d677956",
+      "status": 200,
+      "url": "https://www.fdic.gov/news/financial-institution-letters/2026/"
+    },
+    "fed-sr-letters": {
+      "fetched_at": "2026-11-11T14:14:25Z",
+      "first_seen": "2026-11-11T14:14:25Z",
+      "issuer": "Federal Reserve",
+      "links": [
+        {
+          "text": "Federal Reserve Facebook Page Federal Reserve Instagram Page Federal Reserve YouTube Page Federal Reserve Flickr Page Federal Reserve LinkedIn Page Federal Reserve Threads Page Federal Reserve X Page ",
+          "url": "https://www.facebook.com/federalreserve"
+        },
+        {
+          "text": "The Fed Explained",
+          "url": "https://www.federalreserve.gov/aboutthefed/the-fed-explained.htm"
+        },
+        {
+          "text": "Regulation CC (Availability of Funds and Collection of Checks)",
+          "url": "https://www.federalreserve.gov/paymentsystems/regcc-about.htm"
+        },
+        {
+          "text": "FRB/US Model",
+          "url": "https://www.federalreserve.gov/econres/us-models-about.htm"
+        },
+        {
+          "text": "Estimated Dynamic Optimization (EDO) Model",
+          "url": "https://www.federalreserve.gov/econres/edo-models-about.htm"
+        },
+        {
+          "text": "Yield Curve Models and Data",
+          "url": "https://www.federalreserve.gov/data/yield-curve-models.htm"
+        }
+      ],
+      "sha256": "7739f15130e5cafb9e2dc4b636447624cb26fdcdbc95f65ed288e20ef919cf52",
+      "status": 200,
+      "url": "https://www.federalreserve.gov/supervisionreg/srletters/srletters.htm"
+    },
+    "finra-reports": {
+      "fetched_at": "2026-11-11T14:14:30Z",
+      "first_seen": "2026-11-11T14:14:30Z",
+      "issuer": "FINRA",
+      "links": [
+        {
+          "text": "Events & Training",
+          "url": "https://www.finra.org/index.php/events-training"
+        },
+        {
+          "text": "FINRA Crypto and Blockchain Education Program",
+          "url": "https://www.finra.org/index.php/events-training/FINRA-crypto-and-blockchain-education-program"
+        },
+        {
+          "text": "Weekly Update Email Archive",
+          "url": "https://www.finra.org/index.php/compliance-tools/weekly-archive"
+        },
+        {
+          "text": "File a Complaint",
+          "url": "https://www.finra.org/index.php/investors/need-help/file-a-complaint"
+        },
+        {
+          "text": "2026 FINRA Annual Regulatory Oversight Report",
+          "url": "https://www.finra.org/rules-guidance/guidance/reports/2026-finra-annual-regulatory-oversight-report"
+        },
+        {
+          "text": "2025 FINRA Annual Regulatory Oversight Report",
+          "url": "https://www.finra.org/rules-guidance/guidance/reports/2025-finra-annual-regulatory-oversight-report"
+        },
+        {
+          "text": "Events & Training",
+          "url": "https://www.finra.org/events-training"
+        },
+        {
+          "text": "File an Investor Complaint",
+          "url": "https://www.finra.org/investors/need-help/file-a-complaint"
+        }
+      ],
+      "sha256": "d2fd926a000935ae7e1693f112df35d0659175f1ede2ec35a582affb28e4e174",
+      "status": 200,
+      "url": "https://www.finra.org/rules-guidance/guidance/reports"
+    },
+    "fsb-publications": {
+      "fetched_at": "2026-11-11T14:14:33Z",
+      "first_seen": "2026-11-11T14:14:33Z",
+      "issuer": "FSB",
+      "links": [
+        {
+          "text": "Cyber Resilience",
+          "url": "https://www.fsb.org/work-of-the-fsb/financial-innovation-and-structural-change/cyber-resilience/"
+        },
+        {
+          "text": "Sound Practices for Responsible Adoption of Artificial Intelligence (AI): Final report",
+          "url": "https://www.fsb.org/2026/10/sound-practices-for-responsible-adoption-of-artificial-intelligence-ai-final-report/"
+        },
+        {
+          "text": "Sound Practices for Responsible Adoption of Artificial Intelligence (AI): Overview of consultation responses",
+          "url": "https://www.fsb.org/2026/10/sound-practices-for-responsible-adoption-of-artificial-intelligence-ai-overview-of-consultation-responses/"
+        },
+        {
+          "text": "FSB finalises sound practices for the responsible adoption of artificial intelligence (AI)",
+          "url": "https://www.fsb.org/2026/10/fsb-finalises-sound-practices-for-the-responsible-adoption-of-artificial-intelligence-ai/"
+        },
+        {
+          "text": "FSB Chair sets out FSB work on AI and stablecoins",
+          "url": "https://www.fsb.org/2026/10/fsb-chair-sets-out-fsb-work-on-ai-and-stablecoins/"
+        },
+        {
+          "text": "FSB Chair’s letter to G20 Finance Ministers and Central Bank Governors: October 2026",
+          "url": "https://www.fsb.org/2026/10/fsb-chairs-letter-to-g20-finance-ministers-and-central-bank-governors-october-2026/"
+        }
+      ],
+      "sha256": "9ea897309d458b8c95a83ff41bf654acc3b14ae5a9e140d9a3d0fe3aae3557e9",
+      "status": 200,
+      "url": "https://www.fsb.org/publications/"
+    },
+    "fsc-press": {
+      "fetched_at": "2026-11-11T14:14:15Z",
+      "first_seen": "2026-11-11T14:14:15Z",
+      "issuer": "금융위원회 (FSC)",
+      "links": [
+        {
+          "text": "AI시대, 거세지는 침해위협에 맞서 全 금융권이 튼튼한 보안체계로 무장하도록 혁신적인 정책과제를 적극 추진하겠습니다.",
+          "url": "https://www.fsc.go.kr/no010101/88086?srchCtgry=&curPage=1&srchKey=sj&srchText=AI&srchBeginDt=&srchEndDt="
+        },
+        {
+          "text": "261105(보도자료) AI시대 거세지는 침해위협에 맞서 全 금융권이 튼튼한 보안체계로 무장하도록 혁신적인 정책과제를 적극 추진하겠습니다..hwpx",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=88086&fileTy=ATTACH&fileNo=1"
+        },
+        {
+          "text": "261105(보도자료) AI시대 거세지는 침해위협에 맞서 全 금융권이 튼튼한 보안체계로 무장하도록 혁신적인 정책과제를 적극 추진하겠습니다..pdf",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=88086&fileTy=ATTACH&fileNo=2"
+        },
+        {
+          "text": "261105[별첨2] 全금융권 보안체계 혁신방안.hwpx",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=88086&fileTy=ATTACH&fileNo=5"
+        },
+        {
+          "text": "261105[별첨2] 全금융권 보안체계 혁신방안.pdf",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=88086&fileTy=ATTACH&fileNo=6"
+        },
+        {
+          "text": "금융위원장, 「피지컬 AI 지역거점 발전 포럼」 참석, 피지컬 AI 지역거점 지원 의지 강조",
+          "url": "https://www.fsc.go.kr/no010101/87770?srchCtgry=&curPage=1&srchKey=sj&srchText=AI&srchBeginDt=&srchEndDt="
+        },
+        {
+          "text": "260923 (보도자료) 금융위원장, 「피지컬 AI 지역거점 발전 포럼」 참석 fn.hwpx",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=87770&fileTy=ATTACH&fileNo=1"
+        },
+        {
+          "text": "260923 (보도자료) 금융위원장, 「피지컬 AI 지역거점 발전 포럼」 참석 fn.pdf",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=87770&fileTy=ATTACH&fileNo=2"
+        },
+        {
+          "text": "PG업권 보안 리스크를 빈틈없이 점검하고 AI 보안위협에도 철저히 대비하겠습니다. - 프런티어 AI 보안위협 금융권 상황대응반 제6차 회의 개최",
+          "url": "https://www.fsc.go.kr/no010101/87727?srchCtgry=&curPage=1&srchKey=sj&srchText=AI&srchBeginDt=&srchEndDt="
+        },
+        {
+          "text": "260916(보도자료) PG업권 보안 리스크를 빈틈없이 점검하고 AI 보안위협에도 철저히 대비하겠습니다..hwpx",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=87727&fileTy=ATTACH&fileNo=1"
+        },
+        {
+          "text": "260916(보도자료) PG업권 보안 리스크를 빈틈없이 점검하고 AI 보안위협에도 철저히 대비하겠습니다.pdf",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=87727&fileTy=ATTACH&fileNo=2"
+        },
+        {
+          "text": "보다 다양한 금융회사들이 AI 보안위협에 철저히 대비할 수 있도록 제2차 망분리 규제 긴급 완화 조치를 추진합니다.",
+          "url": "https://www.fsc.go.kr/no010101/87646?srchCtgry=&curPage=1&srchKey=sj&srchText=AI&srchBeginDt=&srchEndDt="
+        },
+        {
+          "text": "260903(보도자료) 보다 다양한 금융회사들이 AI 보안위협에 철저히 대비할 수 있도록 제2차 망분리 규제 긴급 완화 조치를 추진합니다..hwpx",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=87646&fileTy=ATTACH&fileNo=1"
+        },
+        {
+          "text": "260903(보도자료) 보다 다양한 금융회사들이 AI 보안위협에 철저히 대비할 수 있도록 제2차 망분리 규제 긴급 완화 조치를 추진합니다.pdf",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=87646&fileTy=ATTACH&fileNo=2"
+        },
+        {
+          "text": "“AI 시대 국민의 일상과 생업을 잇는 마이데이터 발전방안을 추진합니다.“",
+          "url": "https://www.fsc.go.kr/no010101/87585?srchCtgry=&curPage=1&srchKey=sj&srchText=AI&srchBeginDt=&srchEndDt="
+        },
+        {
+          "text": "(금융위)260825(보도자료) “AI 시대 국민의 일상과 생업을 잇는 마이데이터 발전방안을 추진합니다.hwpx",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=87585&fileTy=ATTACH&fileNo=3"
+        },
+        {
+          "text": "(금융위)260825[별첨] AI 시대 국민의 일상과 생업을 잇는 마이데이터 발전방안.hwpx",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=87585&fileTy=ATTACH&fileNo=4"
+        },
+        {
+          "text": "(금융위)260825(보도자료) “AI 시대 국민의 일상과 생업을 잇는 마이데이터 발전방안을 추진합니다.pdf",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=87585&fileTy=ATTACH&fileNo=5"
+        },
+        {
+          "text": "(금융위)260825[별첨] AI 시대 국민의 일상과 생업을 잇는 마이데이터 발전방안.pdf",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=87585&fileTy=ATTACH&fileNo=6"
+        },
+        {
+          "text": "보이스피싱 의심 금융·통신·수사정보, ｢ASAP에이샙*｣ 통해 본격적으로 공유됩니다. * 보이스피싱 정보공유·분석 AI 플랫폼 (AI-based anti-phishing Sharing & Analysis Platform)",
+          "url": "https://www.fsc.go.kr/no010101/87474?srchCtgry=&curPage=1&srchKey=sj&srchText=AI&srchBeginDt=&srchEndDt="
+        },
+        {
+          "text": "서남권 혁신 성장, 정책금융이 함께 합니다. - 금융위원장, 「KDB NextONE 광주」 개소식 참석 및 광주 AI 산업집적단지 방문",
+          "url": "https://www.fsc.go.kr/no010101/87271?srchCtgry=&curPage=1&srchKey=sj&srchText=AI&srchBeginDt=&srchEndDt="
+        },
+        {
+          "text": "금융회사가 프런티어 AI 보안위협에 적극적으로 대응할 수 있도록 면책 조치와 가이드라인을 마련하였습니다.",
+          "url": "https://www.fsc.go.kr/no010101/87240?srchCtgry=&curPage=1&srchKey=sj&srchText=AI&srchBeginDt=&srchEndDt="
+        },
+        {
+          "text": "260701(보도자료) 금융회사가 프런티어 AI 보안위협에 적극적으로 대응할 수 있도록 면책 조치와 가이드라인을 마련하였습니다.hwp",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=87240&fileTy=ATTACH&fileNo=1"
+        },
+        {
+          "text": "260701(보도자료) 금융회사가 프런티어 AI 보안위협에 적극적으로 대응할 수 있도록 면책 조치와 가이드라인을 마련하였습니다.pdf",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=87240&fileTy=ATTACH&fileNo=2"
+        },
+        {
+          "text": "260701[참고자료] 프런티어 AI 보안 위협 금융분야 대응 요령.hwpx",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=87240&fileTy=ATTACH&fileNo=3"
+        },
+        {
+          "text": "금융위·산업통상부, M.AX(제조AI 대전환) 선도기업들과 ‘피지컬 AI 글로벌 1강’도약 앞당긴다",
+          "url": "https://www.fsc.go.kr/no010101/87225?srchCtgry=&curPage=1&srchKey=sj&srchText=AI&srchBeginDt=&srchEndDt="
+        },
+        {
+          "text": "260630(보도자료) 금융위·산업통상부 M.AX(제조AI 대전환) 선도기업들과 ‘피지컬 AI 글로벌 1강’도약 앞당긴다.hwpx",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=87225&fileTy=ATTACH&fileNo=1"
+        },
+        {
+          "text": "260630(보도자료) 금융위·산업통상부 M.AX(제조AI 대전환) 선도기업들과 ‘피지컬 AI 글로벌 1강’도약 앞당긴다.pdf",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=87225&fileTy=ATTACH&fileNo=2"
+        },
+        {
+          "text": "과기정통부-앤트로픽, 글로벌 AI 안전‧보안 동맹 전면 추진",
+          "url": "https://www.fsc.go.kr/no010101/87150?srchCtgry=&curPage=1&srchKey=sj&srchText=AI&srchBeginDt=&srchEndDt="
+        },
+        {
+          "text": "260618 석간 (보도) 과기정통부-앤트로픽, 글로벌 AI 안전‧보안 동맹 전면 추진.hwpx",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=87150&fileTy=ATTACH&fileNo=1"
+        },
+        {
+          "text": "260618 석간 (보도) 과기정통부-앤트로픽, 글로벌 AI 안전‧보안 동맹 전면 추진.pdf",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=87150&fileTy=ATTACH&fileNo=2"
+        }
+      ],
+      "sha256": "2b5b59ae26d2c7275dbadf83e3eaedb1d07c71b05f27eeb5e1927e97e687cb1a",
+      "status": 200,
+      "url": "https://www.fsc.go.kr/no010101?srchCtgry=&curPage=1&srchKey=sj&srchText=AI"
+    },
+    "fsc-press-security": {
+      "fetched_at": "2026-11-11T14:14:17Z",
+      "first_seen": "2026-11-11T14:14:17Z",
+      "issuer": "금융위원회 (FSC)",
+      "links": [
+        {
+          "text": "AI시대, 거세지는 침해위협에 맞서 全 금융권이 튼튼한 보안체계로 무장하도록 혁신적인 정책과제를 적극 추진하겠습니다.",
+          "url": "https://www.fsc.go.kr/no010101/88086?srchCtgry=&curPage=1&srchKey=sj&srchText=%EB%B3%B4%EC%95%88&srchBeginDt=&srchEndDt="
+        },
+        {
+          "text": "261105(보도자료) AI시대 거세지는 침해위협에 맞서 全 금융권이 튼튼한 보안체계로 무장하도록 혁신적인 정책과제를 적극 추진하겠습니다..hwpx",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=88086&fileTy=ATTACH&fileNo=1"
+        },
+        {
+          "text": "261105(보도자료) AI시대 거세지는 침해위협에 맞서 全 금융권이 튼튼한 보안체계로 무장하도록 혁신적인 정책과제를 적극 추진하겠습니다..pdf",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=88086&fileTy=ATTACH&fileNo=2"
+        },
+        {
+          "text": "261105[별첨2] 全금융권 보안체계 혁신방안.hwpx",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=88086&fileTy=ATTACH&fileNo=5"
+        },
+        {
+          "text": "261105[별첨2] 全금융권 보안체계 혁신방안.pdf",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=88086&fileTy=ATTACH&fileNo=6"
+        },
+        {
+          "text": "금융권 침해사고 재발방지를 위해 금융보안 관리체계를 전면 강화하겠습니다. 금융위 사무처장 주재, 「제2차 긴급 상황대응 회의」 개최",
+          "url": "https://www.fsc.go.kr/no010101/87927?srchCtgry=&curPage=1&srchKey=sj&srchText=%EB%B3%B4%EC%95%88&srchBeginDt=&srchEndDt="
+        },
+        {
+          "text": "261014(보도참고) 금융권 침해사고 재발방지를 위해 금융보안 관리체계를 전면 강화하겠습니다..hwpx",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=87927&fileTy=ATTACH&fileNo=5"
+        },
+        {
+          "text": "261014(보도참고) 금융권 침해사고 재발방지를 위해 금융보안 관리체계를 전면 강화하겠습니다..pdf",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=87927&fileTy=ATTACH&fileNo=6"
+        },
+        {
+          "text": "PG업권 보안 리스크를 빈틈없이 점검하고 AI 보안위협에도 철저히 대비하겠습니다. - 프런티어 AI 보안위협 금융권 상황대응반 제6차 회의 개최",
+          "url": "https://www.fsc.go.kr/no010101/87727?srchCtgry=&curPage=1&srchKey=sj&srchText=%EB%B3%B4%EC%95%88&srchBeginDt=&srchEndDt="
+        },
+        {
+          "text": "260916(보도자료) PG업권 보안 리스크를 빈틈없이 점검하고 AI 보안위협에도 철저히 대비하겠습니다..hwpx",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=87727&fileTy=ATTACH&fileNo=1"
+        },
+        {
+          "text": "260916(보도자료) PG업권 보안 리스크를 빈틈없이 점검하고 AI 보안위협에도 철저히 대비하겠습니다.pdf",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=87727&fileTy=ATTACH&fileNo=2"
+        },
+        {
+          "text": "보다 다양한 금융회사들이 AI 보안위협에 철저히 대비할 수 있도록 제2차 망분리 규제 긴급 완화 조치를 추진합니다.",
+          "url": "https://www.fsc.go.kr/no010101/87646?srchCtgry=&curPage=1&srchKey=sj&srchText=%EB%B3%B4%EC%95%88&srchBeginDt=&srchEndDt="
+        },
+        {
+          "text": "260903(보도자료) 보다 다양한 금융회사들이 AI 보안위협에 철저히 대비할 수 있도록 제2차 망분리 규제 긴급 완화 조치를 추진합니다..hwpx",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=87646&fileTy=ATTACH&fileNo=1"
+        },
+        {
+          "text": "260903(보도자료) 보다 다양한 금융회사들이 AI 보안위협에 철저히 대비할 수 있도록 제2차 망분리 규제 긴급 완화 조치를 추진합니다.pdf",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=87646&fileTy=ATTACH&fileNo=2"
+        },
+        {
+          "text": "금융위원장, 금융보안원 주최 금융회사 CEO 초청 「정보보호의 날 기념 행사」 참석",
+          "url": "https://www.fsc.go.kr/no010101/87307?srchCtgry=&curPage=1&srchKey=sj&srchText=%EB%B3%B4%EC%95%88&srchBeginDt=&srchEndDt="
+        },
+        {
+          "text": "260710 (보도자료)_금융위원장, 금융보안원 주최 금융회사 CEO 초청 「정보보호의 날 기념 행사」 참석_F.hwp",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=87307&fileTy=ATTACH&fileNo=5"
+        },
+        {
+          "text": "260710 (보도자료)_금융위원장, 금융보안원 주최 금융회사 CEO 초청 「정보보호의 날 기념 행사」 참석_F.pdf",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=87307&fileTy=ATTACH&fileNo=6"
+        },
+        {
+          "text": "금융회사가 프런티어 AI 보안위협에 적극적으로 대응할 수 있도록 면책 조치와 가이드라인을 마련하였습니다.",
+          "url": "https://www.fsc.go.kr/no010101/87240?srchCtgry=&curPage=1&srchKey=sj&srchText=%EB%B3%B4%EC%95%88&srchBeginDt=&srchEndDt="
+        },
+        {
+          "text": "260701(보도자료) 금융회사가 프런티어 AI 보안위협에 적극적으로 대응할 수 있도록 면책 조치와 가이드라인을 마련하였습니다.hwp",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=87240&fileTy=ATTACH&fileNo=1"
+        },
+        {
+          "text": "260701(보도자료) 금융회사가 프런티어 AI 보안위협에 적극적으로 대응할 수 있도록 면책 조치와 가이드라인을 마련하였습니다.pdf",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=87240&fileTy=ATTACH&fileNo=2"
+        },
+        {
+          "text": "260701[참고자료] 프런티어 AI 보안 위협 금융분야 대응 요령.hwpx",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=87240&fileTy=ATTACH&fileNo=3"
+        },
+        {
+          "text": "과기정통부-앤트로픽, 글로벌 AI 안전‧보안 동맹 전면 추진",
+          "url": "https://www.fsc.go.kr/no010101/87150?srchCtgry=&curPage=1&srchKey=sj&srchText=%EB%B3%B4%EC%95%88&srchBeginDt=&srchEndDt="
+        },
+        {
+          "text": "260618 석간 (보도) 과기정통부-앤트로픽, 글로벌 AI 안전‧보안 동맹 전면 추진.hwpx",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=87150&fileTy=ATTACH&fileNo=1"
+        },
+        {
+          "text": "260618 석간 (보도) 과기정통부-앤트로픽, 글로벌 AI 안전‧보안 동맹 전면 추진.pdf",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=87150&fileTy=ATTACH&fileNo=2"
+        },
+        {
+          "text": "고도화되는 고성능 AI 보안위협에 치밀하게 대응하기 위해 민간 기술자문단을 가동합니다. - AI·보안·제도분야 최고 전문성을 갖춘 민간 기술자문단 본격 출범",
+          "url": "https://www.fsc.go.kr/no010101/87018?srchCtgry=&curPage=1&srchKey=sj&srchText=%EB%B3%B4%EC%95%88&srchBeginDt=&srchEndDt="
+        },
+        {
+          "text": "260601(보도자료) 고도화되는 고성능 AI 보안위협에 치밀하게 대응하기 위해 민간 기술자문단을 가동합니다..hwp",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=87018&fileTy=ATTACH&fileNo=1"
+        },
+        {
+          "text": "260601(보도자료) 고도화되는 고성능 AI 보안위협에 치밀하게 대응하기 위해 민간 기술자문단을 가동합니다.pdf",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=87018&fileTy=ATTACH&fileNo=2"
+        },
+        {
+          "text": "금융권 AI 전환 본격화! 금융분야 망분리 규제를 완화하여 혁신은 넓게, 보안은 더 단단하게 하겠습니다. - ｢고성능 AI 관련 금융권 보안위협 대응 간담회｣ 실시",
+          "url": "https://www.fsc.go.kr/no010101/86972?srchCtgry=&curPage=1&srchKey=sj&srchText=%EB%B3%B4%EC%95%88&srchBeginDt=&srchEndDt="
+        },
+        {
+          "text": "260522(보도자료) 금융권 AI 전환 본격화! 금융분야 망분리 규제를 완화하여 혁신은 넓게 보안은 더 단단하게 하겠습니다..hwp",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=86972&fileTy=ATTACH&fileNo=1"
+        },
+        {
+          "text": "260522(보도자료) 금융권 AI 전환 본격화! 금융분야 망분리 규제를 완화하여 혁신은 넓게 보안은 더 단단하게 하겠습니다.pdf",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=86972&fileTy=ATTACH&fileNo=2"
+        },
+        {
+          "text": "260522[별첨1] 고성능 AI 관련 금융권 보안 위협 대응 방안.hwp",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=86972&fileTy=ATTACH&fileNo=3"
+        },
+        {
+          "text": "260522[별첨1] 고성능 AI 관련 금융권 보안 위협 대응 방안.pdf",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=86972&fileTy=ATTACH&fileNo=4"
+        },
+        {
+          "text": "[보도자료] 금융권 금융보안 강화 간담회 개최",
+          "url": "https://www.fsc.go.kr/no010101/84581?srchCtgry=&curPage=1&srchKey=sj&srchText=%EB%B3%B4%EC%95%88&srchBeginDt=&srchEndDt="
+        },
+        {
+          "text": "250515(보도자료) 금융권 금융보안 강화 간담회 개최.pdf",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=84581&fileTy=ATTACH&fileNo=1"
+        },
+        {
+          "text": "250515(보도자료) 금융권 금융보안 강화 간담회 개최.hwp",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=84581&fileTy=ATTACH&fileNo=2"
+        },
+        {
+          "text": "250515(보도자료) 금융권 금융보안 강화 간담회 개최.hwpx",
+          "url": "https://www.fsc.go.kr/comm/getFile?srvcId=BBSTY1&upperNo=84581&fileTy=ATTACH&fileNo=3"
+        }
+      ],
+      "sha256": "53d401cf9cf38208dea150c4ce87e7e0ce474cee9cbe00333b0ac79f6e82884c",
+      "status": 200,
+      "url": "https://www.fsc.go.kr/no010101?srchCtgry=&curPage=1&srchKey=sj&srchText=%EB%B3%B4%EC%95%88"
+    },
+    "fsi-news": {
+      "fetched_at": "2026-11-11T14:14:18Z",
+      "first_seen": "2026-11-11T14:14:18Z",
+      "issuer": "금융보안원 (FSI)",
+      "links": [
+        {
+          "text": "취약점 분석·평가",
+          "url": "https://www.fsec.or.kr/bbs/1031"
+        },
+        {
+          "text": "디지털인증·클라우드 안전성 평가",
+          "url": "https://www.fsec.or.kr/bbs/1033"
+        },
+        {
+          "text": "개인정보·제3자 리스크 평가",
+          "url": "https://www.fsec.or.kr/bbs/1034"
+        },
+        {
+          "text": "03 AI·디지털 금융 혁신 기반 조성",
+          "url": "javascript:void(0)"
+        },
+        {
+          "text": "금융 AI 보안",
+          "url": "https://www.fsec.or.kr/bbs/1035"
+        },
+        {
+          "text": "가이드",
+          "url": "https://www.fsec.or.kr/bbs/222"
+        },
+        {
+          "text": "전자서명인증 평가자료",
+          "url": "https://www.fsec.or.kr/bbs/248"
+        }
+      ],
+      "sha256": "118f65aba6f80d48014a97b9050b7b4094cceaa4bc8d545798e5a833754c89f2",
+      "status": 200,
+      "url": "https://www.fsec.or.kr/bbs/221"
+    },
+    "fss-press": {
+      "fetched_at": "2026-11-11T14:14:21Z",
+      "first_seen": "2026-11-11T14:14:21Z",
+      "issuer": "금융감독원 (FSS)",
+      "links": [],
+      "sha256": "72a4fdc654e93a9b43dec03905396bf82449d5962c4a8666ade416bc8c209225",
+      "status": 200,
+      "url": "https://www.fss.or.kr/fss/bbs/B0000188/list.do?menuNo=200218"
+    },
+    "law-efsr": {
+      "fetched_at": "2026-11-11T14:14:24Z",
+      "first_seen": "2026-11-11T14:14:24Z",
+      "issuer": "국가법령정보센터",
+      "links": [],
+      "sha256": "abb52b7245fc0612036a2a73869ddf508947a8d16fdaca23ac72ed838f33c608",
+      "status": 200,
+      "url": "https://www.law.go.kr/행정규칙/전자금융감독규정"
+    },
+    "nist-news": {
+      "fetched_at": "2026-11-11T14:14:24Z",
+      "first_seen": "2026-11-11T14:14:24Z",
+      "issuer": "NIST",
+      "links": [
+        {
+          "text": "Cybersecurity and Privacy",
+          "url": "https://www.nist.gov/cybersecurity-and-privacy"
+        },
+        {
+          "text": "Email Sign-Up",
+          "url": "https://public.govdelivery.com/accounts/USNIST/subscriber/new?topic_id=USNIST_1"
+        },
+        {
+          "text": "Self-Employed? Solopreneur? NIST Has a Cybersecurity Guide Just for You",
+          "url": "https://www.nist.gov/news-events/news/2026/11/self-employed-solopreneur-nist-has-cybersecurity-guide-just-you"
+        },
+        {
+          "text": "Department of Commerce Announces Letters of Intent With 4 Companies for $389 Million of R&D Awards to Strengthen America’s Energy Semiconductor Supply Chain",
+          "url": "https://www.nist.gov/news-events/news/2026/10/department-commerce-announces-letters-intent-4-companies-389-million-rd"
+        },
+        {
+          "text": "NIST Awards More Than $1.7 Million to Support Cybersecurity Workforce Development Across 8 States",
+          "url": "https://www.nist.gov/news-events/news/2026/09/nist-awards-more-17-million-support-cybersecurity-workforce-development"
+        },
+        {
+          "text": "NIST Finalizes Guidelines on Protecting Online Identity and Access Tokens From Misuse",
+          "url": "https://www.nist.gov/news-events/news/2026/09/nist-finalizes-guidelines-protecting-online-identity-and-access-tokens"
+        },
+        {
+          "text": "Mailing List",
+          "url": "https://public.govdelivery.com/accounts/USNIST/subscriber/new"
+        },
+        {
+          "text": "Copyright & Disclaimers",
+          "url": "https://www.nist.gov/copyrights-disclaimers"
+        }
+      ],
+      "sha256": "8df10a2e2b8e2f0af0bf3e3deaf75850f7b2a98ac8060cc342fc2b2a0e5720bb",
+      "status": 200,
+      "url": "https://www.nist.gov/news-events/news"
+    },
+    "nydfs-cyber": {
+      "fetched_at": "2026-11-11T14:14:29Z",
+      "first_seen": "2026-11-11T14:14:29Z",
+      "issuer": "NYDFS",
+      "links": [
+        {
+          "text": "Fraud and Cyber Protection",
+          "url": "https://www.dfs.ny.gov/consumers/fraud_cyber_protection"
+        },
+        {
+          "text": "AI Safety & the RAISE Act",
+          "url": "https://www.dfs.ny.gov/digit"
+        },
+        {
+          "text": "Cybersecurity Resource Center",
+          "url": "https://www.dfs.ny.gov/cybersecurity"
+        },
+        {
+          "text": "File a Complaint or Appeal",
+          "url": "https://www.dfs.ny.gov/complaint"
+        },
+        {
+          "text": "Cybersecurity FAQs",
+          "url": "https://www.dfs.ny.gov/cybersecurity/faqs"
+        },
+        {
+          "text": "23 NYCRR Part 500",
+          "url": "https://www.dfs.ny.gov/cybersecurity/23-NYCRR-Part-500"
+        },
+        {
+          "text": "Cybersecurity Submissions",
+          "url": "https://www.dfs.ny.gov/cybersecurity/submissions"
+        },
+        {
+          "text": "Cybersecurity Exemptions",
+          "url": "https://www.dfs.ny.gov/cybersecurity/exemptions"
+        },
+        {
+          "text": "Training Resources & Tools",
+          "url": "https://www.dfs.ny.gov/cybersecurity/compliance-resources"
+        },
+        {
+          "text": "Guidance on How to Conduct and Use Risk Assessments Required by ...",
+          "url": "https://www.dfs.ny.gov/industry_guidance/industry_letters/il20260910-cyber-risk-assessment"
+        },
+        {
+          "text": "Industry Measures in Heightened Cybersecurity Threat Environment",
+          "url": "https://www.dfs.ny.gov/industry-guidance/industry-letters/20260521-guidance-on-measures-reg-entities-should-consider-in-a-hcte"
+        },
+        {
+          "text": "Heightened Cybersecurity Risks Associated with Frontier AI Models",
+          "url": "https://www.dfs.ny.gov/industry-guidance/industry-letters/20260521-heightened-cybersecurity-risks-assoc-with-frontier-ai-models"
+        },
+        {
+          "text": "Cybersecurity Alert: Critical Vulnerabilities in PHP that Require Immediate Patching",
+          "url": "https://www.dfs.ny.gov/industry_guidance/industry_letters/il20261022-cyber-php-patching"
+        },
+        {
+          "text": "DFS Issues New Cybersecurity Guidance on Risk Assessments for Financial Services Entities",
+          "url": "https://www.dfs.ny.gov/reports_and_publications/press_releases/pr20260910"
+        },
+        {
+          "text": "Cybersecurity Alert: N-central Vulnerability Affecting Some Managed Service Providers",
+          "url": "https://www.dfs.ny.gov/industry_guidance/industry_letters/il20260811-cyber-threat-alert-n-central"
+        },
+        {
+          "text": "New York State Department of Financial Services Secures Cybersecurity Settlement with Order Express, Inc.",
+          "url": "https://www.dfs.ny.gov/reports_and_publications/press_releases/pr20260805"
+        },
+        {
+          "text": "DFS Issues Guidance to Regulated Entities on Cybersecurity in a Heightened Threat Environment",
+          "url": "https://www.dfs.ny.gov/reports_and_publications/press_releases/pr202605121"
+        },
+        {
+          "text": "DFS Secures $2.25 Million Cybersecurity Settlement with Delta Dental",
+          "url": "https://www.dfs.ny.gov/reports_and_publications/press_releases/pr20260430"
+        },
+        {
+          "text": "Disclaimer",
+          "url": "https://www.dfs.ny.gov/disclaimer"
+        }
+      ],
+      "sha256": "629d05cf4c678895f6c4f0e535e64b906c370acac8edb3da09f07b73437f5911",
+      "status": 200,
+      "url": "https://www.dfs.ny.gov/industry_guidance/cybersecurity"
+    },
+    "occ-bulletins": {
+      "fetched_at": "2026-11-11T14:14:28Z",
+      "first_seen": "2026-11-11T14:14:28Z",
+      "issuer": "OCC",
+      "links": [
+        {
+          "text": "Third-Party Relationships: Interagency Guidance on Risk Management",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2023/bulletin-2023-17.html"
+        },
+        {
+          "text": "Legislative Affairs",
+          "url": "https://www.occ.gov/about/connect-with-us/legislative-affairs/index-legislative-affairs.html"
+        },
+        {
+          "text": "Financial Technology",
+          "url": "https://www.occ.gov/topics/supervision-and-examination/financial-technology/index-financial-technology.html"
+        },
+        {
+          "text": "Community Affairs",
+          "url": "https://www.occ.gov/topics/consumers-and-communities/community-development/index-community-affairs.html"
+        },
+        {
+          "text": "OCC Raises Concerns with California’s Climate Disclosure Laws",
+          "url": "https://www.occ.gov/news-issuances/news-releases/2026/nr-occ-2026-95.html"
+        },
+        {
+          "text": "2026 Cybersecurity and Financial System Resilience Report",
+          "url": "https://www.occ.gov/publications-and-resources/publications/cybersecurity-and-financial-system-resilience/files/2026-cybersecurity-report.html"
+        },
+        {
+          "text": "Get OCC Email Updates",
+          "url": "https://www.occ.gov/about/connect-with-us/subscribe-to-occ-email-updates.html"
+        }
+      ],
+      "sha256": "e0d2ece944179a9cbc97cdd0a8198347fb8f542178385984ae06cb97b7072001",
+      "status": 200,
+      "url": "https://www.occ.gov/news-issuances/bulletins/index-bulletins.html"
+    },
+    "treasury-press": {
+      "fetched_at": "2026-11-11T14:14:30Z",
+      "first_seen": "2026-11-11T14:14:30Z",
+      "issuer": "US Treasury",
+      "links": [
+        {
+          "text": "Daily Treasury Par Yield Curve Rates",
+          "url": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView?type=daily_treasury_yield_curve&field_tdr_date_value=2026"
+        },
+        {
+          "text": "Daily Treasury Par Real Yield Curve Rates",
+          "url": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView?type=daily_treasury_real_yield_curve&field_tdr_date_value=2026"
+        },
+        {
+          "text": "Daily Treasury Bill Rates",
+          "url": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView?type=daily_treasury_bill_rates&field_tdr_date_value=2026"
+        },
+        {
+          "text": "Daily Treasury Long-Term Rates",
+          "url": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView?type=daily_treasury_long_term_rate&field_tdr_date_value=2026"
+        },
+        {
+          "text": "Daily Treasury Real Long-Term Rates",
+          "url": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView?type=daily_treasury_real_long_term&field_tdr_date_value=2026"
+        }
+      ],
+      "sha256": "e0679bf7d61e67fd4b174ff1ae346037c0b471bddfc5ce72dcb68fa85cd7eb27",
+      "status": 200,
+      "url": "https://home.treasury.gov/news/press-releases"
+    }
+  }
+}

@@ -1,0 +1,15 @@
+id: intl-iso-iec-27001-2022
+title: ISO/IEC 27001:2022 — Information security management systems (Annex A controls)
+issuer: ISO/IEC
+jurisdiction: INTL
+doc_type: standard
+status: final
+binding: 1
+names_agents: false
+date: 2022-10-25
+url: https://www.iso.org/standard/27001
+url_verified: null
+url_note: 2026-11-11 HTTP 403 (봇 차단). 유료 표준 — 본문 비공개.
+summary: "기업 보안 담당자 피드백(2026-11)이 든 기준점. Annex A: 5.9 자산 인벤토리, 5.15 접근통제, 5.16 신원관리, 5.19~5.23 공급자, 8.15 로깅. 에이전트 언급 없음."
+topics: [rating]
+source_note: 학회 피드백 §3(TISAX AL3·ISO 27001). Annex A 번호는 2022 판 기준 — 원문 대조 필요.

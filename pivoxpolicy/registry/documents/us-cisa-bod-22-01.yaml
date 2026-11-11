@@ -1,0 +1,15 @@
+id: us-cisa-bod-22-01
+title: CISA Binding Operational Directive 22-01 — Reducing the Significant Risk of Known Exploited Vulnerabilities
+issuer: CISA
+jurisdiction: US
+doc_type: regulation
+status: in_force
+binding: 2
+names_agents: false
+date: 2021-11-03
+url: https://www.cisa.gov/news-events/directives/bod-22-01-reducing-significant-risk-known-exploited-vulnerabilities
+url_verified: 2026-11-11
+url_note: curl 은 403, urllib(pivoxpolicy fetch) 은 200 — 봇 차단이 UA 에 따라 다름.
+summary: 연방 민간기관 대상(민간 금융사엔 적용 안 됨). KEV 목록 취약점을 기한 내 패치 — 2021 년 이후 CVE 기본 2주. 덱 제안 ② '패치 기한' 의 선례. 7개 통제 밖.
+topics: [testing]
+source_note: 덱 슬라이드 15 노트.
