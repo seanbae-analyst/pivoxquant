@@ -1368,6 +1368,10 @@ def _do_migrations():
         _widen_column_to_text(_wt, _wc)
 
     if is_postgres:
+        # The env-tier backfill above reads users via db.session and, when
+        # nothing changed, never commits — its ACCESS SHARE lock on users made
+        # the ALTER below time out on every boot (2026-11-03, local PG 16).
+        db.session.remove()
         _enable_rls_on_owned_tables(db.engine)
 
     # Backfill FX rates

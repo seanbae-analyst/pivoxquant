@@ -127,7 +127,8 @@ def filing_timeline(
             break
 
     earnings_days = [r.filed_on for r in rows if (_event(r) or {}).get("earnings")]
-    earnings_in_view = sum(1 for d in earnings_days if d >= since)
+    # 발표 횟수 = 발표한 날 수. 한국은 같은 날 별도·연결 잠정실적을 따로 내기도 한다.
+    earnings_in_view = len({d for d in earnings_days if d >= since})
     reaction = None
     if earnings_in_view:
         reaction = earnings_reaction(

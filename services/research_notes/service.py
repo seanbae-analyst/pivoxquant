@@ -50,6 +50,7 @@ from models.research_note import (
 )
 from models.trade_history import REGISTRATION_SOURCES
 from services.imports import is_date_only, ticker_ok
+from services.pre_trade.friction_outcome import ticker_key
 from services.ticker_normalizer import normalize_ticker
 
 logger = logging.getLogger(__name__)
@@ -286,13 +287,19 @@ def research_for_ticker(user_id: int, ticker: str) -> dict:
 def research_list_for_ticker(user_id: int, ticker: str) -> list[dict]:
     """Every note the caller wrote on one ticker, newest first — the 종목별
     내 기록 timeline (services/stock_record) reads them all, not just the
-    latest one /pre-trade shows."""
+    latest one /pre-trade shows.
+
+    One holding, any spelling (2026-11-03): matched by
+    ``friction_outcome.ticker_key`` like the record's fills, so a note on
+    ``035720.KQ`` shows on ``035720.KS`` (and on a bare ``035720``)."""
     normalized = normalize_ticker(str(ticker or ""))
     if not normalized:
         raise ValueError("ticker is required")
+    key = ticker_key(normalized)
+    spellings = [key, *(key + s for s in (".KS", ".KQ", ".KRX"))]
     rows = (
         ResearchNote.query.filter(
-            ResearchNote.user_id == int(user_id), ResearchNote.ticker == normalized
+            ResearchNote.user_id == int(user_id), ResearchNote.ticker.in_(spellings)
         )
         .order_by(ResearchNote.id.desc())
         .all()

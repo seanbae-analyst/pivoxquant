@@ -75,7 +75,12 @@ def _fetch(source: str, key: str) -> list[AnnualRow] | None:
 
 
 def sync_facts(source: str, key: str, *, now_ts: float | None = None) -> bool:
-    """때가 됐으면 원천에서 연간 숫자를 받아 새 회계연도만 저장. 받았으면 True."""
+    """때가 됐으면 원천에서 연간 숫자를 받아 새 회계연도만 저장.
+
+    원천에 물었으면 True — 받았든 못 받았든. pick_facts 의 요청당 예산은 이걸로
+    준다 (2026-11-03: 실패를 False 로 돌려 예산이 안 줄어, 원천 장애 때 한 요청이
+    종목마다 타임아웃을 기다렸다). 때가 안 됐으면 False.
+    """
     now_ts = time.time() if now_ts is None else now_ts
     marker = f"{source}:{key}"
     if not key or not _due(marker, now_ts):
@@ -84,9 +89,9 @@ def sync_facts(source: str, key: str, *, now_ts: float | None = None) -> bool:
         rows = _fetch(source, key)
     except Exception as exc:  # 네트워크·파싱 — 카드는 "받는 중"으로 남는다
         logger.warning("pick_facts: %s fetch failed for %s: %s", source, key, exc)
-        return False
+        return True
     if rows is None:
-        return False
+        return True
     have = {
         d for (d,) in db.session.query(CompanyAnnualFact.fiscal_end).filter(
             CompanyAnnualFact.source == source, CompanyAnnualFact.ticker == key,
