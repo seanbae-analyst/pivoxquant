@@ -1,9 +1,8 @@
 """피드 파서·수집기 — 네트워크 없이."""
 
-import re
 
 from pivoxpolicy.fetch import FetchResult
-from pivoxpolicy.intel import Item, append_items, collect, load_items, parse_date, parse_feed, render_new
+from pivoxpolicy.intel import append_items, collect, load_items, parse_date, parse_feed, render_new
 
 RSS = """<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/"><channel><title>t</title>
