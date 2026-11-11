@@ -1,0 +1,780 @@
+# `pivoxpolicy intel` 가 읽는 RSS/Atom/JSON 피드. AI 에이전트 규제·위협 동향을 발행 주체에서 바로 받는다.
+# 출처: pivoxpolicy-research 워크플로(2026-11-11). regulators 그룹은 독립 verify(verdict=confirmed),
+# threat-intel·korea-primary 는 finder 가 받았으나(HTTP 200·항목>0) verify 에이전트가 한도로 중단 → 'finder 확인, 2차 미완'.
+# enabled:false = 내 JSON-Feed 파서가 못 읽는 커스텀 API(별도 어댑터 필요). keep_all 안 씀 — keywords 로 거른다.
+feeds:
+  - id: assembly-bill-api-json
+    issuer: "국회 열린국회정보 Open API (의안정보)"
+    jurisdiction: KR
+    kind: primary
+    topic: regulation
+    type: json
+    url: "https://open.assembly.go.kr/portal/openapi/nzmimeepazxkubdpn?AGE=22&pSize=20&Type=json&BILL_NAME=%EC%A0%84%EC%9E%90%EA%B8%88%EC%9C%B5%EA%B1%B0%EB%9E%98%EB%B2%95"
+    enabled: false
+    keywords: ["전자금융거래법", "인공지능", "AI", "인공지능 발전과 신뢰 기반 조성", "정보통신망법", "신용정보법", "개인정보 보호법", "일부개정법률안"]
+    note: "커스텀 JSON API — 파서가 JSON Feed 가 아니라 못 읽음. 어댑터 필요(enabled:false) — 의안 목록 API(nzmimeepazxkubdpn). 2026-11-11 KEY 파라미터 없이 정상 응답(RESULT CODE INFO-000) — 무키 호출 한도는 미확인, 운영 시 발급 KEY 권장. Content-Type 은 text/html 이지만 본문은 JSON. 필드 BILL_ID·BILL_NO·BILL_NAME·PROPOSE_DT·PROC_RE"
+
+  - id: fsc-cardnews-rss
+    issuer: "금융위원회 (FSC)"
+    jurisdiction: KR
+    kind: primary
+    topic: mixed
+    type: rss
+    url: "https://www.fsc.go.kr/about/fsc_card_rss/?fid=0411"
+    keywords: ["AI", "인공지능", "보안", "해킹", "침해", "에이전트"]
+    note: "verify confirmed (항목 10) — 홍보자료>카드뉴스. 규제 신호는 약하지만 금융위 RSS 엔진이 살아 있는지 확인하는 카나리로 쓸 것(fid=0111 복구 감지). text/xml, dc:date 형식 'YYYY-MM-DD 00:00:00'."
+
+  - id: fsi-press-json
+    issuer: "금융보안원 (FSI)"
+    jurisdiction: KR
+    kind: primary
+    topic: incident
+    type: json
+    url: "https://www.fsec.or.kr/bbs/list"
+    enabled: false
+    keywords: ["정보 유출", "침해", "해킹", "보안", "AI", "에이전트", "평가", "클라우드", "사칭"]
+    note: "커스텀 JSON API — 파서가 JSON Feed 가 아니라 못 읽음. 어댑터 필요(enabled:false) — 금융보안원 보도자료(menuNo=69). 목록 HTML(https://www.fsec.or.kr/bbs/69, 200)은 스크립트 렌더링이지만 /static/assets/js/bbs/bbs.js 가 호출하는 XHR 을 직접 쓸 수 있음: POST https://www.fsec.or.kr/bbs/list, Content-Type: application/jso"
+
+  - id: kisa-boho-alert-level-rss
+    issuer: "KISA 보호나라&KrCERT/CC"
+    jurisdiction: KR
+    kind: primary
+    topic: incident
+    type: rss
+    url: "https://www.boho.or.kr/kr/rss.do?bbsId=B0000342"
+    keywords: ["경보", "주의", "경계", "심각", "상향", "하향", "침해사고"]
+    note: "verify confirmed (항목 10) — '사이버위협>경보단계' 공식 RSS. 2026-10-22 '주의' 상향 — 금융위 2026-11-05 전금융권 간담회(침해 37개사) 와 시기 일치. 국가 단위 사고 타임라인의 1차 근거."
+
+  - id: kisa-boho-notice-rss
+    issuer: "KISA 보호나라&KrCERT/CC"
+    jurisdiction: KR
+    kind: primary
+    topic: mixed
+    type: rss
+    url: "https://www.boho.or.kr/kr/rss.do?bbsId=B0000132"
+    keywords: ["AI", "인공지능", "FAQ", "사이버대피소", "취약점", "안내"]
+    note: "verify confirmed (항목 10) — '알림마당>공지사항' 공식 RSS. PHP2Shell 대응 FAQ 2건(10-26, 10-29) — NYDFS 2026-10-22 PHP 경보와 같은 사건의 한국 측 대응."
+
+  - id: kisa-boho-reports-rss
+    issuer: "KISA 보호나라&KrCERT/CC"
+    jurisdiction: KR
+    kind: primary
+    topic: threat_intel
+    type: rss
+    url: "https://www.boho.or.kr/kr/rss.do?bbsId=B0000127"
+    keywords: ["AI", "인공지능", "에이전트", "LLM", "위협 동향", "침해사고 원인분석", "TTPs", "랜섬웨어", "가이드"]
+    note: "verify confirmed (항목 10) — '알림마당>보고서/가이드' 공식 RSS. '2026년 상반기 침해사고 원인분석 및 대응조치 서비스 동향보고서'(2026-08-21), '사이버 위협 동향 보고서(2026년 상반기)'(2026-07-30) 등 반기 보고서가 여기로 나온다."
+
+  - id: kisa-boho-security-notice-rss
+    issuer: "KISA 보호나라&KrCERT/CC"
+    jurisdiction: KR
+    kind: primary
+    topic: threat_intel
+    type: rss
+    url: "https://www.boho.or.kr/kr/rss.do?bbsId=B0000133"
+    keywords: ["AI", "인공지능", "에이전트", "MCP", "LLM", "프롬프트", "취약점", "업데이트 권고", "침해사고", "랜섬웨어"]
+    note: "verify confirmed (항목 10) — 보호나라 RSS 안내(/kr/subPage.do?menuNo=205121)에 공식 게재된 5개 피드 중 '알림마당>보안공지'. text/xml RSS 2.0, pubDate 'YYYY-MM-DD'. 2026-11-11 10건 중 AI 키워드 0건 — 제품 패치 권고 위주. 첫 요청에서 connection reset 1회 후 재시도 성공 → 재시도 로직 필요"
+
+  - id: kisa-boho-vuln-rss
+    issuer: "KISA 보호나라&KrCERT/CC"
+    jurisdiction: KR
+    kind: primary
+    topic: threat_intel
+    type: rss
+    url: "https://www.boho.or.kr/kr/rss.do?bbsId=B0000302"
+    keywords: ["CVE", "취약점", "AI", "인공지능", "에이전트", "LLM", "NAC", "ZTNA", "원격 코드 실행"]
+    note: "verify confirmed (항목 10) — '사이버위협>취약점 정보' 공식 RSS. 국내 벤더 CVE 공개 채널 — 금융권 망분리·NAC 제품 취약점이 먼저 뜬다."
+
+  - id: kisa-press-rss
+    issuer: "한국인터넷진흥원 (KISA)"
+    jurisdiction: KR
+    kind: primary
+    topic: mixed
+    type: rss
+    url: "https://www.kisa.or.kr/rss/401"
+    keywords: ["AI", "에이전트", "침해", "취약점", "보안공지"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 10) — KISA 보도자료 RSS. 보호나라/KrCERT RSS 는 못 찾음(knvd rss 추정 URL 404, 웹검색도 없음) — boho.or.kr, knvd.krcert.or.kr HTML 200 해시 감지로 보완."
+
+  - id: msit-press-rss
+    issuer: "과학기술정보통신부 (MSIT)"
+    jurisdiction: KR
+    kind: primary
+    topic: mixed
+    type: rss
+    url: "https://www.msit.go.kr/user/rss/rss.do?bbsSeqNo=94"
+    keywords: ["인공지능", "AI", "자율형 인공지능", "에이전트", "인증", "침해사고", "직권조사", "정보보호", "AI기본법", "안내서"]
+    note: "verify confirmed (항목 50) — MSIT 'RSS 이용안내'(/contents/cont.do?sCode=user&mId=173&mPid=147) 가 게재한 18개 채널 중 '보도자료'. text/xml, pubDate 'YYYY.MM.DD', 본문 전체 포함(891KB — 요청 비용 큼). 50건 중 '과기정통부, 자율형 인공지능 이용 환경에서 철통 인증을 적용할 수 있는 안내서 발간'"
+
+  - id: msit-rules-rss
+    issuer: "과학기술정보통신부 (MSIT)"
+    jurisdiction: KR
+    kind: primary
+    topic: regulation
+    type: rss
+    url: "https://www.msit.go.kr/user/rss/rss.do?bbsSeqNo=83"
+    keywords: ["고시", "훈령", "예규", "인공지능", "AI", "정보보호", "침해사고", "클라우드", "소프트웨어"]
+    note: "verify confirmed (항목 50) — '훈령예규고시' 채널(660KB, 본문 포함). AI기본법 하위 고시·안내 지침이 공식 번호로 나오는 곳. 같은 안내 페이지의 '보도설명'(bbsSeqNo=86, 최신 2026-11-06 '[보도반박] 바이러스토탈 이용 권장 사실 아님')도 보안 사건 해명 추적에 유용."
+
+  - id: na-press-rss
+    issuer: "국회 (대한민국국회 포털)"
+    jurisdiction: KR
+    kind: primary
+    topic: regulation
+    type: rss
+    url: "https://www.assembly.go.kr/portal/rss/rss/meopenRss.do?brd_sctn=C2"
+    keywords: ["정무위", "정무위원회", "전자금융거래법", "개인정보보호법", "인공지능기본법", "침해", "해킹", "유출", "법안심사소위"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 20) — 국회 보도자료 RSS 2.0 (application/rss+xml). 최신 항목 제목에 개인 이름이 들어 있어 여기선 2번째 항목을 표기. 상임위 법안소위 의결('법사위 법안1소위, 소관 고유법안 심사 및 의결' 식) 이 올라와 정무위 법안 처리 신호로 쓸 수 있음. brd_sctn=B2 도 '보도자료' 피드(내용 거의 동일, 바이트 상이). 다른 섹션:"
+
+  - id: na-schedule-rss
+    issuer: "국회 (대한민국국회 포털)"
+    jurisdiction: KR
+    kind: primary
+    topic: regulation
+    type: rss
+    url: "https://www.assembly.go.kr/portal/rss/rss/meopenRss.do?brd_sctn=A1"
+    keywords: ["정무위원회", "전체회의", "법안심사제1소위원회", "전자금융거래법", "개인정보보호법"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 20) — 의사일정 상세검색 RSS — 위원회 회의 일정. 제목에 위원회 이름이 없는 항목('제9차 전체회의')이 있어 description/link 로 위원회를 식별해야 함(이번 수신분엔 농림축산식품법안심사소위 등 타 위원회 포함). 정무위 전자금융거래법·AI기본법 심사 일정의 선행 지표."
+
+  - id: cisa-kev-json
+    issuer: "CISA"
+    jurisdiction: US
+    kind: primary
+    topic: incident
+    type: json
+    url: "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+    enabled: false
+    keywords: ["Langflow", "LiteLLM", "n8n", "MLflow", "Flowise", "Copilot", "MCP"]
+    note: "커스텀 JSON API — 파서가 JSON Feed 가 아니라 못 읽음. 어댑터 필요(enabled:false) — 피드 등록 가치 있음: vendor/product 키워드 필터로 '실제 악용된 AI 플랫폼 취약점' 피드가 됨 — 2025-01 이후 11건(Langflow 6, LiteLLM 3, n8n 1, MLflow 1). dateAdded 로 신규 감지. CISA RSS 4종은 프록시에서 403(별도 항목)."
+
+  - id: crowdstrike-blog-rss
+    issuer: "CrowdStrike"
+    jurisdiction: US
+    kind: primary
+    topic: threat_intel
+    type: rss
+    url: "https://www.crowdstrike.com/en-us/blog/feed/"
+    keywords: ["ARTEX", "agentic", "AI", "Claude Code", "adversary"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 10) — 피드가 10건만 — 폴링 간격 짧아야 함. 한국 금융권 ARTEX 글(2026-10-07) 200, 'Uncovers New Agentic AI Campaigns'(10-21) 200."
+
+  - id: datadog-security-labs-rss
+    issuer: "Datadog Security Labs"
+    jurisdiction: US
+    kind: primary
+    topic: threat_intel
+    type: rss
+    url: "https://securitylabs.datadoghq.com/rss/feed.xml"
+    keywords: ["ARTEX", "agentic", "LiteLLM", "AWS", "prompt injection"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 30) — 2026-11-09 ARTEX AWS 글: 금융 데이터 탐색 — 금융 관련 1차 벤더 관측. 10-21 LiteLLM 공급망."
+
+  - id: fdic-press-govdelivery-rss
+    issuer: "FDIC (via GovDelivery)"
+    jurisdiction: US
+    kind: primary
+    topic: regulation
+    type: rss
+    url: "https://public.govdelivery.com/topics/USFDIC_26/feed.rss"
+    keywords: ["artificial intelligence", "AI", "agent", "third-party", "model", "technology", "cyber", "FIL", "guidance"]
+    note: "verify confirmed (항목 25) — fdic.gov/news/press-releases 페이지가 직접 링크한 GovDelivery 토픽 피드 — 호스트는 제3자지만 내용은 FDIC 1차 발표. 905KB(본문 포함). FIL 전용 토픽 ID 는 구독 폼(이메일 입력)에만 노출돼 미확인. fdic.gov 자체 RSS 는 /rss.xml 하나(이사회 회의·Notational Vote 10건, 최"
+
+  - id: fed-press-bcreg-rss
+    issuer: "Federal Reserve Board"
+    jurisdiction: US
+    kind: primary
+    topic: regulation
+    type: rss
+    url: "https://www.federalreserve.gov/feeds/press_bcreg.xml"
+    keywords: ["artificial intelligence", "AI", "agent", "third-party risk management", "model", "technology", "cyber", "proposal", "comment"]
+    note: "verify confirmed (항목 15) — 'Banking and Consumer Regulatory Policy' 보도자료 피드. 2026-09-11 'Agencies seek comment on proposed third-party risk management guidance' 포함 — 에이전트 공급업체 통제 논의의 1차 근거. 전체 보도자료 피드는 /feeds/press_all.xml(20건,"
+
+  - id: fed-sr-letters-rss
+    issuer: "Federal Reserve Board"
+    jurisdiction: US
+    kind: primary
+    topic: regulation
+    type: rss
+    url: "https://www.federalreserve.gov/feeds/bankinginfo-rss.xml"
+    keywords: ["SR", "CA", "model risk", "artificial intelligence", "AI", "agent", "technology", "cyber", "third-party", "supervisory guidance"]
+    note: "verify confirmed (항목 15) — 연준 RSS 색인(/feeds/feeds.htm)의 'Supervision and Regulation / Banking Information' 피드 — SR·CA 레터 번호가 제목. 레지스트리 fed-sr-letters(HTML)의 RSS 판. 첫 항목은 2023-08 'CA 23-5 / SR 23-8' 고정(날짜 정렬 필요). 제목에 레터 번호만 있어 본"
+
+  - id: federalregister-ai-agents-api-json
+    issuer: "Federal Register (Office of the Federal Register API)"
+    jurisdiction: US
+    kind: primary
+    topic: regulation
+    type: json
+    url: "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22AI+agents%22+OR+%22agentic%22&order=newest&per_page=20"
+    enabled: false
+    keywords: ["AI agents", "agentic", "artificial intelligence", "request for information", "RFI", "notice", "proposed rule", "Commerce Department", "NIST", "Treasury"]
+    note: "커스텀 JSON API — 파서가 JSON Feed 가 아니라 못 읽음. 어댑터 필요(enabled:false) — 공식 JSON API. 결과 1건 = Commerce/NIST CAISI 에이전트 보안 RFI(레지스트리 us-caisi-agent-rfi-2026-01 과 동일 문서) → 검색어가 좁다. 운영 시 term 을 'artificial intelligence' + agencies[]=treasury-department 등으로 넓힐 것. 같은 조건의 RSS(do"
+
+  - id: gtig-rss
+    issuer: "Google Threat Intelligence Group (Google Cloud blog)"
+    jurisdiction: US
+    kind: primary
+    topic: threat_intel
+    type: rss
+    url: "https://cloudblog.withgoogle.com/topics/threat-intelligence/rss"
+    keywords: ["AI Threat Tracker", "ARTEX", "LLMjacking", "agentic", "AI"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 20) — cloud.google.com/.../rss 는 HTML 반환; 실제 피드는 HTML alternate link 의 cloudblog.withgoogle.com. Mandiant blog rss.xml 은 컨설팅 HTML 로 리다이렉트(폐지). AI 관련: 2026-09-08 AI Threat Tracker, 10-30 ARTEX and Friends, 1"
+
+  - id: house-homeland-rss
+    issuer: "US House Committee on Homeland Security"
+    jurisdiction: US
+    kind: primary
+    topic: regulation
+    type: rss
+    url: "https://homeland.house.gov/feed/"
+    keywords: ["AI", "Anthropic", "cyber", "PRC", "hearing"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 10) — GTG-1002 관련 2025-11-26 서한(Anthropic·Google Cloud PDF 3쪽 200), 12-17 청문회 개회발언 페이지 200. 2026-04-29 PRC AI 모델 공동조사 공지."
+
+  - id: msrc-update-guide-rss
+    issuer: "Microsoft Security Response Center"
+    jurisdiction: US
+    kind: primary
+    topic: threat_intel
+    type: rss
+    url: "https://api.msrc.microsoft.com/update-guide/rss"
+    keywords: ["Copilot", "Agent", "MCP", "Azure AI", "Foundry"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 5775) — CVE 피드. 제목에 Copilot/Agent/MCP 포함 27건(예: CVE-2026-109485 Microsoft 365 Agents SDK, CVE-2026-69435 Azure SRE Agent). Microsoft Security Blog feed 와 MSRC blog 는 프록시에서 403(별도 항목)."
+
+  - id: nist-cyber-insights-blog-rss
+    issuer: "NIST (Cybersecurity Insights blog)"
+    jurisdiction: US
+    kind: primary
+    topic: standard
+    type: rss
+    url: "https://www.nist.gov/blogs/cybersecurity-insights/rss.xml"
+    keywords: ["agent identity", "agentic AI", "AI agents", "identity", "authorization", "NCCoE", "zero trust", "post-quantum"]
+    note: "verify confirmed (항목 40) — 에이전트 신원 관리(NCCoE agent identity, 레지스트리 us-nist-nccoe-agent-identity-2026-02) 후속 글이 공식 문서보다 먼저 여기로 나온다 — 2026-08-27 'Back to the Future: Why Agentic AI Needs a Strong Identity Foundation', 2026-10-27 '"
+
+  - id: nist-it-topic-rss
+    issuer: "NIST (Information Technology topic)"
+    jurisdiction: US
+    kind: primary
+    topic: standard
+    type: rss
+    url: "https://www.nist.gov/news-events/information%20technology/rss.xml"
+    keywords: ["agent", "agentic", "AI", "security", "identity", "5G", "O-RAN", "privacy", "workshop"]
+    note: "verify confirmed (항목 40) — NIST RSS 색인 게재 주제 피드. 뉴스와 행사(미래 pubDate, 예: 2027-02-24 워크숍)가 섞여 있어 날짜 기준 정렬 시 주의. CSRC 전용 RSS 가 없어 CSRC 발표의 상위 흐름으로 쓸 수 있다."
+
+  - id: nist-news-rss
+    issuer: "NIST"
+    jurisdiction: US
+    kind: primary
+    topic: standard
+    type: rss
+    url: "https://www.nist.gov/news-events/news/rss.xml"
+    keywords: ["agent", "agentic", "AI", "artificial intelligence", "cybersecurity", "identity", "CAISI", "CAISSI", "profile", "framework"]
+    note: "verify confirmed (항목 40) — 레지스트리 nist-news(HTML)의 RSS 판. application/rss+xml, 40건. NIST RSS 색인(/news-events/nist-rss-feeds → /coo/nist-rss-feeds)에 게재. 주제별 피드 중 cybersecurity/rss.xml 과 'artificial intelligence'/rss.xml 은 200 이지만"
+
+  - id: nvd-api-keyword
+    issuer: "NIST NVD"
+    jurisdiction: US
+    kind: primary
+    topic: incident
+    type: json
+    url: "https://services.nvd.nist.gov/rest/json/cves/2.0?keywordSearch=prompt%20injection&resultsPerPage=20"
+    enabled: false
+    keywords: ["prompt injection", "AI agent", "MCP", "LLM"]
+    note: "커스텀 JSON API — 파서가 JSON Feed 가 아니라 못 읽음. 어댑터 필요(enabled:false) — totalResults 222. 기본 정렬이 오래된 순 → pubStartDate/pubEndDate 창을 지정해야 최신 감지. 키 없이 5req/30s. NVD RSS(nvd-rss.xml) 404 폐지. cveId 조회(CVE-2025-32711) 200."
+
+  - id: openai-news-rss
+    issuer: "OpenAI"
+    jurisdiction: US
+    kind: primary
+    topic: mixed
+    type: rss
+    url: "https://openai.com/news/rss.xml"
+    keywords: ["Disrupting malicious uses", "threat", "abuse", "cyber", "scam", "distillation"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 1380) — 전체 뉴스 피드라 제목 필터 필수. 'Disrupting' 계열: 2026-10-08, 09-30, 08-25, 07-31, 02-25(Feb 2026 report), 2025-10-07, 06-05, 02-21. 개별 openai.com 페이지는 프록시에서 403, PDF(cdn.openai.com)는 200."
+
+  - id: proofpoint-news-rss
+    issuer: "Proofpoint"
+    jurisdiction: US
+    kind: primary
+    topic: mixed
+    type: rss
+    url: "https://www.proofpoint.com/us/rss.xml"
+    keywords: ["threat", "AI", "agent"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 10) — 기업 뉴스 중심 — 위협 연구는 Threat Insight 블로그 HTML(https://www.proofpoint.com/us/blog/threat-insight 200)만; 그 RSS 추정 URL 2종 404. 우선순위 낮음."
+
+  - id: recordedfuture-rss
+    issuer: "Recorded Future (Insikt Group 포함)"
+    jurisdiction: US
+    kind: primary
+    topic: threat_intel
+    type: rss
+    url: "https://www.recordedfuture.com/feed"
+    keywords: ["Insikt", "AI", "agent", "MCP", "fraud"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 50) — 블로그+연구 혼합. /research/feed 404, /research HTML 200."
+
+  - id: sec-press-rss
+    issuer: "SEC"
+    jurisdiction: US
+    kind: primary
+    topic: regulation
+    type: rss
+    url: "https://www.sec.gov/news/pressreleases.rss"
+    keywords: ["artificial intelligence", "AI", "agent", "AI washing", "cybersecurity", "examination priorities", "Regulation S-P", "broker-dealer", "investment adviser"]
+    note: "verify confirmed (항목 25) — application/rss+xml 25건. 2026-10-23 'FY2027 Examination Priorities' 포함. 규칙 피드(/rss/rules/final.xml, /rss/rules/proposed.xml)는 2회 모두 403 'Request Rate Threshold Exceeded' — SEC 는 접속 정책상 식별 가능한 User-Age"
+
+  - id: sentinelone-labs-rss
+    issuer: "SentinelOne SentinelLABS"
+    jurisdiction: US
+    kind: primary
+    topic: threat_intel
+    type: rss
+    url: "https://www.sentinelone.com/labs/feed/"
+    keywords: ["agent", "agentic", "LLM", "OpenAI", "intrusion"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 10) — 개별 글 페이지는 429 'Vercel Security Checkpoint'(프록시). 관련: 2026-09-16 'Agents at Large' (Hugging Face 위 불법 OpenAI 에이전트), 08-13 'The Model Is the Malware | Four Agentic Intrusions'."
+
+  - id: talos-feedburner-rss
+    issuer: "Cisco Talos"
+    jurisdiction: US
+    kind: primary
+    topic: threat_intel
+    type: rss
+    url: "https://feeds.feedburner.com/feedburner/Talos"
+    keywords: ["AI", "LLM", "agent", "prompt injection", "malware"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 15) — blog.talosintelligence.com/rss/ 와 개별 글은 Cloudflare 403(프록시) — feedburner 사본만 됨."
+
+  - id: tenable-blog-rss
+    issuer: "Tenable Research"
+    jurisdiction: US
+    kind: primary
+    topic: threat_intel
+    type: rss
+    url: "https://www.tenable.com/blog/feed"
+    keywords: ["Gemini", "AI", "agent", "prompt injection"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 10) — Gemini Trifecta(2025-09-30) 글 200."
+
+  - id: trailofbits-rss
+    issuer: "Trail of Bits"
+    jurisdiction: US
+    kind: primary
+    topic: threat_intel
+    type: rss
+    url: "https://blog.trailofbits.com/feed/"
+    keywords: ["AI agent", "MCP", "prompt injection", "audit"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 20) — 리다이렉트 → /index.xml. AI 에이전트 보안 연구 다수."
+
+  - id: treasury-press-govdelivery-rss
+    issuer: "US Treasury (via GovDelivery)"
+    jurisdiction: US
+    kind: primary
+    topic: regulation
+    type: rss
+    url: "https://public.govdelivery.com/topics/USTREAS_49/feed.rss"
+    keywords: ["artificial intelligence", "AI", "agent", "financial services", "cyber", "scam", "fraud", "OFAC", "sanctions"]
+    note: "verify confirmed (항목 25) — home.treasury.gov/news/press-releases 가 구독 링크로 가리키는 토픽(USTREAS_49). 레지스트리 treasury-press(HTML)의 RSS 판. 323KB. treasury.gov 자체 RSS 경로(/news/press-releases/feed, /rss/press.xml, /news/press-releases/rss"
+
+  - id: unit42-rss
+    issuer: "Palo Alto Networks Unit 42"
+    jurisdiction: US
+    kind: primary
+    topic: threat_intel
+    type: rss
+    url: "https://unit42.paloaltonetworks.com/feed/"
+    keywords: ["AI", "agent", "LLM", "Hermes", "prompt"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 15) — AI 관련 2026-10-21 'Next Exploit Opportunities'(Hermes Agent+DeepSeek), 10-15 AI-Powered Espionage Campaign(CL-UNK-1211). 태그/카테고리 피드(generative-ai, ai) 404."
+
+  - id: whitehouse-news-rss
+    issuer: "White House"
+    jurisdiction: US
+    kind: primary
+    topic: regulation
+    type: rss
+    url: "https://www.whitehouse.gov/news/feed/"
+    keywords: ["artificial intelligence", "AI", "agent", "agentic", "executive order", "OSTP", "AI Action Plan", "cybersecurity", "critical infrastructure"]
+    note: "verify confirmed (항목 30) — WordPress 피드, 494KB(본문 포함). OSTP 전용 피드는 없다(/ostp/feed/, /ostp/news/feed/, /feed/ 모두 404) — OSTP 글은 이 피드와 /ostp/news/ HTML(최신 2026-10-29 Fact Sheet) 에 뜬다. 대통령 행정명령·포고는 /presidential-actions/feed/(30건,"
+
+  - id: whitehouse-presidential-actions-rss
+    issuer: "White House"
+    jurisdiction: US
+    kind: primary
+    topic: regulation
+    type: rss
+    url: "https://www.whitehouse.gov/presidential-actions/feed/"
+    keywords: ["executive order", "artificial intelligence", "AI", "agent", "memorandum", "cybersecurity", "national security"]
+    note: "verify confirmed (항목 30) — 행정명령·대통령 각서·포고 전용 WordPress 피드(552KB). AI 관련 EO 는 이 피드가 1차. 인사 지명(Nominations) 항목이 많아 키워드 필터 필수."
+
+  - id: wiz-blog-rss
+    issuer: "Wiz (Wiz Research 포함)"
+    jurisdiction: US
+    kind: primary
+    topic: threat_intel
+    type: rss
+    url: "https://www.wiz.io/feed/rss.xml"
+    keywords: ["AI agent", "ARTEX", "LiteLLM", "Storm-0940", "supply chain", "LLMjacking"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 719) — 마케팅 글 많음 — 'Wiz Research' 필터 권장. 2026-10: LiteLLM(10-21), ARTEX Storm-0940(10-22), Black October(10-30), AI-driven cloud attack(10-19) 모두 200."
+
+  - id: zscaler-threatlabz-rss
+    issuer: "Zscaler ThreatLabz"
+    jurisdiction: US
+    kind: primary
+    topic: threat_intel
+    type: rss
+    url: "https://www.zscaler.com/blogs/feeds/security-research"
+    keywords: ["agentic", "AI-assisted", "ARTEX", "South Korean", "pentesting"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 50) — 2026-10-14 한국 금융권 ARTEX 분석(200), 10-21 'Inside a Global AI-Assisted Hacking Campaign'(200)."
+
+  - id: eba-rss
+    issuer: "EBA"
+    jurisdiction: EU
+    kind: primary
+    topic: regulation
+    type: rss
+    url: "https://www.eba.europa.eu/rss.xml"
+    keywords: ["artificial intelligence", "AI", "agent", "DORA", "ICT risk", "third-party", "outsourcing", "guidelines", "consultation"]
+    note: "verify confirmed (항목 10) — 사이트 전체 RSS. 항목이 'EBA E-mail alert <날짜>' 묶음 형태라 제목만으론 필터가 안 되고 링크 본문을 읽어야 한다. 첫 항목은 2024-06 call for papers 고정."
+
+  - id: ec-digital-strategy-rss
+    issuer: "European Commission DG CNECT (Shaping Europe's digital future / AI Office)"
+    jurisdiction: EU
+    kind: primary
+    topic: regulation
+    type: rss
+    url: "https://digital-strategy.ec.europa.eu/en/rss.xml"
+    keywords: ["AI Act", "AI Office", "general-purpose AI", "GPAI", "code of practice", "agent", "agentic", "guidelines", "delegated act", "DSA"]
+    note: "verify confirmed (항목 10) — AI Office 정책 페이지(/en/policies/ai-office)에는 전용 feed 링크가 없고 /en/rss, /en/news/rss.xml 은 page-not-found 로 떨어진다 — 사이트 전체 rss.xml 이 유일한 기계 피드. AI Act 가이드라인·GPAI 실무규약 발표가 여기로 나온다. 집행위 전체 보도자료 RSS 는 https://"
+
+  - id: ecb-press-rss
+    issuer: "ECB"
+    jurisdiction: EU
+    kind: primary
+    topic: mixed
+    type: rss
+    url: "https://www.ecb.europa.eu/rss/press.html"
+    keywords: ["artificial intelligence", "AI", "agent", "digital euro", "cyber resilience", "TIBER-EU", "operational risk"]
+    note: "verify confirmed (항목 15) — ECB 보도자료·연설 RSS. 은행감독(SSM) 전용은 https://www.bankingsupervision.europa.eu/rss/press.html (15건, 최신 2026-11-06) — 감독 기대·ICT 리스크 발언은 그쪽이 더 밀도 높다. 연설 제목에 개인 이름이 앞에 붙으므로 저장 시 마스킹."
+
+  - id: esma-rss
+    issuer: "ESMA"
+    jurisdiction: EU
+    kind: primary
+    topic: regulation
+    type: rss
+    url: "https://www.esma.europa.eu/rss.xml"
+    keywords: ["artificial intelligence", "AI", "agent", "DORA", "ICT", "algorithmic trading", "MiFID", "supervisory briefing", "Q&A"]
+    note: "verify confirmed (항목 10) — 사이트 전체 RSS 10건(61KB). 항목에 날짜 필드가 없어 신규 여부는 링크 해시로 판단해야 한다."
+
+  - id: arxiv-api-agent-security
+    issuer: "arXiv API"
+    jurisdiction: INTL
+    kind: primary
+    topic: threat_intel
+    type: atom
+    url: "https://export.arxiv.org/api/query?search_query=cat:cs.CR+AND+%28abs:%22AI%20agent%22+OR+abs:%22LLM%20agent%22+OR+abs:agentic%29&sortBy=submittedDate&sortOrder=descending&max_results=25"
+    keywords: ["AI agent", "LLM agent", "agentic", "prompt injection", "security"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 25) — https 필수(http 는 429 1회). arXiv 권고 요청 간격 3초. 프롬프트 인젝션 질의 all:%22prompt%20injection%22 도 200(25건, 최신 2026-11-09). 일간 cs.CR 전체 RSS https://rss.arxiv.org/rss/cs.CR 200(50+건, 키워드 필터 필요)."
+
+  - id: csa-blog-rss
+    issuer: "Cloud Security Alliance"
+    jurisdiction: INTL
+    kind: primary
+    topic: standard
+    type: rss
+    url: "https://cloudsecurityalliance.org/feed"
+    keywords: ["agentic", "MCP", "MAESTRO", "AI governance", "STAR for AI"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 20) — /blog/feed → /feed/ 리다이렉트. 연구 노트는 Lab Space(별도 항목)."
+
+  - id: fsb-rss
+    issuer: "FSB"
+    jurisdiction: INTL
+    kind: primary
+    topic: regulation
+    type: rss
+    url: "https://www.fsb.org/feed/"
+    keywords: ["artificial intelligence", "AI", "agent", "cyber", "third-party", "operational resilience", "sound practices", "crypto"]
+    note: "verify confirmed (항목 10) — 레지스트리 fsb-publications(HTML)의 RSS 판 — 사이트 전체 피드(WordPress). /publications/feed/ 는 2014년 항목 1건짜리 스텁이라 쓰지 말 것."
+
+  - id: fsisac-newsroom-rss
+    issuer: "FS-ISAC"
+    jurisdiction: INTL
+    kind: primary
+    topic: threat_intel
+    type: rss
+    url: "https://www.fsisac.com/newsroom/rss.xml"
+    keywords: ["AI", "agentic", "fraud", "financial services", "threat"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 10) — 금융 ISAC 보도자료. HTML newsroom 의 alternate link 로 발견."
+
+  - id: owasp-genai-rss
+    issuer: "OWASP GenAI Security Project"
+    jurisdiction: INTL
+    kind: primary
+    topic: standard
+    type: rss
+    url: "https://genai.owasp.org/feed/"
+    keywords: ["Exploit Roundup", "Agentic", "ASI", "Top 10", "Agent Control Standard"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 10) — 분기 Exploit Roundup(Q1 2026-04-14, Q2 07-08, Q3 10-08) 자체가 사건 집계 소스. Agentic Top 10 공지 2025-12-09, 2026 LLM Top 10 + Agent Control Standard 2026-09-01. 개별 글 페이지는 Cloudflare 403(프록시)."
+
+  - id: boe-pra-news-rss
+    issuer: "Bank of England / PRA"
+    jurisdiction: OTHER
+    kind: primary
+    topic: regulation
+    type: rss
+    url: "https://www.bankofengland.co.uk/rss/news"
+    keywords: ["artificial intelligence", "AI", "agent", "PRA", "SS1/23", "model risk", "operational resilience", "critical third parties", "cyber", "CBEST"]
+    note: "verify confirmed (항목 50) — PRA 발표는 BoE 사이트가 호스트하므로 이 피드에 포함된다(2026-11-03 'Regulators explore credit union reforms' 등). 간행물 피드 /rss/publications (50건, 최신 2026-11-10) 에 Discussion Paper·Policy Statement 가 뜬다."
+
+  - id: checkpoint-research-rss
+    issuer: "Check Point Research"
+    jurisdiction: OTHER
+    kind: primary
+    topic: threat_intel
+    type: rss
+    url: "https://research.checkpoint.com/feed/"
+    keywords: ["ARTEX", "ChatGPT", "Claude", "AI", "prompt"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 15) — 이스라엘. 2026-11-05 'Hacking on Autopilot: Inside ARTEX Cybercrime Campaigns'(200), 10-27 signed ChatGPT/Claude binaries, 2025-08-05 Cursor MCPoison."
+
+  - id: embracethered-rss
+    issuer: "Embrace The Red (independent AI red-team blog)"
+    jurisdiction: OTHER
+    kind: primary
+    topic: threat_intel
+    type: rss
+    url: "https://embracethered.com/blog/index.xml"
+    keywords: ["prompt injection", "Copilot", "Claude Code", "exfiltration", "CVE"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 233) — 개인 연구 블로그(이름 미기재). 에이전트 취약점 1차 공개가 많음."
+
+  - id: fca-news-rss
+    issuer: "UK FCA"
+    jurisdiction: OTHER
+    kind: primary
+    topic: regulation
+    type: rss
+    url: "https://www.fca.org.uk/news/rss.xml"
+    keywords: ["artificial intelligence", "AI", "agent", "AI Live Testing", "Consumer Duty", "operational resilience", "cyber", "quantum", "financial crime"]
+    note: "verify confirmed (항목 20) — application/rss+xml 20건, pubDate 가 'Tuesday, November 10, 2026 - 17:12' 형식(비표준, 파서 주의). 2026-11-05 'FCA to explore quantum computing to tackle financial crime' 포함."
+
+  - id: jfsa-news-rss-ja
+    issuer: "Japan FSA (金融庁)"
+    jurisdiction: OTHER
+    kind: primary
+    topic: regulation
+    type: rss
+    url: "https://www.fsa.go.jp/fsaNewsListAll_rss2.xml"
+    keywords: ["AI", "人工知能", "エージェント", "サイバーセキュリティ", "ガイドライン", "監督指針", "デジタル", "分散型金融"]
+    note: "verify confirmed (항목 15) — 금융청 신착정보 전체 RSS(application/xml, pubDate JST). 영문판은 https://www.fsa.go.jp/fsaEnNewsList_rss2.xml (10건, 최신 2026-11-11; /en/rss.html 안내 페이지 게재) — /en/newsen_rss2.xml 은 404."
+
+  - id: layerx-blog-rss
+    issuer: "LayerX Security"
+    jurisdiction: OTHER
+    kind: primary
+    topic: threat_intel
+    type: rss
+    url: "https://layerxsecurity.com/feed/"
+    keywords: ["AI browser", "agentic browser", "prompt injection"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 10) — CometJacking(2025-10) 글 URL 404. 우선순위 낮음."
+
+  - id: ncsc-all-rss
+    issuer: "UK NCSC"
+    jurisdiction: OTHER
+    kind: primary
+    topic: threat_intel
+    type: rss
+    url: "https://www.ncsc.gov.uk/api/1/services/v1/all-rss-feed.xml"
+    keywords: ["artificial intelligence", "AI", "agent", "agentic", "AI-powered attacks", "intrusion", "critical infrastructure", "vulnerability", "PHP"]
+    note: "verify confirmed (항목 20) — NCSC 공식 API 피드(뉴스+블로그+보고서). 2026-11-03 'Artificial intelligence and cyber intrusion' 과 'UK facing AI-powered attacks on critical infrastructure within two years' — AI 공격 실태 1차 근거. 뉴스만 보려면 news-rss-fee"
+
+  - id: ncsc-uk-report-rss
+    issuer: "NCSC (UK)"
+    jurisdiction: OTHER
+    kind: primary
+    topic: threat_intel
+    type: rss
+    url: "https://www.ncsc.gov.uk/api/1/services/v1/report-rss-feed.xml"
+    keywords: ["artificial intelligence", "AI", "cyber intrusion", "threat"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 20) — 보고서 전용 피드. 2026-11-03 'Artificial intelligence and cyber intrusion'(200), 2025-05-07 'Impact of AI on cyber threat from now to 2027'. 전체 피드 all-rss-feed.xml 200(20건, 최신 2026-11-11), news/blog/guidance"
+
+  - id: tracebit-rss
+    issuer: "Tracebit"
+    jurisdiction: OTHER
+    kind: primary
+    topic: threat_intel
+    type: rss
+    url: "https://tracebit.com/feed.xml"
+    keywords: ["Gemini CLI", "agent", "prompt injection"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 45) — 영국. Gemini CLI 하이재킹(2025-07-28) 1차. 우선순위 낮음."
+
+  - id: trendmicro-simplysecurity-rss
+    issuer: "Trend Micro (Simply Security blog)"
+    jurisdiction: OTHER
+    kind: primary
+    topic: threat_intel
+    type: rss
+    url: "https://feeds.feedburner.com/TrendMicroSimplySecurity"
+    keywords: ["AI agent", "agentic", "LLM", "vulnerability"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 50) — 연구 피드 feeds.trendmicro.com/TrendMicroResearch 는 프록시 CONNECT 502(2회). research.html 200 이지만 alternate feed 없음. 연구 글은 trendmicro.com/en_us/research/… 직접 URL 로 200(예: Langflow Flodrix 2025-06-17)."
+
+  - id: boannews-incident-rss
+    issuer: "보안뉴스"
+    jurisdiction: KR
+    kind: secondary
+    topic: incident
+    type: rss
+    url: "https://www.boannews.com/rss/S1N2.xml"
+    keywords: ["금융", "금보원", "금감원", "유출", "해킹", "침해", "랜섬웨어", "API", "개인정보"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 20) — 사건·사고 섹션 RSS. pubDate 형식 'YYYY-MM-DD HH:MM:SS'(RFC822 아님 — parse_date 확인 필요). 2026-11-11 '금보원 해킹, ‘가짜 금감원 계정’ 만들어 침투했다... ‘마스킹’ 없는 개인정보 유출 가능성도' 처럼 금융권 사고 후속 보도가 바로 올라옴."
+
+  - id: boannews-policy-rss
+    issuer: "보안뉴스"
+    jurisdiction: KR
+    kind: secondary
+    topic: regulation
+    type: rss
+    url: "https://www.boannews.com/rss/S1N3.xml"
+    keywords: ["금융위", "금감원", "개인정보위", "과기정통부", "규제", "가이드라인", "전자금융", "AI 기본법", "망분리"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 20) — 공공·정책 섹션 RSS — 금융위·개인정보위 발표를 당일 요약. 규제 변경의 2차 신호."
+
+  - id: boannews-rss
+    issuer: "보안뉴스"
+    jurisdiction: KR
+    kind: secondary
+    topic: incident
+    type: rss
+    url: "https://cdn.boannews.com/rss/gn_rss_allArticle.xml"
+    keywords: ["금융보안원", "AI", "에이전트", "해킹", "침해", "금융"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 50) — boannews.com/media/news_rss.xml 은 HTML 리다이렉트 — alternate link 가 cdn 피드. 기사 페이지 200. 2026-11-10~11 금융보안원 해킹 3건 보도."
+
+  - id: etnews-ai-rss
+    issuer: "전자신문"
+    jurisdiction: KR
+    kind: secondary
+    topic: mixed
+    type: rss
+    url: "https://rss.etnews.com/04046.xml"
+    keywords: ["AI 에이전트", "에이전트", "금융", "보안", "가이드라인", "AI 기본법", "딥페이크"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 50) — AI·SW > AI 섹션 RSS. 범위가 넓어 keywords 필터 없이는 소음. 에이전트 규제·사고 보도 보강용."
+
+  - id: etnews-finance-rss
+    issuer: "전자신문"
+    jurisdiction: KR
+    kind: secondary
+    topic: mixed
+    type: rss
+    url: "https://rss.etnews.com/02027.xml"
+    keywords: ["금융IT", "전산", "해킹", "유출", "전자금융", "망분리", "AI 에이전트", "금융위", "금감원"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 50) — 경제 > 금융 섹션 RSS (channel title '경제 - 금융 - 전자신문'). 주의: 02024.xml 은 '경제' 섹션(금융 아님) — RSS 목록 페이지의 라벨 위치가 헷갈리게 배치돼 있음."
+
+  - id: etnews-security-rss
+    issuer: "전자신문 (SW>보안 섹션)"
+    jurisdiction: KR
+    kind: secondary
+    topic: incident
+    type: rss
+    url: "https://rss.etnews.com/04045.xml"
+    keywords: ["금융보안원", "AI", "보안", "해킹", "에이전트"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 50) — rss.etnews.com 인덱스(euc-kr) 에서 섹션 확인: 04045=보안, 04046=AI(200), 03=IT(200). Section902/903 은 정치·문화 — 보안 아님."
+
+  - id: fnnews-finance-rss
+    issuer: "파이낸셜뉴스"
+    jurisdiction: KR
+    kind: secondary
+    topic: mixed
+    type: rss
+    url: "https://www.fnnews.com/rss/r20/fn_realnews_finance.xml"
+    keywords: ["금융IT", "해킹", "유출", "침해사고", "전자금융", "금감원", "금융위", "금보원", "AI 에이전트", "망분리"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 22) — 금융 섹션 실시간 RSS 2.0 (application/xml). pubDate 가 'Wed,11 Nov 2026 09:36:14 +0900' 처럼 쉼표 뒤 공백이 없음 — email.utils.parsedate 호환 확인 필요. 공식 RSS 목록 https://www.fnnews.com/rss/ (r20 경로: all, politics, economy,"
+
+  - id: fnnews-it-rss
+    issuer: "파이낸셜뉴스"
+    jurisdiction: KR
+    kind: secondary
+    topic: mixed
+    type: rss
+    url: "https://www.fnnews.com/rss/r20/fn_realnews_it.xml"
+    keywords: ["금융보안", "FISCON", "제로트러스트", "AI 에이전트", "해킹", "유출", "보안"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 31) — IT 섹션 실시간 RSS. 금융보안 컨퍼런스(FISCON)·보안 벤더 보도 포함. 두 번째 항목 기준 표기(첫 항목은 글로벌 AI 브리핑)."
+
+  - id: mtn-rss
+    issuer: "MTN 머니투데이방송"
+    jurisdiction: KR
+    kind: secondary
+    topic: incident
+    type: rss
+    url: "https://news.mtn.co.kr/rss"
+    keywords: ["금융", "해킹", "AI", "금융위", "금감원"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 50) — 경제 전체 피드. 2026-10-04 금융위원장 'AI 해킹 가능성' 기사 200."
+
+  - id: zdnetkorea-rss
+    issuer: "지디넷코리아"
+    jurisdiction: KR
+    kind: secondary
+    topic: mixed
+    type: rss
+    url: "https://feeds.feedburner.com/zdkorea"
+    keywords: ["보안", "AI", "에이전트", "해킹"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 30) — IT 전체 피드 — 키워드 필터 필요."
+
+  - id: darkreading-rss
+    issuer: "Dark Reading"
+    jurisdiction: US
+    kind: secondary
+    topic: threat_intel
+    type: rss
+    url: "https://www.darkreading.com/rss.xml"
+    keywords: ["AI agent", "Artex", "prompt injection", "agentic"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 50) — 피드 200 이지만 기사 페이지는 Cloudflare 403(프록시) — 제목·요약만."
+
+  - id: krebsonsecurity-rss
+    issuer: "KrebsOnSecurity"
+    jurisdiction: US
+    kind: secondary
+    topic: threat_intel
+    type: rss
+    url: "https://krebsonsecurity.com/feed/"
+    keywords: ["AI", "agent", "fraud", "breach"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 10) — AI 에이전트 관련 빈도 낮음."
+
+  - id: therecord-rss
+    issuer: "The Record (Recorded Future News)"
+    jurisdiction: US
+    kind: secondary
+    topic: incident
+    type: rss
+    url: "https://therecord.media/feed"
+    keywords: ["AI", "agent", "breach", "regulator"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 5) — 피드가 5건만 — 폴링 간격 짧아야 함. 기사 페이지 200."
+
+  - id: aiid-rss
+    issuer: "AI Incident Database"
+    jurisdiction: INTL
+    kind: secondary
+    topic: incident
+    type: rss
+    url: "https://incidentdatabase.ai/rss.xml"
+    keywords: ["agent", "prompt injection", "breach", "Claude", "OpenAI"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 100) — 보안 외 AI 사건 포함 — 필터 필요. Clinejection = Incident 1680(200)."
+
+  - id: riskybiz-news-rss
+    issuer: "Risky Business News"
+    jurisdiction: OTHER
+    kind: secondary
+    topic: threat_intel
+    type: rss
+    url: "https://news.risky.biz/rss/"
+    keywords: ["AI", "agent", "Risky Bulletin"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 15) — 일간 요약 뉴스레터 — 2차 집계용."
+
+  - id: thehackernews-rss
+    issuer: "The Hacker News"
+    jurisdiction: OTHER
+    kind: secondary
+    topic: threat_intel
+    type: rss
+    url: "https://feeds.feedburner.com/TheHackersNews"
+    keywords: ["AI agent", "agentic", "ARTEX", "prompt injection", "Copilot", "MCP"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 50) — 기사 페이지도 200(Railway, SGLang/NEAR AI, BOSSAI, Cline 등). 2차 매체 중 접근성 가장 좋음."
+
+  - id: theregister-security-atom
+    issuer: "The Register (Security)"
+    jurisdiction: OTHER
+    kind: secondary
+    topic: threat_intel
+    type: atom
+    url: "https://www.theregister.com/security/headlines.atom"
+    keywords: ["AI agent", "agentic", "OpenAI", "Anthropic", "prompt injection"]
+    note: "finder 확인·2차 미완 (HTTP 200·항목 50) — 기사 페이지 200(Fireworks AI, DIVD, Taiwan, OpenClaw)."
+

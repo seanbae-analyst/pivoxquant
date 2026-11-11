@@ -61,6 +61,7 @@ python3 -m pytest -q
 ```
 registry/
   controls.yaml          7개 통제 정의 + 주제 태그
+  feeds.yaml             intel 이 읽는 RSS/Atom/JSON 피드 77곳 (KISA 보호나라·금융위·과기정통부·개인정보위·NIST·연준·FDIC·재무부·SEC·FSB·EBA·ESMA·ECB·FCA·BoE·NCSC·JFSA + AI 위협 벤더·arXiv·보안매체). pivoxpolicy-research 워크플로(2026-11-11)가 찾아 검증
   sources.yaml           watch 가 보는 발표 목록 페이지 (금융위·금보원·금감원·NIST·연준·OCC·FDIC·NYDFS·재무부·FINRA·FSB)
   documents/<id>.yaml    문서 1건 = 파일 1개 (30건, 2026-11-11)
   codings/<coder>.yaml   코더 1명 = 파일 1개. TEMPLATE.yaml 을 복사해 2차 코더를 만든다
