@@ -37,7 +37,7 @@ const PRODUCTS: Product[] = [
   {
     name: "Map",
     tag: "회사의 데이터",
-    line: "파일의 컬럼마다 표준용어를 붙입니다.",
+    line: "파일을 진단하고, 칸 이름을 표준용어로 맞추고, 개인정보를 가리고, 두 파일을 가명 키로 결합합니다. AI 도우미가 단계마다 안내합니다.",
     href: "https://map.pivoxquant.com",
     host: "map.pivoxquant.com",
   },
