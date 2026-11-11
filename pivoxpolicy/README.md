@@ -42,8 +42,17 @@ python3 -m pivoxpolicy.cli rubric --check   # 내부통제 평가 루브릭·평
 python3 -m pivoxpolicy.cli assess example-worked_2026   # 기관 평가 프로필 (단일 등급 없음)
 python3 -m pivoxpolicy.cli assess --compare             # 기관 × 차원 격자
 python3 -m pivoxpolicy.cli report  # out/ 에 전부 쓰기 (매트릭스·연표·공백·κ·평가 프로필)
+python3 -m pivoxpolicy.cli site    # out/index.html 정적 대시보드 (Pivox 블랙·골드 — matrix·동향·사건·프로필 한 장)
 python3 -m pytest -q
 ```
+
+## 대시보드 (out/index.html)
+
+`site` 명령이 레지스트리 + intel.jsonl 을 한 페이지로 낸다. 디자인은 **PivoxQuant·PivoxMap·PivoxData 와 맞췄다**
+(Vantablack `#050505` + Bronze `#B8956A` + Pretendard, 뉴스 사이트형 한 페이지, 알약·박스·글로우·italic 없음).
+토큰·CSS 는 `pivoxpolicy/templates/`(pivoxmap globals.css · pivoxdata research.css 에서 옮긴 것, pivoxpolicy-research 워크플로가 추출).
+섹션: 지금 바뀐 것(규제 동향) · 사건(AI 에이전트 보안) · 통제×관할 매트릭스(브론즈 알파 히트, AA 대비 확인) · 공백 · 평가 프로필(16차원) · 연표 · 문서 색인 · 출처·방법.
+빨강·초록은 안 쓴다(가격색은 가격에만). 대시보드의 동향·사건은 AI 에이전트 관련성 필터를 거친다(intel.jsonl 전체 수집과 별개).
 
 ## 두 가지 측정 — 혼동하지 말 것
 

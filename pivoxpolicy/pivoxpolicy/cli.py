@@ -13,6 +13,7 @@ from . import kappa as kappa_mod
 from . import matrix as matrix_mod
 from . import report as report_mod
 from . import rubric as rubric_mod
+from . import site as site_mod
 from .registry import SNAPSHOT_DIR, load_codings, load_controls, load_documents, load_sources
 from .schema import SchemaError, validate_coding
 
@@ -189,6 +190,12 @@ def cmd_assess_kappa(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_site(_: argparse.Namespace) -> int:
+    p = site_mod.build()
+    print(f"wrote {p}")
+    return 0
+
+
 def cmd_report(_: argparse.Namespace) -> int:
     controls, docs, codings = _load_all()
     for p in report_mod.write_all(docs, controls, codings):
@@ -244,6 +251,7 @@ def build_parser() -> argparse.ArgumentParser:
     ak.add_argument("b")
     ak.set_defaults(fn=cmd_assess_kappa)
     sub.add_parser("report", help="out/ 에 매트릭스·연표·공백·kappa 전부 쓰기").set_defaults(fn=cmd_report)
+    sub.add_parser("site", help="out/index.html 정적 대시보드 생성 (Pivox 디자인)").set_defaults(fn=cmd_site)
     return p
 
 

@@ -18,5 +18,8 @@ pivoxpolicy = "pivoxpolicy.cli:main"
 [tool.setuptools.packages.find]
 include = ["pivoxpolicy*"]
 
+[tool.setuptools.package-data]
+pivoxpolicy = ["templates/*.css", "templates/*.html"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -1,0 +1,6 @@
+/* heat.css — 매트릭스·프로필 셀 0~3·미확인. 브론즈 알파 사다리(AA 대비 확인). 빨강·초록 없음. */
+td.h-0,.h-0{background:transparent;color:var(--pq-ivory-dim)}
+td.h-1,.h-1{background:rgba(184,149,106,0.12);color:var(--pq-ivory-soft)}
+td.h-2,.h-2{background:rgba(184,149,106,0.28);color:var(--pq-ivory)}
+td.h-3,.h-3{background:rgba(184,149,106,0.50);color:var(--pq-ivory);font-weight:700}
+td.h-x,.h-x{background:transparent;color:var(--pq-ivory-dim);outline:1px dashed var(--pq-ivory-line-strong);outline-offset:-4px}

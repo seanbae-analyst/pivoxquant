@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>{{PAGE_TITLE}}</title>
+<meta name="description" content="{{PAGE_DESCRIPTION}}" />
+<meta name="theme-color" content="#050505" />
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<style>
+{{TOKENS_CSS}}
+{{BASE_CSS}}
+{{HEAT_CSS}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">본문으로</a>
+<div class="wrap">
+
+<!-- 머리 띠: 이름 + 메뉴 한 줄. 메뉴 = 아래 섹션 앵커 그대로(겹치는 바로가기를 따로 두지 않는다). 폰에서는 둘째 줄로 내려가 옆으로 밀린다 -->
+<header class="topbar">
+<a class="brand" href="#top" aria-label="{{BRAND_ARIA}}">Pivox<span class="b">{{BRAND_SUFFIX}}</span></a>
+<nav class="nav" aria-label="섹션">
+<a href="#now">지금 바뀐 것</a><a href="#incidents">사건</a><a href="#matrix">매트릭스</a><a href="#gaps">공백</a><a href="#profile">평가 프로필</a><a href="#timeline">연표</a><a href="#docs">문서</a><a href="#method">출처·방법</a>
+</nav>
+</header>
+
+<main id="main">
+
+<!-- 1. 머리말 한 줄: 작은 브론즈 라벨 → 제호 크기 h1 → 리드 한 문단 → 갱신·상태 한 줄 -->
+<header class="hero" id="top">
+<span class="eyebrow">{{KICKER}}</span>
+<h1>{{TITLE}}</h1>
+<p class="lede">{{LEDE}}</p>
+<p class="meta"><time datetime="{{BUILT_AT_ISO}}">{{BUILT_AT}}</time> 갱신 · {{FEED_STATUS}} · {{CHECKS}}</p>
+<!-- {{FEED_STATUS}} 예: <span class="st st-live">live</span> 피드 12/12 — 또는 <span class="st st-stale">stale</span> 3일 전 · <span class="st st-error">error</span> 2곳 -->
+</header>
+
+<!-- 2. 지금 바뀐 것 — 최신 동향(규제 · 위협). 줄 목록: 날짜 | 분류 한 줄 · 제목 · 한 문장 -->
+<section id="now" aria-labelledby="h-now">
+<div class="sec-h"><h2 id="h-now"><a href="#now">지금 바뀐 것</a></h2><span>최신 동향 — 규제 · 위협 · 한국</span></div>
+<ul class="rows">
+{{NOW}}
+<!-- 항목 틀: <li><time datetime="2026-11-10">11-10</time><div><div class="k">규제 · EU · AI Act</div><div class="t"><a href="…">제목</a></div><div class="s">무엇이 바뀌었나 한 문장.</div></div></li> -->
+</ul>
+<p class="src"><span>출처 {{NOW_SOURCES}}</span><span>기준일 <time datetime="{{NOW_ASOF_ISO}}">{{NOW_ASOF}}</time></span></p>
+</section>
+
+<!-- 3. 사건 — AI 에이전트 관련 보안 사건·해킹 실태. 같은 줄 목록, 분류 줄에 종류(프롬프트 주입 · 권한 남용 · 공급망 …) -->
+<section id="incidents" aria-labelledby="h-incidents">
+<div class="sec-h"><h2 id="h-incidents"><a href="#incidents">사건</a></h2><span>공식 공지 · 보고서에 적힌 것만</span></div>
+<ul class="rows">
+{{INCIDENTS}}
+</ul>
+<p class="src"><span>출처 {{INCIDENTS_SOURCES}}</span><span>기준일 <time datetime="{{INCIDENTS_ASOF_ISO}}">{{INCIDENTS_ASOF}}</time></span></p>
+</section>
+
+<!-- 4. 통제 × 관할 매트릭스 — 행 = 통제, 열 = 관할, 칸 = 점수 0~3 또는 미확인(heat_scale) -->
+<section id="matrix" aria-labelledby="h-matrix">
+<div class="sec-h"><h2 id="h-matrix"><a href="#matrix">통제 × 관할</a></h2><span>{{MATRIX_RUBRIC_ONE_LINE}}</span></div>
+<div class="tblwrap">
+<table class="matrix">
+<caption class="fine" style="text-align:left;padding:0 0 10px">{{MATRIX_CAPTION}}</caption>
+{{MATRIX}}
+<!-- 틀: <thead><tr><th>통제</th><th>EU</th><th>US</th><th>KR</th>…</tr></thead>
+          <tbody><tr><td>{{CONTROL_NAME}}</td><td class="h-3">3</td><td class="h-1">1</td><td class="h-x">?</td>…</tr></tbody> -->
+</table>
+</div>
+<p class="legend"><span><i class="h-0"></i>0 {{H0_LABEL}}</span><span><i class="h-1"></i>1 {{H1_LABEL}}</span><span><i class="h-2"></i>2 {{H2_LABEL}}</span><span><i class="h-3"></i>3 {{H3_LABEL}}</span><span><i class="h-x"></i>미확인</span></p>
+<p class="src"><span>출처 {{MATRIX_SOURCES}}</span><span>기준일 <time datetime="{{MATRIX_ASOF_ISO}}">{{MATRIX_ASOF}}</time></span></p>
+</section>
+
+<!-- 5. 공백 — 매트릭스에서 0 · 미확인인 칸을 글로. 줄 목록(분류 열 = 관할, 내용 = 통제 · 왜 비어 있나) -->
+<section id="gaps" aria-labelledby="h-gaps">
+<div class="sec-h"><h2 id="h-gaps"><a href="#gaps">공백</a></h2><span>아직 규칙이 없거나 확인하지 못한 곳</span></div>
+<ul class="rows">
+{{GAPS}}
+</ul>
+<p class="src"><span>출처 {{GAPS_SOURCES}}</span><span>기준일 <time datetime="{{GAPS_ASOF_ISO}}">{{GAPS_ASOF}}</time></span></p>
+</section>
+
+<!-- 6. 내부통제 평가 프로필 — 통제별 숫자 칸(카드) + 항목 표. 점수는 설명이지 조언이 아니다(금지어 참고) -->
+<section id="profile" aria-labelledby="h-profile">
+<div class="sec-h"><h2 id="h-profile"><a href="#profile">내부통제 평가 프로필</a></h2><span>{{PROFILE_SCOPE_ONE_LINE}}</span></div>
+<div class="cards">
+{{PROFILE_CARDS}}
+<!-- 틀: <div class="card"><div class="k">{{CONTROL}}</div><div class="v">{{SCORE}}<span class="fine"> / 3</span></div><div class="h">{{BASIS}}</div></div> -->
+</div>
+<div class="tblwrap" style="margin-top:18px">
+<table>
+{{PROFILE}}
+<!-- 틀: <thead><tr><th>항목</th><th>확인 질문</th><th>근거 문서</th><th class="num">점수</th></tr></thead> … -->
+</table>
+</div>
+<p class="src"><span>루브릭 {{PROFILE_RUBRIC_REF}}</span><span>기준일 <time datetime="{{PROFILE_ASOF_ISO}}">{{PROFILE_ASOF}}</time></span></p>
+</section>
+
+<!-- 7. 연표 — 날짜순 줄 목록 -->
+<section id="timeline" aria-labelledby="h-timeline">
+<div class="sec-h"><h2 id="h-timeline"><a href="#timeline">연표</a></h2><span>{{TIMELINE_RANGE}}</span></div>
+<ol class="rows">
+{{TIMELINE}}
+</ol>
+<p class="src"><span>출처 {{TIMELINE_SOURCES}}</span><span>기준일 <time datetime="{{TIMELINE_ASOF_ISO}}">{{TIMELINE_ASOF}}</time></span></p>
+</section>
+
+<!-- 8. 문서 색인 — 표: 날짜 · 관할 · 기관 · 문서(원문 링크) · 종류 -->
+<section id="docs" aria-labelledby="h-docs">
+<div class="sec-h"><h2 id="h-docs"><a href="#docs">문서 색인</a></h2><span>{{DOCS_COUNT}}건 · 원문 링크</span></div>
+<div class="tblwrap">
+<table>
+{{DOCS}}
+<!-- 틀: <thead><tr><th>날짜</th><th>관할</th><th>기관</th><th>문서</th><th>종류</th></tr></thead> … -->
+</table>
+</div>
+<p class="src"><span>출처 기관 도메인의 원문만</span><span>기준일 <time datetime="{{DOCS_ASOF_ISO}}">{{DOCS_ASOF}}</time></span></p>
+</section>
+
+<!-- 9. 출처·방법 — 어디서 왔고 어떻게 확인했나, 이 숫자로 말할 수 없는 것. 긴 설명은 details 로 접는다 -->
+<section id="method" aria-labelledby="h-method">
+<div class="sec-h"><h2 id="h-method"><a href="#method">출처 · 방법</a></h2><span>어디서 왔고, 어떻게 확인했나</span></div>
+{{METHOD}}
+<!-- 틀: <p>…</p> <details><summary>소스 목록</summary><ul>…</ul></details> <details><summary>이 숫자로 말할 수 없는 것</summary><ul>…</ul></details> <p class="note">{{DISCLAIMER}}</p> -->
+<p class="src"><span>마지막 실행 <time datetime="{{BUILT_AT_ISO}}">{{BUILT_AT}}</time></span><span>{{CHECKS}}</span></p>
+</section>
+
+</main>
+
+<footer class="site">
+<span>{{SITE_NAME}} · {{CADENCE}} · <time datetime="{{BUILT_AT_ISO}}">{{BUILT_AT}}</time></span>
+<span class="links"><a href="#top">맨 위</a><a href="#method">방법</a><a href="{{REPO_URL}}" target="_blank" rel="noopener">저장소</a></span>
+</footer>
+
+</div>
+<!-- aria-current 를 보이는 섹션에 붙이는 작은 스크립트(IntersectionObserver)는 선택. 없어도 페이지는 완성이다 -->
+</body>
+</html>

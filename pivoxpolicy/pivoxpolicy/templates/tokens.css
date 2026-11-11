@@ -1,0 +1,39 @@
+:root {
+  /* pivoxmap/frontend/src/app/globals.css :root (L11-64) 에서 이름·값 그대로 복사 — 이 정적 페이지가 쓰는 것만.
+     pivoxquant globals.css :root(L200-470) 와 대조: 아래 값은 전부 같다. 단 --pq-ivory-faint 만 pivoxquant 는 0.50 (2026-09-10 AA 보정) —
+     여기선 pivoxmap 값(0.45)을 그대로 두되 본문 글자색으로는 쓰지 않는다(rules 참고). 가격색 --pq-up/--pq-down 은 이 페이지에 가격이 없어 뺐다. */
+  --pq-ink: #050505;
+  --pq-ivory: #F5F0E8;
+  --pq-bronze: #B8956A;
+  --pq-bronze-light: #A3845C;
+  --pq-bronze-deep: #6F5636;
+  --pq-onyx: #111111;
+
+  --pq-ivory-soft: rgba(245, 240, 232, 0.78);
+  --pq-ivory-mid: rgba(245, 240, 232, 0.65);
+  --pq-ivory-dim: rgba(245, 240, 232, 0.55);
+  --pq-ivory-faint: rgba(245, 240, 232, 0.45);
+  --pq-ivory-line: rgba(245, 240, 232, 0.08);
+  --pq-ivory-line-soft: rgba(245, 240, 232, 0.06);
+  --pq-ivory-line-faint: rgba(245, 240, 232, 0.04);
+  --pq-card-veil: var(--pq-ivory-line-faint);
+  --pq-card-veil-strong: var(--pq-ivory-line-soft);
+
+  --pq-live: #7db487;
+  --pq-stale: #a88f4a;
+  --pq-error: #d18888;
+  /* 알림 칸 바탕 · 테두리 (로그인 화면 Callout — 강조색을 옅게 깐다) */
+  --pq-bronze-wash: rgba(184, 149, 106, 0.07);
+  --pq-bronze-line: rgba(184, 149, 106, 0.30);
+  /* 버튼 · 입력 테두리 (헤어라인 0.08 보다 한 단 진하게 — 2026-10-15 새 흐름) */
+  --pq-ivory-line-strong: rgba(245, 240, 232, 0.16);
+  /* 화면 넘김 (components/Screen.tsx · AppShell) */
+  --pq-ease: cubic-bezier(0.2, 0.75, 0.2, 1);
+
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  --font-code: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;   /* kbd · code 만 */
+
+  --pq-radius-card: 14px;
+  --pq-radius-ctl: 10px;
+  --pq-radius-chip: 6px;
+}
