@@ -48,8 +48,11 @@ def test_derive_level_rules():
         "discloses_ai_usecases": {"observed": True, "evidence_level": "primary"},
     })
     assert d.level == 2
-    # L3 는 press 면 못 감
+    # L3 는 press 면 못 감 — 강등만 있고 false 로 확인한 것이 없으면 0 이 아니라 미평가 (증거 없음 ≠ 통제 없음)
     d = derive_level(dim, {"verified_inventory": {"observed": True, "evidence_level": "press"}})
+    assert d.level is None and d.downgraded == ["verified_inventory"]
+    d = derive_level(dim, {"verified_inventory": {"observed": True, "evidence_level": "press"},
+                           "mentions_ai_governance": {"observed": False}})
     assert d.level == 0 and d.downgraded == ["verified_inventory"]
     d = derive_level(dim, {"verified_inventory": {"observed": True, "evidence_level": "primary"}})
     assert d.level == 3

@@ -37,8 +37,10 @@ def build_matrix(
         j: {c.id: Cell(score=None) for c in controls} for j in JURISDICTIONS
     }
     for doc_id, cells in items.items():
-        doc = docs[doc_id]
-        if doc.binding == 0:
+        doc = docs.get(doc_id)
+        if doc is None or doc.binding == 0:  # 모르는 문서는 `check` 가 보고한다 — 여기선 건너뛴다
+            continue
+        if not isinstance(cells, dict):
             continue
         for c in controls:
             cell = (cells or {}).get(c.id)
@@ -58,7 +60,8 @@ def build_matrix(
                 target.score = s
                 target.top_docs = [doc_id]
                 target.names_agents = bool(doc.names_agents) and covered
-            elif s == target.score and s > 0:
+            elif s == target.score:
+                # 0 동점도 기록한다 — '어떤 문서도 다루지 않음' 의 근거 문서가 여럿이면 다 보여야 한다
                 target.top_docs.append(doc_id)
                 target.names_agents = target.names_agents or (bool(doc.names_agents) and covered)
     return matrix
@@ -127,4 +130,43 @@ def render_csv(matrix: dict[str, dict[str, Cell]], controls: list[Control]) -> s
             s = matrix[j][c.id].score
             vals.append("" if s is None else str(s))
         lines.append(f"{c.num},{c.id}," + ",".join(vals))
+    return "\n".join(lines) + "\n"
+
+
+def diff(
+    a: dict[str, dict[str, Cell]], b: dict[str, dict[str, Cell]], controls: list[Control]
+) -> list[tuple[str, str, int | None, int | None]]:
+    """두 코더 매트릭스에서 관할 점수가 다른 칸 (관할, 통제, a 점수, b 점수)."""
+    out: list[tuple[str, str, int | None, int | None]] = []
+    for j in JURISDICTIONS:
+        for c in controls:
+            sa, sb = a[j][c.id].score, b[j][c.id].score
+            if sa != sb:
+                out.append((j, c.id, sa, sb))
+    return out
+
+
+def render_diff(
+    a: dict[str, dict[str, Cell]], b: dict[str, dict[str, Cell]], controls: list[Control], name_a: str, name_b: str
+) -> str:
+    rows = diff(a, b, controls)
+    n = len(JURISDICTIONS) * len(controls)
+    judged = [r for r in rows if r[2] is not None and r[3] is not None]
+    lines = [
+        f"# 매트릭스 민감도 — `{name_a}` vs `{name_b}`",
+        "",
+        f"관할 × 통제 {n}칸 중 점수가 다른 칸 **{len(rows)}** — 둘 다 코딩했는데 판단이 갈린 칸 **{len(judged)}** · "
+        f"한쪽만 코딩한 칸(?) {len(rows) - len(judged)}. "
+        "판단이 갈린 칸의 결론(예: '미국은 사람 승인 0')은 코더 한 명의 판단에 기대고 있으니 논문에서는 둘을 함께 쓰거나 판정 규칙을 먼저 정한다.",
+        "",
+        f"| 관할 | 통제 | {name_a} | {name_b} | {name_a} 최고 문서 | {name_b} 최고 문서 |",
+        "|---|---|---|---|---|---|",
+    ]
+    fmt = lambda x: "?" if x is None else str(x)  # noqa: E731
+    for j, cid, sa, sb in rows:
+        ta = ", ".join(f"`{d}`" for d in a[j][cid].top_docs[:3]) or "–"
+        tb = ", ".join(f"`{d}`" for d in b[j][cid].top_docs[:3]) or "–"
+        lines.append(f"| {j} | {cid} | {fmt(sa)} | {fmt(sb)} | {ta} | {tb} |")
+    if not rows:
+        lines.append("| – | – | – | – | – | – |")
     return "\n".join(lines) + "\n"

@@ -197,6 +197,28 @@ def cmd_incidents(_: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_incident_kappa(args: argparse.Namespace) -> int:
+    from . import agreement as agreement_mod
+    controls = load_controls()
+    incs = incidents_mod.load_incidents(control_ids={c.id for c in controls})
+    first = {i.id: list(i.related_controls) for i in incs}
+    raws = agreement_mod.load_incident_codings()
+    names = [args.coder] if args.coder else sorted(raws)
+    if not names or any(n not in raws for n in names):
+        print(f"registry/incident_codings/ 에 있는 코더: {', '.join(sorted(raws)) or '(없음)'}")
+        return 2
+    for n in names:
+        raw = raws[n]
+        try:
+            second = agreement_mod.second_controls(raw, set(first))
+        except agreement_mod.IncidentCodingError as e:
+            print(f"{n}: {e}")
+            return 1
+        basis = {k: (v or {}).get("basis", "") for k, v in (raw.get("incidents") or {}).items()}
+        print(agreement_mod.render_incident_agreement(first, second, n, basis))
+    return 0
+
+
 def cmd_site(_: argparse.Namespace) -> int:
     p = site_mod.build()
     print(f"wrote {p}")
@@ -259,6 +281,9 @@ def build_parser() -> argparse.ArgumentParser:
     ak.set_defaults(fn=cmd_assess_kappa)
     sub.add_parser("report", help="out/ 에 매트릭스·연표·공백·kappa 전부 쓰기").set_defaults(fn=cmd_report)
     sub.add_parser("incidents", help="AI 에이전트 보안 사건 × 통제 교차표").set_defaults(fn=cmd_incidents)
+    ik = sub.add_parser("incident-kappa", help="사건 × 통제 코딩 일치도 (1차 related_controls vs registry/incident_codings)")
+    ik.add_argument("coder", nargs="?")
+    ik.set_defaults(fn=cmd_incident_kappa)
     sub.add_parser("site", help="out/index.html 정적 대시보드 생성 (Pivox 디자인)").set_defaults(fn=cmd_site)
     return p
 

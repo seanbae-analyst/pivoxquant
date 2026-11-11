@@ -18,7 +18,7 @@
 
 ### KR
 
-- 1 인벤토리: **0** ← `kr-efsr-art13`
+- 1 인벤토리: **0** ← `kr-efsr-art13`, `kr-efsr-art37-2`, `kr-outsourcing-regulation`, `kr-fsi-agent-criteria-2026-10`, `kr-fss-fsi-pentest-standards-2026`
 - 2 공급자 관리: **2** ← `kr-outsourcing-regulation`
 - 3 고유 식별자: **2** ← `kr-efsr-art13`
 - 4 최소 권한: **2†** ← `kr-efsr-art13` · 에이전트 명시 자율문서: `kr-fsi-agent-criteria-2026-10`
@@ -32,9 +32,9 @@
 - 2 공급자 관리: **2** ← `us-nydfs-part500`
 - 3 고유 식별자: **1*** ← `us-nist-csf-2-0`, `us-nist-nccoe-agent-identity-2026-02` · 에이전트 명시 자율문서: `us-nist-nccoe-agent-identity-2026-02`
 - 4 최소 권한: **2** ← `us-nydfs-part500`
-- 5 사람 승인: **0** ← `us-nydfs-part500`
+- 5 사람 승인: **0** ← `us-nydfs-part500`, `us-fed-sr-26-2`, `us-nist-csf-2-0`, `us-cisa-bod-22-01`
 - 6 감사 기록: **2†** ← `us-nydfs-part500` · 에이전트 명시 자율문서: `us-nist-nccoe-agent-identity-2026-02`
-- 7 즉시 중단: **0** ← `us-nydfs-part500`
+- 7 즉시 중단: **0** ← `us-nydfs-part500`, `us-fed-sr-26-2`, `us-nist-csf-2-0`, `us-cisa-bod-22-01`
 
 ### EU
 

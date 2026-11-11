@@ -7,6 +7,9 @@
 
 from __future__ import annotations
 
+import re
+from datetime import date
+
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -54,6 +57,8 @@ class Incident:
 
     @classmethod
     def from_dict(cls, d: dict[str, Any], control_ids: set[str]) -> "Incident":
+        if not isinstance(d, dict):
+            raise IncidentError(f"incidents 항목은 매핑이어야 함 (받음: {type(d).__name__})")
         for k in ("id", "date", "title", "jurisdiction", "ai_role", "evidence_level", "source_url"):
             if not d.get(k):
                 raise IncidentError(f"{d.get('id', '?')}: 필수 필드 없음 {k}")
@@ -63,13 +68,33 @@ class Incident:
             raise IncidentError(f"{d['id']}: evidence_level {d['evidence_level']!r}")
         if d["jurisdiction"] not in JURS:
             raise IncidentError(f"{d['id']}: jurisdiction {d['jurisdiction']!r}")
-        bad = [c for c in d.get("related_controls") or [] if c not in control_ids]
+        rc = d.get("related_controls") or []
+        if not isinstance(rc, list):
+            raise IncidentError(f"{d['id']}: related_controls 는 목록이어야 함 (받음: {rc!r})")
+        bad = [c for c in rc if c not in control_ids]
         if bad:
             raise IncidentError(f"{d['id']}: 모르는 통제 {bad}")
         kw = {k: d[k] for k in cls.__dataclass_fields__ if k in d and d[k] is not None}
-        kw["date"] = str(kw["date"])
+        kw["date"] = _norm_date(kw["date"], d["id"])
         kw["related_controls"] = list(d.get("related_controls") or [])
         return cls(**kw)
+
+
+_DATE_RE = re.compile(r"^(\d{4})[-./](\d{1,2})(?:[-./](\d{1,2}))?$")
+
+
+def _norm_date(v: Any, iid: str) -> str:
+    """'YYYY-MM-DD' 또는 'YYYY-MM' 로 맞춘다. 글자 정렬(최신순)이 날짜 순과 같아야 해서
+    '2026.03.01' 같은 표기는 하이픈으로 바꾸고, 못 읽으면 오류."""
+    if isinstance(v, date):
+        return v.isoformat()[:10]
+    m = _DATE_RE.match(str(v).strip())
+    if not m:
+        raise IncidentError(f"{iid}: date 는 YYYY-MM-DD 또는 YYYY-MM (받음: {v!r})")
+    y, mo, dd = m.group(1), int(m.group(2)), m.group(3)
+    if not 1 <= mo <= 12 or (dd and not 1 <= int(dd) <= 31):
+        raise IncidentError(f"{iid}: 없는 날짜 {v!r}")
+    return f"{y}-{mo:02d}" + (f"-{int(dd):02d}" if dd else "")
 
 
 def load_incidents(registry_dir: Path = REGISTRY_DIR, control_ids: set[str] | None = None) -> list[Incident]:
@@ -79,7 +104,12 @@ def load_incidents(registry_dir: Path = REGISTRY_DIR, control_ids: set[str] | No
     if control_ids is None:
         from .registry import load_controls
         control_ids = {c.id for c in load_controls(registry_dir)}
-    data = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+    try:
+        data = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+    except yaml.YAMLError as e:
+        raise IncidentError(f"incidents.yaml: YAML 문법 오류 — {e}") from None
+    if not isinstance(data, dict) or not isinstance(data.get("incidents") or [], list):
+        raise IncidentError("incidents.yaml: 최상위에 incidents: [ … ] 목록이 있어야 함")
     out = [Incident.from_dict(d, control_ids) for d in data.get("incidents") or []]
     ids = [i.id for i in out]
     if len(set(ids)) != len(ids):

@@ -57,6 +57,13 @@ _SECURITY = ("attack", "hack", "breach", "exploit", "vuln", "malware", "ransomwa
              "취약점", "침해", "해킹", "랜섬", "유출", "공격", "탈취", "악성", "보안위협", "사고")
 
 
+def _link(url: str, text: str) -> str:
+    """http(s) 링크만 a 태그로 — 피드가 준 javascript: · 상대 경로는 글자만 보인다."""
+    if url and url.lower().startswith(("https://", "http://")):
+        return f'<a href="{_e(url)}" target="_blank" rel="noopener">{_e(text)}</a>'
+    return _e(text)
+
+
 def _hay(it) -> str:
     return (" ".join(it.matched) + " " + it.title + " " + (it.summary or "")).lower()
 
@@ -77,19 +84,22 @@ def _now_and_incidents(items: list) -> tuple[str, str, list[str], list[str]]:
         kind_ko = {"regulation": "규제", "guideline": "가이드", "threat_intel": "위협",
                    "incident": "사건", "standard": "표준", "mixed": "동향"}.get(it.topic, it.topic or "")
         k = " · ".join(x for x in (kind_ko, d, it.issuer) if x)
-        date = it.published[:10] if it.published else (it.first_seen[:10] if it.first_seen else "")
         dt = it.published[:10] if it.published else ""
+        # 발행일이 없으면 수집일을 '수집' 이라고 밝혀 적는다 — 발행일처럼 보이면 안 된다
+        shown = dt[5:] if dt else (f"수집 {it.first_seen[5:10]}" if it.first_seen else "날짜 없음")
         s = (it.summary or "")[:160]
-        return (f'<li><time datetime="{_e(dt)}">{_e(date[5:] or date)}</time>'
+        return (f'<li><time datetime="{_e(dt)}">{_e(shown)}</time>'
                 f'<div><div class="k">{_e(k)}</div>'
-                f'<div class="t"><a href="{_e(it.link)}" target="_blank" rel="noopener">{_e(it.title)}</a></div>'
+                f'<div class="t">{_link(it.link, it.title)}</div>'
                 + (f'<div class="s">{_e(s)}</div>' if s else "") + "</div></li>")
 
     reg = [i for i in items if i.topic in ("regulation", "guideline", "standard", "mixed")]
     inc = [i for i in items if i.topic in ("threat_intel", "incident") and _is_security(i)]
 
     def top(group, n=14):
+        # 발행일 있는 것 최신순 → 없는 것(수집일 순)은 뒤로. 1차 먼저 (안정 정렬)
         group = sorted(group, key=lambda i: (i.published or i.first_seen or ""), reverse=True)
+        group.sort(key=lambda i: not i.published)
         group.sort(key=lambda i: i.kind != "primary")
         return group[:n]
 
@@ -108,13 +118,15 @@ def _incident_rows(incs) -> str:
                                     {"primary": "1차", "vendor": "벤더 분석", "press": "보도"}[i.evidence_level]) if x)
         ctl = ", ".join(i.related_controls)
         rows.append(f'<li><time datetime="{_e(i.date)}">{_e(i.date)}</time><div><div class="k">{_e(k)}</div>'
-                    f'<div class="t"><a href="{_e(i.source_url)}" target="_blank" rel="noopener">{_e(i.title)}</a></div>'
+                    f'<div class="t">{_link(i.source_url, i.title)}</div>'
                     + (f'<div class="s">관련 통제 — {_e(ctl)}</div>' if ctl else "") + "</div></li>")
     return "\n".join(rows)
 
 
-def _matrix_section(docs, controls, coding, inc_counts=None) -> tuple[str, str]:
+def _matrix_section(docs, controls, coding, inc_counts=None, alt=None) -> tuple[str, str]:
+    """alt = 다른 코더의 코딩. 주면 그 코더에선 관할 점수가 달라지는 칸에 ‡ 를 단다."""
     m = matrix_mod.build_matrix(docs, controls, coding)
+    m_alt = matrix_mod.build_matrix(docs, controls, alt) if alt else None
     inc_counts = inc_counts or {}
     head = ("<thead><tr><th>통제</th>" + "".join(f"<th>{j}</th>" for j in JURISDICTIONS)
             + ('<th class="num" title="이 통제가 실패했거나 관련된 AI 에이전트 사건 수 (1차 증거)">사건</th>' if inc_counts else "")
@@ -124,13 +136,44 @@ def _matrix_section(docs, controls, coding, inc_counts=None) -> tuple[str, str]:
         tds = [f"<th scope=\"row\">{c.num}. {_e(c.name_ko)}</th>"]
         for j in JURISDICTIONS:
             cell = m[j][c.id]
-            tds.append(f'<td class="{_cell_class(cell.score)}">{_e(_cell_text(cell.score, cell.names_agents))}</td>')
+            mark = ""
+            if m_alt is not None and m_alt[j][c.id].score != cell.score:
+                other = m_alt[j][c.id].score
+                mark = f'<sup class="fine" title="2차 코더: {"?" if other is None else other}">‡</sup>'
+            tds.append(f'<td class="{_cell_class(cell.score)}">{_e(_cell_text(cell.score, cell.names_agents))}{mark}</td>')
         if inc_counts:
             r = inc_counts.get(c.id, {"total": 0, "primary": 0})
             tds.append(f'<td class="num">{r["total"]}<span class="fine"> ({r["primary"]})</span></td>')
         rows.append("<tr>" + "".join(tds) + "</tr>")
     body = "<tbody>" + "\n".join(rows) + "</tbody>"
     return head + body, m
+
+
+def _agreement_note(docs, controls, coding, alt, alt_name, incs) -> str:
+    """방법 섹션의 '이 숫자로 말할 수 없는 것' 첫 줄들 — 코더 일치도를 실제 값으로."""
+    from . import agreement as agreement_mod
+    from . import kappa as kappa_mod
+    if not alt:
+        return "<li>1차 코딩은 발표 덱(2026-11-01)의 2차 인용 — provisional. 2차 코딩 전.</li>"
+    res = kappa_mod.compare_coders(coding, alt, docs, controls)
+    k = res["coverage"].kappa
+    rows = matrix_mod.diff(matrix_mod.build_matrix(docs, controls, coding),
+                           matrix_mod.build_matrix(docs, controls, alt), controls)
+    n_judged = sum(1 for r in rows if r[2] is not None and r[3] is not None)
+    out = [f"<li>문서 코딩: 1차(발표 덱 노트) vs 2차({_e(alt_name)}, 원문) — 공통 {res['n_cells']}칸 κ "
+           f"{'n/a' if k is None else f'{k:.2f}'}. 관할 점수가 다른 칸 {len(rows)}개 = ‡ (판단이 갈림 {n_judged} · 1차 미코딩 {len(rows) - n_judged}). "
+           "불일치는 대부분 '직원 통제(계정 정지·결재)를 에이전트 통제로 볼 것인가' 의 판정 규칙 차이다.</li>",
+           "<li>2차 코더는 1차와 같은 모델 계열의 AI 다. κ 는 입력이 다른 두 AI 판단의 일치이지 사람 코더 간 신뢰도가 아니다.</li>"]
+    raws = agreement_mod.load_incident_codings()
+    if incs and alt_name in raws:
+        first = {i.id: list(i.related_controls) for i in incs}
+        second = agreement_mod.second_controls(raws[alt_name], set(first))
+        a, b, _, per = agreement_mod.incident_vectors(first, second)
+        ki = kappa_mod.cohen_kappa(a, b).kappa
+        both = " · ".join(f"{c.id} {sum(1 for x, y in zip(*per[c.id]) if x and y)}" for c in controls)
+        out.append(f"<li>사건 열은 1차 코더 기준. 사건 × 통제 κ {'n/a' if ki is None else f'{ki:.2f}'}. "
+                   f"두 코더가 모두 실패를 본 사건 — {_e(both)}.</li>")
+    return "".join(out)
 
 
 def _gaps_section(m, controls) -> str:
@@ -153,9 +196,11 @@ def _profile_section(rub) -> tuple[str, str, str]:
                 "testing": "모의해킹·테스트", "response": "사고 대응"}
     cards = []
     for g, dims in groups.items():
+        if not dims:  # 차원이 없는 그룹은 카드도 없다 (dims[0] 에서 IndexError 나던 것)
+            continue
         cards.append(f'<div class="card"><div class="k">{_e(group_ko.get(g, g))}</div>'
                      f'<div class="v">{len(dims)}<span class="fine"> 차원</span></div>'
-                     f'<div class="h">{_e(dims[0].group)}</div></div>')
+                     f'<div class="h">{_e(g)}</div></div>')
     head = "<thead><tr><th>#</th><th>차원</th><th>확인 질문</th><th>근거</th></tr></thead>"
     rows = []
     for d in rub.dimensions:
@@ -201,6 +246,8 @@ def build(out_dir: Path = OUT_DIR, snapshot_dir: Path = SNAPSHOT_DIR, now: datet
     docs = load_documents()
     codings = load_codings()
     coding = codings.get("deck_2026-11-01") or next(iter(codings.values()))
+    alt_name = next((n for n in sorted(codings) if codings[n] is not coding), None)
+    alt = codings.get(alt_name) if alt_name else None
     rub = rubric_mod.load_rubric()
     try:
         items = load_items(snapshot_dir)
@@ -223,7 +270,8 @@ def build(out_dir: Path = OUT_DIR, snapshot_dir: Path = SNAPSHOT_DIR, now: datet
                     + (f'<li class="more"><details><summary>피드에 새로 들어온 것</summary><ul class="rows">{inc_html}</ul></details></li>'
                        if inc_html and "수집된 항목이 없습니다" not in inc_html else ""))
         inc_src = ["registry/incidents.yaml"] + inc_src
-    matrix_html, m = _matrix_section(docs, controls, coding, inc_counts)
+    matrix_html, m = _matrix_section(docs, controls, coding, inc_counts, alt)
+    agree_html = _agreement_note(docs, controls, coding, alt, alt_name, incs)
     gaps_html = _gaps_section(m, controls)
     cards_html, profile_html = _profile_section(rub)
     timeline_html, tl_range = _timeline_section(docs)
@@ -246,7 +294,7 @@ def build(out_dir: Path = OUT_DIR, snapshot_dir: Path = SNAPSHOT_DIR, now: datet
         "FSB · EBA · ESMA · ECB · FCA · BoE · NCSC · JFSA + AI 위협 벤더 · arXiv. "
         "문서 URL 은 받아 본 것만 기록(registry/).</p></details>"
         "<details><summary>이 숫자로 말할 수 없는 것</summary><ul class=\"fine\">"
-        "<li>1차 코딩은 발표 덱(2026-11-01)의 2차 인용 — provisional. 원문 2차 코딩·κ 확인 전.</li>"
+        + agree_html +
         "<li>공시 유무 ≠ 실행 유무. 미국 10-K 와 한국 사업보고서 공시 의무가 달라 국가 간 레벨 직접 비교 금지.</li>"
         "<li>평가 차원은 '무엇을 재는가' 만 보인다. 실제 기관 점수는 명예훼손·공정성 때문에 공개 페이지에 넣지 않았다.</li>"
         "<li>threat-intel·korea-primary 피드는 finder 가 받았으나 2차 verify 는 한도로 중단.</li>"
@@ -272,7 +320,7 @@ def build(out_dir: Path = OUT_DIR, snapshot_dir: Path = SNAPSHOT_DIR, now: datet
         "INCIDENTS": inc_html, "INCIDENTS_SOURCES": " · ".join(inc_src[:6]) or "공식 공지·보고서",
         "INCIDENTS_ASOF_ISO": today, "INCIDENTS_ASOF": today,
         "MATRIX_RUBRIC_ONE_LINE": "0 미다룸 · 1 자율 · 2 구속력 · 3 에이전트 명시 · ? 미확인",
-        "MATRIX_CAPTION": "행 = 7개 에이전트 통제 · 열 = 관할. 칸 = 그 관할에서 그 통제를 요구하는 가장 센 문서의 구속력. 마지막 열 = 그 통제가 실패했거나 관련된 AI 에이전트 사건 수(괄호 = 1차 증거).",
+        "MATRIX_CAPTION": "행 = 7개 에이전트 통제 · 열 = 관할. 칸 = 그 관할에서 그 통제를 요구하는 가장 센 문서의 구속력(1차 코더). ‡ = 2차 코더에선 점수가 다름. 마지막 열 = 그 통제가 실패했거나 관련된 AI 에이전트 사건 수(괄호 = 1차 증거).",
         "MATRIX": matrix_html,
         "H0_LABEL": _H_LABEL[0], "H1_LABEL": _H_LABEL[1], "H2_LABEL": _H_LABEL[2], "H3_LABEL": _H_LABEL[3],
         "MATRIX_SOURCES": "registry/documents · codings", "MATRIX_ASOF_ISO": today, "MATRIX_ASOF": today,
@@ -290,8 +338,8 @@ def build(out_dir: Path = OUT_DIR, snapshot_dir: Path = SNAPSHOT_DIR, now: datet
     page = _tpl("skeleton.html")
     # 저작용 주석(틀 예시·금지어 설명)을 뺀다 — 생성 결과엔 남기지 않는다.
     page = re.sub(r"<!--.*?-->", "", page, flags=re.S)
-    for k, v in repl.items():
-        page = page.replace("{{" + k + "}}", v)
+    # 한 번에 치환 — 차례로 replace 하면 앞 값(피드 제목 등) 안의 '{{DOCS}}' 가 뒤에서 펼쳐진다
+    page = re.sub(r"\{\{([A-Z0-9_]+)\}\}", lambda m: repl.get(m.group(1), m.group(0)), page)
 
     out_dir.mkdir(parents=True, exist_ok=True)
     p = out_dir / "index.html"

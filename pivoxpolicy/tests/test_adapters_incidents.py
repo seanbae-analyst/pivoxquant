@@ -7,7 +7,7 @@ import pytest
 
 from pivoxpolicy.fetch import FetchResult
 from pivoxpolicy.incidents import IncidentError, Incident, control_counts, load_incidents
-from pivoxpolicy.intel import _request_for, collect, parse_adapter
+from pivoxpolicy.intel import FeedParseError, _request_for, collect, parse_adapter
 from pivoxpolicy.registry import load_controls
 from pivoxpolicy.rubric import load_assessments, load_rubric, validate_assessment
 
@@ -37,7 +37,7 @@ def b(x):
 
 def test_each_adapter_parses_the_measured_shape():
     kev = parse_adapter("kev", b(KEV), "k")
-    assert kev[0].link == "https://nvd.nist.gov/vuln/detail/CVE-2025-3248"
+    assert kev[0].link == "https://nvd.nist.gov/vuln/detail/CVE-2025-3248#cisa-kev"
     assert kev[0].published == "2025-05-05T00:00:00Z" and "Langflow" in kev[0].title
     nvd = parse_adapter("nvd", b(NVD), "n")
     assert nvd[0].published == "2026-08-03T20:17:17Z" and "MCP" in nvd[0].summary
@@ -48,7 +48,8 @@ def test_each_adapter_parses_the_measured_shape():
     fsi = parse_adapter("fsi_bbs", b(FSI), "s", {"menu_no": 69})
     assert fsi[0].link == "https://www.fsec.or.kr/bbs/detail?menuNo=69&bbsNo=12144"
     assert '"정보"' in fsi[0].title and fsi[0].summary == "본문"
-    assert parse_adapter("kev", b"not json", "k") == []
+    with pytest.raises(FeedParseError):  # collect 가 잡아 그 피드만 '실패' 로 적는다
+        parse_adapter("kev", b"not json", "k")
 
 
 def test_nvd_request_gets_a_rolling_90_day_window_and_fsi_posts():

@@ -38,10 +38,15 @@ jobs:
       - run: pip install -q pyyaml
       - name: intel
         id: intel
+        # shell: bash = -eo pipefail. 없으면 `cli intel | tee` 가 파이썬이 죽어도 tee 의 0 으로 끝나 수집이 조용히 멈춘다.
+        shell: bash
         run: |
           python3 -m pivoxpolicy.cli intel | tee intel.out
-          echo "primary_new=$(grep -c '^- ' intel.out || true)" >> "$GITHUB_OUTPUT"
+          # 1차 섹션의 항목 줄만 센다 (실패·0건 섹션의 '- ' 줄은 빼고)
+          echo "primary_new=$(awk '/^## 1차/{p=1;next} /^## /{p=0} p && /^- /' intel.out | wc -l | tr -d ' ')" >> "$GITHUB_OUTPUT"
+          echo "all_new=$(awk '/^## (1차|2차)/{p=1;next} /^## /{p=0} p && /^- /' intel.out | wc -l | tr -d ' ')" >> "$GITHUB_OUTPUT"
       - name: watch + fetch
+        shell: bash
         run: |
           python3 -m pivoxpolicy.cli watch | tee watch.out
           python3 -m pivoxpolicy.cli fetch | tee fetch.out
@@ -50,12 +55,14 @@ jobs:
           python3 -m pivoxpolicy.cli report
           python3 -m pivoxpolicy.cli site
       - name: commit if changed
+        env:
+          ALL_NEW: ${{ steps.intel.outputs.all_new }}
         run: |
           git config user.name "pivoxpolicy-bot"
           git config user.email "pivoxpolicy-bot@users.noreply.github.com"
           git add snapshots/manifest.json snapshots/intel.jsonl out/
           if git diff --cached --quiet; then echo "변경 없음"; exit 0; fi
-          git commit -m "intel: $(date -u +%Y-%m-%dT%H:%MZ) 수집 — $(grep -c '^- ' intel.out || echo 0) 새 항목"
+          git commit -m "intel: $(date -u +%Y-%m-%dT%H:%MZ) 수집 — ${ALL_NEW:-0} 새 항목"
           git push
       - name: open issue when primary sources have news
         if: steps.intel.outputs.primary_new != '0'
@@ -65,4 +72,4 @@ jobs:
           # 1차 소스 섹션만 뽑아 이슈 본문으로
           body=$(awk '/^## 1차/{p=1} /^## 2차/{p=0} p' intel.out)
           [ -z "$body" ] && exit 0
-          gh issue create --title "intel $(date -u +%Y-%m-%d %H:%M)Z — 1차 소스 새 항목" --body "$body" --label intel || true
+          gh issue create --title "intel $(date -u '+%Y-%m-%d %H:%M')Z — 1차 소스 새 항목" --body "$body" --label intel || true

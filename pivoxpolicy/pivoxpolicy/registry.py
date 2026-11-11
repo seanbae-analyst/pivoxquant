@@ -55,7 +55,7 @@ def load_codings(registry_dir: Path = REGISTRY_DIR) -> dict[str, dict[str, Any]]
         if path.stem.upper() == "TEMPLATE":
             continue
         data = _load_yaml(path)
-        out[path.stem] = data
+        out[path.stem] = data if isinstance(data, dict) else {}  # 빈 파일 — check 가 '필수 필드 없음' 으로 보고
     return out
 
 

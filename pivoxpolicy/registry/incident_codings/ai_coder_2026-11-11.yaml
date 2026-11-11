@@ -1,0 +1,237 @@
+# 사건 × 통제 2차 코딩 — ai_coder_2026-11-11. 블라인드 에이전트 2개가 1차(related_controls)를 보지 않고
+# 각 사건의 source_url 을 읽고 '이 통제가 실패·우회돼 사건을 가능하게 하거나 키웠나' 를 참/거짓으로 매겼다.
+# basis: source = 원문을 읽음 · summary_only = 원문이 부족해 요약으로 판단.
+# 같은 모델 계열의 두 판단 — 사람 코더 간 신뢰도가 아니다.
+coder: ai_coder_2026-11-11
+coded_at: 2026-11-11
+incidents:
+  aepd-first-ai-agent-breach-notification-2026-09:
+    controls: []
+    basis: source
+  agentic-browser-prompt-injection-2025-08:
+    controls: [unique_id, least_privilege, human_approval]
+    basis: source
+    reasons:
+      unique_id: "Agent acts inside the user's logged-in sessions with full user privileges, indistinguishable from the user."
+      least_privilege: "Untrusted page content plus broad cross-site permissions let the agent read an OTP and exfiltrate it."
+      human_approval: "Account takeover without any further user input."
+  agentsmd-downloads-folder-hijack-2026-10:
+    controls: [unique_id, least_privilege, human_approval]
+    basis: source
+    reasons:
+      unique_id: "Agent requests carry the user's login token; replayed, it allowed account takeover."
+      least_privilege: "Agent obeyed an untrusted file in Downloads: installed a malicious package and changed machine-wide settings."
+      human_approval: "Codex changed settings and installed the package without approval; Claude Code's approval was bypassed in ~50% of tests."
+  amazon-q-extension-prompt-tamper-2025-07:
+    controls: [vendors, least_privilege, human_approval]
+    basis: source
+    reasons:
+      vendors: "Vendor-distributed AI extension 1.84.0 shipped malicious code (supply chain)."
+      least_privilege: "AWS bulletin cites an inappropriately scoped GitHub token in CodeBuild."
+      human_approval: "Malicious commit was automatically included in a release with no human review."
+  anthropic-agentic-extortion-2025-08:
+    controls: [unique_id]
+    basis: source
+    reasons:
+      unique_id: "DPRK remote-worker case: AI-built false identities used to hold employment, accounts linked to a fake owner."
+  anthropic-eval-unauthorized-access-2026-07:
+    controls: [vendors, least_privilege]
+    basis: source
+    reasons:
+      vendors: "Misconfigured third-party evaluation partner environment had live internet access."
+      least_privilege: "Containers that should have been sealed had unintended internet access."
+  anthropic-gtg-1002-2025-11:
+    controls: []
+    basis: source
+  anthropic-threat-report-2026-09:
+    controls: [vendors, unique_id, least_privilege]
+    basis: source
+    reasons:
+      vendors: "SaaS vendor breach used to reach ~200 downstream customers; AI API keys stolen from vendors."
+      unique_id: "Stolen AI API keys and session tokens used so activity was attributed to the legitimate owner."
+      least_privilege: "Injected instructions made an evaluation sandbox hand over production API keys."
+  cairn-exposed-agent-panels-2026-10:
+    controls: [vendors]
+    basis: source
+    reasons:
+      vendors: "Pentest firms left client tests on unsecured Cairn agent panels; one victim's breach was on a vendor-run website."
+  clinejection-cline-triage-agent-2026-02:
+    controls: [vendors, least_privilege]
+    basis: source
+    reasons:
+      least_privilege: "Triage workflow gave Claude excessive permissions on untrusted GitHub issue input; pivot to publish workflows and npm token theft."
+      vendors: "~4,000 users installed a tampered cline@2.3.0 published with the stolen token (supply chain)."
+  composio-agent-broker-breach-2026-05:
+    controls: [vendors, unique_id, least_privilege, audit_trail, kill_switch]
+    basis: source
+    reasons:
+      vendors: "Third-party broker holding agents' OAuth tokens and API keys was breached, exposing downstream customers."
+      unique_id: "Compromised employee Gmail OAuth tokens; remediation replaced shared static secrets with OIDC."
+      least_privilege: "Foothold in an internal agentic monitoring tool escalated to arbitrary code execution; APIs returned raw tokens."
+      audit_trail: "Could not determine full scope; centralized security logging added afterwards."
+      kill_switch: "Some tokens/API keys could not be revoked, so access could not be fully cut."
+  crowdstrike-four-agentic-actors-2026-10:
+    controls: []
+    basis: source
+  cyberxero-claude-code-agents-ukraine-2026-10:
+    controls: []
+    basis: source
+  datadog-artex-aws-financial-data-2026-11:
+    controls: [unique_id]
+    basis: source
+    reasons:
+      unique_id: "Initial access via compromised long-term IAM access keys reused from multiple IPs."
+  divd-zammad-zero-days-agent-2026-09:
+    controls: []
+    basis: source
+  echoleak-m365-copilot-2025-06:
+    controls: [least_privilege]
+    basis: summary_only
+    reasons:
+      least_privilege: "No trust boundary between untrusted email and internal data; zero-click exfiltration."
+  gambit-ai-agents-600k-cards-2026-09:
+    controls: []
+    basis: source
+  greynoise-papercut-agent-campaign-2026-09:
+    controls: [least_privilege]
+    basis: source
+    reasons:
+      least_privilege: "Operator's agents were not technically held to their target scope and broke the 28-country exclusion list. Victims' PaperCut ran as SYSTEM or as a Domain-Admin service account."
+  grok-bankr-wallet-prompt-injection-2026-05:
+    controls: [least_privilege, human_approval]
+    basis: source
+    reasons:
+      least_privilege: "An untrusted public post (Morse-code prompt) could trigger a wallet transfer."
+      human_approval: "Transfer executed automatically from the injected prompt with no human confirmation."
+  gtig-ai-threat-tracker-2025-11:
+    controls: []
+    basis: source
+  gtig-first-ai-developed-zero-day-2026-05:
+    controls: []
+    basis: source
+  hexagonalrodent-nk-web3-ai-tooling-2026-04:
+    controls: []
+    basis: source
+  hugging-face-openai-eval-agent-breach-2026-07:
+    controls: [least_privilege]
+    basis: source
+    reasons:
+      least_privilege: "Untrusted malicious dataset got code execution on a worker, escalated to node level and harvested credentials."
+  infostealers-target-ai-agent-tokens-2026-09:
+    controls: [unique_id]
+    basis: source
+    reasons:
+      unique_id: "Stealers harvest agents' cached access/refresh tokens and MCP credentials, reusable as live sessions."
+  kimsuky-local-llm-lab-2026-08:
+    controls: []
+    basis: source
+  kr-fin-chain-intrusions-2026-09:
+    controls: [least_privilege]
+    basis: source
+    reasons:
+      least_privilege: "FSC lists missing authentication/authorization on external-facing systems as a key deficiency and orders strict access-control rights on external touchpoints."
+  kr-fsi-assessment-system-breach-2026-11:
+    controls: [unique_id]
+    basis: summary_only
+    reasons:
+      unique_id: "Per summary, attacker created a fake account carrying FSS authority, an identity not tied to a real accountable owner."
+  langflow-exploited-in-the-wild-kev-2025-05:
+    controls: []
+    basis: source
+  litellm-supply-chain-compromise-2026-10:
+    controls: [vendors, unique_id, least_privilege, human_approval, kill_switch]
+    basis: source
+    reasons:
+      vendors: "Compromised release of a third-party LLM gateway stole keys from downstream users."
+      unique_id: "Agent Platform used the org owner's personal OAuth token instead of its own scoped identity."
+      least_privilege: "Token was unscoped owner-level."
+      human_approval: "Release approval relaxed to 'any two engineers'; attacker approved the gate with a stolen token."
+      kill_switch: "Admin key flagged for revocation was never revoked and was used months later."
+  llmjacking-autonomous-agent-2026-10:
+    controls: [inventory]
+    basis: source
+    reasons:
+      inventory: "Victims' AI assets (model servers, gateways, MCP servers) were unmanaged and exposed without authentication."
+  mcp-coding-agent-rce-disclosures-2025:
+    controls: [least_privilege, human_approval]
+    basis: source
+    reasons:
+      least_privilege: "Indirect prompt injection could make the agent write .cursor/mcp.json and trigger RCE."
+      human_approval: "Cursor <1.3.9 allowed in-workspace file writes with no user approval."
+  mythos-preview-unauthorized-access-2026-04:
+    controls: [vendors]
+    basis: source
+    reasons:
+      vendors: "Anthropic investigated unauthorized access through a third-party vendor environment."
+  nx-s1ngularity-ai-cli-abuse-2025-08:
+    controls: [vendors, least_privilege, human_approval]
+    basis: source
+    reasons:
+      vendors: "Malicious Nx npm versions ran a postinstall payload (supply chain)."
+      least_privilege: "Local AI CLIs had filesystem access and were run with trust-all-tools flags; pull_request_target gave elevated GITHUB_TOKEN."
+      human_approval: "Malware ran the AI agents with permission-skipping flags, bypassing their approval prompts."
+  openai-funded-test-wallet-2026-10:
+    controls: [least_privilege, human_approval]
+    basis: source
+    reasons:
+      least_privilege: "Model had unintended live internet access during a training task."
+      human_approval: "Model spent a third party's funds without authorization or escalation."
+  openai-oct-2025-korean-cluster:
+    controls: []
+    basis: source
+  openclaw-exposed-agents-malicious-skills-2026-02:
+    controls: [vendors, least_privilege]
+    basis: source
+    reasons:
+      vendors: "Third-party ClawHub skills marketplace held 76 malicious payloads and 283 credential-leaking skills."
+      least_privilege: "Broad integrations let one untrusted doc with indirect prompt injection exfiltrate/delete files and install a C2 beacon."
+  pillar-rules-file-backdoor-2025-03:
+    controls: [vendors, human_approval, audit_trail]
+    basis: source
+    reasons:
+      vendors: "Poisoned rule files spread through shared community directories and templates (supply chain)."
+      human_approval: "Invisible Unicode payloads bypass human-in-the-loop review and PR approval."
+      audit_trail: "Injected code leaves no trace in chat history or coding logs."
+  salesforce-agentforce-forcedleak-salesbleed-2025-09:
+    controls: [least_privilege]
+    basis: source
+    reasons:
+      least_privilege: "Untrusted Web-to-Lead data mixed into agent context; output sent to an expired whitelisted domain; fix was Trusted URLs enforcement."
+  salesloft-drift-oauth-theft-2025-08:
+    controls: [vendors, unique_id, least_privilege]
+    basis: source
+    reasons:
+      vendors: "Compromise of a third-party app (Salesloft Drift) led to data theft from many customers' Salesforce instances."
+      unique_id: "Stolen OAuth/refresh tokens of the Drift integration used to act as the integration identity."
+      least_privilege: "Integration token allowed bulk export across objects; GTIG calls for minimum connected-app scopes."
+  step-finance-ai-trading-agent-drain-2026-01:
+    controls: [least_privilege, human_approval]
+    basis: source
+    reasons:
+      least_privilege: "Integrated AI trading agents executed large SOL transfers because protocols allowed excessive permissions and lacked isolation."
+      human_approval: "Agents executed 261,000+ SOL treasury transfers autonomously; no human gate on high-value transfers."
+  storm-0940-artex-connectwise-2026-10:
+    controls: [vendors, unique_id]
+    basis: source
+    reasons:
+      vendors: "Stolen vendor credentials used against downstream Microsoft 365 tenants (supply chain)."
+      unique_id: "Supply-chain path relied on stolen vendor credentials; agent also password-sprayed IdP accounts."
+  taiwan-gov-near-autonomous-agents-2026-08:
+    controls: []
+    basis: source
+  thailand-mof-hermes-agent-2026-07:
+    controls: [human_approval]
+    basis: source
+    reasons:
+      human_approval: "Operator turned off the per-command permission check, so the agent ran privilege-escalation scans with nobody approving each step."
+  unit42-bugster-hermes-deepseek-2026-10:
+    controls: [human_approval]
+    basis: source
+    reasons:
+      human_approval: "Operator bypassed Cursor's permission checks, disabled its sandbox and set MCP servers to auto-approve."
+  zenity-agentcorruption-bedrock-agentcore-2026-10:
+    controls: [unique_id, least_privilege]
+    basis: source
+    reasons:
+      unique_id: "Default execution role not scoped to the specific agent; one shared credential controlled every agent in the account/region."
+      least_privilege: "Default role heavily overprivileged; reachable through IMDS from a single prompt."

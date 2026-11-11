@@ -15,7 +15,7 @@ from .schema import Control, Document, cell_score
 @dataclass
 class KappaResult:
     n: int
-    observed_agreement: float
+    observed_agreement: float | None  # n=0 이면 None (0.000 이 아니라 n/a)
     kappa: float | None          # 비가중
     weighted_kappa: float | None  # 선형가중 (서열 점수용). 범주형엔 None
     categories: list[Any]
@@ -42,7 +42,7 @@ def cohen_kappa(a: Sequence[Hashable], b: Sequence[Hashable]) -> KappaResult:
         raise ValueError("길이가 다름")
     n = len(a)
     if n == 0:
-        return KappaResult(0, 0.0, None, None, [])
+        return KappaResult(0, None, None, None, [])
     cats = sorted(set(a) | set(b), key=lambda x: (x is None, x))
     po = sum(1 for x, y in zip(a, b) if x == y) / n
     ca, cb = Counter(a), Counter(b)

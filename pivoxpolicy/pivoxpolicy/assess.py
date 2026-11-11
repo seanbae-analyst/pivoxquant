@@ -55,7 +55,9 @@ class Profile:
 
 
 def build_profile(assessment: dict[str, Any], rubric: Rubric) -> Profile:
-    scores = dict(assessment.get("scores") or {})
+    raw = (assessment or {}).get("scores") if isinstance(assessment, dict) else None
+    scores = raw if isinstance(raw, dict) else {}  # 모양이 틀린 파일은 validate_assessment 가 보고한다
+    assessment = assessment if isinstance(assessment, dict) else {}
     derivations: dict[str, Derivation] = {}
     for d in rubric.dimensions:
         derivations[d.id] = derive_level(d, scores.get(d.id) or {})
@@ -81,13 +83,14 @@ def _signal_vectors(a: dict[str, Any], b: dict[str, Any], rubric: Rubric) -> tup
         for s in d.signals:
             ca = (sa.get(d.id) or {}).get(s.id)
             cb = (sb.get(d.id) or {}).get(s.id)
-            if not ca or not cb:
+            if not isinstance(ca, dict) or not isinstance(cb, dict):
                 continue
             oa, ob = ca.get("observed"), cb.get("observed")
-            if oa is None or ob is None:
+            # derive_level 과 같은 기준 — 진짜 bool 만 관찰로 센다(1 · "true" 는 미확인)
+            if not isinstance(oa, bool) or not isinstance(ob, bool):
                 continue
-            va.append(bool(oa))
-            vb.append(bool(ob))
+            va.append(oa)
+            vb.append(ob)
             keys.append(f"{d.id}.{s.id}")
     return va, vb, keys
 
@@ -108,8 +111,10 @@ def compare_assessors(a: dict[str, Any], b: dict[str, Any], rubric: Rubric) -> d
         lb.append(vb)
         if va != vb:
             disagreements.append((d.id, va, vb))
+    mismatch = [k for k in ("subject", "period") if (a.get(k) or "") != (b.get(k) or "")]
     return {
         "subject": pa.subject,
+        "mismatch": mismatch,  # 다른 기관·기간을 비교하면 κ 가 뜻이 없다 — 렌더가 경고한다
         "assessor_a": pa.assessor,
         "assessor_b": pb.assessor,
         "n_signals": len(sva),
@@ -191,6 +196,8 @@ def render_kappa(result: dict[str, Any]) -> str:
     lines = [
         f"# 평가자 간 일치도 — {result['subject']}: `{result['assessor_a']}` vs `{result['assessor_b']}`",
         "",
+        *([f"> ⚠ 두 평가의 {' · '.join(result['mismatch'])} 가 다르다 — 다른 기관·기간을 비교한 κ 는 재현성 지표가 아니다.", ""]
+          if result.get("mismatch") else []),
         "| 단위 | n | 관측 일치율 | κ (비가중) | κ (선형가중) | Landis–Koch |",
         "|---|---|---|---|---|---|",
         f"| 신호 (관찰 true/false) | {result['n_signals']} | {f(sk.observed_agreement)} | {f(sk.kappa)} | – | {sk.landis_koch()} |",

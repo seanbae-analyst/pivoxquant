@@ -13,7 +13,7 @@ binding 0 문서(보도자료·보고서)는 규범이 아니므로 셀 점수�
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, datetime
 from typing import Any
 
 JURISDICTIONS = ("KR", "US", "EU", "INTL")
@@ -93,9 +93,7 @@ class Document:
             if k in d:
                 kw[k] = d[k]
         for dk in ("date", "effective", "url_verified"):
-            v = kw.get(dk)
-            if isinstance(v, str):
-                kw[dk] = date.fromisoformat(v)
+            kw[dk] = _as_date(kw.get(dk), f"{d.get('id', '?')}.{dk}")
         doc = cls(**kw)
         doc.raw = d
         doc.validate()
@@ -120,6 +118,22 @@ class Document:
             raise SchemaError(f"{self.id}: url 이 없으면 url_note 에 이유('확인 필요' 등)를 적어야 함")
 
 
+def _as_date(v: Any, where: str) -> date | None:
+    """YAML 이 주는 날짜 값 → date. 'YYYY-MM-DD' 만 받는다 — 연월만·한국어·숫자 연도는 정렬이 깨지니 오류로."""
+    if v is None:
+        return None
+    if isinstance(v, datetime):  # YAML timestamp(시각 포함) — 날짜만 쓴다
+        return v.date()
+    if isinstance(v, date):
+        return v
+    if isinstance(v, str):
+        try:
+            return date.fromisoformat(v.strip())
+        except ValueError:
+            pass
+    raise SchemaError(f"{where}: 날짜는 YYYY-MM-DD (받음: {v!r}). 날을 모르면 그 달 1일로 적고 note 에 밝힌다")
+
+
 def cell_score(doc: Document, covered: bool | None) -> int | None:
     """문서 × 통제 셀 점수. binding 0 문서는 None (규범 아님)."""
     if covered is None:
@@ -136,6 +150,10 @@ def cell_score(doc: Document, covered: bool | None) -> int | None:
 def validate_coding(coding: dict[str, Any], docs: dict[str, Document], controls: list[Control]) -> list[str]:
     """코딩 파일의 문제점 목록. 비어 있으면 통과."""
     problems: list[str] = []
+    if not isinstance(coding, dict):
+        return ["코딩 파일이 비었거나 매핑이 아님"]
+    if not isinstance(coding.get("items") or {}, dict):
+        return ["items 는 문서 id → 통제 매핑이어야 함"]
     for k in ("coder", "coded_at", "items"):
         if k not in coding:
             problems.append(f"필수 필드 없음: {k}")
@@ -146,6 +164,9 @@ def validate_coding(coding: dict[str, Any], docs: dict[str, Document], controls:
             continue
         if docs[doc_id].binding == 0:
             problems.append(f"{doc_id}: binding 0 문서는 코딩 대상이 아님")
+        if not isinstance(cells or {}, dict):
+            problems.append(f"{doc_id}: 통제 id → {{covered: …}} 매핑이어야 함")
+            continue
         for cid, cell in (cells or {}).items():
             if cid not in control_ids:
                 problems.append(f"{doc_id}: 알 수 없는 통제 {cid}")
@@ -153,8 +174,10 @@ def validate_coding(coding: dict[str, Any], docs: dict[str, Document], controls:
             if not isinstance(cell, dict) or "covered" not in cell:
                 problems.append(f"{doc_id}.{cid}: covered 필드 필요 (true/false/null)")
                 continue
-            if cell["covered"] not in (True, False, None):
-                problems.append(f"{doc_id}.{cid}: covered 는 true/false/null")
+            if cell["covered"] is not None and not isinstance(cell["covered"], bool):
+                # 1 in (True, False, None) 이 참이라 '1' 이 통과하던 것 — 타입으로 본다
+                problems.append(f"{doc_id}.{cid}: covered 는 true/false/null (받음: {cell['covered']!r})")
+                continue
             if cell["covered"] is True and not cell.get("evidence"):
                 problems.append(f"{doc_id}.{cid}: covered true 면 evidence(조문·항목 번호) 필요")
     return problems

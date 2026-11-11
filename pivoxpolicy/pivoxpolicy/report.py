@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from . import assess as assess_mod
+from . import agreement as agreement_mod
 from . import incidents as incidents_mod
 from . import kappa as kappa_mod
 from . import matrix as matrix_mod
@@ -90,6 +91,10 @@ def write_all(
         for j in range(i + 1, len(names)):
             res = kappa_mod.compare_coders(codings[names[i]], codings[names[j]], docs, controls)
             w(f"kappa-{names[i]}-vs-{names[j]}.md", kappa_mod.render_markdown(res))
+            ma = matrix_mod.build_matrix(docs, controls, codings[names[i]])
+            mb = matrix_mod.build_matrix(docs, controls, codings[names[j]])
+            w(f"matrix-diff-{names[i]}-vs-{names[j]}.md",
+              matrix_mod.render_diff(ma, mb, controls, names[i], names[j]))
 
     # 내부통제 평가 루브릭·프로필
     try:
@@ -100,11 +105,17 @@ def write_all(
     if rub is not None:
         profiles = [assess_mod.build_profile(a, rub) for a in asmts.values()]
         if profiles:
-            w("assessment-comparison.md", assess_mod.render_comparison(profiles, rub))
+            # 'assessments.md' — 평가 파일 이름(assessment-<stem>.md)과 겹치지 않는 이름 (stem 이 comparison 이어도)
+            w("assessments.md", assess_mod.render_comparison(profiles, rub))
         for name, a in asmts.items():
             w(f"assessment-{name}.md", assess_mod.render_profile(assess_mod.build_profile(a, rub), rub))
         w("scoring-method.md", rubric_mod.render_codebook(rub))
     incs = incidents_mod.load_incidents(control_ids={c.id for c in controls})
     if incs:
         w("incidents.md", incidents_mod.render_markdown(incs, controls))
+        first = {i.id: list(i.related_controls) for i in incs}
+        for coder, raw in agreement_mod.load_incident_codings().items():
+            second = agreement_mod.second_controls(raw, set(first))
+            basis = {k: (v or {}).get("basis", "") for k, v in (raw.get("incidents") or {}).items()}
+            w(f"incident-kappa-{coder}.md", agreement_mod.render_incident_agreement(first, second, coder, basis))
     return written

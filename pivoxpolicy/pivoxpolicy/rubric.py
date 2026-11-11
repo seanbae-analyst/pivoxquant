@@ -115,21 +115,32 @@ def derive_level(dim: Dimension, cells: dict[str, Any]) -> Derivation:
     fired: list[tuple[int, str]] = []
     downgraded: list[str] = []
     checked_any = False
+    any_false = False
+    if not isinstance(cells, dict):
+        return Derivation(None, [], [], False)
     for s in dim.signals:
         cell = cells.get(s.id)
-        if not cell or cell.get("observed") is None:
+        if not isinstance(cell, dict):
+            continue
+        obs = cell.get("observed")
+        if obs is not True and obs is not False:  # null · 잘못된 값(1, "true") 은 미확인
             continue
         checked_any = True
-        if cell.get("observed") is True:
+        if obs is True:
             rank = EVIDENCE_RANK.get(cell.get("evidence_level", "unverified"), 0)
             if rank >= s.min_rank:
                 fired.append((s.level, s.id))
             else:
                 downgraded.append(s.id)
-    if not checked_any:
-        return Derivation(None, [], [], False)
-    level = max((lv for lv, _ in fired), default=0)
-    return Derivation(level, [sid for _, sid in fired], downgraded, True)
+        else:
+            any_false = True
+    if fired:
+        return Derivation(max(lv for lv, _ in fired), [sid for _, sid in fired], downgraded, True)
+    if any_false:
+        # 규칙: 하나도 발화 안 했는데 하나라도 false 로 확인 → 0
+        return Derivation(0, [], downgraded, True)
+    # 관찰은 true 인데 증거 수준이 모자라 전부 강등 — '없음(0)' 이 아니라 미평가. 증거 없음 ≠ 통제 없음.
+    return Derivation(None, [], downgraded, checked_any)
 
 
 @dataclass
@@ -175,10 +186,15 @@ def load_rubric(registry_dir: Path = REGISTRY_DIR) -> Rubric:
 def validate_assessment(a: dict[str, Any], rubric: Rubric) -> list[str]:
     """평가 파일의 문제점 목록. 비어 있으면 통과."""
     problems: list[str] = []
+    if not isinstance(a, dict):
+        return ["평가 파일이 비었거나 매핑이 아님"]
     for k in ("subject", "period", "assessor", "scores"):
         if k not in a:
             problems.append(f"필수 필드 없음: {k}")
-    for did, cells in (a.get("scores") or {}).items():
+    scores = a.get("scores") or {}
+    if not isinstance(scores, dict):
+        return problems + ["scores 는 차원 id → 신호 매핑이어야 함"]
+    for did, cells in scores.items():
         try:
             dim = rubric.by_id(did)
         except KeyError:
@@ -195,8 +211,9 @@ def validate_assessment(a: dict[str, Any], rubric: Rubric) -> list[str]:
             if not isinstance(cell, dict) or "observed" not in cell:
                 problems.append(f"{did}.{sid}: observed 필드 필요 (true/false/null)")
                 continue
-            if cell["observed"] not in (True, False, None):
-                problems.append(f"{did}.{sid}: observed 는 true/false/null")
+            if cell["observed"] is not None and not isinstance(cell["observed"], bool):
+                problems.append(f"{did}.{sid}: observed 는 true/false/null (받음: {cell['observed']!r})")
+                continue
             if cell.get("observed") is True:
                 if not cell.get("evidence"):
                     problems.append(f"{did}.{sid}: observed true 면 evidence 필요")
@@ -204,7 +221,7 @@ def validate_assessment(a: dict[str, Any], rubric: Rubric) -> list[str]:
                     problems.append(f"{did}.{sid}: evidence_level 은 {EVIDENCE_LEVELS} 중 하나")
     # 레벨 0 = '찾아봤으나 없음' — 찾아본 출처가 적혀 있어야 한다. 없으면 미평가(null)로 둬야 한다.
     zeros = [d.id for d in rubric.dimensions
-             if derive_level(d, (a.get("scores") or {}).get(d.id) or {}).level == 0]
+             if derive_level(d, scores.get(d.id) or {}).level == 0]
     if zeros and not a.get("sources_checked"):
         problems.append(f"레벨 0 차원 {len(zeros)}개({', '.join(zeros[:4])}…) — 찾아본 출처를 sources_checked 에 적어야 한다")
     return problems
@@ -220,7 +237,8 @@ def load_assessments(registry_dir: Path = REGISTRY_DIR) -> dict[str, dict[str, A
         if path.stem.upper() == "TEMPLATE":
             continue
         with path.open(encoding="utf-8") as f:
-            out[path.stem] = yaml.safe_load(f)
+            data = yaml.safe_load(f)
+        out[path.stem] = data if isinstance(data, dict) else {}
     return out
 
 

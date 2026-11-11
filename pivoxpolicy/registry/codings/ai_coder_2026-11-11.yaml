@@ -1,0 +1,192 @@
+# 2차 코딩 — ai_coder_2026-11-11. AI 코더(에이전트)가 1차 코딩을 보지 않고 원문을 받아 코딩했다.
+# 같은 모델 계열이 1차(덱 노트 기반)와 2차(원문 기반)를 했으므로, κ 는 '입력이 다른 두 AI 판단의 일치' 이지
+# 사람 코더 간 신뢰도가 아니다. 논문에는 사람 코더 1명을 더해 보고하는 것이 맞다.
+coder: ai_coder_2026-11-11
+coded_at: 2026-11-11
+basis: "원문(법령·고시 원문, 공식 PDF·HWPX, 보도자료) — 1차 코딩·문서 요약을 보지 않은 블라인드 에이전트 3개(KR·US·EU/INTL)"
+provisional: true
+items:
+  eu-ai-act-art14:
+    inventory: {covered: false, note: "Art. 14 (paras 1-5) contains no requirement to register or inventory AI systems, access rights or owners."}
+    vendors: {covered: false, note: "Borderline. Art. 14(3)(b)/(4) put design duties on the provider but do not require managing third parties or contract terms. Coded false."}
+    unique_id: {covered: false, note: "No identifier or account requirement for users or systems in Art. 14."}
+    least_privilege: {covered: false, note: "No access-limitation or permission-scoping requirement in Art. 14."}
+    human_approval: {covered: true, evidence: "Art. 14(5): 'no action or decision is taken by the deployer ... unless that identification has been separately verified and confirmed by at least two natural persons'", note: "Two-person confirmation applies only to Annex III 1(a) (remote biometric identification); Art. 14(1) general oversight and 14(4)(d) (disregard, override or reverse output) back this up."}
+    audit_trail: {covered: false, note: "Art. 14(4)(a) requires the ability to 'duly monitor its operation' but says nothing on logging; logging is Art. 12, outside the coded scope."}
+    kill_switch: {covered: true, evidence: "Art. 14(4)(e): 'to intervene in the operation of the high-risk AI system or interrupt the system through a 'stop' button or a similar procedure'", note: "Halt 'in a safe state'. No periodic testing or access revocation required."}
+  intl-fsb-ai-sound-practices-2026-10:
+    inventory: {covered: true, evidence: "Sec. 2.3 (SP3), p.25: 'Financial institutions leverage existing processes and repositories, such as use case and model inventories, third-party registries, or systems registry.'", note: "Documentation items (p.25) include 'allocation of accountability (i.e. owner of the AI use case ...)'. Printed page numbers (PDF page minus 4)."}
+    vendors: {covered: true, evidence: "Sec. 3.9 (SP12), p.60: 'include contractual terms with third-party AI providers that enable: effective oversight and risk management, including monitoring rights; access, audit and information rights'", note: "p.61 adds notification of material changes affecting AI behaviour and liability for autonomous agents' actions."}
+    unique_id: {covered: true, evidence: "Sec. 2.3, p.26: 'Visibility assigns individual unique identifiers to each AI agent so that financial institutions can see which actions it took and which humans configured'", note: "Identifiers let agents 'be easily differentiated from human users and other ICT systems' (printed p.26 = PDF p.30)."}
+    least_privilege: {covered: true, evidence: "Sec. 3.8 (SP11), p.59: 'adapt ICT controls to agents, including Identity and Access Management (IAM) and least privilege, which grants agents the minimum permissions needed to achieve their goals'", note: "p.60 zero trust and action-level authorisation; p.52 limit interaction with the external environment. No explicit untrusted-input/source rule."}
+    human_approval: {covered: true, evidence: "Sec. 3.7 (SP10), p.52: 'setting clear, risk-based triggers for when an agent must seek human approval, confirmation or review. For example, before approving financial transactions above a certain value'", note: "Risk-based, not every action."}
+    audit_trail: {covered: true, evidence: "Sec. 2.3, p.26: 'Traceability allows financial institutions to follow what a given AI agent did, including: what triggered the action; what information and tools it accessed'", note: "Records protected from manipulation / immutable (p.26)."}
+    kill_switch: {covered: true, evidence: "Sec. 3.7, p.53: 'implementing and testing risk-based 'kill-switch' mechanisms to pause, limit, override or remove an agent's access to systems, tools, databases or decision-making functions'", note: "Covers halting, removing access and testing."}
+  intl-fsb-ai-sound-practices-consultation-2026-06:
+    inventory: {covered: true, evidence: "Sec. 2.3 (SP3), p.22: 'financial institutions track and document their AI use throughout the lifecycle. This may leverage existing processes like use case and model inventory'", note: "Use-case owner not named explicitly (unlike the final)."}
+    vendors: {covered: true, evidence: "Sec. 3.9 (SP12), p.48: 'include terms and conditions in contracts with third-party AI providers that enable: effective oversight, including monitoring; access, audit, and information rights'"}
+    unique_id: {covered: true, evidence: "Sec. 3.7, p.43: 'assigning and documenting individual identifiers to AI agents to facilitate monitoring and identity management'", note: "No explicit link to a responsible human here."}
+    least_privilege: {covered: true, evidence: "Sec. 3.8 (SP11), p.45: 'applying the principle of 'least privilege' to AI agents and their sub-agents (giving them the minimum permissions and access controls necessary to accomplish their tasks)'", note: "p.43 restrict direct agent access to payment systems."}
+    human_approval: {covered: true, evidence: "Sec. 3.7, p.43: 'defining actions that are prohibited or that require human approval at appropriate checkpoints (i.e. high risk actions ...)'", note: "p.43 also human approval or dual authorisation above a value."}
+    audit_trail: {covered: true, evidence: "Sec. 2.3, p.23: 'deploy enhanced documentation and logging for GenAI and agentic AI use cases'. Sec. 3.7, p.43: 'maintaining audit trails of agent transactions'", note: "Less detailed than the final."}
+    kill_switch: {covered: true, evidence: "Sec. 3.7 (SP10), p.42: ''Kill switch': mechanisms enabling human intervention to halt or constrain AI operations, ranging from complete shutdown'", note: "Listed as an option among forms of human oversight; no testing (unlike final p.53)."}
+  intl-iso-iec-27001-2022:
+    inventory: {covered: null, note: "Annex A text not in any public preview retrieved; not coded from memory."}
+    vendors: {covered: null, note: "Annex A not publicly available."}
+    unique_id: {covered: null, note: "Annex A not publicly available."}
+    least_privilege: {covered: null, note: "Annex A not publicly available."}
+    human_approval: {covered: null, note: "Annex A not publicly available; Clause 6.1.3(f) risk-owner approval of the treatment plan is not approval of actions."}
+    audit_trail: {covered: null, note: "Annex A not publicly available."}
+    kill_switch: {covered: null, note: "Annex A not publicly available."}
+  intl-iso-iec-42001-2023:
+    inventory: {covered: null, note: "Public preview (to clause 4.4) silent; Annex A/B not public."}
+    vendors: {covered: true, evidence: "Introduction, p.vi: 'processes for the management of suppliers, partners and third parties that provide or develop AI systems for the organization'", note: "Introduction only (public preview); Annex A supplier controls not readable."}
+    unique_id: {covered: null, note: "Public preview silent; Annex A/B not public."}
+    least_privilege: {covered: null, note: "Public preview silent; Annex A/B not public."}
+    human_approval: {covered: null, note: "Public preview silent."}
+    audit_trail: {covered: null, note: "Public preview silent; 3.18 'audit' is a management-system audit, not logging."}
+    kill_switch: {covered: null, note: "Public preview silent; Annex A/B not public."}
+  kr-ai-basic-act:
+    inventory: {covered: false, note: "I read the whole Act. Art.33① requires a prior review of whether an AI system is high-impact (a classification step, not a register). Art.34①5 requires keeping documents. Nothing requires an inventory of systems, owners or access."}
+    vendors: {covered: false, note: "No duty to manage suppliers or outsourcing. Art.36 (domestic agent for foreign AI businesses) is about representation, not managing third parties."}
+    unique_id: {covered: false, note: "No identity, account or credential provision."}
+    least_privilege: {covered: false, note: "No access-privilege provision."}
+    human_approval: {covered: true, evidence: "제34조①4호: \"고영향 인공지능에 대한 사람의 관리ㆍ감독\"", note: "Human oversight duty for providers of high-impact AI."}
+    audit_trail: {covered: false, note: "Borderline. Art.34①5 says \"안전성ㆍ신뢰성 확보를 위한 조치의 내용을 확인할 수 있는 문서의 작성과 보관\". That is compliance documentation, not a log of activity, inputs or tool calls."}
+    kill_switch: {covered: false, note: "Borderline. Art.13②2 lets the government support R&D and spread of the 비상정지 기능 (from 지능정보화기본법 §60③) in AI products. That is a discretionary support program, not a requirement or recommendation to operators. Art.40③ (regulator orders a violation to stop) is an enforcement power."}
+  kr-efsr-art13:
+    inventory: {covered: true, evidence: "제13조①2호: \"전산자료의 보유현황을 관리하고 책임자를 지정ㆍ운영할 것\"", note: "An inventory of data assets with a designated owner. ①5호 (보조기억매체 보유 현황 점검) supports this."}
+    vendors: {covered: false, note: "Art.13 has no third-party or outsourcing provision."}
+    unique_id: {covered: true, evidence: "제13조①1호: \"사용자 인증 수단을 개인별로 부여하고\"; ②: \"사용자계정의 공동 사용이 불가피한 경우에는 개인별 사용내역을 기록ㆍ관리\""}
+    least_privilege: {covered: true, evidence: "제13조①1호: \"접근권한은 최소한으로 부여하는 등 적절한 접근권한 관리 및 통제 절차를 수립ㆍ운용할 것\""}
+    human_approval: {covered: true, evidence: "제13조③: \"정보처리시스템 관리자의 주요 업무 관련 행위는 책임자가 제28조제2항에 따라 이중확인 및 모니터링을 하여야 한다\"", note: "①10호 also requires 책임자의 승인 to store important information on terminals."}
+    audit_trail: {covered: true, evidence: "제13조①9호: \"정보처리시스템의 가동기록은 … 접속의 성공여부와 상관없이 자동적으로 기록ㆍ유지하고 1년 이상 보존할 것\""}
+    kill_switch: {covered: true, evidence: "제13조①11호: \"전출ㆍ퇴직 등 인사조치가 있을 때에는 지체 없이 해당 사용자계정 삭제, 계정 사용 중지 … 접근을 통제할 것\"", note: "Matches the employee analog of suspending an account."}
+  kr-efsr-art37-2:
+    inventory: {covered: false, note: "Only covers assessment cycle, team and remediation. ④ (splitting 평가 대상 시설) does not require an inventory."}
+    vendors: {covered: false, note: "Borderline. ② allows outsourcing the assessment to a 평가전문기관 instead of an in-house team. ⑥ says the institution may ask 전자금융보조업자 to cooperate. Both are permissive; neither is vendor management or a contract requirement."}
+    unique_id: {covered: false}
+    least_privilege: {covered: false}
+    human_approval: {covered: true, evidence: "제37조의2⑤2호: \"취약점의 제거 또는 이에 상응하는 조치가 불가한 경우에는 최고경영자 승인을 득할 것\"", note: "CEO sign-off on accepting an unremediated risk. ⑤3호 adds reporting to the CEO."}
+    audit_trail: {covered: false, note: "Reporting results to the CEO is not logging."}
+    kill_switch: {covered: false}
+  kr-fsc-ai-guidelines-2026-06:
+    inventory: {covered: true, evidence: "§7.3 (본문 p.74): \"사용되는 데이터 및 모델의 목록을 관리하고 데이터 및 모델에 대한 접근권한과 변경·삭제에 대한 기록을 관리\"", note: "Example on p.75 lists each model with 담당자 (owner), and §5.3 asks for a third-party register."}
+    vendors: {covered: true, evidence: "§5.3 (p.58): \"제3자 IT리스크를 관리할 수 있도록 정보처리 업무 위탁 관련 규정 준수, 단계별 내부통제 체계 및 비상 대응 계획 마련, 제3자 현황 식별·관리\"", note: "p.61 gives example contract clauses, including ⑤ 사고 발생 시 정보 공유. §7.4 covers verifying external models and suppliers."}
+    unique_id: {covered: false, note: "Borderline. p.86 mentions \"사용자ㆍ관리자 등록ㆍ관리\" and MFA, p.83 mentions \"ID별 접근 가능 단말기 지정\" as an example, and p.80 mentions service account keys. None requires unique per-person or per-agent accounts or bans shared accounts."}
+    least_privilege: {covered: true, evidence: "§7.5 (p.78): \"인공지능시스템의 자동화된 접근패턴을 별도로 모니터링하고 업무 목적에 필요한 최소한의 권한만 부여한다\""}
+    human_approval: {covered: true, evidence: "§3.2 (p.31): \"‘고위험 인공지능’은 사람이 수행하는 의사결정에 보조적인 용도로만 사용(Human-in-the-loop)함으로써 … 최종적으로 수행하지 않도록 설계·운영한다\"", note: "Intervention is tiered by risk level."}
+    audit_trail: {covered: true, evidence: "§3.2 (p.34): \"인적개입의 결과는 설명가능한 근거와 함께 사후추적 가능한 로그로 보존\"; p.86: \"접속ㆍ이용 내역, 관리자 활동 … 로그 수집(1년 이상 보존)\"", note: "p.82 also requires logging gen-AI input/output data."}
+    kill_switch: {covered: true, evidence: "§5.2 (p.57): \"사후 개입이 가능한 긴급정지 기능 등 시스템 위험관리를 위한 안전장치를 마련한다\"", note: "§3.2 (p.33-34) adds a Kill switch and quarantine, with records kept. The checklist requires drills."}
+  kr-fsc-frontier-ai-guide-2026-07:
+    inventory: {covered: true, evidence: "대응요령 다.: \"시스템, 애플리케이션, API, 클라우드, 오픈소스, 위탁 업체, 제3자 소프트웨어 등 모든 자산을 통합적으로 관리할 필요\"", note: "Also recommends an SBOM."}
+    vendors: {covered: true, evidence: "대응요령 다. 적용예시: \"외부 업체 솔루션 및 신규 오픈소스 소프트웨어 도입 시, 내부망과 격리된 샌드박스 검증 환경 구축ㆍ운영\"", note: "가. has the CISO report on 제3자 리스크; 마. covers joint supply-chain checks. Nothing on contract terms."}
+    unique_id: {covered: false, note: "Borderline. Covers MFA, removing dormant accounts, and linking HR changes to deleting privileges. No requirement for unique per-actor IDs or a ban on shared accounts."}
+    least_privilege: {covered: true, evidence: "대응요령 바.: \"다중 인증, 최소 권한, 마이크로세그멘테이션, 휴면계정 제거, API 접근통제, 중요 데이터 접근 검증 등 핵심 통제 강화\""}
+    human_approval: {covered: true, evidence: "대응요령 라.: \"계정 잠금, 트래픽 차단, 시스템 격리, 패치 배포 등은 사전 시뮬레이션과 인간 승인을 전제로 운영\"", note: "Tiered by risk: for high-risk systems, \"보안담당자/CISO 최종 승인 후 차단 실행\"."}
+    audit_trail: {covered: true, evidence: "대응요령 라. 적용예시 (저위험): \"완전 자동화 … 조치 결과 로그만 모니터링\"", note: "Weak. Logs of automated actions are assumed to exist and are monitored; there is no explicit logging or retention requirement."}
+    kill_switch: {covered: true, evidence: "보도자료 면책요건 ②: \"[예시] 롤백(Rollback), 킬스위치(Kill Switch), 서비스 모듈 격리(Isolation) 등\"", note: "The guide also covers network isolation and service limits for unpatchable systems, and DB session shutdown."}
+  kr-fsi-agent-criteria-2026-10:
+    inventory: {covered: false, note: "None of the 17 items is an inventory or registration of agents."}
+    vendors: {covered: true, evidence: "평가기준표 2.: \"검증 대상이 모델에서 외부도구·플러그인 등 구성요소 전반으로 확대 … ⑫공급망 보안\"", note: "Supply-chain verification of third-party components, not contract terms. Coded from the official press release only; the full criteria are not public."}
+    unique_id: {covered: false, note: "⑨메모리 격리 and ⑪에이전트 간 통신보안 do not say per-agent identity or accounts."}
+    least_privilege: {covered: true, evidence: "\"★⑥도구 권한 제어\"; 중점 점검: \"▲실행 권한 및 격리 관리 여부\""}
+    human_approval: {covered: true, evidence: "\"★⑬인적 승인체계 구축 ★⑭인적 개입 과부하 방지\"", note: "⑭ matches the confirmation-fatigue concern."}
+    audit_trail: {covered: true, evidence: "\"⑰로깅 및 감사체계 구축\""}
+    kill_switch: {covered: true, evidence: "\"⑯킬스위치 구현\"; 중점 점검: \"▲자율 실행 제한 및 중단 여부\""}
+  kr-fss-fsi-pentest-standards-2026:
+    inventory: {covered: false, note: "Official FSS/FSI joint press release only; no separate 운영기준 document was found. It is about the scope of the blind pentest exercise."}
+    vendors: {covered: false, note: "Inspecting 외부 접속 인프라 is not vendor management."}
+    unique_id: {covered: false}
+    least_privilege: {covered: false}
+    human_approval: {covered: false}
+    audit_trail: {covered: false, note: "Tests hacking detection, not logging."}
+    kill_switch: {covered: false, note: "Tests 해킹탐지·차단 and the emergency response system (비상대응체계). Blocking attackers is not the institution's own halt or suspend capability."}
+  kr-outsourcing-regulation:
+    inventory: {covered: false, note: "Art.7④ requires half-yearly reporting of outsourcing status to FSS, and Art.7①7 asks for counterparty details. That is a vendor register or supervisory report, not an asset, system or owner inventory."}
+    vendors: {covered: true, evidence: "제4조③: \"정보처리 위탁계약을 체결할 경우 데이터에 대한 접근통제, 전산사고 등에 따른 … 책임관계 … 계약 내용에 반드시 포함\"", note: "Arts.4⑦, 7 and 8 add joint liability, reporting and inspection."}
+    unique_id: {covered: false}
+    least_privilege: {covered: true, evidence: "제4조⑤: \"위탁받은 자는 … 이전받은 정보를 당초 위탁의 범위를 초과하여 다른 목적으로 활용할 수 없다\"", note: "Borderline. Art.4③ requires a data access-control clause, and ⑤ limits use to the outsourced scope (the job-scope analog)."}
+    human_approval: {covered: true, evidence: "제7조①3호: \"업무위탁 계약이 이 규정 등 관련법령에 위배되지 아니한다는 준법감시인 … 의 검토의견\"", note: "Low confidence. The compliance officer's review is a required gate before outsourcing; it is a review opinion, not an explicit approval."}
+    audit_trail: {covered: false, note: "Art.8① only requires responding to FSS data requests. No logging."}
+    kill_switch: {covered: false, note: "Art.4② bans outsourcing in some cases and Art.8④ lets FSS demand changes. No halt or suspend mechanism."}
+  us-cisa-bod-22-01:
+    inventory: {covered: true, evidence: "FAQ (third-party environments): \"Each agency is responsible for inventorying all their information systems hosted in third-party environments (FedRAMP Authorized or otherwise)\"", note: "FAQ, not Required Actions. Systems/assets, no owner fields."}
+    vendors: {covered: true, evidence: "FAQ (third-party/cloud): \"the service provider must report the status of outstanding vulnerabilities to the agency receiving the service\"", note: "Vulnerability-status reporting from providers; no log-provision clause."}
+    unique_id: {covered: false, note: "Directive + FAQ cover only KEV remediation."}
+    least_privilege: {covered: false, note: "Isolation that 'minimizes direct access' is network isolation, not a privilege limit."}
+    human_approval: {covered: false, note: "No human sign-off of actions."}
+    audit_trail: {covered: false, note: "Tracking/reporting of remediation status, not activity logs."}
+    kill_switch: {covered: true, evidence: "FAQ (alternative mitigations): \"If these actions cannot be accomplished within the required timeframe, you must remove the asset from the agency network.\"", note: "Borderline: removal/isolation of unpatchable assets; FAQ; no account suspension or test."}
+  us-fed-sr-26-2:
+    inventory: {covered: false, note: "Agentic and generative AI excluded from scope (Attachment p.3 fn.3)."}
+    vendors: {covered: false, note: "Agentic and generative AI excluded from scope (Attachment p.3 fn.3)."}
+    unique_id: {covered: false, note: "Agentic and generative AI excluded from scope (Attachment p.3 fn.3)."}
+    least_privilege: {covered: false, note: "Agentic and generative AI excluded from scope (Attachment p.3 fn.3)."}
+    human_approval: {covered: false, note: "Agentic and generative AI excluded from scope (Attachment p.3 fn.3)."}
+    audit_trail: {covered: false, note: "Agentic and generative AI excluded from scope (Attachment p.3 fn.3)."}
+    kill_switch: {covered: false, note: "Agentic and generative AI excluded from scope (Attachment p.3 fn.3)."}
+  us-nist-csf-2-0:
+    inventory: {covered: true, evidence: "Appendix A, ID.AM-02 (p.18): \"Inventories of software, services, and systems managed by the organization are maintained\"", note: "Also ID.AM-01/04. No owner fields."}
+    vendors: {covered: true, evidence: "Appendix A, GV.SC-05 (p.18): \"Requirements to address cybersecurity risks in supply chains are established, prioritized, and integrated into contracts and other types of agreements with suppliers\"", note: "Also GV.SC-07/08."}
+    unique_id: {covered: true, evidence: "Appendix A, PR.AA-01 (p.19): \"Identities and credentials for authorized users, services, and hardware are managed by the organization\"", note: "Identity management; 'unique' not stated; no owner linkage."}
+    least_privilege: {covered: true, evidence: "Appendix A, PR.AA-05 (p.20): \"Access permissions, entitlements, and authorizations are defined in a policy, managed, enforced, and reviewed, and incorporate the principles of least privilege\"", note: "General least privilege."}
+    human_approval: {covered: false, note: "No human approval of decisions/actions in the Core; GV.OV and separation of duties are not action approval."}
+    audit_trail: {covered: true, evidence: "Appendix A, PR.PS-04 (p.20): \"Log records are generated and made available for continuous monitoring\"", note: "Also RS.AN-06, DE.CM-03."}
+    kill_switch: {covered: true, evidence: "Appendix A, RS.MI-01 (p.22): \"Incidents are contained\"", note: "Borderline: generic containment; no explicit stop/revocation or testing."}
+  us-nist-ir-8596-cyber-ai-profile:
+    inventory: {covered: true, evidence: "ID.AM-02 focus-area consideration (PDF p.45): \"Inventories should include AI models, APIs, keys, agents, data (see also ID.AM-07), and their integrations and permissions.\"", note: "Explicitly covers agents. Initial preliminary draft, Dec 2025."}
+    vendors: {covered: true, evidence: "GV.SC-05 focus-area consideration (PDF p.41): \"Require vendors to disclose both model and data scope, as well as incident support for AI tools.\"", note: "Also GV.SC-06."}
+    unique_id: {covered: true, evidence: "PR.AA-01 general consideration (PDF p.60): \"Give AI systems unique and traceable identities and credentials to better track their activity.\"", note: "AI service-level accounts."}
+    least_privilege: {covered: true, evidence: "PR.AA-05 general consideration (PDF p.62): \"Apply the principle of least privilege to AI agents by granting only the permissions necessary to carry out their role.\"", note: "Periodic privilege review; no untrusted-input rule found."}
+    human_approval: {covered: true, evidence: "PR.IR-01 focus-area consideration (PDF p.71): \"Gate AI-initiated network changes and privilege use by implementing human approval or policy-based checks.\"", note: "Also PR.PS-05."}
+    audit_trail: {covered: true, evidence: "PR.PS-04 focus-area consideration (PDF p.69-70): \"Logs should show request data, response data, ... and whether responses matched policy.\"", note: "Tamper protection considered."}
+    kill_switch: {covered: true, evidence: "RS.MI-01 focus-area consideration (PDF p.90): \"Containment procedures include AI-specific steps, such as rapidly disabling the autonomy/privileges of a compromised AI agent to a validated, trusted state.\"", note: "No periodic testing stated."}
+  us-nist-nccoe-agent-identity-2026-02:
+    inventory: {covered: false, note: "No inventory/registry of agents; 'ensure that agents are known' is a goal statement."}
+    vendors: {covered: false, note: "External agents from untrusted sources are out of initial scope (§3, p.7)."}
+    unique_id: {covered: true, evidence: "§1 Areas of Interest (p.6): \"identify software and AI agents such that access management systems can distinguish between agent and human identities\"", note: "Draft concept paper; focus areas, not requirements."}
+    least_privilege: {covered: true, evidence: "Note to Reviewers Q4 (p.4): \"How do we establish 'least privilege' for an agent, especially when its required actions might not be fully predictable when deployed?\"", note: "Much is framed as questions."}
+    human_approval: {covered: true, evidence: "§1 Areas of Interest (p.6): \"effectively manage the range of actions an agent may take from controlled human-in-the-loop approval to autonomous action\""}
+    audit_trail: {covered: true, evidence: "§1 Areas of Interest (p.6): \"Logging and Transparency. Link specific AI agent and software systems actions to the identity of the non-human entity\"", note: "Also tamper-proof logging question (Q5)."}
+    kill_switch: {covered: true, evidence: "Note to Reviewers Q3 (p.4): \"How do we handle key management for agents? Issuance, update, and revocation?\"", note: "Borderline: credential revocation only, framed as a question; no halt mechanism or testing."}
+  us-nydfs-letter-2024-10-16:
+    inventory: {covered: true, evidence: "Data Management: \"These entities also should maintain an inventory of all such systems\"", note: "Systems that use or rely on AI."}
+    vendors: {covered: true, evidence: "Third-Party Service Provider and Vendor Management: \"Covered Entities should require TPSPs to provide timely notification of any Cybersecurity Event that directly impacts the Covered Entity's Information Systems\""}
+    unique_id: {covered: true, evidence: "Access Controls: \"MFA requires Authorized Users to authenticate their identities using at least two of three authentication factors\"", note: "Borderline, inferred; no explicit unique-ID language."}
+    least_privilege: {covered: true, evidence: "Access Controls: \"the controls must limit an Authorized User's access privileges to only those necessary for that Authorized User's job functions\""}
+    human_approval: {covered: true, evidence: "Cybersecurity Training: \"trainings should address circumstances in which human review and oversight must be included in verification procedures\"", note: "Verification of unusual requests (e.g. urgent transfers)."}
+    audit_trail: {covered: true, evidence: "Monitoring: \"The Cybersecurity Regulation also requires Covered Entities to monitor the activity of Authorized Users\"", note: "Borderline: activity monitoring, no retention."}
+    kill_switch: {covered: true, evidence: "Access Controls: \"must remove or disable access privileges that are no longer necessary, promptly terminate access privileges following departures\"", note: "Access revocation; no emergency halt."}
+  us-nydfs-letter-2026-09-10:
+    inventory: {covered: true, evidence: "§3 Scope and Coverage, All Assets: \"Covered Entities are required to maintain an accurate and current asset inventory.\""}
+    vendors: {covered: true, evidence: "§3 Third-Party and Supply Chain Risk: \"Risk Assessments should evaluate cybersecurity risks associated with Third-Party Service Providers based on the criticality of the services provided\"", note: "No contract clauses."}
+    unique_id: {covered: false}
+    least_privilege: {covered: false, note: "Only 'who has access to assets' in risk assessment."}
+    human_approval: {covered: true, evidence: "§4 Documentation and Traceability: \"The documentation should also capture instances where management elects to accept a risk, including the justification for risk acceptance\"", note: "Governance-level sign-off; no transaction-level approval."}
+    audit_trail: {covered: false, note: "Risk-assessment records, not activity logs."}
+    kill_switch: {covered: false}
+  us-nydfs-letters-2026-05-21:
+    inventory: {covered: true, evidence: "Frontier AI Advisory, Coordinate with TPSPs: \"Regulated Entities should develop and maintain dependency maps, and coordinate with critical third-party service providers and material downstream providers\"", note: "Borderline: dependency map coded as register."}
+    vendors: {covered: true, evidence: "HCTE Guidance 2.6: \"Engage with critical Third-Party Service Providers to confirm awareness of and appropriate action on heightened cybersecurity risks and readiness to respond\""}
+    unique_id: {covered: true, evidence: "HCTE Guidance 1.3: \"Restrict MFA enrollment and changes to authorized processes with strong identity verification.\"", note: "Borderline: identity proofing; no explicit unique-ID."}
+    least_privilege: {covered: true, evidence: "HCTE Guidance 1.7: \"Conduct privileged access reviews, especially for threat-relevant users, systems, and devices\"; 1.9: \"Restrict and validate inputs prior to ... executing commands\""}
+    human_approval: {covered: true, evidence: "Frontier AI Advisory, Secure Programming: \"additional testing and validation procedures, including human oversight, for AI-generated code prior to deployment in production environments\""}
+    audit_trail: {covered: true, evidence: "HCTE Guidance 2.2: \"Confirm that log and security event alerting data is captured on Information Systems\""}
+    kill_switch: {covered: false, note: "No halt/suspend/revoke measure in either letter."}
+  us-nydfs-part500:
+    inventory: {covered: true, evidence: "§500.13(a): \"produce and maintain a complete, accurate and documented asset inventory\"; tracks \"(i) owner\"", note: "Owner linkage."}
+    vendors: {covered: true, evidence: "§500.11(b)(3): \"notice to be provided to the covered entity in the event of a cybersecurity event directly impacting the covered entity's information systems\""}
+    unique_id: {covered: true, evidence: "§500.12(a): \"Multi-factor authentication shall be utilized for any individual accessing any information systems of a covered entity\"", note: "Borderline, inferred; with §500.3(d) identity management."}
+    least_privilege: {covered: true, evidence: "§500.7(a)(1): \"limit user access privileges to information systems that provide access to nonpublic information to only those necessary to perform the user's job\""}
+    human_approval: {covered: true, evidence: "§500.15(b): \"effective alternative compensating controls that have been reviewed and approved by the covered entity's CISO in writing\""}
+    audit_trail: {covered: true, evidence: "§500.6(a)(2): \"include audit trails designed to detect and respond to cybersecurity events\"", note: "Retention 3 years (§500.6(b))."}
+    kill_switch: {covered: true, evidence: "§500.7(a)(4),(6): \"remove or disable accounts and access that are no longer necessary\"; \"promptly terminate access following departures\"", note: "No explicit emergency stop."}
+  us-treasury-fs-ai-rmf-2026-02:
+    inventory: {covered: true, evidence: "Guidebook CO GV-1.6.1 AI Inventory Management: \"maintains a regularly updated inventory of its AI systems, including purpose, data sources, responsible personnel, risk ratings, criticality, dependencies\"", note: "Owner via responsible personnel."}
+    vendors: {covered: true, evidence: "Guidebook CO GV-6.2.3 SLAs and Contracts with AI Vendors: \"contractual provisions with high-risk third-party AI providers, defining obligations, liabilities, remedies, performance metrics ... incident reporting requirements\""}
+    unique_id: {covered: false, note: "System IDs in the inventory are registry identifiers, not access identities."}
+    least_privilege: {covered: true, evidence: "Guidebook CO GV-1.4.3: \"provide relevant AI stakeholders with appropriate access based on their roles and the system's risk classification\"", note: "Borderline/weak: RBAC for the documentation repository; nothing limits AI system privileges."}
+    human_approval: {covered: true, evidence: "Guidebook CO MP-3.5.3: \"documents and communicates criteria and thresholds for human intervention in AI system operation, procedures for escalating issues\"", note: "Also GV-3.2.1 human override."}
+    audit_trail: {covered: true, evidence: "Guidebook CO MS-2.7.4: \"AI-specific security logs and monitoring outputs are integrated into centralized security information and event management (SIEM) systems\""}
+    kill_switch: {covered: true, evidence: "Guidebook CO MG-2.4.3: \"designs, implements, and regularly tests technical mechanisms and safeguards, including fallback, rollback, contingency, and deactivation systems, for the rapid, controlled disengagement\"", note: "Includes regular testing."}

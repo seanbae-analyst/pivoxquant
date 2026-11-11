@@ -23,9 +23,11 @@ from typing import Any, Callable
 from .registry import SNAPSHOT_DIR
 
 USER_AGENT = "Mozilla/5.0 (compatible; pivoxpolicy/0.1; research snapshot)"
-AGENT_RE = re.compile(r"(?i)\bagentic\b|\bai agents?\b|에이전트")
+# 경계는 ASCII 영숫자로만 잰다 — 파이썬 \b 는 한글도 '단어 글자' 로 봐서 'AI agent가' · '생성형AI agents' 를 놓친다.
+_A0, _A1 = r"(?<![A-Za-z0-9])", r"(?![A-Za-z0-9])"
+AGENT_RE = re.compile(rf"(?i){_A0}agentic{_A1}|{_A0}ai agents?{_A1}|에이전트")
 TAG_RE = re.compile(r"<script.*?</script>|<style.*?</style>|<[^>]+>", re.S)
-LINK_RE = re.compile(r"""<a\s[^>]*?href=["']([^"'#]+)["'][^>]*>(.*?)</a>""", re.S | re.I)
+LINK_RE = re.compile(r"""<a\s[^>]*?href=["']([^"']+)["'][^>]*>(.*?)</a>""", re.S | re.I)
 WS_RE = re.compile(r"\s+")
 
 
@@ -105,7 +107,11 @@ def extract_links(body: bytes, base_url: str, keyword_re: re.Pattern[str] | None
             continue
         if keyword_re and not keyword_re.search(text):
             continue
-        absu = urllib.parse.urljoin(base_url, html.unescape(href))
+        href = html.unescape(href).strip()
+        if not href or href.startswith("#") or href.lower().startswith(("javascript:", "mailto:")):
+            continue
+        # 조각(#...)만 뗀다 — 전에는 href 에 '#' 가 있으면 링크째 버려 watch 가 새 글을 놓쳤다
+        absu = urllib.parse.urldefrag(urllib.parse.urljoin(base_url, href))[0]
         if absu in seen:
             continue
         seen.add(absu)
@@ -114,7 +120,10 @@ def extract_links(body: bytes, base_url: str, keyword_re: re.Pattern[str] | None
 
 
 def keyword_regex(keywords: list[str] | None) -> re.Pattern[str]:
-    """키워드 목록 → 정규식. 짧은 ASCII 키워드('AI')는 단어 경계를 붙여 'Daily'·'Mailing' 을 안 잡는다.
+    """키워드 목록 → 정규식. 짧은 ASCII 키워드('AI')는 ASCII 영숫자 경계를 붙여 'Daily'·'Mailing' 을 안 잡는다.
+    경계는 ASCII 로만 잰다 — 한글이 바로 붙은 'AI가' · '생성형AI' · 'AI기본법' 도 잡아야 한다.
+    대문자 약어(AI · LLM · MCP)는 대문자로 쓰였으면 뒤에 소문자가 붙어도 잡는다('LLMs' · 'LLMjacking'),
+    소문자로 쓰였으면 영숫자 경계까지 본다('said' · 'aim' 은 안 잡는다).
     한글 키워드는 복합어 안에서도 잡히도록 경계를 안 붙인다('금융보안원' ⊃ '보안')."""
     if not keywords:
         return AGENT_RE
@@ -122,7 +131,10 @@ def keyword_regex(keywords: list[str] | None) -> re.Pattern[str]:
     for k in keywords:
         e = re.escape(k)
         if k.isascii() and len(k) <= 4:
-            e = rf"\b{e}\b"
+            if k.isupper():
+                e = rf"{_A0}(?:(?-i:{e}(?![A-Z0-9]))|{e}s?{_A1})"
+            else:
+                e = rf"{_A0}{e}{_A1}"
         parts.append(e)
     return re.compile("|".join(parts), re.I)
 

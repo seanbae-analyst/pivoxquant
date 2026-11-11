@@ -7,8 +7,9 @@ status: final
 binding: 1
 names_agents: true
 date: 2026-10-08
-url: null
-url_note: 확인 필요 — fsec.or.kr 보안원 소식(bbs/221)은 스크립트 렌더링이라 링크를 못 뽑음. 보도 — fnnews 2026-10-07, SBS Biz.
+url: https://www.fsec.or.kr/bbs/detail?menuNo=69&bbsNo=12122
+url_verified: 2026-11-11
+url_note: "금융보안원 보도자료 게시판(menuNo 69) 글 — 제목 「금융분야 AI 에이전트 보안 평가기준」마련, 2026-10-08 게시, hwpx·pdf 첨부. 2026-11-11 HTTP 200·제목 확인. 평가기준 세부 항목 전문은 공개 안 됨(보도자료에 6분야 17항목 목록만) — 2026 「AI REDTEAM REPORT」 에 공개 예정이라고 함."
 summary: 5개 분야 17개 항목(데이터오염·모델오염·추출·회피·AI 에이전트 보안), 에이전트 관련 10개. OWASP·CSA 참고. 레드팀 테스트용이지 등급이 아님. 2026 시범 → 2027 정식. 덱 노트 — 도구권한 통제·샌드박스·사람 승인·킬스위치·로깅 포함.
 topics: [testing]
 source_note: 덱 슬라이드 10·11·14 노트 + 2026-11-11 웹 검색(fnnews, SBS Biz). 17개 항목 원문은 미확보 — 코딩 근거는 보도·덱 노트 수준.
