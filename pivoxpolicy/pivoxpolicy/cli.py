@@ -130,6 +130,9 @@ def cmd_intel(args: argparse.Namespace) -> int:
 
 def cmd_rubric(args: argparse.Namespace) -> int:
     rub = rubric_mod.load_rubric()
+    if args.codebook:
+        print(rubric_mod.render_codebook(rub))
+        return 0
     if args.check:
         problems = 0
         for name, a in rubric_mod.load_assessments().items():
@@ -160,7 +163,7 @@ def cmd_assess(args: argparse.Namespace) -> int:
         print("평가 파일이 없음 (registry/assessments/*.yaml). TEMPLATE.yaml 을 복사해 만든다.")
         return 2
     if args.compare:
-        profiles = [assess_mod.build_profile(a) for a in asmts.values()]
+        profiles = [assess_mod.build_profile(a, rub) for a in asmts.values()]
         print(assess_mod.render_comparison(profiles, rub))
         return 0
     if args.subject:
@@ -171,7 +174,7 @@ def cmd_assess(args: argparse.Namespace) -> int:
     else:
         items = list(asmts.items())
     for _, a in items:
-        print(assess_mod.render_profile(assess_mod.build_profile(a), rub))
+        print(assess_mod.render_profile(assess_mod.build_profile(a, rub), rub))
     return 0
 
 
@@ -226,8 +229,9 @@ def build_parser() -> argparse.ArgumentParser:
     i.add_argument("--dry-run", action="store_true", help="저장하지 않고 보기만")
     i.set_defaults(fn=cmd_intel)
 
-    ru = sub.add_parser("rubric", help="내부통제 평가 루브릭 (차원 목록). --check 로 평가 스키마 검사")
+    ru = sub.add_parser("rubric", help="내부통제 평가 루브릭. --codebook 로 채점 절차 전문, --check 로 평가 스키마 검사")
     ru.add_argument("--check", action="store_true")
+    ru.add_argument("--codebook", action="store_true")
     ru.set_defaults(fn=cmd_rubric)
 
     asm = sub.add_parser("assess", help="기관 내부통제 평가 프로필 (단일 등급 없음)")

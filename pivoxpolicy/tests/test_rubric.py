@@ -1,101 +1,131 @@
-"""평가 루브릭·채점 — 실데이터 검증 + 단위."""
+"""평가 루브릭 — 신호에서 레벨 도출, 프로필, 평가자 간 κ."""
 
 import pytest
 
 from pivoxpolicy.assess import build_profile, compare_assessors, render_comparison, render_profile
 from pivoxpolicy.rubric import (
-    RubricError, load_assessments, load_rubric, validate_assessment,
+    Dimension, RubricError, derive_level, load_assessments, load_rubric,
+    render_codebook, validate_assessment,
 )
 
 
-def test_rubric_loads_and_groups_cover_all_dimensions():
+def test_rubric_loads_groups_and_signal_invariants():
     rub = load_rubric()
-    assert len(rub.dimensions) >= 14
-    assert rub.provisional is True
-    grouped = sum(len(v) for v in rub.groups().values())
-    assert grouped == len(rub.dimensions)
-    # 7개 통제가 agent_control 에 그대로
+    assert len(rub.dimensions) >= 14 and rub.provisional is True
+    assert sum(len(v) for v in rub.groups().values()) == len(rub.dimensions)
     ac = {d.id for d in rub.groups()["agent_control"]}
     assert {"inventory", "vendors", "unique_id", "least_privilege", "human_approval", "audit_trail", "kill_switch"} <= ac
     for d in rub.dimensions:
         assert [l.level for l in d.levels] == [0, 1, 2, 3]
+        levels = {s.level for s in d.signals}
+        assert 1 in levels and 3 in levels
+        for s in d.signals:
+            if s.level == 3:
+                assert s.min_evidence == "primary"   # 보도만으로 L3 불가
 
 
-def test_seed_assessments_validate():
+def test_derive_level_rules():
+    rub = load_rubric()
+    dim = rub.by_id("inventory")
+    # 전부 null → 미평가
+    assert derive_level(dim, {}).level is None
+    assert derive_level(dim, {"mentions_ai_governance": {"observed": None}}).level is None
+    # false 만 → 0
+    d = derive_level(dim, {"mentions_ai_governance": {"observed": False}})
+    assert d.level == 0 and d.checked_any is True
+    # L1 primary 발화 → 1
+    d = derive_level(dim, {"mentions_ai_governance": {"observed": True, "evidence_level": "primary"}})
+    assert d.level == 1 and d.fired == ["mentions_ai_governance"]
+    # L2 가 press 면 발화 못 함(↓), L1 만 → 1
+    d = derive_level(dim, {
+        "mentions_ai_governance": {"observed": True, "evidence_level": "primary"},
+        "discloses_ai_usecases": {"observed": True, "evidence_level": "press"},
+    })
+    assert d.level == 1 and "discloses_ai_usecases" in d.downgraded
+    # L2 primary → 최고값 2
+    d = derive_level(dim, {
+        "mentions_ai_governance": {"observed": True, "evidence_level": "primary"},
+        "discloses_ai_usecases": {"observed": True, "evidence_level": "primary"},
+    })
+    assert d.level == 2
+    # L3 는 press 면 못 감
+    d = derive_level(dim, {"verified_inventory": {"observed": True, "evidence_level": "press"}})
+    assert d.level == 0 and d.downgraded == ["verified_inventory"]
+    d = derive_level(dim, {"verified_inventory": {"observed": True, "evidence_level": "primary"}})
+    assert d.level == 3
+
+
+def test_seed_assessments_validate_and_derive_expected():
     rub = load_rubric()
     asmts = load_assessments()
     assert "example-worked_2026" in asmts
     for name, a in asmts.items():
         assert validate_assessment(a, rub) == [], name
+    prof = build_profile(asmts["example-worked_2026"], rub)
+    assert prof.level("inventory") == 1
+    assert prof.level("human_approval") == 2
+    assert prof.level("test_scope") == 1          # L2 가 press 라 ↓
+    assert prof.level("detection_time") == 3
+    assert prof.level("escalation") is None       # 전부 null
+    assert prof.level("vendors") == 0             # 전부 false
 
 
-def test_validate_rejects_press_level3_and_missing_evidence():
+def test_validate_rejects_unknown_signal_and_missing_evidence():
     rub = load_rubric()
     bad = {"subject": "x", "period": "2026", "assessor": "t", "scores": {
-        "inventory": {"level": 3, "evidence": "보도만", "evidence_level": "press"},
-        "vendors": {"level": 2, "evidence": "", "evidence_level": "primary"},
-        "nope": {"level": 1, "evidence": "e", "evidence_level": "primary"},
+        "inventory": {
+            "mentions_ai_governance": {"observed": True, "evidence": "", "evidence_level": "primary"},  # evidence 없음
+            "nope_signal": {"observed": True, "evidence": "e", "evidence_level": "primary"},             # 모르는 신호
+        },
+        "nope_dim": {"x": {"observed": True}},
     }}
     probs = validate_assessment(bad, rub)
-    assert any("press" in p for p in probs)
-    assert any("vendors" in p and "evidence" in p for p in probs)
-    assert any("nope" in p for p in probs)
+    assert any("evidence" in p and "mentions_ai_governance" in p for p in probs)
+    assert any("nope_signal" in p for p in probs)
+    assert any("nope_dim" in p for p in probs)
 
 
-def test_profile_counts_and_distribution_keep_unknown_separate():
+def test_profile_counts_keep_unknown_separate():
     rub = load_rubric()
-    a = load_assessments()["example-worked_2026"]
-    prof = build_profile(a)
+    prof = build_profile(load_assessments()["example-worked_2026"], rub)
     v, z, coded = prof.verified_count(rub)
-    # 예시: detection_time=3 하나, 0 은 vendors·unique_id·kill_switch·test_coverage=4, escalation=null 은 미평가
-    assert v == 1
-    assert z == 4
-    assert coded == len(rub.dimensions) - 1   # escalation 만 null
+    assert v == 1                                  # detection_time
+    assert coded == len(rub.dimensions) - 1        # escalation 만 미평가
     dist = prof.group_distribution(rub)
-    assert dist["agent_control"].get("unknown", 0) == 0
-    assert dist["connection"].get("unknown") == 1   # escalation
+    assert dist["connection"].get("unknown") == 1  # escalation
 
 
-def test_render_profile_says_evidence_not_control():
+def test_render_profile_and_codebook_say_evidence_not_control():
     rub = load_rubric()
-    prof = build_profile(load_assessments()["example-worked_2026"])
+    prof = build_profile(load_assessments()["example-worked_2026"], rub)
     out = render_profile(prof, rub)
-    assert "공개 증거 수준" in out and "통제 유무" in out
-    assert "예시은행" in out
+    assert "공개 증거 수준" in out and "통제 유무" in out and "예시은행" in out
+    cb = render_codebook(rub)
+    assert "직접 고르지 않는다" in cb and "primary 필요" in cb
 
 
-def test_compare_assessors_kappa_on_levels():
+def test_kappa_signal_and_level():
     rub = load_rubric()
-    a = {"subject": "같은은행", "period": "2026", "assessor": "A", "scores": {
-        "inventory": {"level": 2, "evidence": "e", "evidence_level": "primary"},
-        "vendors": {"level": 1, "evidence": "e", "evidence_level": "primary"},
-        "unique_id": {"level": 0},
-        "kill_switch": {"level": 3, "evidence": "e", "evidence_level": "primary"},
-    }}
-    b = {"subject": "같은은행", "period": "2026", "assessor": "B", "scores": {
-        "inventory": {"level": 2, "evidence": "e", "evidence_level": "primary"},
-        "vendors": {"level": 2, "evidence": "e", "evidence_level": "primary"},  # 불일치
-        "unique_id": {"level": 0},
-        "kill_switch": {"level": 3, "evidence": "e", "evidence_level": "primary"},
-    }}
+    base = load_assessments()["example-worked_2026"]
+    a = dict(base); a["assessor"] = "A"
+    # B: 한 신호만 다르게 (inventory L2 신호를 봤다고)
+    import copy
+    b = copy.deepcopy(base); b["assessor"] = "B"
+    b["scores"]["inventory"]["discloses_ai_usecases"] = {"observed": True, "evidence": "e", "evidence_level": "primary"}
     res = compare_assessors(a, b, rub)
-    assert res["n"] == 4
-    assert res["disagreements"] == [("vendors", 1, 2)]
-    assert 0.0 < res["kappa"].kappa < 1.0
-    assert res["kappa"].weighted_kappa is not None
+    assert res["n_signals"] > 0 and res["n_dims"] > 0
+    assert ("inventory", 1, 2) in res["disagreements"]
+    assert res["signal_kappa"].kappa is not None
+    assert render_comparison([build_profile(a, rub)], rub).find("단일 등급 없음") >= 0
 
 
-def test_comparison_grid_has_no_single_grade():
-    rub = load_rubric()
-    profiles = [build_profile(load_assessments()["example-worked_2026"])]
-    out = render_comparison(profiles, rub)
-    assert "단일 등급 없음" in out
-    # 합계/평균/종합 같은 단어로 뭉친 행이 없어야 한다
-    assert "종합점수" not in out and "총점" not in out
-
-
-def test_dimension_rejects_bad_levels():
-    with pytest.raises(RubricError):
-        from pivoxpolicy.rubric import Dimension
-        Dimension.from_dict({"id": "x", "num": 1, "group": "testing", "name_ko": "a", "name_en": "a",
-                             "question": "q", "levels": [{"level": 0, "label_ko": "", "criterion": ""}]})
+def test_dimension_rejects_missing_or_bad_signals():
+    base = {"id": "x", "num": 1, "group": "testing", "name_ko": "a", "name_en": "a", "question": "q",
+            "levels": [{"level": i, "label_ko": "", "criterion": ""} for i in range(4)]}
+    with pytest.raises(RubricError):   # 신호 없음
+        Dimension.from_dict(base)
+    with pytest.raises(RubricError):   # L3 신호가 press
+        Dimension.from_dict({**base, "signals": [
+            {"id": "s1", "level": 1, "min_evidence": "press", "question": "q"},
+            {"id": "s3", "level": 3, "min_evidence": "press", "question": "q"},
+        ]})

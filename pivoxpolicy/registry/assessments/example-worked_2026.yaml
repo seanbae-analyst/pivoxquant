@@ -1,28 +1,79 @@
-# ⚠️ 가상 예시 — 실제 기관이 아니다. 루브릭이 어떻게 채워지는지 보여 주려고 만든 합성 사례.
-# 실제 기관 평가를 공개할 때의 명예훼손·공정성 위험 때문에(rubric.yaml pitfalls), 시드에는
-# 실존 회사를 넣지 않는다. 각 level 의 evidence 는 "이런 종류의 공개 자료가 있으면 이 레벨" 을
-# 보여 주는 예시 문장이며, 실제 사건을 평가한 것이 아니다.
+# ⚠️ 가상 예시 — 실제 기관이 아니다. 신호에서 레벨이 어떻게 도출되는지 보여 주는 합성 사례.
+# 실제 기관 평가를 공개할 때의 명예훼손·공정성 위험 때문에(rubric.yaml pitfalls) 실존 회사를 넣지 않는다.
+# 각 신호의 evidence 는 "이런 자료가 있으면 이 신호가 발화" 를 보여 주는 예시 문장이며 실제 평가가 아니다.
 #
-# (연구에서 실제 기관을 평가할 때는 사건 레지스트리·제재 공개안·공시를 1차 출처로 채운다.)
+# 도출 예: inventory 는 L1 신호만 primary 로 발화 → 레벨 1.
+#          human_approval 은 L2 신호가 primary 로 발화(L1 도 발화) → 최고값 레벨 2.
+#          test_scope 는 L2 신호를 봤지만 press 라 발화 못 함(↓), L1 만 발화 → 레벨 1.
+#          detection_time 은 L3 신호가 primary 로 발화 → 레벨 3.
+#          escalation 은 전부 null → 미평가.
 subject: 예시은행(가상)
 period: "2026"
 assessor: example
 provisional: true
 basis: 합성 예시. 실제 공개 자료 아님.
 scores:
-  inventory:        {level: 1, evidence: "사업보고서에 'AI 거버넌스 체계 운영' 원칙만 언급(예시)", source_url: "", evidence_level: primary}
-  vendors:          {level: 0, evidence: "", source_url: "", evidence_level: unverified}
-  unique_id:        {level: 0, evidence: "", source_url: "", evidence_level: unverified}
-  least_privilege:  {level: 1, evidence: "최소권한 원칙 언급(예시)", source_url: "", evidence_level: primary}
-  human_approval:   {level: 2, evidence: "AI 가이드라인 수용, 고위험 거래에 사람 승인 절차 명시(예시)", source_url: "", evidence_level: primary}
-  audit_trail:      {level: 1, evidence: "로그 1년 보존 규정 준수 언급(예시)", source_url: "", evidence_level: primary}
-  kill_switch:      {level: 0, evidence: "", source_url: "", evidence_level: unverified}
-  warning_receipt:  {level: 2, evidence: "감독기관 경고 수신 후 상황반 구성, 보도자료로 확인(예시)", source_url: "", evidence_level: primary}
-  escalation:       {level: null, evidence: "", source_url: "", evidence_level: unverified}
-  test_frequency:   {level: 2, evidence: "블라인드 침투테스트 연 2회 공개(예시)", source_url: "", evidence_level: primary}
-  test_scope:       {level: 1, evidence: "주요 시스템 점검 언급, 외부접점 범위 불명(예시)", source_url: "", evidence_level: press}
-  test_followup:    {level: 1, evidence: "보완조치 계획 언급, 기한 불명(예시)", source_url: "", evidence_level: press}
-  test_coverage:    {level: 0, evidence: "", source_url: "", evidence_level: unverified}
-  detection_time:   {level: 3, evidence: "국회 제출자료에 탐지 소요시간 수치 공개(예시)", source_url: "", evidence_level: primary}
-  disclosure:       {level: 2, evidence: "신고·고객 안내 시점 공개(예시)", source_url: "", evidence_level: primary}
-  remediation:      {level: 1, evidence: "재발방지 방침 발표(예시)", source_url: "", evidence_level: press}
+  inventory:
+    mentions_ai_governance: {observed: true,  evidence: "사업보고서에 'AI 거버넌스 체계 운영' 원칙 언급(예시)", evidence_level: primary}
+    discloses_ai_usecases:  {observed: false, evidence: "", evidence_level: unverified}
+    verified_inventory:     {observed: false, evidence: "", evidence_level: unverified}
+  vendors:
+    mentions_third_party_risk:     {observed: false, evidence: "", evidence_level: unverified}
+    specifies_ai_vendor_controls:  {observed: false, evidence: "", evidence_level: unverified}
+    verified_vendor_review:        {observed: false, evidence: "", evidence_level: unverified}
+  unique_id:
+    mentions_access_control:  {observed: false, evidence: "", evidence_level: unverified}
+    separates_agent_accounts: {observed: false, evidence: "", evidence_level: unverified}
+    verified_agent_identity:  {observed: false, evidence: "", evidence_level: unverified}
+  least_privilege:
+    mentions_least_privilege:      {observed: true,  evidence: "최소권한 원칙 언급(예시)", evidence_level: primary}
+    specifies_source_based_limits: {observed: false, evidence: "", evidence_level: unverified}
+    redteam_verified_isolation:    {observed: false, evidence: "", evidence_level: unverified}
+  human_approval:
+    mentions_human_in_loop:        {observed: true, evidence: "AI 가이드라인 수용, 사람 개입 원칙(예시)", evidence_level: primary}
+    specifies_risk_based_approval: {observed: true, evidence: "고위험 거래에 사람 승인 절차 명시(예시)", evidence_level: primary}
+    verified_approval_gate:        {observed: false, evidence: "", evidence_level: unverified}
+  audit_trail:
+    mentions_logging:          {observed: true,  evidence: "로그 1년 보존 규정 준수 언급(예시)", evidence_level: primary}
+    specifies_agent_log_items: {observed: false, evidence: "", evidence_level: unverified}
+    verified_log_retention:    {observed: false, evidence: "", evidence_level: unverified}
+  kill_switch:
+    mentions_emergency_stop: {observed: false, evidence: "", evidence_level: unverified}
+    specifies_kill_switch:   {observed: false, evidence: "", evidence_level: unverified}
+    tested_kill_switch:      {observed: false, evidence: "", evidence_level: unverified}
+  warning_receipt:
+    acknowledged_warning:  {observed: true, evidence: "감독기관 경고 수신 후 상황반 구성, 보도자료 확인(예시)", evidence_level: primary}
+    relayed_to_action:     {observed: true, evidence: "경고→부서 전달→조치 결정 경로 공개(예시)", evidence_level: primary}
+    verified_action_taken: {observed: false, evidence: "", evidence_level: unverified}
+  escalation:
+    mentions_reporting_line:       {observed: null, evidence: "", evidence_level: unverified}
+    management_acted_on_report:    {observed: null, evidence: "", evidence_level: unverified}
+    verified_report_action_record: {observed: null, evidence: "", evidence_level: unverified}
+  test_frequency:
+    mentions_periodic_test:      {observed: true, evidence: "정기 점검 언급(예시)", evidence_level: primary}
+    discloses_cadence:           {observed: true, evidence: "블라인드 침투테스트 연 2회 공개(예시)", evidence_level: primary}
+    verified_continuous_testing: {observed: false, evidence: "", evidence_level: unverified}
+  test_scope:
+    mentions_core_scope:                {observed: true,  evidence: "주요 시스템 점검 언급(예시)", evidence_level: primary}
+    includes_external_touchpoints:      {observed: true,  evidence: "외부접점 포함 주장이 보도에만 있음(예시)", evidence_level: press}
+    verified_full_touchpoint_coverage:  {observed: false, evidence: "", evidence_level: unverified}
+  test_followup:
+    mentions_remediation_plan:   {observed: true,  evidence: "보완조치 계획 언급(예시)", evidence_level: press}
+    specifies_patch_deadline:    {observed: false, evidence: "", evidence_level: unverified}
+    verified_timely_remediation: {observed: false, evidence: "", evidence_level: unverified}
+  test_coverage:
+    mentions_ai_security_intent: {observed: false, evidence: "", evidence_level: unverified}
+    specifies_ai_test_or_drill:  {observed: false, evidence: "", evidence_level: unverified}
+    verified_ai_test_count:      {observed: false, evidence: "", evidence_level: unverified}
+  detection_time:
+    mentions_monitoring:       {observed: true, evidence: "24시간 모니터링 언급(예시)", evidence_level: primary}
+    discloses_detection_time:  {observed: true, evidence: "탐지 소요시간 공개(예시)", evidence_level: primary}
+    verified_fast_detection:   {observed: true, evidence: "국회 제출자료에 짧은 탐지시간 수치 공개(예시)", evidence_level: primary}
+  disclosure:
+    mentions_notification:        {observed: true, evidence: "고객 안내·신고 언급(예시)", evidence_level: primary}
+    specifies_disclosure_timing:  {observed: true, evidence: "신고·안내 시점 공개(예시)", evidence_level: primary}
+    verified_timely_disclosure:   {observed: false, evidence: "", evidence_level: unverified}
+  remediation:
+    mentions_prevention:            {observed: true,  evidence: "재발방지 방침 발표(예시)", evidence_level: press}
+    specifies_prevention_plan:      {observed: false, evidence: "", evidence_level: unverified}
+    verified_prevention_implemented: {observed: false, evidence: "", evidence_level: unverified}

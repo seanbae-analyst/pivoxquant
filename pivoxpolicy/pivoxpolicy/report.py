@@ -97,9 +97,10 @@ def write_all(
     except FileNotFoundError:
         rub, asmts = None, {}
     if rub is not None:
-        profiles = [assess_mod.build_profile(a) for a in asmts.values()]
+        profiles = [assess_mod.build_profile(a, rub) for a in asmts.values()]
         if profiles:
             w("assessment-comparison.md", assess_mod.render_comparison(profiles, rub))
         for name, a in asmts.items():
-            w(f"assessment-{name}.md", assess_mod.render_profile(assess_mod.build_profile(a), rub))
+            w(f"assessment-{name}.md", assess_mod.render_profile(assess_mod.build_profile(a, rub), rub))
+        w("scoring-method.md", rubric_mod.render_codebook(rub))
     return written

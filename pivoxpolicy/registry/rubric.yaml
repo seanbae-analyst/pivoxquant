@@ -1,21 +1,19 @@
 # 내부통제 평가 루브릭 — 금융회사가 AI 에이전트를 "직원처럼" 통제하는지를
 # 외부 연구자가 공개 자료로 평가하기 위한 도구.
 #
-# 설계 원칙 (발표 덱 2026-11-01 슬라이드 9·10 의 논지에서 나옴):
-#   - 등급·점수 한 개로 뭉치지 않는다. 인증·등급(ISMS-P·S등급)이 실제 방어를 보장하지 않았다
-#     (신한 S등급 보유 중 침해). 그래서 차원별 '증거 수준' 프로필만 만든다.
-#   - 레벨은 "통제가 있다/없다" 가 아니라 "공개 증거가 어디까지 있나" 를 잰다.
-#     **증거 없음(0) ≠ 통제 없음.** 회사가 비공개로 할 수도 있다(실무자 피드백 2026-11).
-#     그래서 결과는 "그 회사가 못한다" 가 아니라 "외부에서 검증할 수 있는 수준" 이다.
+# 어떻게 레벨을 매기나 (제대로):
+#   평가자는 레벨(0~3)을 직접 고르지 않는다. 각 차원의 **신호(signals)** 를 공개 자료에서 확인해
+#   observed: true/false/null 과 증거 수준만 적고, 레벨은 도출된다 (pivoxpolicy/rubric.py::derive_level).
+#     - 신호 발화 = observed:true 이고 증거 수준이 그 신호의 min_evidence 이상
+#     - 차원 레벨 = 발화한 신호 중 최고 level · 하나도 발화 안 했는데 하나라도 false 면 0 · 전부 null 이면 미평가
+#     - L3 신호는 min_evidence=primary → 보도(press)만으로는 레벨 3 에 도달 못 한다(구조적 강제)
+#   코드북 전문: `pivoxpolicy rubric --codebook`
 #
-# 레벨 척도 (모든 차원 공통):
-#   0  공개 증거 없음        — 공시·보도·제재문 어디에도 근거가 없음 (통제 부재가 아님)
-#   1  언급만                — 원칙·계획·방침을 말했으나 대상·주기·책임이 없음
-#   2  구체 기술             — 대상·주기·책임자·방법이 공개 자료에 적혀 있음
-#   3  검증 가능             — 제3자 점검·수치·감독기관 확인 등 외부가 대조할 수 있는 증거
+# 레벨 척도 (levels 는 사람이 읽는 앵커, signals 는 기계 규칙):
+#   0 공개 증거 없음(통제 부재가 아님) · 1 언급 · 2 구체(대상·주기·책임) · 3 검증(제3자·수치·감독기관)
 #
-# provisional: 이 시드는 덱 슬라이드 14·15 와 pivoxmap 평가체계 노트에서 옮긴 것이다.
-# 리서치 워크플로가 FSB(최종본)·NIST NCCoE·OWASP ASI·금보원 17항목 원문으로 basis 를 채우면 교체한다.
+# provisional: 신호 정의는 덱 슬라이드 14·15 와 pivoxmap 평가체계 노트에서 옮긴 것이다.
+# 리서치 워크플로가 FSB(최종)·NIST NCCoE·OWASP ASI·금보원 17항목 원문으로 basis·신호를 채우면 교체한다.
 provisional: true
 source_note: 덱 슬라이드 2·14·15 + pivoxmap/docs/research/fin-breach_assessment-frameworks_2026-10-31.md (2026-11-11)
 
@@ -29,9 +27,13 @@ dimensions:
     question: 회사가 운영 중인 AI 에이전트·그 접근권한·책임자를 등록·관리하는 증거가 있는가
     levels:
       - {level: 0, label_ko: 증거 없음, criterion: AI 에이전트 목록·거버넌스에 대한 공개 언급 없음}
-      - {level: 1, label_ko: 언급, criterion: "AI 활용·거버넌스를 원칙 수준으로 언급(사업보고서·보도자료)"}
-      - {level: 2, label_ko: 구체, criterion: "AI 사용 사례·책임 부서를 구체적으로 공개(예: 10-K Item 1C, AI 거버넌스 체계도)"}
-      - {level: 3, label_ko: 검증, criterion: 제3자 점검·감독기관 보고로 인벤토리 존재가 확인됨}
+      - {level: 1, label_ko: 언급, criterion: AI 활용·거버넌스를 원칙 수준으로 언급}
+      - {level: 2, label_ko: 구체, criterion: AI 사용 사례·책임 부서를 구체적으로 공개}
+      - {level: 3, label_ko: 검증, criterion: 제3자 점검·감독기관 보고로 인벤토리 존재가 확인}
+    signals:
+      - {id: mentions_ai_governance, level: 1, min_evidence: press, question: "AI 활용·거버넌스를 공개 자료에서 언급하는가"}
+      - {id: discloses_ai_usecases, level: 2, min_evidence: primary, question: "AI 사용 사례·책임 부서를 구체적으로 공개하는가(예: 10-K Item 1C)"}
+      - {id: verified_inventory, level: 3, min_evidence: primary, question: "제3자 점검·감독기관 보고로 에이전트 인벤토리 존재가 확인되는가"}
     public_evidence_sources: [10-K Item 1C, 사업보고서 정보보호 현황, KISA 정보보호 공시, AI 거버넌스 보도자료]
     basis: [FSB SP(최종), Treasury FS AI RMF 인벤토리, NYDFS 500.13]
 
@@ -44,8 +46,12 @@ dimensions:
     levels:
       - {level: 0, label_ko: 증거 없음, criterion: 제3자 AI 위탁 통제에 대한 공개 근거 없음}
       - {level: 1, label_ko: 언급, criterion: 외주·제3자 리스크 관리를 일반 원칙으로 언급}
-      - {level: 2, label_ko: 구체, criterion: AI 공급자 계약·점검 항목(취약점 통지·로그 제공 등)을 구체화}
-      - {level: 3, label_ko: 검증, criterion: 위탁 점검 결과·감독기관 확인이 공개됨}
+      - {level: 2, label_ko: 구체, criterion: AI 공급자 계약·점검 항목을 구체화}
+      - {level: 3, label_ko: 검증, criterion: 위탁 점검 결과·감독기관 확인이 공개}
+    signals:
+      - {id: mentions_third_party_risk, level: 1, min_evidence: press, question: "외주·제3자 리스크 관리를 언급하는가"}
+      - {id: specifies_ai_vendor_controls, level: 2, min_evidence: primary, question: "AI 공급자 계약·점검 항목(취약점 통지·로그 제공 등)을 구체화하는가"}
+      - {id: verified_vendor_review, level: 3, min_evidence: primary, question: "위탁 점검 결과·감독기관 확인이 공개되는가"}
     public_evidence_sources: [IT 위탁 공시, 제재 공개안의 위탁 관련 지적, 10-K 제3자 리스크]
     basis: [FSB SP, Treasury FS AI RMF 제3자, NYDFS 500.11]
 
@@ -60,6 +66,10 @@ dimensions:
       - {level: 1, label_ko: 언급, criterion: 계정·접근통제 원칙을 일반적으로 언급}
       - {level: 2, label_ko: 구체, criterion: 에이전트·서비스 계정을 사람 계정과 구분해 관리한다고 구체화}
       - {level: 3, label_ko: 검증, criterion: 로그·점검에서 에이전트 계정이 사람과 식별됨이 확인}
+    signals:
+      - {id: mentions_access_control, level: 1, min_evidence: press, question: "계정·접근통제 원칙을 언급하는가"}
+      - {id: separates_agent_accounts, level: 2, min_evidence: primary, question: "에이전트·서비스 계정을 사람 계정과 구분해 관리한다고 구체화하는가"}
+      - {id: verified_agent_identity, level: 3, min_evidence: primary, question: "로그·점검에서 에이전트 계정이 사람과 식별됨이 확인되는가"}
     public_evidence_sources: [정보보호 공시 접근통제 항목, 제재 공개안 로그 지적]
     basis: [NIST NCCoE 에이전트 신원, FSB SP, EFSR 제13조(사람 기준)]
 
@@ -72,8 +82,12 @@ dimensions:
     levels:
       - {level: 0, label_ko: 증거 없음, criterion: 에이전트 권한 제한에 대한 공개 근거 없음}
       - {level: 1, label_ko: 언급, criterion: 최소권한 원칙을 일반적으로 언급}
-      - {level: 2, label_ko: 구체, criterion: 출처 기반 행위 차단·도구 권한 제한을 구체화(샌드박스 등)}
-      - {level: 3, label_ko: 검증, criterion: 레드팀·점검에서 권한 격리가 검증됨}
+      - {level: 2, label_ko: 구체, criterion: 출처 기반 행위 차단·도구 권한 제한을 구체화}
+      - {level: 3, label_ko: 검증, criterion: 레드팀·점검에서 권한 격리가 검증}
+    signals:
+      - {id: mentions_least_privilege, level: 1, min_evidence: press, question: "최소권한 원칙을 언급하는가"}
+      - {id: specifies_source_based_limits, level: 2, min_evidence: primary, question: "출처 기반 행위 차단·도구 권한 제한(샌드박스 등)을 구체화하는가"}
+      - {id: redteam_verified_isolation, level: 3, min_evidence: primary, question: "레드팀·점검에서 권한 격리가 검증되는가"}
     public_evidence_sources: [정보보호 공시, 레드팀 결과 공개, 제재 공개안]
     basis: [EchoLeak·FIDES(출처 기반 차단), FSB SP, FINRA 2026, OWASP ASI]
 
@@ -85,9 +99,13 @@ dimensions:
     question: 고위험 행위에 사람 승인 게이트를 두는 증거가 있는가(모든 행위 승인은 피로를 부름)
     levels:
       - {level: 0, label_ko: 증거 없음, criterion: 사람 개입·승인 절차에 대한 공개 근거 없음}
-      - {level: 1, label_ko: 언급, criterion: 사람 개입·보조적 역할 원칙을 언급(가이드라인 수용 등)}
+      - {level: 1, label_ko: 언급, criterion: 사람 개입·보조적 역할 원칙을 언급}
       - {level: 2, label_ko: 구체, criterion: 어떤 행위에 승인이 필요한지(위험 기반 트리거)를 구체화}
-      - {level: 3, label_ko: 검증, criterion: 승인 로그·점검으로 게이트 작동이 확인됨}
+      - {level: 3, label_ko: 검증, criterion: 승인 로그·점검으로 게이트 작동이 확인}
+    signals:
+      - {id: mentions_human_in_loop, level: 1, min_evidence: press, question: "사람 개입·보조적 역할 원칙을 언급하는가"}
+      - {id: specifies_risk_based_approval, level: 2, min_evidence: primary, question: "고위험 행위에 승인이 필요하다는 위험 기반 트리거를 구체화하는가"}
+      - {id: verified_approval_gate, level: 3, min_evidence: primary, question: "승인 로그·점검으로 게이트 작동이 확인되는가"}
     public_evidence_sources: [AI 가이드라인 수용 공시, 내부통제 보고]
     basis: [FSC AI 가이드라인(보조적 역할), FSB SP(위험기반 트리거), EU AI Act 14(4)(d)]
 
@@ -101,7 +119,11 @@ dimensions:
       - {level: 0, label_ko: 증거 없음, criterion: 에이전트 활동 로깅에 대한 공개 근거 없음}
       - {level: 1, label_ko: 언급, criterion: 로그 보존 원칙을 일반적으로 언급}
       - {level: 2, label_ko: 구체, criterion: 입력·출처·도구 호출 등 에이전트별 로그 항목을 구체화}
-      - {level: 3, label_ko: 검증, criterion: 로그 보존·분석이 점검·제재문에서 확인됨}
+      - {level: 3, label_ko: 검증, criterion: 로그 보존·분석이 점검·제재문에서 확인}
+    signals:
+      - {id: mentions_logging, level: 1, min_evidence: press, question: "로그 보존 원칙을 언급하는가"}
+      - {id: specifies_agent_log_items, level: 2, min_evidence: primary, question: "입력·출처·도구 호출 등 에이전트별 로그 항목을 구체화하는가"}
+      - {id: verified_log_retention, level: 3, min_evidence: primary, question: "로그 보존·분석이 점검·제재문에서 확인되는가"}
     public_evidence_sources: [정보보호 공시 로그 항목, 제재 공개안(로그 평문·미보존 지적)]
     basis: [NIST NCCoE(데이터 흐름 추적), FSB SP, EFSR 제13조①9, NYDFS 500.6]
 
@@ -115,7 +137,11 @@ dimensions:
       - {level: 0, label_ko: 증거 없음, criterion: 중단·권한회수 수단에 대한 공개 근거 없음}
       - {level: 1, label_ko: 언급, criterion: 비상 중단·대응 체계를 일반적으로 언급}
       - {level: 2, label_ko: 구체, criterion: 즉시 중단·권한 회수 수단과 책임을 구체화}
-      - {level: 3, label_ko: 검증, criterion: 중단 메커니즘 테스트 결과가 확인됨(FSI 레드팀 등)}
+      - {level: 3, label_ko: 검증, criterion: 중단 메커니즘 테스트 결과가 확인}
+    signals:
+      - {id: mentions_emergency_stop, level: 1, min_evidence: press, question: "비상 중단·대응 체계를 언급하는가"}
+      - {id: specifies_kill_switch, level: 2, min_evidence: primary, question: "즉시 중단·권한 회수 수단과 책임을 구체화하는가"}
+      - {id: tested_kill_switch, level: 3, min_evidence: primary, question: "중단 메커니즘 테스트 결과가 확인되는가(FSI 레드팀 등)"}
     public_evidence_sources: [레드팀 결과, 비상대응 훈련 공개]
     basis: [FSB SP(안전 중단 테스트), FSI 기준 ⑯, EU AI Act 14(4)(e)]
 
@@ -131,6 +157,10 @@ dimensions:
       - {level: 1, label_ko: 언급, criterion: 경고를 인지·공유했다고 언급}
       - {level: 2, label_ko: 구체, criterion: 경고→부서 전달→조치 결정의 경로가 구체적으로 확인}
       - {level: 3, label_ko: 검증, criterion: 조치 이행이 제3자·감독기관 자료로 확인}
+    signals:
+      - {id: acknowledged_warning, level: 1, min_evidence: press, question: "감독기관·AI회사 경고를 인지·공유했다고 언급하는가"}
+      - {id: relayed_to_action, level: 2, min_evidence: primary, question: "경고→부서 전달→조치 결정 경로가 구체적으로 확인되는가"}
+      - {id: verified_action_taken, level: 3, min_evidence: primary, question: "조치 이행이 제3자·감독기관 자료로 확인되는가"}
     public_evidence_sources: [보도자료, 국회 제출자료, 제재 공개안, 사고 경위 발표]
     basis: [덱 슬라이드 2·5(미국=AI회사 탐지·통지, 한국=조치 공개기록 없음), COSO 정보·소통]
 
@@ -138,14 +168,18 @@ dimensions:
     num: 9
     group: connection
     name_ko: 보고·에스컬레이션
-    name_en: CISO→management escalation
+    name_en: CISO-to-management escalation
     question: 보안 책임자(CISO)의 보고가 경영진 결정·조치로 이어진 기록이 있는가
     levels:
       - {level: 0, label_ko: 증거 없음, criterion: 보고→경영진 조치 연결에 대한 공개 근거 없음}
       - {level: 1, label_ko: 언급, criterion: 보고 체계가 있다고 언급}
       - {level: 2, label_ko: 구체, criterion: 보고 후 경영진 조치가 구체적으로 확인}
       - {level: 3, label_ko: 검증, criterion: 보고·조치 기록이 제재문·감사에서 확인}
-    public_evidence_sources: [제재 공개안(롯데카드: CISO 보고 뒤 경영진 조치 없음), 내부통제 보고]
+    signals:
+      - {id: mentions_reporting_line, level: 1, min_evidence: press, question: "CISO 보고 체계가 있다고 언급하는가"}
+      - {id: management_acted_on_report, level: 2, min_evidence: primary, question: "보고 후 경영진 조치가 구체적으로 확인되는가"}
+      - {id: verified_report_action_record, level: 3, min_evidence: primary, question: "보고·조치 기록이 제재문·감사에서 확인되는가"}
+    public_evidence_sources: ["제재 공개안(롯데카드: CISO 보고 뒤 경영진 조치 없음)", 내부통제 보고]
     basis: [덱(연결 실패), 롯데카드 금감원 공개안, COSO 통제환경, Basel 운영리스크]
 
   # ── testing: 모의해킹 제도화 4요소 (슬라이드 15) ──
@@ -160,6 +194,10 @@ dimensions:
       - {level: 1, label_ko: 언급, criterion: 정기 점검을 한다고 언급}
       - {level: 2, label_ko: 구체, criterion: "연 N회 등 주기가 공개됨(예: 블라인드 연 2회)"}
       - {level: 3, label_ko: 검증, criterion: 상시·AI 기반 테스트 수행이 수치·감독기관 자료로 확인}
+    signals:
+      - {id: mentions_periodic_test, level: 1, min_evidence: press, question: "정기 점검·침투테스트를 한다고 언급하는가"}
+      - {id: discloses_cadence, level: 2, min_evidence: primary, question: "연 N회 등 테스트 주기가 공개되는가"}
+      - {id: verified_continuous_testing, level: 3, min_evidence: primary, question: "상시·AI 기반 테스트 수행이 수치·감독기관 자료로 확인되는가"}
     public_evidence_sources: [FSS·FSI 운영기준, 국회 제출자료, 정보보호 공시]
     basis: [덱 슬라이드 15 ①, KEV×NVD 30일내 악용 증가, FSC 10-14]
 
@@ -173,7 +211,11 @@ dimensions:
       - {level: 0, label_ko: 증거 없음, criterion: 테스트 범위에 대한 공개 근거 없음}
       - {level: 1, label_ko: 언급, criterion: 주요 시스템을 점검한다고 언급}
       - {level: 2, label_ko: 구체, criterion: 외부접점·주변 시스템을 범위에 포함한다고 구체화}
-      - {level: 3, label_ko: 검증, criterion: 전체 외부접점 테스트가 확인(사고 경로가 커버되었는가)}
+      - {level: 3, label_ko: 검증, criterion: 전체 외부접점 테스트가 확인}
+    signals:
+      - {id: mentions_core_scope, level: 1, min_evidence: press, question: "주요 시스템을 점검한다고 언급하는가"}
+      - {id: includes_external_touchpoints, level: 2, min_evidence: primary, question: "외부접점·주변 시스템을 테스트 범위에 포함한다고 구체화하는가"}
+      - {id: verified_full_touchpoint_coverage, level: 3, min_evidence: primary, question: "전체 외부접점 테스트 수행이 확인되는가(사고 경로가 커버되었나)"}
     public_evidence_sources: [사고 경위(침입 경로), 인증 범위 공개, 보도]
     basis: [덱 슬라이드 9·15 ②(3개 은행 모두 주변 시스템으로 침입), FSC 10-14 외부접점 의무화]
 
@@ -187,7 +229,11 @@ dimensions:
       - {level: 0, label_ko: 증거 없음, criterion: 취약점 사후조치에 대한 공개 근거 없음}
       - {level: 1, label_ko: 언급, criterion: 보완조치 계획을 세운다고 언급}
       - {level: 2, label_ko: 구체, criterion: 패치 기한·재점검 절차가 구체화}
-      - {level: 3, label_ko: 검증, criterion: 기한 내 조치·재점검 완료가 수치로 확인(미조치 건수 등)}
+      - {level: 3, label_ko: 검증, criterion: 기한 내 조치·재점검 완료가 수치로 확인}
+    signals:
+      - {id: mentions_remediation_plan, level: 1, min_evidence: press, question: "취약점 보완조치 계획을 세운다고 언급하는가"}
+      - {id: specifies_patch_deadline, level: 2, min_evidence: primary, question: "패치 기한·재점검 절차를 구체화하는가"}
+      - {id: verified_timely_remediation, level: 3, min_evidence: primary, question: "기한 내 조치·재점검 완료가 수치로 확인되는가(미조치 건수 등)"}
     public_evidence_sources: [FSS 미조치 취약점 자료, 제재 공개안(패치 미실시)]
     basis: [덱 슬라이드 15 ③(109건 미조치), CISA BOD 22-01(패치 기한), EFSR 제37조의2]
 
@@ -201,7 +247,11 @@ dimensions:
       - {level: 0, label_ko: 증거 없음, criterion: AI 활용·공동훈련에 대한 공개 근거 없음}
       - {level: 1, label_ko: 언급, criterion: AI 보안 활용 의향을 언급}
       - {level: 2, label_ko: 구체, criterion: AI 기반 테스트·공동훈련 참여를 구체화}
-      - {level: 3, label_ko: 검증, criterion: AI 테스트·공동훈련 수행이 수치로 확인(78건 중 9건 등)}
+      - {level: 3, label_ko: 검증, criterion: AI 테스트·공동훈련 수행이 수치로 확인}
+    signals:
+      - {id: mentions_ai_security_intent, level: 1, min_evidence: press, question: "테스트에 AI 보안을 활용할 의향을 언급하는가"}
+      - {id: specifies_ai_test_or_drill, level: 2, min_evidence: primary, question: "AI 기반 테스트·공동훈련 참여를 구체화하는가"}
+      - {id: verified_ai_test_count, level: 3, min_evidence: primary, question: "AI 테스트·공동훈련 수행이 수치로 확인되는가(78건 중 9건 등)"}
     public_evidence_sources: [국회 제출자료(AI 활용 침투테스트 수), FSI 공동훈련]
     basis: [덱 슬라이드 15 ④(지역·특수은행 1/26), 금보원 공동훈련]
 
@@ -217,6 +267,10 @@ dimensions:
       - {level: 1, label_ko: 언급, criterion: 모니터링 체계가 있다고 언급}
       - {level: 2, label_ko: 구체, criterion: 탐지 소요시간이 공개됨(시간 단위)}
       - {level: 3, label_ko: 검증, criterion: 짧은 탐지시간이 사고 경위·국회자료로 확인}
+    signals:
+      - {id: mentions_monitoring, level: 1, min_evidence: press, question: "24시간 모니터링 등 탐지 체계가 있다고 언급하는가"}
+      - {id: discloses_detection_time, level: 2, min_evidence: primary, question: "공격 시작→인지 소요시간이 공개되는가(시간 단위)"}
+      - {id: verified_fast_detection, level: 3, min_evidence: primary, question: "짧은 탐지시간이 사고 경위·국회자료로 확인되는가"}
     public_evidence_sources: [사고 경위 발표, 국회 제출 탐지시간 자료]
     basis: [덱 슬라이드 5(신한 15h·하나 42h·KB 68h), 24시간 모니터링]
 
@@ -230,7 +284,11 @@ dimensions:
       - {level: 0, label_ko: 증거 없음, criterion: 신고·공개에 대한 근거 없음}
       - {level: 1, label_ko: 언급, criterion: 고객 안내·신고를 했다고 언급}
       - {level: 2, label_ko: 구체, criterion: 신고·공시·안내의 시점과 내용이 구체적}
-      - {level: 3, label_ko: 검증, criterion: 적시 신고·공시가 감독기관·공시시스템으로 확인(DART·8-K)}
+      - {level: 3, label_ko: 검증, criterion: 적시 신고·공시가 감독기관·공시시스템으로 확인}
+    signals:
+      - {id: mentions_notification, level: 1, min_evidence: press, question: "고객 안내·신고를 했다고 언급하는가"}
+      - {id: specifies_disclosure_timing, level: 2, min_evidence: primary, question: "신고·공시·안내의 시점과 내용이 구체적인가"}
+      - {id: verified_timely_disclosure, level: 3, min_evidence: primary, question: "적시 신고·공시가 감독기관·공시시스템으로 확인되는가(DART·8-K)"}
     public_evidence_sources: [DART·EDGAR 공시, 개인정보위 신고 공표, 사과문]
     basis: [덱 슬라이드 4·5, 서울보증 DART 자율공시, NYDFS 72h 신고]
 
@@ -245,19 +303,23 @@ dimensions:
       - {level: 1, label_ko: 언급, criterion: 재발방지 방침을 언급}
       - {level: 2, label_ko: 구체, criterion: 재발방지 대책이 구체적(대상·일정)}
       - {level: 3, label_ko: 검증, criterion: 이행·개선이 감독기관 점검으로 확인}
+    signals:
+      - {id: mentions_prevention, level: 1, min_evidence: press, question: "재발방지 방침을 언급하는가"}
+      - {id: specifies_prevention_plan, level: 2, min_evidence: primary, question: "재발방지 대책이 대상·일정까지 구체적인가"}
+      - {id: verified_prevention_implemented, level: 3, min_evidence: primary, question: "이행·개선이 감독기관 점검으로 확인되는가"}
     public_evidence_sources: [제재 공개안 개선요구, 재발방지 대책 공개]
     basis: [덱 슬라이드 15, 제재 공개안, COSO 모니터링]
 
 scoring_rules:
-  - "단일 등급으로 합산하지 않는다. 출력은 차원별 레벨 0~3 프로필(그룹별 묶음)이다."
-  - "그룹 요약은 평균이 아니라 분포(레벨별 개수)와 '검증(3) 차원 수 / 증거없음(0) 차원 수' 로 보여 준다."
-  - "unknown(레벨 미기입, null)은 0 과 구분한다 — '코딩 필요' 로 집계하고 분모에서 뺀다."
-  - "사건 데이터가 증거가 되는 차원을 명시한다: 탐지시간→detection_time, 침입 경로→test_scope, 제재 공개안의 통제 실패→해당 agent_control·connection 차원(롯데카드 escalation=경영진 조치 없음)."
-  - "평가자 2명이 같은 기관을 평가하면 차원 레벨 수열로 Cohen's κ(선형가중) 를 낸다."
-  - "evidence_level(primary/press/vendor) 을 레벨과 함께 기록한다. press 만으로 레벨 3 을 주지 않는다."
+  - "레벨은 평가자가 직접 고르지 않는다 — 각 차원의 신호(observed:true/false/null + 증거수준)에서 도출한다(rubric.py::derive_level)."
+  - "차원 레벨 = 발화한 신호 중 최고 level. 하나도 발화 안 했는데 하나라도 false 로 확인했으면 0. 전부 null 이면 미평가(분모 제외)."
+  - "L3 신호는 min_evidence=primary — 보도(press)만으로 레벨 3 에 도달 못 한다. 구조적으로 강제됨."
+  - "단일 등급으로 합산하지 않는다. 출력은 차원별 레벨 프로필 + 그룹별 분포뿐이다."
+  - "사건 데이터가 신호의 증거가 되는 차원을 명시한다: 탐지시간→detection_time, 침입 경로→test_scope, 제재 공개안의 통제 실패→해당 agent_control·connection 신호(롯데카드 escalation=경영진 조치 없음)."
+  - "평가자 2명이 같은 기관을 평가하면 (a) 신호 단위 κ(관찰 일치)와 (b) 도출 레벨 κ(선형가중)를 함께 낸다. 신호 κ 가 더 엄격한 재현성 지표다."
 
 pitfalls:
   - "특정 회사 평가를 공개할 때 명예훼손·공정성 위험 — 레벨은 '증거 수준' 이지 '이 회사가 못한다' 가 아님을 명시."
   - "공시 유무 ≠ 실행 유무. 미국 10-K 와 한국 사업보고서의 공시 의무가 달라 국가 간 레벨을 직접 비교하면 안 됨."
-  - "evidence_level 혼동 — 보도(press)를 1차(primary)처럼 쓰면 레벨 인플레."
-  - "사건이 없는 회사는 response 차원을 평가할 수 없음(증거 부재 ≠ 대응 부실). 분모에서 제외."
+  - "증거 수준 혼동 — 보도(press)를 primary 처럼 적으면 L2 신호가 잘못 발화해 레벨 인플레."
+  - "사건이 없는 회사는 response 차원 신호를 확인할 수 없음(전부 null → 미평가). 증거 부재 ≠ 대응 부실."
