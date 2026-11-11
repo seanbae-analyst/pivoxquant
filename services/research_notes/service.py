@@ -50,6 +50,7 @@ from models.research_note import (
 )
 from models.trade_history import REGISTRATION_SOURCES
 from services.imports import is_date_only, ticker_ok
+from services.pre_trade.friction_outcome import _KR_SUFFIXES, ticker_key
 from services.ticker_normalizer import normalize_ticker
 
 logger = logging.getLogger(__name__)
@@ -74,6 +75,14 @@ _DISPOSAL_ACTION = "SELL"  # // legal-ok
 
 
 # ── Public surface ───────────────────────────────────────────────────
+
+
+def _same_stock(ticker: str) -> list[str]:
+    """Every stored spelling of one stock: a note on ``035760.KS`` and a sell
+    on ``035760.KQ`` are the same name (``ticker_key``, the rule the rest of
+    the journal uses). Exact-match lookups split them (2026-11-11)."""
+    key = ticker_key(ticker)
+    return [key] + [key + suffix for suffix in _KR_SUFFIXES]
 
 def kst_today(now: datetime | None = None) -> date:
     now = now or datetime.now(timezone.utc)
@@ -175,7 +184,7 @@ def list_research(
     if ticker:
         normalized = normalize_ticker(str(ticker))
         if normalized:
-            query = query.filter(ResearchNote.ticker == normalized)
+            query = query.filter(ResearchNote.ticker.in_(_same_stock(normalized)))
     query = _filter_source(query, source)
     query = _filter_status(query, status, today)
     query = _filter_written(query, since, until)
@@ -272,7 +281,7 @@ def research_for_ticker(user_id: int, ticker: str) -> dict:
     if not normalized:
         raise ValueError("ticker is required")
     q = ResearchNote.query.filter(
-        ResearchNote.user_id == int(user_id), ResearchNote.ticker == normalized
+        ResearchNote.user_id == int(user_id), ResearchNote.ticker.in_(_same_stock(normalized))
     )
     count = q.count()
     latest = q.order_by(ResearchNote.id.desc()).first()
@@ -292,7 +301,7 @@ def research_list_for_ticker(user_id: int, ticker: str) -> list[dict]:
         raise ValueError("ticker is required")
     rows = (
         ResearchNote.query.filter(
-            ResearchNote.user_id == int(user_id), ResearchNote.ticker == normalized
+            ResearchNote.user_id == int(user_id), ResearchNote.ticker.in_(_same_stock(normalized))
         )
         .order_by(ResearchNote.id.desc())
         .all()
@@ -366,7 +375,7 @@ def _sold_after(traded_at: datetime, written_at: datetime | None) -> bool:
 def _outcomes(user_id: int, rows: list[ResearchNote]) -> dict[int, str]:
     """note id → gain / loss / flat / open, from SELLs of the same ticker
     at or after the moment the note was written (``_sold_after``)."""
-    tickers = {r.ticker for r in rows if r.ticker}
+    tickers = {ticker_key(r.ticker) for r in rows if r.ticker}
     if not tickers:
         return {}
     sells: dict[str, list[tuple[datetime, float]]] = {}
@@ -377,7 +386,7 @@ def _outcomes(user_id: int, rows: list[ResearchNote]) -> dict[int, str]:
     for t in q.all():
         if (t.source or "") in REGISTRATION_SOURCES or not t.traded_at or not t.ticker:
             continue
-        tk = normalize_ticker(t.ticker) or t.ticker.upper()
+        tk = ticker_key(normalize_ticker(t.ticker) or t.ticker)
         if tk not in tickers:
             continue
         try:
@@ -388,7 +397,7 @@ def _outcomes(user_id: int, rows: list[ResearchNote]) -> dict[int, str]:
 
     out: dict[int, str] = {}
     for r in rows:
-        after = [p for at, p in sells.get(r.ticker, []) if _sold_after(at, r.created_at)]
+        after = [p for at, p in sells.get(ticker_key(r.ticker or ""), []) if _sold_after(at, r.created_at)]
         if not after:
             out[r.id] = "open"
             continue
@@ -530,9 +539,14 @@ def _parse_day(raw, field: str) -> date | None:
     if raw is None or raw == "":
         return None
     try:
-        return date.fromisoformat(str(raw))
+        day = date.fromisoformat(str(raw))
     except ValueError:
         raise ValueError(f"{field} must be YYYY-MM-DD") from None
+    # 0001-01-01 / 9999-12-31 overflowed the KST shift below into a 500
+    # (2026-11-11 simulation). No note predates 1900 or outlives 9998.
+    if not (date(1900, 1, 1) <= day <= date(9998, 12, 31)):
+        raise ValueError(f"{field} must be between 1900-01-01 and 9998-12-31")
+    return day
 
 
 def _filter_written(query, since, until):

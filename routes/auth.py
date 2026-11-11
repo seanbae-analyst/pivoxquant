@@ -941,9 +941,12 @@ def login():
             status=403,
         )
 
-    d = request.get_json() or {}
-    u = User.query.filter_by(email=(d.get("email") or "").strip().lower()).first()
-    if not u or not u.chk_pw(d.get("password") or ""):
+    d = request.get_json(silent=True)
+    d = d if isinstance(d, dict) else {}  # a scalar / list body 500'd (2026-11-11)
+    email = d.get("email") if isinstance(d.get("email"), str) else ""
+    password = d.get("password") if isinstance(d.get("password"), str) else ""
+    u = User.query.filter_by(email=email.strip().lower()).first()
+    if not u or not u.chk_pw(password):
         return api_error(
             en="Invalid email or password",
             kr="이메일 또는 비밀번호가 올바르지 않습니다.",
@@ -2196,8 +2199,10 @@ def delete_cancel():
     200 ``already_active=true`` so a double-click / email pre-fetch is safe.
     Never logs the user in — restoration ≠ authentication.
     """
-    data = request.get_json(silent=True) or {}
-    token = (data.get("token") or "").strip()
+    data = request.get_json(silent=True)
+    data = data if isinstance(data, dict) else {}  # a scalar body 500'd (2026-11-11)
+    token = data.get("token") if isinstance(data.get("token"), str) else ""
+    token = token.strip()
     if not token:
         return api_error(
             en="Missing cancellation token.",

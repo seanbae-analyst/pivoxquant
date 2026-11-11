@@ -195,7 +195,7 @@ def _build_positions_list():
                 price_source = "stale"
                 observed_at = None
                 change_pct = 0.0
-        currency = sd.get("currency", "KRW" if is_kr else "USD")
+        currency = "KRW" if is_kr else "USD"  # suffix only — totals bucket by suffix (Pattern 7)
         name = _position_display_name(p, sd)
         opened_at = p.added_at.isoformat() if p.added_at else None
 
@@ -541,6 +541,18 @@ def list_trades_alias():
         )
 
 
+def _json_object() -> dict:
+    """The JSON body as a dict, or ``{}``. A scalar / list body (``5``,
+    ``"x"``, ``[1]``) 500'd every ``d.get`` below (2026-11-11 simulation)."""
+    d = request.get_json(silent=True)
+    return d if isinstance(d, dict) else {}
+
+
+def _text(v) -> str:
+    """A text field, or ``""`` when the client sent a non-string (``123``)."""
+    return v if isinstance(v, str) else ""
+
+
 def _parse_purchase_date(raw):
     """Parse a user-supplied "YYYY-MM-DD" purchase (open) date.
 
@@ -599,8 +611,8 @@ def create_position_alias():
     Validated by ``services/pre_trade/link.py``; the trade row is then an
     ordinary buy linked to that pause instead of a holding seed.
     """
-    d = request.get_json() or {}
-    raw_symbol = (d.get("symbol") or d.get("ticker") or "").strip().upper()
+    d = _json_object()
+    raw_symbol = _text(d.get("symbol") or d.get("ticker")).strip().upper()
     # Bug #1 fix (2026-05-13): this is the *production* endpoint hit by
     # the new frontend (POST /api/portfolio/positions). Previously stored
     # bare "005930" → portfolio surfaces rendered "$54,000" / raw ticker /
@@ -628,8 +640,12 @@ def create_position_alias():
             en="Quantity and price out of range", kr="수량 또는 가격이 허용 범위를 벗어났습니다.",
             code="INVALID_AMOUNT", status=400,
         )
-    # Position.ticker is db.String(20).
-    if len(symbol) > 20:
+    # Position.ticker is db.String(20). 2026-11-11: the same symbol rule the
+    # holdings import and the inbox enforce — "<script>", "AAPL; DROP" and
+    # "삼성전자" were stored as positions (each one a free-plan slot and a
+    # vendor lookup).
+    from services.imports import ticker_ok
+    if len(symbol) > 20 or not ticker_ok(symbol):
         return api_error(
             en="Invalid ticker", kr="유효하지 않은 종목입니다.",
             code="INVALID_TICKER", status=400,
@@ -692,8 +708,12 @@ def create_position_alias():
 
     # 2026-09-29: registered shares get a holding-seed trade_history row so
     # the FIFO mirrors have a lot for them (services/position_writes).
-    # A seed's traded_at is the registration time even when purchase_date is
-    # given — the seed is excluded from hold-time statistics either way.
+    # 2026-11-11: a seed is dated purchase_date when one is given. It is
+    # excluded from hold-time statistics, but the FIFO / running-average
+    # mirrors still order lots by traded_at — a seed stamped "now" sorted
+    # AFTER every backdated fill recorded later, so adds at a loss read as
+    # fresh opens and sells closed the user's own recent buys (fake holds).
+    # With no purchase_date it is still the registration time.
     # With a reflection link the row is a recorded buy dated purchase_date.
     from services.position_writes import add_holding_seed, add_recorded_buy
 
@@ -710,7 +730,7 @@ def create_position_alias():
                              traded_at=opened_dt)
             return
         add_holding_seed(current_user.id, symbol, quantity, price,
-                         currency, resolved_name or symbol)
+                         currency, resolved_name or symbol, traded_at=opened_dt)
 
     try:
         ex = Position.query.filter_by(user_id=current_user.id, ticker=symbol).first()
@@ -794,7 +814,7 @@ def patch_position_alias(pid):
             en="Position not found", kr="포지션을 찾을 수 없습니다.",
             code="POSITION_NOT_FOUND", status=404,
         )
-    d = request.get_json() or {}
+    d = _json_object()
 
     if "avg_cost" in d or "avgCost" in d:
         try:
@@ -823,7 +843,7 @@ def patch_position_alias(pid):
 
     if "note" in d or "notes" in d or "thesis" in d:
         note_val = d.get("note") or d.get("notes") or d.get("thesis") or ""
-        note_val = (note_val or "").strip()[:500]
+        note_val = _text(note_val).strip()[:500]
         p.thesis = note_val or None
         if note_val and not p.thesis_created_at:
             p.thesis_created_at = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -848,7 +868,7 @@ def create_trade_alias():
     """Record an executed buy/sell fill on an existing position:
     {position_id, action, quantity, price, date, note}. Seed capital is not
     involved (see the note below the date parse)."""
-    d = request.get_json() or {}
+    d = _json_object()
     try:
         pid = int(d.get("position_id") or d.get("positionId") or 0)
         quantity = float(d.get("quantity") or d.get("shares") or 0)
@@ -858,7 +878,7 @@ def create_trade_alias():
             en="position_id/quantity/price must be numeric", kr="position_id / quantity / price 는 숫자여야 합니다.",
             code="TRADE_NUMERIC_REQUIRED", status=400,
         )
-    action = (d.get("action") or "").lower()
+    action = _text(d.get("action")).lower()
 
     if action not in ("buy", "sell"):
         return api_error(
@@ -897,9 +917,12 @@ def create_trade_alias():
 
     cached = cache_service.get_signal(p.ticker)
     sd = cache_service.safe_cache_blob(cached)
-    is_kr = sd.get("is_korean", p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ"))
+    # 2026-11-11 (Pattern 7): currency comes from the ticker suffix only, as
+    # ledger / position_writes / the CSV export do. A cache blob saying
+    # {"currency": "KRW"} for AAPL booked a $20 gain as ₩20 in the KRW bucket.
+    is_kr = p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ")
     name = canonical_display_name(sd.get("name"), p.ticker)
-    currency = sd.get("currency", "KRW" if is_kr else "USD")
+    currency = "KRW" if is_kr else "USD"
 
     # Trade-accuracy fix (2026-05-22): the TradeModalV2 record-mode sends an
     # explicit trade date ("YYYY-MM-DD") for already-executed past trades, but
@@ -996,7 +1019,9 @@ def create_trade_alias():
     cost_basis = quantity * p.avg_cost
     pnl = proceeds - cost_basis
     pnl_pct = (pnl / cost_basis * 100) if cost_basis > 0 else 0
-    closed = quantity >= p.shares - 0.0001
+    # 2026-11-11: shares are kept to 6 decimals; the old absolute 1e-4
+    # epsilon closed a 0.0002-share holding on a 0.0001 sell and dropped the rest.
+    closed = round(p.shares - quantity, 6) <= 0
     if closed:
         db.session.delete(p)
     else:

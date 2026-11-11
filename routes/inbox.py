@@ -11,7 +11,9 @@ from __future__ import annotations
 import os
 
 from flask import Blueprint, jsonify
-from flask_login import current_user, login_required
+from flask_login import current_user
+
+from routes.decorators import api_auth
 
 from services.inbox import build_inbox_payload
 
@@ -36,7 +38,7 @@ def _is_admin() -> bool:
 
 
 @inbox_bp.route("", methods=["GET"])
-@login_required
+@api_auth
 def get_inbox():
     """CEO Inbox payload.
 
