@@ -10,6 +10,12 @@
   빠진 것은 협의안의 '합성 직원(synthetic employee)' 문구뿐(최종본 0건). → 코딩 `intl-fsb-ai-sound-practices-2026-10.unique_id` 를 true 로, 인벤토리(p.30·31)도 true 로 정정. 매트릭스 INTL 칸 점수는 그대로(1 — FSB 는 자율).
   **논문·제출본에서 이 문장을 고쳐야 한다.** 같은 PDF 로 확인: 위험기반 승인 트리거 p.56, kill-switch 구현·테스트 p.57, 목표·권한·데이터 분리 p.41.
 
+- **슬라이드 15(제안 ② 패치 기한)의 선례 "CISA BOD 22-01 — KEV 2주" 는 현행이 아니다.** BOD 22-01 은 **2026-06-10 폐지**됐고 **BOD 26-04 "Prioritizing Security Updates Based on Risk"** 가 대체했다
+  (2026-11-11 cisa.gov 실측: 22-01 페이지 제목 "(Revoked)" · 본문 "This Directive has been revoked. It is superseded by BOD 26-04" · 26-04 본문 "This Directive supersedes and hereby revokes BOD 19-02 … and BOD 22-01").
+  새 기한(Table 1, 달력일)은 '2주' 하나가 아니라 4변수(외부 노출 · KEV 등재 · 공격 자동화 가능 · 기술적 영향) 조합 — **3일 + 포렌식 트리아지 / 3일 / 14일 / 60일 / 시스템 업그레이드 때**.
+  가장 급한 줄: KEV 등재 + 자동화 가능 + 완전 장악 = 3일(노출 여부 무관). 배경 문단이 "their use of AI may further narrow the time defenders have to react between patch release and possible exploitation" 이라고 적는다 — 덱의 '공격 속도' 논지에 직접 쓸 수 있는 1차 근거.
+  → 레지스트리: `us-cisa-bod-26-04` 등록, `us-cisa-bod-22-01` 은 superseded(매트릭스에서 빠짐). **논문·제출본은 26-04 를 인용하고 22-01 은 '전신' 으로만.** 여전히 연방 민간기관 대상이라 민간 금융사에는 적용되지 않는다는 한계는 같다.
+
 ## 덱(2026-11-01) 이후 — 논문 수치 갱신 필요
 
 | 날짜 | 무엇 | 어디서 | 다음 행동 |

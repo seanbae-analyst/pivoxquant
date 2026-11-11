@@ -8,22 +8,30 @@ AI 에이전트 관련 **금융 보안 규제·가이드라인을 모아, 같은
 
 ## 무엇을 재나
 
-**셀 하나 = 문서 × 통제.** 7개 에이전트 통제(덱 슬라이드 14)를 행으로, 관할(KR·US·EU·INTL)을 열로 놓고
-각 셀에 "그 관할에서 그 통제를 요구하는 가장 센 문서의 구속력"을 적는다.
+**셀 하나 = 문서 × 통제 × 층.** 7개 에이전트 통제(덱 슬라이드 14)를 행으로, 관할(KR·US·EU·INTL)을 열로 놓고
+각 칸에 "그 관할에서 그 통제를 요구하는 가장 센 문서의 구속력"을 적는다 — **두 층으로 따로**(코드북 v2, 2026-11-11):
 
-| 점수 | 뜻 |
-|---|---|
-| 0 | 어떤 문서도 다루지 않음 |
-| 1 | 자율 — 가이드라인·표준·초안·감독 안내서한 |
-| 2 | 구속력 있음, 에이전트를 이름 붙이지 않음 (사람·시스템 기준 규정) |
-| 3 | 구속력 있음 **+ 에이전트 명시** |
-| `?` | 문서는 있는데 아직 안 읽음 (코딩 필요) |
+| 층 | 묻는 것 | 점수 |
+|---|---|---|
+| `analog` 일반 통제 | 문서가 이 통제를 **사람·계정·일반 시스템**을 대상으로 요구·권고하는가 (퇴직자 계정 정지, 결재, 접근 로그…) | 0 미다룸 · 1 자율 · 2 구속력 |
+| `agent` AI·에이전트 적용 | 문서가 이 통제를 **AI 시스템·모델·AI 에이전트**를 대상으로 요구·권고하는가 | 0 · 1 · 2 구속력(AI 일반) · **3 구속력 + 에이전트 명시** |
 
-점수는 코더가 직접 매기지 않는다. 코더는 **"이 문서가 이 통제를 다루는가" (true/false/null) 와 근거 조문**만 적고,
-문서의 `binding`(0·1·2) 과 `names_agents` 는 문서 레코드에 있다. 점수는 그 둘의 곱으로 자동 계산된다 (`pivoxpolicy/schema.py::cell_score`).
-그래서 코더 둘의 결과를 그대로 Cohen's κ 로 비교할 수 있다.
+`?` = 문서는 있는데 아직 안 읽음(코딩 필요). 폐지·대체된 문서(`status: superseded`)는 매트릭스에 넣지 않는다.
 
-**3 인 셀이 하나도 없으면 — 그것이 논문의 핵심 결과다.** 2026-11-11 1차 코딩 기준으로 3 은 없다 (`out/matrix-deck_2026-11-01.md`).
+**왜 두 층인가.** 처음엔 통제마다 '다룸' 한 칸이었다(v1). 발표 덱을 옮긴 1차 코더와 원문을 읽은 2차 AI 코더의 불일치 12칸이
+*전부* 같은 물음 — "직원 통제의 유사물(계정 정지 · CISO 승인)이 있으면 에이전트 통제를 다룬 것인가" — 에서 갈렸다(κ 0.70).
+교수 피드백 "비교 기준이 추상적" 이 가리킨 곳이 여기다. 두 층으로 나누면 그 물음이 사라지고, 논문의 주장
+— *일반 통제는 구속력이 있는데 AI·에이전트에 적용한 요구는 없거나 자율뿐* — 이 **칸 단위 간극**(일반 2 · AI 2 미만)으로 세어진다.
+
+점수는 코더가 직접 매기지 않는다. 코더는 층마다 **true/false/null 과 근거(위치 + 원문 인용)**, AI 층이 true 면 근거 조항의 대상
+(`subject: agent` = 에이전트 명시 / `ai` = AI 일반)만 적는다. 문서의 `binding`(0·1·2)은 문서 레코드에 있고, 점수는 자동 계산된다
+(`pivoxpolicy/schema.py::cell_score` · `layer_view`). 그래서 코더 둘의 결과를 층마다 그대로 Cohen's κ 로 비교할 수 있다.
+
+- **판정 기준은 `registry/controls.yaml` 하나** — 층 정의, 공통 규칙 G1~G8(범위·요구의 형태·대상으로 층 가르기·증거·경계 사례),
+  통제마다 `true_if` / `false_if`. 규칙은 조항 유형으로만 쓴다 — 특정 문서·조문을 이름 붙이면 κ 가 부풀려진다(테스트가 막는다).
+- **코더는 같은 원문을 읽는다** — 고정 코퍼스 21건(`snapshots/corpus.json` 에 문서별 출처·범위·sha256). 본문 텍스트는 저작권 때문에
+  저장소에 넣지 않는다. ISO/IEC 27001·42001 은 원문이 유료라 코퍼스에 없다(미코딩).
+- 빈 양식은 `registry/codings/TEMPLATE.yaml`. v1 코딩(`deck_2026-11-01` · `ai_coder_2026-11-11`)은 기록으로 남기고 그대로 읽힌다.
 
 ## 쓰는 법
 
@@ -31,10 +39,11 @@ AI 에이전트 관련 **금융 보안 규제·가이드라인을 모아, 같은
 cd pivoxpolicy
 pip install pyyaml pytest          # 의존성은 이 둘뿐
 python3 -m pivoxpolicy.cli check   # 레지스트리·코딩 스키마 검사
-python3 -m pivoxpolicy.cli matrix  # 통제 × 관할 매트릭스 (--csv 가능)
-python3 -m pivoxpolicy.cli gaps    # 구속력 2 미만·미코딩 셀
+python3 -m pivoxpolicy.cli matrix  # 통제 × 관할 — 두 층 나란히 (--layer analog|agent 로 한 층, --csv, --coder)
+python3 -m pivoxpolicy.cli gaps    # AI·에이전트 층이 구속력 2 미만인 칸 (옆에 일반 층 점수)
 python3 -m pivoxpolicy.cli timeline
-python3 -m pivoxpolicy.cli kappa   # 코더 둘 이상일 때 일치도
+python3 -m pivoxpolicy.cli kappa   # 코더 간 일치도 — 층마다 (인자 없으면 두 층 코더 둘, `kappa A B` 로 지정)
+python3 -m pivoxpolicy.cli incident-kappa   # 사건 × 통제 코딩 일치도
 python3 -m pivoxpolicy.cli fetch   # 문서 URL 스냅숏 → snapshots/manifest.json, 바뀐 문서 보고
 python3 -m pivoxpolicy.cli watch   # 발표 목록 페이지에서 새 글 찾기
 python3 -m pivoxpolicy.cli intel   # RSS/Atom/JSON 피드에서 AI 에이전트 관련 새 항목 → snapshots/intel.jsonl
