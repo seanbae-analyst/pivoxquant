@@ -37,9 +37,22 @@ python3 -m pivoxpolicy.cli timeline
 python3 -m pivoxpolicy.cli kappa   # 코더 둘 이상일 때 일치도
 python3 -m pivoxpolicy.cli fetch   # 문서 URL 스냅숏 → snapshots/manifest.json, 바뀐 문서 보고
 python3 -m pivoxpolicy.cli watch   # 발표 목록 페이지에서 새 글 찾기
-python3 -m pivoxpolicy.cli report  # out/ 에 전부 쓰기
+python3 -m pivoxpolicy.cli intel   # RSS/Atom/JSON 피드에서 AI 에이전트 관련 새 항목 → snapshots/intel.jsonl
+python3 -m pivoxpolicy.cli rubric --check   # 내부통제 평가 루브릭·평가 스키마 검사
+python3 -m pivoxpolicy.cli assess example-worked_2026   # 기관 평가 프로필 (단일 등급 없음)
+python3 -m pivoxpolicy.cli assess --compare             # 기관 × 차원 격자
+python3 -m pivoxpolicy.cli report  # out/ 에 전부 쓰기 (매트릭스·연표·공백·κ·평가 프로필)
 python3 -m pytest -q
 ```
+
+## 두 가지 측정 — 혼동하지 말 것
+
+- **통제 × 관할 매트릭스** (`matrix`): *규제·가이드라인이 무엇을 요구하나.* 문서 × 7통제, 구속력 0~3.
+- **내부통제 평가 프로필** (`assess`): *한 금융회사가 공개 자료상 무엇을 하는가.* 기관 × 16차원, 증거 수준 0~3.
+  - 16차원 = 7통제(agent_control) + 경고→조치 연결(connection 2) + 모의해킹 4요소(testing 4) + 사고 대응(response 3).
+  - **단일 등급으로 뭉치지 않는다.** 차원별 레벨 프로필 + 그룹 분포만. 레벨은 "증거 수준" 이지 "통제 유무" 가 아니다.
+  - 실제 기관 평가는 명예훼손·공정성 때문에 시드에 넣지 않았다 — `example-worked_2026` 은 가상 예시다.
+  - 설계 근거: `registry/rubric.yaml` (덱 슬라이드 2·14·15 + pivoxmap 평가체계 노트). provisional — 리서치 워크플로가 FSB·OWASP ASI·NCCoE 원문으로 basis 를 채우면 교체.
 
 `pip install -e .` 하면 `pivoxpolicy` 명령으로도 된다.
 

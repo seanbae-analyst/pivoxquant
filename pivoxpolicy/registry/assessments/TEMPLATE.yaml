@@ -1,0 +1,35 @@
+# 한 기관·한 기간·한 평가자의 내부통제 평가. 복사해서 assessments/<기관-기간-평가자>.yaml 로 저장.
+#
+# level:   0 공개 증거 없음 · 1 언급 · 2 구체 · 3 검증 · null 미평가(분모에서 뺌)
+#          — "증거 없음" 은 "통제 없음" 이 아니다. 외부에서 검증할 수 있는 수준을 적는 것이다.
+# evidence: level ≥ 1 이면 필수. 어느 공개 자료의 무엇을 봤는지(쪽·조문·공시 번호).
+# evidence_level: primary(공시·제재문·감독기관 원문) / press(보도) / vendor(보안업체) / unverified.
+#          press 만으로 level 3 을 주지 않는다.
+# source_url: 가능하면 1차 출처 URL.
+# 차원 정의·레벨 기준은 registry/rubric.yaml 참조.
+subject: 기관명 또는 익명 코드
+period: "2026"          # 평가 대상 기간
+assessor: CODER_NAME
+provisional: true
+basis: 어떤 공개 자료를 봤는지 요약
+scores:
+  # agent_control
+  inventory:        {level: null, evidence: "", source_url: "", evidence_level: unverified}
+  vendors:          {level: null, evidence: "", source_url: "", evidence_level: unverified}
+  unique_id:        {level: null, evidence: "", source_url: "", evidence_level: unverified}
+  least_privilege:  {level: null, evidence: "", source_url: "", evidence_level: unverified}
+  human_approval:   {level: null, evidence: "", source_url: "", evidence_level: unverified}
+  audit_trail:      {level: null, evidence: "", source_url: "", evidence_level: unverified}
+  kill_switch:      {level: null, evidence: "", source_url: "", evidence_level: unverified}
+  # connection
+  warning_receipt:  {level: null, evidence: "", source_url: "", evidence_level: unverified}
+  escalation:       {level: null, evidence: "", source_url: "", evidence_level: unverified}
+  # testing
+  test_frequency:   {level: null, evidence: "", source_url: "", evidence_level: unverified}
+  test_scope:       {level: null, evidence: "", source_url: "", evidence_level: unverified}
+  test_followup:    {level: null, evidence: "", source_url: "", evidence_level: unverified}
+  test_coverage:    {level: null, evidence: "", source_url: "", evidence_level: unverified}
+  # response
+  detection_time:   {level: null, evidence: "", source_url: "", evidence_level: unverified}
+  disclosure:       {level: null, evidence: "", source_url: "", evidence_level: unverified}
+  remediation:      {level: null, evidence: "", source_url: "", evidence_level: unverified}

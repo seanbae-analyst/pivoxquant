@@ -6,11 +6,13 @@ import argparse
 import sys
 from typing import Any
 
+from . import assess as assess_mod
 from . import fetch as fetch_mod
 from . import intel as intel_mod
 from . import kappa as kappa_mod
 from . import matrix as matrix_mod
 from . import report as report_mod
+from . import rubric as rubric_mod
 from .registry import SNAPSHOT_DIR, load_codings, load_controls, load_documents, load_sources
 from .schema import SchemaError, validate_coding
 
@@ -126,6 +128,64 @@ def cmd_intel(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_rubric(args: argparse.Namespace) -> int:
+    rub = rubric_mod.load_rubric()
+    if args.check:
+        problems = 0
+        for name, a in rubric_mod.load_assessments().items():
+            for p in rubric_mod.validate_assessment(a, rub):
+                print(f"✗ assessments/{name}: {p}")
+                problems += 1
+        asmts = rubric_mod.load_assessments()
+        print(f"차원 {len(rub.dimensions)} · 평가 {len(asmts)}: {', '.join(asmts) or '없음'}"
+              + (" · provisional" if rub.provisional else ""))
+        if problems:
+            print(f"✗ 평가 문제 {problems}건")
+            return 1
+        print("✓ 통과")
+        return 0
+    # 루브릭 자체를 보여 준다
+    for g, dims in rub.groups().items():
+        print(f"## {g}")
+        for d in dims:
+            print(f"  {d.num} {d.name_ko} ({d.name_en}) — {d.question}")
+        print()
+    return 0
+
+
+def cmd_assess(args: argparse.Namespace) -> int:
+    rub = rubric_mod.load_rubric()
+    asmts = rubric_mod.load_assessments()
+    if not asmts:
+        print("평가 파일이 없음 (registry/assessments/*.yaml). TEMPLATE.yaml 을 복사해 만든다.")
+        return 2
+    if args.compare:
+        profiles = [assess_mod.build_profile(a) for a in asmts.values()]
+        print(assess_mod.render_comparison(profiles, rub))
+        return 0
+    if args.subject:
+        if args.subject not in asmts:
+            print(f"평가 {args.subject!r} 없음. 있는 것: {', '.join(asmts)}")
+            return 2
+        items = [(args.subject, asmts[args.subject])]
+    else:
+        items = list(asmts.items())
+    for _, a in items:
+        print(assess_mod.render_profile(assess_mod.build_profile(a), rub))
+    return 0
+
+
+def cmd_assess_kappa(args: argparse.Namespace) -> int:
+    rub = rubric_mod.load_rubric()
+    asmts = rubric_mod.load_assessments()
+    if args.a not in asmts or args.b not in asmts:
+        print(f"두 평가가 필요. 있는 것: {', '.join(asmts)}")
+        return 2
+    res = assess_mod.compare_assessors(asmts[args.a], asmts[args.b], rub)
+    print(assess_mod.render_kappa(res))
+    return 0
+
+
 def cmd_report(_: argparse.Namespace) -> int:
     controls, docs, codings = _load_all()
     for p in report_mod.write_all(docs, controls, codings):
@@ -165,6 +225,20 @@ def build_parser() -> argparse.ArgumentParser:
     i.add_argument("--all", action="store_true", help="키워드 필터 없이 전부")
     i.add_argument("--dry-run", action="store_true", help="저장하지 않고 보기만")
     i.set_defaults(fn=cmd_intel)
+
+    ru = sub.add_parser("rubric", help="내부통제 평가 루브릭 (차원 목록). --check 로 평가 스키마 검사")
+    ru.add_argument("--check", action="store_true")
+    ru.set_defaults(fn=cmd_rubric)
+
+    asm = sub.add_parser("assess", help="기관 내부통제 평가 프로필 (단일 등급 없음)")
+    asm.add_argument("subject", nargs="?", help="특정 평가 파일 stem")
+    asm.add_argument("--compare", action="store_true", help="모든 평가를 기관 × 차원 격자로")
+    asm.set_defaults(fn=cmd_assess)
+
+    ak = sub.add_parser("assess-kappa", help="같은 기관을 평가한 두 평가자의 일치도")
+    ak.add_argument("a")
+    ak.add_argument("b")
+    ak.set_defaults(fn=cmd_assess_kappa)
     sub.add_parser("report", help="out/ 에 매트릭스·연표·공백·kappa 전부 쓰기").set_defaults(fn=cmd_report)
     return p
 

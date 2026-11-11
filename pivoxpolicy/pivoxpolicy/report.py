@@ -6,8 +6,10 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
+from . import assess as assess_mod
 from . import kappa as kappa_mod
 from . import matrix as matrix_mod
+from . import rubric as rubric_mod
 from .registry import OUT_DIR
 from .schema import Control, Document, JURISDICTIONS
 
@@ -87,4 +89,17 @@ def write_all(
         for j in range(i + 1, len(names)):
             res = kappa_mod.compare_coders(codings[names[i]], codings[names[j]], docs, controls)
             w(f"kappa-{names[i]}-vs-{names[j]}.md", kappa_mod.render_markdown(res))
+
+    # 내부통제 평가 루브릭·프로필
+    try:
+        rub = rubric_mod.load_rubric()
+        asmts = rubric_mod.load_assessments()
+    except FileNotFoundError:
+        rub, asmts = None, {}
+    if rub is not None:
+        profiles = [assess_mod.build_profile(a) for a in asmts.values()]
+        if profiles:
+            w("assessment-comparison.md", assess_mod.render_comparison(profiles, rub))
+        for name, a in asmts.items():
+            w(f"assessment-{name}.md", assess_mod.render_profile(assess_mod.build_profile(a), rub))
     return written
