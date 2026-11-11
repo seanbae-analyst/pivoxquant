@@ -1,0 +1,68 @@
+# pivoxpolicy — 빠른 동향 수집 크론.
+#
+# ⚠️ 이 파일은 pivoxpolicy 가 **자기 저장소**로 옮겨진 뒤에만 돈다. GitHub Actions 는 저장소 루트의
+# .github/workflows 만 읽으므로, pivoxquant/pivoxpolicy/.github/ 에 있는 동안은 실행되지 않는다(의도).
+#
+# 하는 일 (2시간마다):
+#   1. intel  — registry/feeds.yaml 의 RSS/Atom/JSON 피드에서 AI 에이전트 관련 새 항목 → snapshots/intel.jsonl
+#   2. watch  — registry/sources.yaml 의 발표 목록 페이지에서 새 글
+#   3. fetch  — registry/documents 의 URL 스냅숏(해시 변경 = 문서 개정)
+#   4. report / site — out/ 갱신
+#   5. 바뀐 것이 있으면 커밋. 1차(primary) 새 항목이 있으면 이슈 하나를 열어 알린다.
+#
+# 비용: 외부 사이트 요청 ~60건/회. 봇 차단(403/202)은 실패로 기록되고 다음 회차에 다시 시도한다.
+name: intel
+
+on:
+  schedule:
+    - cron: "17 */2 * * *"   # 2시간마다, 정각 혼잡 피해서 17분
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: intel
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -q pyyaml
+      - name: intel
+        id: intel
+        run: |
+          python3 -m pivoxpolicy.cli intel | tee intel.out
+          echo "primary_new=$(grep -c '^- ' intel.out || true)" >> "$GITHUB_OUTPUT"
+      - name: watch + fetch
+        run: |
+          python3 -m pivoxpolicy.cli watch | tee watch.out
+          python3 -m pivoxpolicy.cli fetch | tee fetch.out
+      - name: report + site
+        run: |
+          python3 -m pivoxpolicy.cli report
+          python3 -m pivoxpolicy.cli site
+      - name: commit if changed
+        run: |
+          git config user.name "pivoxpolicy-bot"
+          git config user.email "pivoxpolicy-bot@users.noreply.github.com"
+          git add snapshots/manifest.json snapshots/intel.jsonl out/
+          if git diff --cached --quiet; then echo "변경 없음"; exit 0; fi
+          git commit -m "intel: $(date -u +%Y-%m-%dT%H:%MZ) 수집 — $(grep -c '^- ' intel.out || echo 0) 새 항목"
+          git push
+      - name: open issue when primary sources have news
+        if: steps.intel.outputs.primary_new != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # 1차 소스 섹션만 뽑아 이슈 본문으로
+          body=$(awk '/^## 1차/{p=1} /^## 2차/{p=0} p' intel.out)
+          [ -z "$body" ] && exit 0
+          gh issue create --title "intel $(date -u +%Y-%m-%d %H:%M)Z — 1차 소스 새 항목" --body "$body" --label intel || true

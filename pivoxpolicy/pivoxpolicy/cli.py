@@ -7,6 +7,7 @@ import sys
 from typing import Any
 
 from . import fetch as fetch_mod
+from . import intel as intel_mod
 from . import kappa as kappa_mod
 from . import matrix as matrix_mod
 from . import report as report_mod
@@ -110,6 +111,21 @@ def cmd_watch(_: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_intel(args: argparse.Namespace) -> int:
+    feeds = intel_mod.load_feeds()
+    if not feeds:
+        print("registry/feeds.yaml 이 없거나 비어 있음")
+        return 2
+    known = intel_mod.load_items()
+    new, status = intel_mod.collect(feeds, known, only_matching=not args.all)
+    if not args.dry_run:
+        intel_mod.append_items(new)
+    sys.stdout.write(intel_mod.render_new(new, status))
+    if args.dry_run:
+        print("(dry-run — 저장 안 함)")
+    return 0
+
+
 def cmd_report(_: argparse.Namespace) -> int:
     controls, docs, codings = _load_all()
     for p in report_mod.write_all(docs, controls, codings):
@@ -144,6 +160,11 @@ def build_parser() -> argparse.ArgumentParser:
     f.set_defaults(fn=cmd_fetch)
 
     sub.add_parser("watch", help="발표 목록 페이지에서 새 글 찾기").set_defaults(fn=cmd_watch)
+
+    i = sub.add_parser("intel", help="RSS/Atom/JSON 피드에서 AI 에이전트 관련 새 항목 수집 → snapshots/intel.jsonl")
+    i.add_argument("--all", action="store_true", help="키워드 필터 없이 전부")
+    i.add_argument("--dry-run", action="store_true", help="저장하지 않고 보기만")
+    i.set_defaults(fn=cmd_intel)
     sub.add_parser("report", help="out/ 에 매트릭스·연표·공백·kappa 전부 쓰기").set_defaults(fn=cmd_report)
     return p
 
