@@ -202,3 +202,9 @@ tr.ob-unmet td:first-child{box-shadow:inset 2px 0 0 var(--pq-ivory)}
 .ob-na li{margin:4px 0}
 .mx-t th.pz.ob{color:var(--pq-bronze-light)}
 .mx-det .basis h6{margin:0 0 4px}
+.ob-conflict{margin:4px 0 14px;padding:12px 14px;border-left:2px solid var(--pq-ivory);background:var(--pq-card-veil);font-size:13.5px;color:var(--pq-ivory-soft)}
+.ob-conflict b{color:var(--pq-ivory)}
+.ob-conflict p{margin:8px 0 0}
+.ob-conflict a{color:var(--pq-ivory);text-decoration:underline;text-decoration-color:var(--pq-ivory-line-strong);text-underline-offset:3px}
+.ob-st.conflict{color:var(--pq-ivory);text-decoration:underline;text-underline-offset:3px}
+tr.ob-conflict td:first-child{box-shadow:inset 2px 0 0 var(--pq-ivory)}

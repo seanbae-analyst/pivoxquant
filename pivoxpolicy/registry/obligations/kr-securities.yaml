@@ -10,10 +10,15 @@
 #   quote_verified     registry(이 저장소의 문서 코딩에서 원문 대조) | primary(법령 원문) | secondary(법무법인 · 언론) | none
 #   requires           회사가 해야 하는 일 한 문장
 #   when               적용 조건. 비어 있으면 모든 증권사. 키끼리는 AND, 목록 안은 OR
-#                      activities_any · data_any · external_llm_any · retail · automated_decision · high_impact
+#                      activities_any · data_any · external_llm_any(하나라도) · activities_none · data_none(하나도 없을 때) ·
+#                      retail · automated_decision · high_impact
 #   control · layer    런타임 통제 하나에 대응. layer: analog(사람 · 계정 — 수준 1) | agent(AI 에이전트까지 명시 — 수준 2)
-#   extends            analog 인 조문을 AI 에이전트 계정 · 호출에도 적용된다고 읽을 여지 — interpretive | null
-#                      ('강제 · 해석 포함' 모드에서만 수준 2 로 센다. 감독당국이 그렇게 읽는다는 근거는 아직 없다)
+#   extends            analog 인 조문이 AI 에이전트에도 미치는가 — interpretive | direct | null
+#                      interpretive: '사용자 · 취급자' 처럼 사람을 대상으로 쓴 조문. 에이전트 계정에도 미친다고 읽을 여지('강제 · 해석
+#                                    포함' 모드에서만 수준 2. 감독당국이 그렇게 읽는다는 근거는 아직 없다)
+#                      direct: 행위 · 데이터 처리 자체를 규율해 처리 주체가 에이전트여도 문언대로 걸린다(예: 개인신용정보 처리 기록)
+#   prohibits · unless 설계 충돌 — 통제 수준과 상관없이 프로필 자체가 조문과 맞지 않는다. unless 에 예외 사유
+#   effective          시행 · 개정 메모
 #   runtime            false 면 런타임이 집행 · 시험할 수 없는 의무(고객 설명 · 계약 · 망분리 등) — 증적으로 따로 점검
 #   owner              흔히 맡는 책무(책무구조도의 배정은 회사마다 다르다)
 #
@@ -41,7 +46,9 @@ profile:
     multi: true
     options:
       - {id: personal_credit, label: 개인신용정보}
-      - {id: personal, label: 개인정보(고객 식별정보 등)}
+      - {id: unique_identifier, label: 고유식별정보(주민등록번호 등)}
+      - {id: transactions, label: 고객의 금융거래정보(거래내역 · 잔고)}
+      - {id: personal, label: 그 밖의 개인정보}
   external_llm:
     label: 쓰는 모델
     options:
@@ -69,7 +76,7 @@ obligations:
     article: 제13조 제1항 제1호
     force: supervisory_regulation
     quote: "사용자 인증 수단을 개인별로 부여하고 접근권한은 최소한으로 부여하는 등"
-    quote_verified: registry
+    quote_verified: primary
     source: https://www.law.go.kr/행정규칙/전자금융감독규정
     requires: 정보처리시스템 사용자마다 개별 인증 수단을 준다(공유 계정 금지).
     control: unique_id
@@ -82,7 +89,7 @@ obligations:
     article: 제13조 제1항 제1호
     force: supervisory_regulation
     quote: "접근권한은 최소한으로 부여하는 등 적절한 접근권한 관리 및 통제 절차를 수립ㆍ운용할 것"
-    quote_verified: registry
+    quote_verified: primary
     source: https://www.law.go.kr/행정규칙/전자금융감독규정
     requires: 접근권한을 업무에 필요한 최소한으로 주고, 관리·통제 절차를 운용한다.
     control: least_privilege
@@ -109,7 +116,7 @@ obligations:
     article: 제13조 제1항 제9호
     force: supervisory_regulation
     quote: "정보처리시스템의 가동기록은 금융감독원장이 정하는 사항을 접속의 성공여부와 상관없이 자동적으로 기록ㆍ유지하고 1년 이상 보존할 것"
-    quote_verified: registry
+    quote_verified: primary
     source: https://www.law.go.kr/행정규칙/전자금융감독규정
     requires: 정보처리시스템 가동기록을 자동으로 남기고 1년 이상 보존한다.
     control: audit_trail
@@ -123,7 +130,7 @@ obligations:
     article: 제13조 제1항 제11호
     force: supervisory_regulation
     quote: "사용자가 전출ㆍ퇴직 등 인사조치가 있을 때에는 지체 없이 해당 사용자계정 삭제, 계정 사용 중지, 공동 사용 계정 변경 등 정보처리시스템에 대한 접근을 통제할 것"
-    quote_verified: registry
+    quote_verified: primary
     source: https://www.law.go.kr/행정규칙/전자금융감독규정
     requires: 사용자 계정을 지체 없이 삭제·중지할 수 있어야 한다.
     control: kill_switch
@@ -137,7 +144,7 @@ obligations:
     article: 제13조 제3항
     force: supervisory_regulation
     quote: "정보처리시스템 관리자의 주요 업무 관련 행위는 책임자가 제28조제2항에 따라 이중확인 및 모니터링을 하여야 한다"
-    quote_verified: registry
+    quote_verified: primary
     source: https://www.law.go.kr/행정규칙/전자금융감독규정
     requires: 시스템 관리자의 주요 업무 행위는 책임자가 이중확인·모니터링한다.
     control: human_approval
@@ -154,6 +161,7 @@ obligations:
     quote_verified: registry
     source: https://www.law.go.kr/행정규칙/전자금융감독규정
     requires: 취약점 분석·평가 뒤 조치하지 못한 취약점은 최고경영자 승인을 받는다.
+    effective: 현행. 금융위 2026-11-05 발표(대형사 연 2회, 수시평가, API를 포함한 외부접점 전부)는 규정변경예고 예정이며 아직 시행 전이다.
     runtime: false
     category: 취약점 분석·평가
     owner: 정보보호최고책임자(CISO)
@@ -337,3 +345,413 @@ obligations:
     control: audit_trail
     layer: agent
     owner: 정보보호최고책임자(CISO)
+
+  # ── 전자금융감독규정 제14조의2 · 제15조 — 클라우드 · 망분리 (조사: 국가법령정보센터 현행 원문 대조, 2026-11-12) ──
+  - id: efsr-14-2-1
+    doc: 전자금융감독규정
+    article: 제14조의2 제1항 · 제2항
+    force: supervisory_regulation
+    quote: "금융회사 또는 전자금융업자는 「클라우드컴퓨팅 발전 및 이용자 보호에 관한 법률」 제2조제3호에 따른 클라우드컴퓨팅서비스를 이용하고자 하는 경우 다음 각 호의 절차를 수행하여야 한다. 1. 다음 각 목의 기준에 따른 이용업무의 중요도 평가 2. 클라우드컴퓨팅서비스 제공자의 건전성 및 안전성 등에 대한 평가 …"
+    quote_verified: primary
+    source: https://www.law.go.kr/행정규칙/전자금융감독규정
+    requires: 외부 클라우드(LLM API 포함)를 쓰기 전에 업무 중요도와 제공자를 평가하고, 업무연속성 계획과 안전성 확보조치를 세워 정보보호위원회 심의·의결을 거친다.
+    when: {external_llm_any: [domestic_cloud, foreign_api]}
+    runtime: false
+    category: 클라우드 이용 절차
+    effective: 개정 2025.2.5
+    owner: 정보보호최고책임자(CISO)
+
+  - id: efsr-14-2-4
+    doc: 전자금융감독규정
+    article: 제14조의2 제4항
+    force: supervisory_regulation
+    quote: "금융회사 또는 전자금융업자는 다음 각 호의 어느 하나에 해당하는 사유가 발생한 날로부터 3개월 이내에 금융감독원장에게 보고하여야 하고, 관련 서류를 최신상태로 유지하여야 한다. 1. 클라우드컴퓨팅서비스 이용계약을 신규로 체결하거나, 기존 클라우드컴퓨팅서비스 이용계약을 통해 신규 업무를 처리하는 경우 …"
+    quote_verified: primary
+    source: https://www.law.go.kr/행정규칙/전자금융감독규정
+    requires: 클라우드를 새로 계약하거나 기존 계약으로 새 업무(에이전트에 맡기는 새 업무 포함)를 처리하면 3개월 안에 금감원에 보고한다.
+    when: {external_llm_any: [domestic_cloud, foreign_api]}
+    runtime: false
+    category: 감독당국 보고
+    effective: 개정 2025.2.5
+    owner: 정보보호최고책임자(CISO)
+
+  - id: efsr-14-2-7
+    doc: 전자금융감독규정
+    article: 제14조의2 제7항 단서
+    force: supervisory_regulation
+    quote: "… 고유식별정보 또는 개인신용정보를 클라우드컴퓨팅서비스를 통하여 처리하는 경우에는 제11조제2호를 적용하고, 해당 정보처리시스템을 국내에 설치하여야 한다."
+    quote_verified: primary
+    source: https://www.law.go.kr/행정규칙/전자금융감독규정
+    requires: 고유식별정보나 개인신용정보를 클라우드로 처리하면 그 정보처리시스템을 국내에 둔다.
+    when: {external_llm_any: [foreign_api], data_any: [personal_credit, unique_identifier]}
+    runtime: false
+    category: 국외 처리 제한
+    prohibits: true
+    unless: 해외 사업자라도 국내 리전에 설치된 시스템에서 처리하거나, 프롬프트에서 해당 정보를 빼거나 가명처리하면 해소된다.
+    effective: 단서 신설 2018.12.21, 개정 2025.2.5
+    owner: 정보보호최고책임자(CISO)
+
+  - id: efsr-15-1-3
+    doc: 전자금융감독규정
+    article: 제15조 제1항 제3호
+    force: supervisory_regulation
+    quote: "내부통신망과 연결된 내부 업무용시스템은 인터넷(무선통신망 포함) 등 외부통신망과 분리ㆍ차단 및 접속 금지. 다만, 다음 각 목의 경우에는 그러하지 아니하다. …"
+    quote_verified: primary
+    source: https://www.law.go.kr/행정규칙/전자금융감독규정
+    requires: 내부 업무용 시스템은 인터넷 등 외부망과 분리한다. 업무망 안의 에이전트가 외부 모델을 직접 부르면 예외 사유가 있어야 한다.
+    when: {external_llm_any: [domestic_cloud, foreign_api]}
+    runtime: false
+    category: 망분리
+    prohibits: true
+    unless: 예외(개인신용정보 없는 연구·개발, 금감원장 확인, 세칙 제2조의3의 SaaS 예외)나 혁신금융서비스 지정, 비조치의견서가 있으면 해소된다.
+    note: 2026-09-03 '제2차 망분리 규제 긴급 완화'는 보안 목적 AI에 한정된 비조치의견서이고 규정 문언은 바뀌지 않았다. 2026-11-05 '전면해제 TF'는 논의 단계다.
+    effective: 개정 2022.11.23
+    owner: 정보보호최고책임자(CISO)
+
+  - id: fssdetail-2-3-1-3
+    doc: 전자금융감독규정시행세칙
+    article: 제2조의3 제1항 제3호 · 제3항 · 제4항
+    force: supervisory_regulation
+    quote: "이용자의 고유식별정보 또는 개인신용정보를 처리하지 않는 「클라우드컴퓨팅 발전 및 이용자 보호에 관한 법률 시행령」 제3조제2호에 따른 '응용프로그램 등 소프트웨어를 제공하는 서비스' 이용 목적의 경우"
+    quote_verified: primary
+    source: https://www.law.go.kr/행정규칙/전자금융감독규정시행세칙
+    requires: 고유식별정보·개인신용정보를 처리하지 않는 SaaS로 망분리 예외를 쓰려면 위험성 평가, 대체통제(별표7), 정보보호위원회 승인을 거치고 반기 1회 이행을 평가·보고한다.
+    when: {external_llm_any: [domestic_cloud, foreign_api], data_none: [personal_credit, unique_identifier]}
+    runtime: false
+    category: 망분리 예외 조건
+    note: LLM API가 이 SaaS 예외에 드는지는 해석이 필요하다. 원문의 큰따옴표는 작은따옴표로 옮겼다.
+    effective: 신설 2026.4.20
+    owner: 정보보호최고책임자(CISO)
+
+  # ── 금융회사의 정보처리 업무 위탁에 관한 규정 — 국외 위탁 ──
+  - id: outsourcing-5-1
+    doc: 금융회사의 정보처리 업무 위탁에 관한 규정
+    article: 제5조 제1항
+    force: supervisory_regulation
+    quote: "제4조에 따라 정보처리를 위탁하는 경우 금융회사는 각 관련 법령상의 안전성 확보조치를 충실히 이행하여야 한다. 이 때 개인고객의 고유식별정보는 암호화 등의 보호 조치를 하여야 하며, 특히 국외로 이전되지 않도록 하여야 한다."
+    quote_verified: primary
+    source: https://www.law.go.kr/행정규칙/금융회사의정보처리업무위탁에관한규정
+    requires: 위탁할 때 고유식별정보를 암호화하고 국외로 이전되지 않게 한다.
+    when: {external_llm_any: [foreign_api], data_any: [unique_identifier]}
+    runtime: false
+    category: 국외 이전 제한
+    prohibits: true
+    unless: 프롬프트와 로그에서 고유식별정보를 빼면 해소된다. 해외 LLM API 이용이 '정보처리 위탁'인지는 해석이 갈린다.
+    effective: 개정 2015.7.22
+    owner: 정보보호최고책임자(CISO)
+
+  - id: outsourcing-7-1
+    doc: 금융회사의 정보처리 업무 위탁에 관한 규정
+    article: 제7조 제1항
+    force: supervisory_regulation
+    quote: "금융회사가 제4조제1항에 따라 개인고객의 금융거래정보(…) 처리업무를 위탁하고자 하는 경우로서 업무를 수탁받는 자가 국외에 소재하는 경우에는 그 사실을 … 실제로 수행하려는 날의 30영업일 이전에 다음 각 호의 서류를 첨부하여 금융감독원장에게 보고하여야 한다."
+    quote_verified: primary
+    source: https://www.law.go.kr/행정규칙/금융회사의정보처리업무위탁에관한규정
+    requires: 고객 금융거래정보 처리를 국외 수탁자에게 맡기려면 30영업일 전에 계약서안, 준법감시인 의견 등을 붙여 금감원에 보고한다.
+    when: {external_llm_any: [foreign_api], data_any: [transactions]}
+    runtime: false
+    category: 감독당국 보고
+    note: 해외 LLM 제공자가 '계속적으로 처리하는' 수탁자인지는 해석이 필요하다.
+    effective: 개정 2018.6.28
+    owner: 준법감시인
+
+  # ── 신용정보법 — 개인신용정보 처리 · 자동화평가 ──
+  - id: cia-20-2
+    doc: 신용정보의 이용 및 보호에 관한 법률
+    article: 제20조 제2항
+    force: law
+    quote: "신용정보회사등은 다음 각 호의 구분에 따라 개인신용정보의 처리에 대한 기록을 3년간 보존하여야 한다. 1. 개인신용정보를 수집ㆍ이용한 경우 가. 수집ㆍ이용한 날짜 나. 수집ㆍ이용한 정보의 항목 다. 수집ㆍ이용한 사유와 근거 …"
+    quote_verified: primary
+    source: https://www.law.go.kr/법령/신용정보의이용및보호에관한법률
+    requires: 개인신용정보를 수집·이용·제공할 때마다 날짜, 항목, 사유와 근거를 3년간 보존한다.
+    when: {data_any: [personal_credit]}
+    control: audit_trail
+    layer: analog
+    extends: direct
+    note: 처리 행위 자체를 기록하라는 조문이라 처리 주체가 에이전트여도 문언대로 걸린다. 에이전트가 조회할 때마다 사유와 근거를 남겨야 한다. 보존 기간 3년은 감사 기록 설정에서 따로 맞춘다.
+    effective: 시행 2020.8.5
+    owner: 신용정보관리·보호인
+
+  - id: cia-dec-16-1-3
+    doc: 신용정보의 이용 및 보호에 관한 법률 시행령
+    article: 제16조 제1항 제3호
+    force: decree
+    quote: "… 신용정보 취급ㆍ조회 권한을 직급별ㆍ업무별로 차등 부여하는 데에 관한 사항 및 신용정보 조회기록의 주기적인 점검에 관한 사항"
+    quote_verified: primary
+    source: https://www.law.go.kr/법령/신용정보의이용및보호에관한법률시행령
+    requires: 신용정보 조회 권한을 업무별로 차등 부여하고 조회기록을 주기적으로 점검한다.
+    when: {data_any: [personal_credit]}
+    control: least_privilege
+    layer: analog
+    extends: interpretive
+    note: "'직급별'이라는 말은 사람을 전제한다. 에이전트의 조회 권한까지 업무 범위로 묶으라는 뜻으로 읽을지는 해석이다."
+    owner: 신용정보관리·보호인
+
+  - id: cia-36-2
+    doc: 신용정보의 이용 및 보호에 관한 법률
+    article: 제36조의2 제1항 · 제2항
+    force: law
+    quote: "개인인 신용정보주체는 개인신용평가회사 및 대통령령으로 정하는 신용정보제공ㆍ이용자(…)에 대하여 다음 각 호의 사항을 설명하여 줄 것을 요구할 수 있다. 1. 다음 각 목의 행위에 자동화평가를 하는지 여부 …"
+    quote_verified: primary
+    source: https://www.law.go.kr/법령/신용정보의이용및보호에관한법률
+    requires: 신용공여 여부를 자동화평가로 정하면, 고객이 요구할 때 자동화평가 여부, 결과, 주요 기준을 설명하고 정정·재산출 요구를 처리한다.
+    when: {activities_any: [credit], automated_decision: true}
+    runtime: false
+    category: 고객 설명 · 재산출
+    note: 자동화평가는 종사자가 관여하지 않는 평가로 정의된다(법 제2조 제14호). 금융투자업자의 신용공여도 시행령 제31조의2로 대상이 된다.
+    effective: 시행 2020.8.5
+    owner: 소비자보호 총괄책임자
+
+  # ── 개인정보 보호법 ──
+  - id: pipa-37-2
+    doc: 개인정보 보호법
+    article: 제37조의2 제1항 · 제3항
+    force: law
+    quote: "정보주체는 완전히 자동화된 시스템(인공지능 기술을 적용한 시스템을 포함한다)으로 개인정보를 처리하여 이루어지는 결정(…)이 자신의 권리 또는 의무에 중대한 영향을 미치는 경우에는 … 해당 결정을 거부할 수 있는 권리를 가진다."
+    quote_verified: primary
+    source: https://www.law.go.kr/법령/개인정보보호법
+    requires: 고객 권리·의무에 중대한 영향을 주는 완전 자동화 결정은 거부되면 적용을 멈추거나 사람이 다시 처리하고, 설명 요구에 응하며, 기준과 절차를 공개한다.
+    when: {automated_decision: true, data_any: [personal, personal_credit, unique_identifier, transactions]}
+    control: human_approval
+    layer: agent
+    note: AI를 명시한 강제 조문이다. 요구하는 것은 거부나 설명 요구가 있을 때 사람이 다시 처리하는 경로이고, 모든 호출의 사전 승인까지는 아니다. 신용정보법 제36조의2와 겹칠 때 어느 쪽이 먼저인지는 정리되지 않았다.
+    effective: 시행 2024.3.15
+    owner: 개인정보 보호책임자(CPO)
+
+  - id: pipa-28-8
+    doc: 개인정보 보호법
+    article: 제28조의8 제1항
+    force: law
+    quote: "개인정보처리자는 개인정보를 국외로 제공(조회되는 경우를 포함한다)ㆍ처리위탁ㆍ보관(…)하여서는 아니 된다. 다만, 다음 각 호의 어느 하나에 해당하는 경우에는 개인정보를 국외로 이전할 수 있다. 1. 정보주체로부터 국외 이전에 관한 별도의 동의를 받은 경우 …"
+    quote_verified: primary
+    source: https://www.law.go.kr/법령/개인정보보호법
+    requires: 고객 개인정보를 해외 LLM으로 보내려면 별도 동의, 처리방침 공개·통지, 인증, 적정성 인정 중 하나의 근거를 갖추고 보호조치를 계약에 넣는다.
+    when: {external_llm_any: [foreign_api], data_any: [personal, personal_credit, unique_identifier, transactions]}
+    runtime: false
+    category: 국외 이전 근거
+    note: 해외 LLM 호출이 '처리위탁·보관'인지 '제공'인지는 해석이 필요하다.
+    effective: 시행 2023.9.15
+    owner: 개인정보 보호책임자(CPO)
+
+  - id: pipa-29
+    doc: 개인정보 보호법
+    article: 제29조
+    force: law
+    quote: "개인정보처리자는 개인정보가 유출등이 되지 아니하도록 내부 관리계획 수립, 접속기록 보관 등 대통령령으로 정하는 바에 따라 안전성 확보에 필요한 기술적ㆍ관리적 및 물리적 조치를 하여야 한다."
+    quote_verified: primary
+    source: https://www.law.go.kr/법령/개인정보보호법
+    requires: 내부관리계획, 접근권한 관리, 접속기록 보관 같은 안전조치를 한다(세부는 시행령 제30조와 안전성 확보조치 기준).
+    when: {data_any: [personal, personal_credit, unique_identifier, transactions]}
+    control: audit_trail
+    layer: analog
+    extends: interpretive
+    note: 안전성 확보조치 기준은 접근 권한을 업무에 필요한 최소 범위로 차등 부여하고(제5조), 접속기록을 1년(대량 처리나 고유식별정보는 2년) 이상 보관하라고(제8조) 정한다. 대상이 '개인정보취급자'라서 에이전트에 미치는지는 해석이다.
+    effective: 개정 2026.3.10, 시행 2026.9.11
+    owner: 개인정보 보호책임자(CPO)
+
+  # ── 자본시장법 · 시행령 · 금융투자업규정 (조사: 국가법령정보센터 현행 원문 대조, 2026-11-12. 법 2026.10.2 · 영 2026.10.13 · 규정 2026.9.9 시행판) ──
+  - id: fscma-70
+    doc: 자본시장과 금융투자업에 관한 법률
+    article: 제70조
+    force: law
+    quote: "투자매매업자 또는 투자중개업자는 투자자나 그 대리인으로부터 금융투자상품의 매매의 청약 또는 주문을 받지 아니하고는 투자자로부터 예탁받은 재산으로 금융투자상품의 매매를 하여서는 아니 된다."
+    quote_verified: primary
+    source: https://www.law.go.kr/법령/자본시장과금융투자업에관한법률/제70조
+    requires: 투자자의 주문 없이 고객 예탁재산으로 매매하지 않는다(임의매매 금지).
+    when: {activities_any: [order]}
+    control: least_privilege
+    layer: analog
+    extends: direct
+    note: 매매 행위 자체를 규율하므로 주문을 내는 주체가 에이전트여도 문언대로 걸린다. 뉴스 · 메일 같은 외부 글에서 나온 주문은 투자자의 주문이 아니다. 이 도구는 이를 '외부 입력이 섞인 고위험 행위 차단'(최소 권한)으로 집행한다. 이 대응은 도구의 판단이다.
+    effective: 2013.5.28 개정
+    owner: 준법감시인
+
+  - id: fscma-dec-62
+    doc: 자본시장과 금융투자업에 관한 법률 시행령
+    article: 제62조 제1항 제1호 나목 · 다목 (법 제60조)
+    force: decree
+    quote: "나. 주문기록, 매매명세 등 투자자의 금융투자상품의 매매, 그 밖의 거래 관련 자료 … : 10년 다. 집합투자재산, 투자일임재산, 신탁재산 등 투자자재산의 운용 관련 자료: 10년"
+    quote_verified: primary
+    source: https://www.law.go.kr/법령/자본시장과금융투자업에관한법률시행령/제62조
+    requires: 주문기록, 매매명세, 운용 자료를 10년 보존하고 멸실·위변조 방지 대책을 세운다(법 제60조 제2항).
+    when: {activities_any: [order, advice]}
+    control: audit_trail
+    layer: analog
+    extends: direct
+    note: 주문 기록 자체를 남기라는 조문이라 에이전트가 낸 주문과 그 근거도 문언대로 대상이다. 10년 보존과 위변조 방지는 이 도구의 해시 사슬 감사 기록과 맞닿지만 보존 기간은 따로 설정해야 한다.
+    effective: 2013.8.27 개정
+    owner: 준법감시인
+
+  - id: fsir-2-26
+    doc: 금융투자업규정
+    article: 제2-26조 제1항 제5호 · 제10호 · 제12호
+    force: supervisory_regulation
+    quote: "5. 매매주문을 접수, 집행하는 경우 투자자별 거래한도, 위탁증거금 등에 대한 관리를 통해 결제가 적절하게 이행될 수 있도록 할 것 … 10. 전산ㆍ통신설비의 장애로 인하여 투자자의 매매주문이 처리되지 않는 사태가 발생하지 않도록 … 12. 임직원 등의 주문착오 방지체계를 구축함과 아울러 …"
+    quote_verified: primary
+    source: https://www.law.go.kr/행정규칙/금융투자업규정
+    requires: 매매주문처리 내부통제기준에 투자자별 거래한도, 장애 대책, 주문착오 방지체계를 담고 금감원장 확인을 받는다.
+    when: {activities_any: [order]}
+    control: least_privilege
+    layer: analog
+    extends: direct
+    note: 주문 처리 자체에 거래한도와 착오 방지를 요구하므로 에이전트가 낸 주문도 대상이다. 이 도구의 '건당 한도'가 이 자리에 대응한다.
+    effective: 고시 제2026-38호 기준 현행
+    owner: 준법감시인
+
+  - id: fscma-68
+    doc: 자본시장과 금융투자업에 관한 법률 · 시행령
+    article: 법 제68조 · 시행령 제66조의2 제2항
+    force: law
+    quote: "… 최선집행기준…에는 다음 각 호의 사항을 고려하여 최선의 거래조건으로 집행하기 위한 방법 및 그 이유 등이 포함되어야 한다. … 1. 금융투자상품의 가격 2. 투자자가 매매체결과 관련하여 부담하는 수수료 및 그 밖의 비용 3. 그 밖에 청약 또는 주문의 규모 및 매매체결의 가능성 등"
+    quote_verified: primary
+    source: https://www.law.go.kr/법령/자본시장과금융투자업에관한법률시행령/제66조의2
+    requires: 최선집행기준을 마련·공표하고 그대로 집행하며 3개월마다 점검한다.
+    when: {activities_any: [order]}
+    runtime: false
+    category: 최선집행
+    note: 주문을 라우팅하는 에이전트(KRX, 넥스트레이드)는 공표한 기준을 그대로 구현하고 주문마다 근거를 남겨야 한다.
+    effective: 시행규칙 제7조의3 2025.6.2 개정(대체거래소)
+    owner: 준법감시인
+
+  - id: fscma-71-6
+    doc: 자본시장과 금융투자업에 관한 법률 · 시행령
+    article: 법 제71조 제6호 · 시행령 제7조 제3항 제1호
+    force: law
+    quote: "1. 투자자가 금융투자상품의 매매거래일(하루에 한정한다)과 그 매매거래일의 총매매수량이나 총매매금액을 지정한 경우로서 투자자로부터 그 지정 범위에서 금융투자상품의 수량ㆍ가격 및 시기에 대한 투자판단을 일임받은 경우"
+    quote_verified: primary
+    source: https://www.law.go.kr/법령/자본시장과금융투자업에관한법률시행령/제7조
+    requires: 투자일임업 없이 일임받아 운용하지 않는다. 하루 안에서, 투자자가 정한 총수량·총금액 범위의 수량·가격·시기 판단만 맡을 수 있다.
+    when: {activities_any: [order]}
+    runtime: false
+    category: 집행 재량 한계
+    note: 주문 집행 에이전트의 재량에 대한 법적 상한이다. 하루를 넘기거나 종목을 고르면 일임업 영역이다.
+    effective: 시행령 제7조 제3항 개정 2018.9.28
+    owner: 준법감시인
+
+  - id: fscma-71-1
+    doc: 자본시장과 금융투자업에 관한 법률
+    article: 제71조 제1호
+    force: law
+    quote: "투자자로부터 금융투자상품의 가격에 중대한 영향을 미칠 수 있는 매수 또는 매도의 청약이나 주문을 받거나 받게 될 가능성이 큰 경우 이를 체결시키기 전에 그 금융투자상품을 자기의 계산으로 매수 또는 매도하거나 제삼자에게 매수 또는 매도를 권유하는 행위"
+    quote_verified: primary
+    source: https://www.law.go.kr/법령/자본시장과금융투자업에관한법률/제71조
+    requires: 고객의 대량 주문 정보를 고유매매나 제3자 권유에 쓰지 않는다(선행매매 금지).
+    when: {activities_any: [order]}
+    runtime: false
+    category: 정보 이용 금지
+    note: 고객 주문을 보는 에이전트와 고유계정 에이전트를 분리하고, 정보를 쓰지 않았음을 보일 로그가 필요하다.
+    owner: 준법감시인
+
+  - id: fscma-45
+    doc: 자본시장과 금융투자업에 관한 법률
+    article: 제45조 제1항
+    force: law
+    quote: "금융투자업자는 금융투자업, … 를 영위하는 경우 내부통제기준이 정하는 방법 및 절차에 따라 제174조 제1항 각 호 외의 부분에 따른 미공개중요정보 등 대통령령 으로 정하는 정보의 교류를 적절히 차단하여야 한다."
+    quote_verified: primary
+    source: https://www.law.go.kr/법령/자본시장과금융투자업에관한법률/제45조
+    requires: 미공개중요정보, 투자자 매매·보유 현황, 운용 정보의 교류를 내부통제기준에 따라 차단하고 정기 점검한다.
+    runtime: false
+    category: 정보교류 차단
+    note: 여러 부서에 걸친 에이전트의 컨텍스트, 메모리, 검색 범위 자체가 정보 교류다. 차단은 데이터 접근 단위로 구현해야 한다.
+    effective: 2020.5.19 개정
+    owner: 준법감시인
+
+  - id: fsir-4-20-1-11
+    doc: 금융투자업규정
+    article: 제4-20조 제1항 제11호 나목
+    force: supervisory_regulation
+    quote: "나. 시장에서의 매매주문을 받은 경우 투자자가 지정한 주문 내용과 방법에 따라 즉시 주문을 당해 시장에 전달하지 아니하는 행위. 다만, … (1) 매매주문방법의 변경이 … 더 효과적이라고 볼 수 있는 합리적 근거가 있을 것 (2) … 투자자의 서면 등에 의한 사전에 동의가 있을 것 …"
+    quote_verified: primary
+    source: https://www.law.go.kr/행정규칙/금융투자업규정
+    requires: 주문은 지정된 대로 즉시 전달한다. 쪼개거나 묶거나 늦추려면 합리적 근거, 사전 서면 동의, 내부통제가 모두 있어야 한다.
+    when: {activities_any: [order]}
+    runtime: false
+    category: 주문 전달
+    effective: 고시 제2026-38호 기준 현행
+    owner: 준법감시인
+
+  - id: fscma-178-2
+    doc: 자본시장과 금융투자업에 관한 법률
+    article: 제178조의2 제2항 제1호
+    force: law
+    quote: "거래 성립 가능성이 희박한 호가를 대량으로 제출하거나 호가를 제출한 후 해당 호가를 반복적으로 정정ㆍ취소하여 시세에 부당한 영향을 주거나 줄 우려가 있는 행위"
+    quote_verified: primary
+    source: https://www.law.go.kr/법령/자본시장과금융투자업에관한법률/제178조의2
+    requires: 목적과 상관없이 시세에 영향을 주는 대량 허수호가나 반복 정정·취소를 하지 않는다(과징금 대상).
+    when: {activities_any: [order]}
+    runtime: false
+    category: 시장질서
+    note: 고빈도로 정정·취소하는 에이전트는 의도와 상관없이 위반할 수 있다. 호가 대비 체결 비율과 빈도 한도가 필요하다.
+    effective: 2014.12.30 신설
+    owner: 준법감시인
+
+  - id: robo-dec-2-6
+    doc: 자본시장과 금융투자업에 관한 법률 시행령
+    article: 제2조 제6호
+    force: decree
+    quote: "“전자적 투자조언장치”란 다음 각 목의 요건을 모두 갖춘 자동화된 전산정보처리장치를 말한다. 가. … 2) 투자자문업 또는 투자일임업을 수행하는 경우: 투자자의 투자목적ㆍ재산상황ㆍ투자경험 등을 고려하여 투자자의 투자성향을 분석할 것 …"
+    quote_verified: primary
+    source: https://www.law.go.kr/법령/자본시장과금융투자업에관한법률시행령/제2조
+    requires: 자동화 자문·일임 장치는 투자성향 분석, 침해사고·재해 예방과 복구 체계, 금융위 고시 요건을 갖춘다.
+    when: {activities_any: [advice]}
+    runtime: false
+    category: 전자적 투자조언장치 요건
+    note: LLM 에이전트가 '전자적 투자조언장치'에 해당하는지는 해석이다. 해당한다면 사람 인력 없이 일반투자자에게 자문·일임하는 유일한 근거(시행령 제99조 제1항 제1호의2)가 되고, 모델을 바꿀 때 투자자 동의가 필요하다(규정 제4-77조 제19호).
+    owner: 준법감시인
+
+  - id: robo-fsir-1-2-2
+    doc: 금융투자업규정
+    article: 제1-2조의2
+    force: supervisory_regulation
+    quote: "1) 투자자문의 내용 또는 투자일임재산에 포함된 투자대상자산이 하나의 종류ㆍ종목에 집중되지 아니할 것 2) 매 분기별로 1회 이상 다음의 사항을 평가하여 … 변경이 필요하다고 인정되는 경우 … 변경할 것 …"
+    quote_verified: primary
+    source: https://www.law.go.kr/행정규칙/금융투자업규정
+    requires: 분산투자, 분기 1회 이상 재평가와 재조정, 유지·보수 전문인력 1인 이상, 코스콤이 지원하는 심의위원회 심사를 갖춘다.
+    when: {activities_any: [advice]}
+    runtime: false
+    category: 전자적 투자조언장치 요건
+    owner: 준법감시인
+
+  - id: robo-fsir-4-4-2
+    doc: 금융투자업규정
+    article: 제4-4조의2
+    force: supervisory_regulation
+    quote: "1. 위탁자인 금융투자업자가 전자적 투자조언장치에 대한 배타적 접근권한 및 통제권을 보유하면서 직접 전자적 투자조언장치를 이용할 것 2. 위탁자인 금융투자업자가 운용ㆍ운용지시 업무의 주체로서 투자자 등에 대하여 … 직접적인 책임을 부담한다는 사항을 … 명시할 것"
+    quote_verified: primary
+    source: https://www.law.go.kr/행정규칙/금융투자업규정
+    requires: 외부 업체의 장치로 일임·운용을 하면 증권사가 배타적 통제권을 갖고 직접 책임을 지며 점검·변경의 주체가 된다.
+    when: {activities_any: [advice], external_llm_any: [domestic_cloud, foreign_api]}
+    runtime: false
+    category: 위탁 시 통제권
+    note: 외부 AI 업체의 모델을 써도 통제권과 책임은 증권사에 남는다.
+    effective: 2019.7.24 시행
+    owner: 준법감시인
+
+  # ── 거래소 · 시장감시 — 원문을 받지 못한 것은 인용 없이 ──
+  - id: krx-hft-104-3
+    doc: 한국거래소 유가증권시장 업무규정
+    article: 제104조의3 · 제104조의4
+    force: exchange_rule
+    quote: null
+    quote_verified: none
+    source: https://www.kcmi.re.kr/kcmifile/webzine_content/weekly_jedo/6050/webzinepdf_6050.pdf
+    requires: 고속 알고리즘거래는 거래소에 등록하고 신고 계좌로만 호가한다. 회원은 주문시스템을 점검하고 주문한도를 부여·감시하며 자료를 10년 보관한다.
+    when: {activities_any: [order]}
+    runtime: false
+    category: 알고리즘거래 등록
+    note: 거래소 규정 원문은 이 환경에서 받지 못해 2차 자료(자본시장연구원)로 풀어 썼다. 2023.1.25 시행.
+    owner: 준법감시인
+
+  - id: krx-algo-gl-4-3
+    doc: 한국거래소 시장감시위원회 알고리즘거래 위험관리 가이드라인
+    article: 4.3 ①
+    force: guideline
+    quote: "거래소에 호가가 제출되기 전에 회원 자체적으로 금액기준 주문한도를 사전에 설정하여 시스템에 적용하여야 한다."
+    quote_verified: secondary
+    source: https://www.smallake.kr/wp-content/uploads/2016/01/20160124_111425.pdf
+    requires: 호가가 거래소에 가기 전에 금액 기준 주문한도를 시스템에 설정한다.
+    when: {activities_any: [order]}
+    control: least_privilege
+    layer: agent
+    note: 2014.11 가이드라인의 사본에서 읽었다. 지금도 유효한지는 확인하지 못했다. 자동화된 주문 시스템을 직접 다루므로 AI까지로 셌다.
+    owner: 준법감시인

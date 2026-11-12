@@ -288,7 +288,7 @@
       .catch(function (err) { clear(out).appendChild(el("p", { cls: "err", text: err.message })); });
   });
   var mxData = null;
-  var OB_SHORT = { "OB-binding_explicit": "적용 조문: 강제, 명시만", "OB-binding_interpretive": "적용 조문: 강제, 해석 포함", "OB-guideline": "적용 조문: 가이드라인까지" };
+  var OB_SHORT = { "OB-binding_explicit": "적용 조문: 강제, 문언대로", "OB-binding_interpretive": "적용 조문: 강제, 해석 포함", "OB-guideline": "적용 조문: 가이드라인까지" };
   function colLabel(p) { return p.preset === "current" ? (levelsDirty() ? "지금 화면 (저장 안 함)" : "지금 설정") : (OB_SHORT[p.preset] || p.label); }
   function renderMatrix(j) {
     mxData = j;
@@ -325,7 +325,7 @@
 
 
   // ── 적용 조문 (조항 단위 의무, 증권부터) ──
-  var OB_ST = { met: "충족", partial: "사람·계정 층만", unmet: "미충족", offline: "런타임 밖" };
+  var OB_ST = { met: "충족", partial: "사람·계정 층만", unmet: "미충족", offline: "런타임 밖", conflict: "설계 충돌" };
   var LINK_KO = {
     violation: "이 에이전트에 걸리는 강제 조문이 이 통제를 AI까지 명시해 요구한다. 위반 소지가 있다.",
     interpretive: "걸리는 강제 조문은 사람·계정 층만 말한다. 에이전트 계정에도 미친다고 읽으면 위반 소지, 아니면 규제 공백이다.",
@@ -333,6 +333,13 @@
     gap: "이 에이전트에 걸리는 조문 중 이 통제를 요구하는 것이 없다. 합법이지만 위험한 규제 공백이다."
   };
   var LINK_SHORT = { violation: "위반 소지", interpretive: "해석에 따라 위반 소지", guideline: "가이드라인 미이행", gap: "규제 공백" };
+  var STOP_KO = {
+    violation: "강제 조문이 문언대로 요구하는 차단이다.",
+    interpretive: "강제 조문은 사람·계정 층만 말한다. 이 차단은 그 조문이 에이전트에도 미친다고 읽을 때의 것이다.",
+    guideline: "자율 규범(가이드라인, 평가기준)이 요구하는 차단이다.",
+    gap: "이 차단을 요구하는 조문은 이 에이전트에 걸리지 않는다. 회사가 스스로 둔 통제다."
+  };
+  var STOP_SHORT = { violation: "강제 조문이 요구", interpretive: "해석에 따른 요구", guideline: "자율 규범이 요구", gap: "요구하는 조문 없음" };
   function obMeta() { return meta.obligations || { profile: {} }; }
   var obFormFor = null;
   function renderObForm() {
@@ -397,8 +404,17 @@
     var out = clear($("ob-out")), s = j.summary, M = obMeta(), byId = {};
     j.applicable.forEach(function (r) { byId[r.id] = r; });
     out.appendChild(el("p", { cls: "sum", text: "적용 조문 " + s.applicable + " (강제 " + s.binding + " · 자율 " + s.voluntary + " · 런타임 밖 " + s.offline + ") · 걸리지 않는 조문 " + s.not_applicable }));
-    out.appendChild(el("p", { cls: "fine", text: "지금 통제 기준: 충족 " + s.met + ", 사람·계정 층만 " + s.partial + ", 미충족 " + s.unmet + ", 런타임 밖 " + s.offline + ". 강제 조문 중 미충족이거나 사람·계정 층만인 것 " + s.unmet_binding + "개." }));
+    out.appendChild(el("p", { cls: "fine", text: "지금 통제 기준: 충족 " + s.met + ", 사람·계정 층만 " + s.partial + ", 미충족 " + s.unmet + ", 런타임 밖 " + (s.offline - s.conflict) + ", 설계 충돌 " + s.conflict + ". 강제 조문 중 미충족이거나 사람·계정 층만인 것 " + s.unmet_binding + "개." }));
     out.appendChild(el("p", { cls: "hi-line" }, [el("b", { text: "AI 기본법 고영향 AI: " + (j.high_impact.value ? "해당" : "해당 안 함") }), " " + j.high_impact.reason]));
+    // 설계 충돌 — 통제를 켜도 풀리지 않는다. 맨 위에 둔다
+    var cf = j.applicable.filter(function (r) { return r.prohibits; });
+    if (cf.length) {
+      var box = el("div", { cls: "ob-conflict", role: "note" }, [el("b", { text: "설계 충돌 " + cf.length + "건: 통제를 켜도 풀리지 않는다. 프로필(쓰는 모델 · 다루는 정보)을 바꾸거나 예외 사유를 갖춰야 한다." })]);
+      cf.forEach(function (r) {
+        box.appendChild(el("p", null, [obRef(r), " " + r.requires + (r.unless ? " 해소: " + r.unless : "")]));
+      });
+      out.appendChild(box);
+    }
     // 모드별 통제 수준
     var t = el("table", { cls: "ob-lv" }), hr = el("tr", null, [el("th", { text: "통제" }), el("th", { text: "지금" })]);
     M.modes.forEach(function (m) {
@@ -433,7 +449,9 @@
       det.appendChild(el("p", { cls: "fine", text: "인용 확인: " + ({ registry: "문서 코딩에서 원문 대조", primary: "법령 원문", secondary: "법무법인 · 언론 2차 자료", none: "없음" }[r.quote_verified] || r.quote_verified) +
         (r.owner ? " · 흔히 맡는 책무: " + r.owner : "") + " · " + r.reason }));
       if (r.note) det.appendChild(el("p", { cls: "fine", text: r.note }));
-      var ctl = r.runtime ? ctlName[r.control] + " · " + (r.layer === "agent" ? "AI까지 명시" : "사람·계정" + (r.extends ? " (에이전트는 해석)" : "")) : (r.category || "런타임 밖");
+      if (r.unless) det.appendChild(el("p", { cls: "fine", text: "해소: " + r.unless }));
+      if (r.effective) det.appendChild(el("p", { cls: "fine", text: "시행 · 개정: " + r.effective }));
+      var ctl = r.runtime ? ctlName[r.control] + " · " + (r.layer === "agent" ? "AI까지 명시" : r.extends === "direct" ? "행위 규율 (에이전트에도 문언대로)" : "사람·계정" + (r.extends ? " (에이전트는 해석)" : "")) : (r.category || "런타임 밖");
       tb2.appendChild(el("tr", { cls: "ob-" + r.status }, [el("td", null, [obRef(r), det]), el("td", { cls: r.binding ? "bind" : "sub", text: r.force_ko }),
         el("td", { text: r.requires }), el("td", { cls: "sub", text: ctl }), el("td", null, [el("span", { cls: "ob-st " + r.status, text: OB_ST[r.status] || r.status })])]));
     });
@@ -449,8 +467,9 @@
   }
   function linkBlock(link, obs) {
     var box = el("div", { cls: "basis" });
-    box.appendChild(el("h6", { text: "이 에이전트에 걸리는 조문: " + LINK_SHORT[link.kind] }));
-    box.appendChild(el("p", { cls: "basis-h", text: LINK_KO[link.kind] }));
+    var stop = link.basis === "stop";
+    box.appendChild(el("h6", { text: (stop ? "이 차단을 요구하는 조문: " + STOP_SHORT[link.kind] : "이 에이전트에 걸리는 조문: " + LINK_SHORT[link.kind]) }));
+    box.appendChild(el("p", { cls: "basis-h", text: stop ? STOP_KO[link.kind] : LINK_KO[link.kind] }));
     (link.obligations || []).forEach(function (id) {
       var r = obs[id]; if (!r) return;
       box.appendChild(el("p", { cls: "basis-doc" }, [el("span", { cls: "k", text: r.force_ko + (r.binding ? " · 강제" : " · 자율") }), obRef(r)]));
@@ -510,7 +529,7 @@
       if (!focus.length) d.appendChild(el("p", { cls: "fine", text: "멈춘 통제가 없다. 이 케이스는 그대로 처리됐다." }));
       else focus.forEach(function (cid) { d.appendChild(basisBlock(cid, j, thr)); });
       d.appendChild(el("p", { cls: "fine", text: "관할 근거는 그 관할에서 이 통제를 가장 세게 다룬 문서 하나와 코딩 근거 인용이다." }));
-    } else if (!cell.link) d.appendChild(el("p", { cls: "fine", text: "적용성 프로필을 넣으면 이 결함과 관련된 조문(위반 소지 · 해석 · 가이드라인 · 공백)을 보여 준다." }));
+    } else if (!(mxData && mxData.obligations)) d.appendChild(el("p", { cls: "fine", text: "적용성 프로필을 넣으면 이 결과와 관련된 조문(위반 소지, 해석, 가이드라인, 공백)을 보여 준다." }));
     d.appendChild(el("p", { cls: "fine", text: "조문 대응과 분류는 변호사 검토 전 초안이다. 법률 자문이 아니다." }));
     d.scrollIntoView({ block: "nearest" });
     close.focus();

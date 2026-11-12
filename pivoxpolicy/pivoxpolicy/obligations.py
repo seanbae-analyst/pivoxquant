@@ -4,12 +4,16 @@
 고영향 AI 에만 걸리는데, 프리셋은 정산 에이전트에도 똑같이 씌웠다. 여기서는 조문마다 적용 조건을 적고 프로필로 거른다.
 
 모드 세 가지(강제력 × 해석)
-  binding_explicit      강제 조문만. AI 를 명시한 조문(layer: agent)만 수준 2, 사람 · 계정 조문은 수준 1
+  binding_explicit      강제 조문을 문언대로. AI 를 명시한 조문(layer: agent)과, 행위 자체를 규율해 처리 주체가 에이전트여도
+                        그대로 걸리는 조문(extends: direct — 예: 개인신용정보 처리 기록)은 수준 2, 사람 · 계정 조문은 수준 1
   binding_interpretive  강제 조문만. 사람 · 계정 조문 중 에이전트에도 미친다고 읽을 여지가 있는 것(extends: interpretive)도 수준 2
   guideline             자율 가이드라인 · 평가기준까지. 해석 여지도 수준 2
 
+설계 충돌(prohibits: true): 통제 수준과 상관없이 프로필 자체가 조문과 맞지 않는 경우(예: 개인신용정보를 해외 클라우드에서 처리 —
+전자금융감독규정 제14조의2 제7항은 국내 설치를 요구). unless 에 예외 사유를 적는다.
+
 결함과 조문을 잇는 분류(classify)
-  violation             적용되는 강제 조문이 그 통제를 AI 까지 명시해 요구한다 → 위반 소지
+  violation             적용되는 강제 조문이 그 통제를 문언대로 AI 까지 요구한다(명시 또는 행위 규율) → 위반 소지
   interpretive          강제 조문이 사람 · 계정 층만 말하고, 에이전트에 미치는지는 해석 → 해석에 따라 위반 소지
   guideline             자율 규범만 요구한다 → 가이드라인 미이행
   gap                   적용되는 조문이 없다 → 규제 공백(합법이지만 위험)
@@ -30,9 +34,10 @@ FORCES = (*sorted(BINDING), "guideline", "criteria")
 FORCE_KO = {"law": "법률", "decree": "시행령", "supervisory_regulation": "감독규정", "exchange_rule": "거래소 규정",
             "guideline": "가이드라인", "criteria": "평가기준"}
 MODES = ("binding_explicit", "binding_interpretive", "guideline")
-MODE_KO = {"binding_explicit": "강제 조문, 명시만", "binding_interpretive": "강제 조문, 해석 포함", "guideline": "가이드라인까지"}
+MODE_KO = {"binding_explicit": "강제 조문, 문언대로", "binding_interpretive": "강제 조문, 해석 포함", "guideline": "가이드라인까지"}
+EXTENDS = (None, "interpretive", "direct")
 VERIFIED = ("registry", "primary", "secondary", "none")
-WHEN_KEYS = ("activities_any", "data_any", "external_llm_any", "retail", "automated_decision", "high_impact")
+WHEN_KEYS = ("activities_any", "data_any", "external_llm_any", "activities_none", "data_none", "retail", "automated_decision", "high_impact")
 SECTORS = {"securities": "kr-securities.yaml"}
 
 
@@ -70,17 +75,19 @@ def validate_library(lib: dict[str, Any], control_ids: set[str]) -> list[str]:
                 probs.append(f"{oid}: control 은 통제 id (런타임 밖이면 runtime: false)")
             if ob.get("layer") not in ("analog", "agent"):
                 probs.append(f"{oid}: layer 는 analog · agent")
-            if ob.get("extends") not in (None, "interpretive"):
-                probs.append(f"{oid}: extends 는 interpretive 또는 비움")
+            if ob.get("extends") not in EXTENDS:
+                probs.append(f"{oid}: extends 는 interpretive · direct 또는 비움")
             if ob.get("layer") == "agent" and ob.get("extends"):
                 probs.append(f"{oid}: AI 를 명시한 조문(layer: agent)에는 extends 를 달지 않는다")
         elif not ob.get("category"):
             probs.append(f"{oid}: 런타임 밖 의무에는 category 필요")
+        if ob.get("prohibits") and ob.get("runtime", True):
+            probs.append(f"{oid}: 설계 충돌(prohibits)은 런타임 밖 의무로 둔다(runtime: false)")
         for k, v in (ob.get("when") or {}).items():
             if k not in WHEN_KEYS:
                 probs.append(f"{oid}: when 키 {k} 는 {WHEN_KEYS}")
-            elif k.endswith("_any"):
-                base = k[:-4]
+            elif k.endswith(("_any", "_none")):
+                base = k.rsplit("_", 1)[0]
                 bad = set(v or []) - opts.get(base, set())
                 if bad:
                     probs.append(f"{oid}: when.{k} 에 모르는 값 {sorted(bad)}")
@@ -140,6 +147,12 @@ def applies(ob: dict[str, Any], profile: dict[str, Any], labels: dict[str, str] 
             have = have if isinstance(have, list) else [have]
             if not set(have) & set(v or []):
                 return False, f"{_KEY_KO.get(k[:-4], k)} 조건({', '.join(labels.get(x, x) for x in v)})에 해당하지 않는다"
+        elif k.endswith("_none"):
+            have = profile.get(k[:-5])
+            have = have if isinstance(have, list) else [have]
+            hit = set(have) & set(v or [])
+            if hit:
+                return False, f"{', '.join(labels.get(x, x) for x in sorted(hit))}을(를) 다뤄서 이 조문(예외 조건)에 들지 않는다"
         elif k == "high_impact":
             hi, why = high_impact(profile)
             if bool(v) != hi:
@@ -158,6 +171,8 @@ def _when_text(when: dict[str, Any], labels: dict[str, str]) -> list[str]:
     for k, v in when.items():
         if k.endswith("_any"):
             out.append(f"{_KEY_KO.get(k[:-4], k)}이 " + " 또는 ".join(labels.get(x, x) for x in v))
+        elif k.endswith("_none"):
+            out.append(f"{_KEY_KO.get(k[:-5], k)}에 " + ", ".join(labels.get(x, x) for x in v) + " 없음")
         elif k == "high_impact":
             out.append("고영향 AI")
         else:
@@ -178,7 +193,7 @@ def required_level(ob: dict[str, Any], mode: str) -> int:
     binding = ob.get("force") in BINDING
     if mode in ("binding_explicit", "binding_interpretive") and not binding:
         return 0
-    if ob.get("layer") == "agent":
+    if ob.get("layer") == "agent" or ob.get("extends") == "direct":
         return 2
     if ob.get("extends") == "interpretive" and mode in ("binding_interpretive", "guideline"):
         return 2
@@ -198,7 +213,7 @@ def assess(lib: dict[str, Any], profile: dict[str, Any], levels: dict[str, int] 
     for ob in lib.get("obligations") or []:
         ok, why = applies(ob, profile, labels)
         row = {k: ob.get(k) for k in ("id", "doc", "article", "force", "quote", "quote_verified", "source", "requires",
-                                      "control", "layer", "extends", "category", "note", "owner")}
+                                      "control", "layer", "extends", "category", "note", "owner", "prohibits", "unless", "effective")}
         row.update(binding=ob.get("force") in BINDING, runtime=ob.get("runtime", True), force_ko=FORCE_KO.get(ob.get("force"), ""))
         if not ok:
             nap.append({**row, "reason": why})
@@ -212,13 +227,14 @@ def assess(lib: dict[str, Any], profile: dict[str, Any], levels: dict[str, int] 
                     lv[m][c], basis[m][c] = r, [ob["id"]]
                 elif r == lv[m][c]:
                     basis[m][c].append(ob["id"])
-        if levels is not None:
-            row["status"] = _status(row, levels)
+        if levels is not None or ob.get("prohibits"):
+            row["status"] = _status(row, levels or {})
         app.append(row)
     order = {f: i for i, f in enumerate(("law", "decree", "supervisory_regulation", "exchange_rule", "guideline", "criteria"))}
     app.sort(key=lambda r: (not r["binding"], order.get(r["force"], 9), not r["runtime"], r["id"]))
     summary = {"applicable": len(app), "binding": sum(r["binding"] for r in app), "voluntary": sum(not r["binding"] for r in app),
-               "offline": sum(not r["runtime"] for r in app), "not_applicable": len(nap)}
+               "offline": sum(not r["runtime"] for r in app), "not_applicable": len(nap),
+               "conflict": sum(1 for r in app if r.get("prohibits"))}
     if levels is not None:
         summary.update({s: sum(1 for r in app if r["status"] == s) for s in ("met", "partial", "unmet", "offline")})
         summary["unmet_binding"] = sum(1 for r in app if r["binding"] and r["status"] in ("unmet", "partial"))
@@ -228,12 +244,14 @@ def assess(lib: dict[str, Any], profile: dict[str, Any], levels: dict[str, int] 
 
 
 def _status(row: dict[str, Any], levels: dict[str, int]) -> str:
-    """met — 해석까지 충족 · partial — 사람 · 계정 층만(에이전트까지는 해석 영역) · unmet · offline(런타임 밖)."""
+    """conflict(설계 충돌) · met — 해석까지 충족 · partial — 사람 · 계정 층만(에이전트까지는 해석 영역) · unmet · offline(런타임 밖)."""
+    if row.get("prohibits"):
+        return "conflict"
     if not row["runtime"]:
         return "offline"
     cur = int(levels.get(row["control"], 0))
-    need = 2 if row["layer"] == "agent" else 1
-    want = 2 if row.get("extends") == "interpretive" else need
+    need = 2 if row["layer"] == "agent" or row.get("extends") == "direct" else 1
+    want = 2 if row.get("extends") in ("interpretive", "direct") else need
     if cur >= want:
         return "met"
     if cur >= need:
@@ -249,7 +267,9 @@ def preset_columns(assessment: dict[str, Any]) -> list[dict[str, Any]]:
 def classify(assessment: dict[str, Any], controls: list[str]) -> dict[str, Any]:
     """결함 · 사람 승인에 기댐을 막는 통제들 → 그 통제를 요구하는 적용 조문과 분류(위반 소지 · 해석 · 가이드라인 · 공백)."""
     rel = [r for r in assessment["applicable"] if r["runtime"] and r["control"] in controls]
-    if any(r["binding"] and r["layer"] == "agent" for r in rel):
+    # 가장 센 근거부터: 강제 · 문언대로(명시 또는 행위 규율) → 강제 · 해석 → 자율
+    rel.sort(key=lambda r: (0 if r["binding"] and (r["layer"] == "agent" or r.get("extends") == "direct") else 1 if r["binding"] else 2))
+    if any(r["binding"] and (r["layer"] == "agent" or r.get("extends") == "direct") for r in rel):
         kind = "violation"
     elif any(r["binding"] and r.get("extends") == "interpretive" for r in rel):
         kind = "interpretive"

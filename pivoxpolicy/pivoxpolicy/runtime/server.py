@@ -337,8 +337,10 @@ class App:
         if assessment:   # 결함마다 그 통제를 요구하는 적용 조문과 분류(위반 소지 · 해석 · 가이드라인 · 공백)
             for col in res["presets"]:
                 for cell in col["cells"].values():
-                    if cell.get("fixes"):
-                        cell["link"] = obligations_mod.classify(assessment, cell["fixes"])
+                    if cell.get("fixes"):                              # 뚫렸거나 승인에 기댐 → 막을 통제를 요구하는 조문
+                        cell["link"] = {**obligations_mod.classify(assessment, cell["fixes"]), "basis": "fix"}
+                    elif cell.get("control") and cell.get("verdict") == "good":   # 막힘 → 이 차단을 요구하는 조문
+                        cell["link"] = {**obligations_mod.classify(assessment, [cell["control"]]), "basis": "stop"}
             res["obligations"] = {r["id"]: {k: r.get(k) for k in ("doc", "article", "force_ko", "binding", "quote", "quote_verified",
                                                                    "source", "requires", "control", "layer", "extends", "note")}
                                   for r in assessment["applicable"]}

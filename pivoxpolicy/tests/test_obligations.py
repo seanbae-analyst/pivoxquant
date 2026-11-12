@@ -80,3 +80,28 @@ def test_preset_columns():
     cols = O.preset_columns(O.assess(LIB, prof(activities=["transfer"])))
     assert [c["id"] for c in cols] == ["OB-binding_explicit", "OB-binding_interpretive", "OB-guideline"]
     assert set(cols[0]["levels"]) == set(CONTROL_ORDER)
+
+
+def test_direct_coverage_counts_as_written():
+    """행위 자체를 규율하는 강제 조문(임의매매 금지 · 주문기록 · 개인신용정보 처리 기록)은 해석 없이 에이전트까지 걸린다."""
+    order = O.assess(LIB, prof(activities=["order"], data=["transactions"]))
+    assert order["levels"]["binding_explicit"]["least_privilege"] == 2
+    assert "fscma-70" in order["basis"]["binding_explicit"]["least_privilege"]
+    assert order["levels"]["binding_explicit"]["audit_trail"] == 2
+    assert O.classify(order, ["least_privilege"])["kind"] == "violation"
+    credit = O.assess(LIB, prof(activities=["credit"], data=["personal_credit"], automated_decision=True))
+    assert set(credit["basis"]["binding_explicit"]["human_approval"]) == {"aibasic-34-1-4", "pipa-37-2"}
+
+
+def test_design_conflicts_are_not_fixed_by_controls():
+    """개인신용정보를 해외 API로 — 통제를 모두 켜도 국내 설치 의무(제14조의2 제7항)와 충돌한다."""
+    a = O.assess(LIB, prof(activities=["customer_service"], data=["personal_credit"], external_llm="foreign_api"),
+                 levels={c: 2 for c in CONTROL_ORDER})
+    by = {r["id"]: r for r in a["applicable"]}
+    assert by["efsr-14-2-7"]["status"] == "conflict" and by["efsr-14-2-7"]["unless"]
+    assert a["summary"]["conflict"] == 2
+    # SaaS 망분리 예외는 개인신용정보를 다루면 쓸 수 없다(data_none)
+    assert "fssdetail-2-3-1-3" in {r["id"] for r in a["not_applicable"]}
+    ok = O.assess(LIB, prof(activities=["internal"], external_llm="domestic_cloud"))
+    assert "fssdetail-2-3-1-3" in {r["id"] for r in ok["applicable"]}
+    assert "efsr-14-2-7" not in {r["id"] for r in ok["applicable"]}
