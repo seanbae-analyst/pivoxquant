@@ -1,0 +1,113 @@
+"""런타임 서버 — 실제 HTTP 로: 관리자 로그인 · CSRF · 등록 · 에이전트 SDK 판정 · 승인 · 즉시 중단 · 레드팀 · 보안 헤더."""
+
+from __future__ import annotations
+
+import json
+import threading
+import urllib.error
+import urllib.request
+from wsgiref.simple_server import make_server
+
+import pytest
+
+from pivoxpolicy.runtime import server
+from pivoxpolicy.runtime.sdk import ApprovalRequired, Blocked, Guard
+
+ADMIN = "test-admin-token-0123456789"
+ALL2 = {c: 2 for c in ("inventory", "vendors", "unique_id", "least_privilege", "human_approval", "audit_trail", "kill_switch")}
+
+
+@pytest.fixture()
+def srv(tmp_path):
+    app, _ = server.build_app(tmp_path / "rt.db", ADMIN, secure_cookie=False)
+    httpd = make_server("127.0.0.1", 0, app, server_class=server._Threading, handler_class=server._Quiet)
+    t = threading.Thread(target=httpd.serve_forever, daemon=True)
+    t.start()
+    yield f"http://127.0.0.1:{httpd.server_port}", app
+    httpd.shutdown()
+
+
+def call(base, method, path, body=None, headers=None, raw=False):
+    data = json.dumps(body).encode() if body is not None else None
+    h = {"Content-Type": "application/json", **(headers or {})}
+    req = urllib.request.Request(base + path, data=data, method=method, headers=h)
+    try:
+        with urllib.request.urlopen(req, timeout=10) as r:
+            return r.status, (r.read() if raw else json.loads(r.read() or b"null")), dict(r.headers)
+    except urllib.error.HTTPError as e:
+        return e.code, json.loads(e.read() or b"null"), dict(e.headers)
+
+
+def login(base):
+    st, body, hd = call(base, "POST", "/admin/login", {"token": ADMIN})
+    assert st == 200
+    cookie = hd["Set-Cookie"].split(";")[0]
+    assert "HttpOnly" in hd["Set-Cookie"] and "SameSite=Strict" in hd["Set-Cookie"]
+    return {"Cookie": cookie, "X-CSRF": body["csrf"]}
+
+
+def test_admin_requires_login_and_csrf(srv):
+    base, _ = srv
+    assert call(base, "GET", "/admin/api/agents")[0] == 401
+    assert call(base, "POST", "/admin/login", {"token": "wrong-token-xxxxxxxx"})[0] == 401
+    h = login(base)
+    assert call(base, "GET", "/admin/api/agents", headers={"Cookie": h["Cookie"]})[0] == 200
+    st, _, _ = call(base, "POST", "/admin/api/agents", {"name": "x"}, headers={"Cookie": h["Cookie"]})      # CSRF 헤더 없음
+    assert st == 403
+    st, _, _ = call(base, "POST", "/admin/api/agents", {"name": "x"}, headers={**h, "Origin": "https://evil.example"})
+    assert st == 403
+    st, body, hd = call(base, "GET", "/admin", raw=True)
+    assert st == 200 and b"<script src=\"/admin/assets/runtime-ui.js\">" in body and b"<script>" not in body
+    assert "script-src 'self'" in hd["Content-Security-Policy"] and hd["X-Content-Type-Options"] == "nosniff"
+
+
+def test_login_is_rate_limited(srv):
+    base, _ = srv
+    codes = [call(base, "POST", "/admin/login", {"token": "nope-nope-nope-nope"})[0] for _ in range(11)]
+    assert codes[:10] == [401] * 10 and codes[10] == 429
+
+
+def test_end_to_end_register_decide_approve_suspend_redteam(srv):
+    base, app = srv
+    h = login(base)
+    st, r, _ = call(base, "POST", "/admin/api/agents", {"name": "트레이딩 봇", "owner": "리스크관리팀", "profile": "trading",
+                                                        "env": {"tools": "pay", "untrusted_input": True}, "levels": ALL2}, headers=h)
+    assert st == 201 and r["api_key"].startswith("pvx_")
+    aid, key = r["agent"]["id"], r["api_key"]
+    g = Guard(base, key)
+
+    @g.tool("transfer")
+    def transfer(amount, target):
+        return "sent"
+
+    web = [{"kind": "web", "trusted": False}]
+    with pytest.raises(Blocked) as e:
+        transfer(9_000_000, "attacker", input_sources=web)
+    assert e.value.decision["control"] == "least_privilege"
+    with pytest.raises(ApprovalRequired) as e:
+        transfer(300_000, "vendor-1", input_sources=[{"kind": "user", "trusted": True}])
+    apr = e.value.approval_id
+    st, pend, _ = call(base, "GET", "/admin/api/approvals?status=pending", headers=h)
+    assert [p["id"] for p in pend["approvals"]] == [apr] and pend["approvals"][0]["request"]["args"]["amount"] == 300_000
+    assert call(base, "POST", f"/admin/api/approvals/{apr}", {"approve": True}, headers=h)[0] == 200
+    assert transfer(300_000, "vendor-1", input_sources=[{"kind": "user", "trusted": True}], approval_id=apr) == "sent"
+    # 장기 키 직접 사용 — 고유 식별자 통제가 막는다
+    d = Guard(base, key, use_token=False).check("market_news")
+    assert d["decision"] == "deny" and d["control"] == "unique_id"
+    # 즉시 중단 → 모든 호출 거부(토큰도 끊김)
+    assert call(base, "POST", f"/admin/api/agents/{aid}/status", {"status": "suspended", "reason": "시험"}, headers=h)[0] == 200
+    with pytest.raises(Exception):
+        g.check("market_news")
+    # 레드팀 · 감사 사슬
+    st, rt, _ = call(base, "POST", f"/admin/api/agents/{aid}/redteam", {}, headers=h)
+    assert st == 200 and len(rt["results"]) == 12 and rt["summary"]["damage"] == 0       # 모든 통제를 AI까지 — 피해가 나는 원형 없음
+    st, v, _ = call(base, "GET", "/admin/api/audit/verify", headers=h)
+    assert v["ok"] and v["checked"] > 5
+
+
+def test_agent_api_rejects_bad_input(srv):
+    base, _ = srv
+    assert call(base, "POST", "/v1/decide", {"tool": "x"})[0] == 401
+    assert call(base, "POST", "/v1/decide", {"tool": "x"}, headers={"Authorization": "Bearer pvx_nope"})[0] == 401
+    assert call(base, "GET", "/v1/decide")[0] == 405
+    assert call(base, "GET", "/nope")[0] == 404

@@ -314,6 +314,12 @@ def cmd_site(_: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_serve(a: argparse.Namespace) -> int:
+    from .runtime import server
+    server.serve(a.host, a.port, a.db)
+    return 0
+
+
 def cmd_bundle(_: argparse.Namespace) -> int:
     from . import bundle as bundle_mod
     for q in bundle_mod.build():
@@ -391,6 +397,11 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("pending", help="자동 수집 피드에서 아직 레지스트리에 없는 새 규제·가이드라인 후보 → out/pending-regulations.md").set_defaults(fn=cmd_pending)
     sub.add_parser("sim", help="out/sim.html 모의 테스트 페이지 + out/simulation.md 프리셋 표").set_defaults(fn=cmd_sim)
     sub.add_parser("site", help="out/ 정적 사이트 — index.html 첫 화면 · dashboard.html 대시보드 · sim.html 모의 테스트 (+ offline/)").set_defaults(fn=cmd_site)
+    sv = sub.add_parser("serve", help="런타임 서버(프로토타입) — 에이전트 등록 · 도구 호출 판정 · 승인 · 즉시 중단 · 레드팀, 콘솔 /admin")
+    sv.add_argument("--host", default="127.0.0.1")
+    sv.add_argument("--port", type=int, default=8787)
+    sv.add_argument("--db", default="runtime.db", help="SQLite 파일 (기본 runtime.db — 저장소에 올리지 않는다)")
+    sv.set_defaults(fn=cmd_serve)
     sub.add_parser("bundle", help="out/offline/ — 서버 없이 더블클릭으로 여는 파일 하나짜리 사본").set_defaults(fn=cmd_bundle)
     return p
 
