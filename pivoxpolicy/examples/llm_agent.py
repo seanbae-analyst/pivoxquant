@@ -60,6 +60,11 @@ def main() -> int:
     except anthropic.APIStatusError as e:
         print(f"Anthropic API 오류 {e.status_code}: {e.message} (request-id {e.response.headers.get('request-id')})", file=sys.stderr)
         return 1
+    except TypeError as e:                     # 자격 증명이 아예 없으면 SDK 가 요청 때 TypeError 를 낸다
+        if "authentication" not in str(e):
+            raise
+        print("Anthropic 자격 증명이 없다 — ANTHROPIC_API_KEY 를 넣거나 `ant auth login` 을 한다", file=sys.stderr)
+        return 1
     except anthropic.APIConnectionError:
         print("Anthropic API 에 연결하지 못했다", file=sys.stderr)
         return 1

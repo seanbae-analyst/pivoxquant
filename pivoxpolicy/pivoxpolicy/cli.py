@@ -354,6 +354,57 @@ def cmd_diagnose(a: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_llm_redteam(a: argparse.Namespace) -> int:
+    """실제 모델로 회사 에이전트의 프롬프트 · 도구를 돌린다(ANTHROPIC_API_KEY 또는 `ant auth login` 필요, 비용이 든다)."""
+    import json as _json
+
+    from . import intake
+    from . import obligations as obl
+    from .runtime import llm_redteam
+    try:
+        import anthropic
+    except ImportError:
+        print('Anthropic SDK 가 없다: pip install "anthropic>=2.8"', file=sys.stderr)
+        return 2
+    src = Path(a.spec).read_text(encoding="utf-8")
+    try:
+        built = intake.build(src)
+    except intake.IntakeError as e:
+        print(f"명세를 읽지 못했다: {e}", file=sys.stderr)
+        return 2
+    if a.levels == "spec":
+        levels = None
+    elif a.levels in ("all", "none"):
+        levels = {c: (2 if a.levels == "all" else 0) for c in built["agent"]["levels"]}
+    else:
+        levels = obl.assess(obl.load_library(), built["compliance"])["levels"][a.levels]
+    print(f"모델 {a.model} · 시나리오마다 {a.trials}회 · 통제 {a.levels} · 승인자 {a.approver} · 모델 호출 최대 {a.max_calls}회(비용이 든다)", file=sys.stderr)
+    try:
+        r = llm_redteam.run(anthropic.Anthropic(), src, trials=a.trials, levels=levels, approver=a.approver, model=a.model,
+                            effort=a.effort, max_calls=a.max_calls, log=(lambda s: print(s, file=sys.stderr)) if a.verbose else (lambda s: None))
+    except anthropic.AuthenticationError:
+        print("Anthropic 인증 실패 — ANTHROPIC_API_KEY 또는 `ant auth login` 을 확인한다", file=sys.stderr)
+        return 1
+    except anthropic.APIStatusError as e:
+        print(f"Anthropic API 오류 {e.status_code}: {e.message}", file=sys.stderr)
+        return 1
+    except TypeError as e:                     # 자격 증명이 아예 없으면 SDK 가 요청 때 TypeError 를 낸다
+        if "authentication" not in str(e):
+            raise
+        print("Anthropic 자격 증명이 없다 — ANTHROPIC_API_KEY 를 넣거나 `ant auth login` 을 한다", file=sys.stderr)
+        return 1
+    except anthropic.APIConnectionError:
+        print("Anthropic API 에 연결하지 못했다", file=sys.stderr)
+        return 1
+    md = llm_redteam.to_markdown(r)
+    print(md)
+    if a.out:
+        Path(a.out).parent.mkdir(parents=True, exist_ok=True)
+        Path(a.out).write_text(md, encoding="utf-8")
+        Path(a.out).with_suffix(".json").write_text(_json.dumps(r, ensure_ascii=False, indent=1), encoding="utf-8")
+    return 0
+
+
 def cmd_report(_: argparse.Namespace) -> int:
     controls, docs, codings = _load_all()
     for p in report_mod.write_all(docs, controls, codings):
@@ -419,6 +470,19 @@ def build_parser() -> argparse.ArgumentParser:
     dg.add_argument("--out", default="out/diagnosis", help="보고서를 쓸 폴더")
     dg.add_argument("--company", help="보고서 머리말에 넣을 회사 이름")
     dg.set_defaults(fn=cmd_diagnose)
+    lr = sub.add_parser("llm-redteam", help="실제 LLM 으로 회사 에이전트의 프롬프트 · 도구를 돌려 숨은 지시를 따르는지와 런타임이 막는지를 잰다"
+                                            " (ANTHROPIC_API_KEY 필요, 비용 발생)")
+    lr.add_argument("spec", help="명세 YAML · JSON (agent.system_prompt 가 있으면 그것을 쓴다)")
+    lr.add_argument("--trials", type=int, default=3, help="시나리오마다 반복 횟수")
+    lr.add_argument("--levels", default="spec", choices=["spec", "all", "none", "binding_explicit", "binding_interpretive", "guideline"],
+                    help="통제 수준: 명세의 지금 수준 · 모두 · 없음 · 적용 조문 모드")
+    lr.add_argument("--approver", default="refuse", choices=["refuse", "approve"], help="사람 승인 요청에 승인자가 거부할지 · 승인할지(속은 승인자)")
+    lr.add_argument("--model", default="claude-opus-5-5")
+    lr.add_argument("--effort", default="medium", choices=["low", "medium", "high", "xhigh", "max"])
+    lr.add_argument("--max-calls", type=int, default=60, help="모델 호출 상한(비용 안전장치)")
+    lr.add_argument("--out", help="결과 Markdown 경로(같은 이름의 .json 도 쓴다)")
+    lr.add_argument("-v", "--verbose", action="store_true")
+    lr.set_defaults(fn=cmd_llm_redteam)
     sub.add_parser("incidents", help="AI 에이전트 보안 사건 × 통제 교차표").set_defaults(fn=cmd_incidents)
     ik = sub.add_parser("incident-kappa", help="사건 × 통제 코딩 일치도 (1차 related_controls vs registry/incident_codings)")
     ik.add_argument("coder", nargs="?")

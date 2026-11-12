@@ -105,6 +105,30 @@ PIVOX_AGENT_KEY=pvx_... python3 examples/demo_agent.py                 # 콘솔�
 - 배포: 정적 사이트(Vercel)와 따로 돌려야 한다(Render 등). `PIVOX_ADMIN_TOKEN` · `PIVOX_KEY_PEPPER` · `PIVOX_SECURE_COOKIE=1`(HTTPS) 을 환경변수로.
   아직 없는 것: MCP 프록시 방식 연결, 다중 관리자 · 역할, 승인 알림(메일 · 메신저), DB 이중화.
 
+### 진단 도구로 쓰기 (2026-11-12) — 명세 가져오기 · 적용 조문 · 진단 보고서 · LLM 레드팀
+
+회사가 이미 가진 에이전트의 도구 정의에서 출발해, 그 에이전트에 걸리는 조문과 실제로 뚫리는 자리를 보고서 한 벌로 낸다.
+
+```bash
+python3 -m pivoxpolicy.cli diagnose examples/agent_spec_order.yaml --out out/diagnosis      # 서버 없이 보고서(HTML · MD · RCM CSV · 조문 CSV)
+python3 -m pivoxpolicy.cli llm-redteam examples/agent_spec_order.yaml --trials 3            # 실제 모델(키 · 비용 필요)
+```
+
+- **명세 가져오기** (`pivoxpolicy/intake.py`, 콘솔 '명세서로 등록'): Anthropic · OpenAI 함수 · MCP `tools/list` 도구 정의를 섞어 받는다.
+  도구마다 종류(조회 · 쓰기 · 전송 · 실행 · 송금·주문)를 근거와 확신도와 함께 추정하고(동사 먼저 — `get_order_status` 는 조회, 모르면 쓰기),
+  금액 · 고객 인자(`notional_krw`, `customer_id` …), 외부 글을 읽는 도구, 적용성 프로필을 찾는다. 공격 케이스는 **그 에이전트의 실제 도구 이름 · 인자로** 만든다.
+  런타임은 도구별 `amount_arg` · `customer_arg` 로 한도 · 고객 범위를 검사한다(예전에는 `amount` · `customer` 라는 이름만 봤다).
+- **적용 조문** (`pivoxpolicy/obligations.py`, `registry/obligations/kr-securities.yaml`, 증권 61개): 관할 프리셋('한국 — 강제 규제만')은 적용 조건을 보지 않는다.
+  여기서는 조문 하나마다 적용 조건(하는 일 · 정보 · 모델 · 일반투자자 · 자동화된 결정 · 고영향 AI)과 에이전트에 미치는 방식(AI 명시 · 행위 규율 · 해석)을 적고,
+  세 모드(강제 조문 문언대로 / 해석 포함 / 가이드라인까지)로 통제 수준을 도출한다. 설계 충돌(예: 개인신용정보를 해외 API로 — 국내 설치 의무)은 따로 표시한다.
+  인용은 국가법령정보센터 현행 원문(2026-11-12)이나 이 저장소의 문서 코딩에서 대조한 것만 싣는다. **변호사 검토 전 초안이다.**
+- **진단 보고서** (`pivoxpolicy/diagnosis.py`, 콘솔 '진단 보고서'): 요약 · 우선 조치 · 통제 매트릭스(RCM) · 설계 충돌 · 공격 시험(결함 · 사람 승인에 기댐 · 처방 ·
+  조문 분류) · 조문별 충족 · 책무별 미충족(책무구조도 점검 목록) · 도구 추정 · 한계 · 증적. 처방은 통제 하나를 올려 같은 엔진으로 다시 돌려 확인한 것만 적는다.
+- **LLM 레드팀** (`runtime/llm_redteam.py`): 회사 에이전트의 시스템 프롬프트와 도구로 실제 모델을 돌린다. 외부 글을 읽는 도구의 결과 · 고객 메시지에
+  숨은 지시를 심고, 시나리오마다 N회 반복해 **모델이 따른 비율**(모델 쪽 위험)과 **따랐을 때 런타임이 막은 비율**(통제 쪽 효과)을 나눠 낸다.
+  도구는 모의, 판정은 샌드박스 정책 엔진, 승인자는 기본 거부(`--approver approve` 는 속은 승인자). `--max-calls` 로 비용을 막는다.
+  테스트(`tests/test_llm_redteam.py`)는 숨은 지시를 따르는 · 거절하는 가짜 모델로 돈다. 이 저장소에서 실제 모델로 돌린 결과는 아직 없다.
+
 ## 글과 화면 규칙 (2026-11-12 다듬기)
 
 자동 생성물처럼 보이지 않게 맞춘 규칙이다. 새 화면·문구도 이대로 쓴다.

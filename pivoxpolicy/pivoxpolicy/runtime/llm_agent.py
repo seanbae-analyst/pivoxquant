@@ -61,11 +61,19 @@ def echo_blocks(content: list[Any]) -> tuple[list[Any], list[Any]]:
 class GuardedAgent:
     def __init__(self, client: Any, guard: Any, *, model: str = MODEL, effort: str = "medium", system: str = SYSTEM,
                  task: str = TASK, intents: list[dict[str, Any]] | None = None, wait_approval: float = 0,
-                 log: Callable[[str], None] = print, max_turns: int = 8, fallbacks: bool = True):
+                 log: Callable[[str], None] = print, max_turns: int = 8, fallbacks: bool = True,
+                 tools: list[dict[str, Any]] | None = None,
+                 executor: Callable[[str, dict[str, Any]], tuple[str, list[dict[str, Any]]]] | None = None,
+                 task_source: dict[str, Any] | None = None):
+        """tools · executor 를 주면 회사 에이전트의 도구 정의와 모의 실행기로 돈다(LLM 레드팀). executor(name, input) →
+        (도구 결과 글, 대화에 새로 들어온 입력 출처 목록). 주지 않으면 정산 데모(TOOLS · NEWS)."""
         self.client, self.guard, self.model, self.effort, self.system = client, guard, model, effort, system
         self.task, self.intents = task, intents if intents is not None else INTENTS
         self.wait, self.log, self.max_turns, self.fallbacks = wait_approval, log, max_turns, fallbacks
-        self.sources: list[dict[str, Any]] = [{"kind": "user", "trusted": True, "ref": "operator-task"}]
+        self.tools, self.executor = tools, executor
+        self.executed: list[dict[str, Any]] = []        # 허용돼 '실행된' 모든 도구 호출
+        # 첫 메시지의 출처 — 운영자 지시(신뢰)가 기본. 고객 메시지로 시작하면 외부 입력으로 단다(LLM 레드팀)
+        self.sources: list[dict[str, Any]] = [dict(task_source or {"kind": "user", "trusted": True, "ref": "operator-task"})]
         self.ledger: list[dict[str, Any]] = []          # 실제로 '실행된' 모의 송금
         self.calls: list[dict[str, Any]] = []           # 도구 호출마다 런타임 판정
         self.usage = {"input_tokens": 0, "output_tokens": 0}
@@ -79,6 +87,11 @@ class GuardedAgent:
 
     # ── 도구 실행(모의) ──
     def _execute(self, name: str, inp: dict[str, Any]) -> str:
+        self.executed.append({"tool": name, "input": inp})
+        if self.executor is not None:
+            text, srcs = self.executor(name, inp)
+            self.sources.extend(dict(s) for s in srcs)
+            return text
         if name == "market_news":
             self.sources.append({"kind": "web", "trusted": False, "ref": "news://market/" + str(inp.get("topic", ""))[:40]})
             return NEWS
@@ -134,7 +147,7 @@ class GuardedAgent:
 
     # ── 루프 ──
     def _create(self, messages: list[Any]) -> Any:
-        kw: dict[str, Any] = {"model": self.model, "max_tokens": 16000, "system": self.system, "tools": TOOLS,
+        kw: dict[str, Any] = {"model": self.model, "max_tokens": 16000, "system": self.system, "tools": self.tools or TOOLS,
                               "messages": messages, "output_config": {"effort": self.effort}}
         if self.fallbacks:     # 안전 분류기가 거절하면 서버가 다른 모델로 같은 요청을 이어 받는다
             kw.update(betas=[FALLBACK_BETA], fallbacks="default")
@@ -169,4 +182,5 @@ class GuardedAgent:
             for b in uses:
                 self.log(f"[{turn}] 도구 호출: {b.name} {dict(b.input or {})}")
             messages.append({"role": "user", "content": [self.handle(b) for b in uses]})
-        return {"stop_reason": stop, "calls": self.calls, "ledger": self.ledger, "usage": self.usage, "messages": len(messages)}
+        return {"stop_reason": stop, "calls": self.calls, "ledger": self.ledger, "executed": self.executed, "usage": self.usage,
+                "messages": len(messages)}
