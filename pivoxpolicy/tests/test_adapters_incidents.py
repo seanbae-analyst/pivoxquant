@@ -86,7 +86,8 @@ def test_incident_registry_loads_and_counts_by_evidence():
     controls = load_controls()
     incs = load_incidents(control_ids={c.id for c in controls})
     assert len(incs) >= 40
-    assert all(i.source_checked.startswith("2026-11-11 HTTP 200") for i in incs)
+    # 모든 출처는 받아 본 날짜와 HTTP 200 이 적혀 있어야 한다 (2026-11-12 에 출처를 바꾼 사건은 그날 날짜)
+    assert all(re.match(r"\d{4}-\d{2}-\d{2} HTTP 200", i.source_checked) for i in incs), [i.id for i in incs if not re.match(r"\d{4}-\d{2}-\d{2} HTTP 200", i.source_checked)]
     cc = control_counts(incs)
     assert cc["least_privilege"]["total"] == sum(cc["least_privilege"][k] for k in ("primary", "vendor", "press"))
     with pytest.raises(IncidentError):
