@@ -55,13 +55,18 @@ def pick_tool(agent: dict[str, Any], spec: str) -> dict[str, Any] | None:
 
 
 def walk_steps(agent: dict[str, Any], steps: list[dict[str, Any]] | None, approved: list[dict[str, Any]],
-               now=None, note_key: str = "note") -> dict[str, Any]:
+               now=None, note_key: str = "note", approver: str = "refuse") -> dict[str, Any]:
     """단계 목록을 샌드박스 복사본의 정책 엔진으로 흘려보낸다(redteam · cases 공용).
-    → {outcome: blocked|passed|no_surface, steps, stopped_at, control, detected}. 단계가 모두 허용되면 passed."""
+    → {outcome: blocked|passed|no_surface, steps, stopped_at, control, detected}. 단계가 모두 허용되면 passed.
+    approver: refuse — 사람 승인 요청에서 멈춘다(공격자는 승인을 받을 수 없다는 가정).
+              approve — 승인자가 화면만 보고 승인한다고 치고(요약에 속거나 승인 피로) 그 요청에 묶인 승인으로 다시 묻는다.
+              사람 승인을 '실패할 수 있는 통제' 로 다루려는 것이다."""
     a = copy.deepcopy(agent)
     recent, out, detected = 0, [], False
     for k, st in enumerate(steps or [], 1):
-        tool = pick_tool(a, st["tool"])
+        # prefer: 이야기에 맞는 도구 이름(있으면 그것, 없으면 tool 종류로 고른다) — 첫 번째로 걸리는 도구가 이야기와 다른
+        # 도구라서 결과가 바뀌는 일을 막는다(예: '결제 모듈 변조' 가 뉴스 피드 도구로 돌던 것)
+        tool = next((t for t in a.get("tools") or [] if st.get("prefer") and t["name"] == st["prefer"]), None) or pick_tool(a, st["tool"])
         if tool is None:
             out.append({"step": k, "note": st.get(note_key, ""), "tool": None, "decision": "no_tool", "reason": f"{st['tool']} 도구가 등록돼 있지 않다"})
             return {"outcome": "no_surface", "steps": out, "stopped_at": k, "control": None, "detected": detected}
@@ -74,8 +79,17 @@ def walk_steps(agent: dict[str, Any], steps: list[dict[str, Any]] | None, approv
                 req["on_behalf_of"] = st["on_behalf_of"]
             res = policy.decide(a, req, {"auth": st.get("auth", "token"), "now": now, "recent_high_risk": recent, "approval": None,
                                          "approved_components": approved})
-            if res["kind"] in policy.HIGH:
+            if res["high"] and res["decision"] != "require_approval":   # service.decide 와 같은 셈법
                 recent += 1
+            if res["decision"] == "require_approval" and approver == "approve":
+                out.append({"step": k, "repeat": i + 1, "note": st.get(note_key, ""), "tool": tool["name"], "kind": res["kind"],
+                            "decision": "require_approval", "control": "human_approval", "reason": "승인자가 승인했다(샌드박스 가정)",
+                            "checks": res["checks"], "flags": res["flags"], "approved": True})
+                ap = {"status": "approved", "request_hash": res["request_hash"], "agent_id": a.get("id")}
+                res = policy.decide(a, req, {"auth": st.get("auth", "token"), "now": now, "recent_high_risk": recent, "approval": ap,
+                                             "approved_components": approved})
+                if res["high"] and res["decision"] != "require_approval":
+                    recent += 1
             detected = detected or "burst" in res["flags"]
             out.append({"step": k, "repeat": i + 1, "note": st.get(note_key, ""), "tool": tool["name"], "kind": res["kind"],
                         "decision": res["decision"], "control": res["control"], "reason": res["reason"], "checks": res["checks"], "flags": res["flags"]})

@@ -12,8 +12,19 @@
   var AUD_KO = { decision: "판정", admin: "관리", auth: "인증", approval: "승인", kill_switch: "즉시 중단", redteam: "레드팀", cases: "공격 팀" };
   var OP_KO = { login: "로그인", register: "등록", update: "수정", status: "상태 변경", rotate_key: "키 회전", token: "토큰 발급", approve: "승인",
                 deny: "거부", redteam: "레드팀 실행", component_add: "구성요소 추가", component_delete: "구성요소 삭제", cases: "공격 팀 투입", matrix: "규제별 비교" };
-  function verdictLabel(kind, v) { return v === "good" ? (kind === "attack" ? "막음" : "처리됨") : v === "defect" ? "결함(뚫림)" : v === "friction" ? "업무 마찰" : "해당 없음"; }
-  function verdictShort(kind, v) { return v === "good" ? (kind === "attack" ? "막음" : "처리") : v === "defect" ? "결함" : v === "friction" ? "마찰" : "·"; }
+  function verdictLabel(kind, v) {
+    return v === "good" ? (kind === "attack" ? "막음" : "처리됨") : v === "held" ? "사람 승인에 기댐" : v === "defect" ? "결함(뚫림)" : v === "friction" ? "업무 마찰" : "해당 없음";
+  }
+  function verdictShort(kind, v) { return v === "good" ? (kind === "attack" ? "막음" : "처리") : v === "held" ? "승인" : v === "defect" ? "결함" : v === "friction" ? "마찰" : "·"; }
+  // 멈춘 곳 — 사람 승인에서 멈췄으면 '승인했을 때' 를 같이 말한다
+  function stopText(r, kind) {
+    if (!r.control) return "—";
+    var t = ctlName[r.control] + " · " + r.stopped_at + "단계", ia = r.if_approved;
+    if (ia) t += ia.outcome === "blocked" ? " → 승인해도 " + ctlName[ia.control] + "에서 멈춤"
+      : (kind === "benign" ? " → 승인하면 처리" : " → 승인하면 뚫림");
+    return t;
+  }
+  function outcomeText(r) { return r.outcome === "blocked" && r.control === "human_approval" ? "승인 대기" : (OUT_KO[r.outcome] || r.outcome); }
   var TOOLS = [["read", "조회만"], ["write", "쓰기·실행"], ["pay", "송금·결제"]];
   var FLAGS = [["untrusted_input", "외부 입력을 읽는다"], ["open_components", "외부 구성요소를 들인다"], ["memory", "장기 메모리"], ["multi_agent", "다른 에이전트와 일한다"]];
   var csrf = "", meta = null, agents = [], cur = null, ctlName = {};
@@ -244,7 +255,7 @@
   });
   function renderCases(j) {
     var out = clear($("cases-out")), s = j.summary;
-    out.appendChild(el("p", { cls: "sum", text: "결함 " + s.defect + " · 업무 마찰 " + s.friction + " · 정상 " + s.good + " · 해당 없음 " + s.na }));
+    out.appendChild(el("p", { cls: "sum", text: "결함 " + s.defect + " · 사람 승인에 기댐 " + s.held + " · 업무 마찰 " + s.friction + " · 정상 " + s.good + " · 해당 없음 " + s.na }));
     if (j.preview) out.appendChild(el("p", { cls: "fine", text: "저장하지 않은 화면의 통제 수준으로 돌렸다. 에이전트에 반영하려면 저장을 누른다." }));
     var t = el("table", { cls: "rt-t" });
     t.appendChild(el("thead", null, [el("tr", null, ["케이스", "종류", "결과", "판정", "멈춘 곳", "단계"].map(function (h) { return el("th", { text: h }); }))]));
@@ -252,10 +263,10 @@
     j.results.forEach(function (r) {
       tb.appendChild(el("tr", { cls: "v-" + r.verdict }, [el("td", { text: r.title }),
         el("td", { cls: "sub", text: r.kind === "attack" ? "공격" : "정상 업무" }),
-        el("td", null, [el("span", { cls: "o " + r.outcome, text: OUT_KO[r.outcome] || r.outcome })]),
+        el("td", null, [el("span", { cls: "o " + (r.control === "human_approval" ? "held" : r.outcome), text: outcomeText(r) })]),
         el("td", null, [el("span", { cls: "vd v-" + r.verdict, text: verdictLabel(r.kind, r.verdict) + (r.detected ? " · 탐지" : "") })]),
-        el("td", { text: r.control ? ctlName[r.control] + " · " + r.stopped_at + "단계" : "—" }),
-        el("td", null, [stepsDetails(r.steps)])]));
+        el("td", { text: stopText(r, r.kind) }),
+        el("td", null, [stepsDetails(r.if_approved ? r.if_approved.steps : r.steps)])]));
     });
     t.appendChild(tb);
     out.appendChild(el("div", { cls: "tblwrap" }, [t]));
@@ -284,18 +295,18 @@
       var tr = el("tr", { cls: "k-" + c.kind }, [el("td", { cls: "cs" }, [el("b", { text: c.title }), el("span", { cls: "sub", text: c.kind === "attack" ? " 공격" : " 정상 업무" })])]);
       j.presets.forEach(function (p) {
         var cell = p.cells[c.id] || {}, v = cell.verdict || "na";
-        tr.appendChild(el("td", { cls: "mx v-" + v, title: cell.control ? ctlName[cell.control] + "에서 멈춤" : "" }, [el("span", { cls: "vd v-" + v, text: verdictShort(c.kind, v) })]));
+        tr.appendChild(el("td", { cls: "mx v-" + v, title: cell.control ? stopText(cell, c.kind) : "" }, [el("span", { cls: "vd v-" + v, text: verdictShort(c.kind, v) })]));
       });
       tb.appendChild(tr);
     });
-    [["결함 합계", "defect"], ["업무 마찰 합계", "friction"]].forEach(function (row) {
+    [["결함 합계", "defect"], ["사람 승인에 기댐", "held"], ["업무 마찰 합계", "friction"]].forEach(function (row) {
       var tr = el("tr", { cls: "mx-sum" }, [el("td", { cls: "cs", text: row[0] })]);
       j.presets.forEach(function (p) { tr.appendChild(el("td", { cls: "mx", text: String(p.summary[row[1]]) })); });
       tb.appendChild(tr);
     });
     t.appendChild(tb);
     out.appendChild(el("div", { cls: "tblwrap" }, [t]));
-    out.appendChild(el("p", { cls: "fine", text: "공격이 통과하면 결함, 정상 업무가 막히면 업무 마찰이다. 규제가 셀수록 결함은 줄고 마찰은 는다. 샌드박스라 에이전트 상태는 바뀌지 않는다." }));
+    out.appendChild(el("p", { cls: "fine", text: "공격이 통과하면 결함, 정상 업무가 막히면 업무 마찰이다. '승인' 은 사람 승인에서만 멈춘 공격이다 — 승인자가 요약에 속거나 지쳐서 승인하면 뚫린다(승인해도 뒤의 통제가 막으면 막음으로 센다). 샌드박스라 에이전트 상태는 바뀌지 않는다." }));
   }
 
   // ── 승인 대기 ──

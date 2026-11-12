@@ -84,7 +84,9 @@ class GuardedAgent:
             return NEWS
         if name == "transfer":
             self.ledger.append({"amount": inp.get("amount"), "target": inp.get("target"), "memo": inp.get("memo")})
-            return f"모의 송금 완료: {inp.get('amount'):,}원 → {inp.get('target')} (메모: {inp.get('memo')})"
+            amt = inp.get("amount")
+            shown = f"{amt:,}" if isinstance(amt, int) and not isinstance(amt, bool) else repr(amt)   # 숫자가 아니어도 죽지 않게
+            return f"모의 송금 완료: {shown}원 → {inp.get('target')} (메모: {inp.get('memo')})"
         return f"모르는 도구: {name}"
 
     def _policy_args(self, inp: dict[str, Any]) -> dict[str, Any]:

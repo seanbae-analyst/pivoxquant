@@ -37,7 +37,21 @@ def test_full_controls_block_attacks_but_add_friction():
     # 정상 송금은 사람 승인에서 멈춘다 → 업무 마찰(결함이 아니라 트레이드오프)
     assert by["normal-settlement"]["verdict"] == "friction"
     assert by["normal-lookup"]["verdict"] == "good"             # 조회는 통제를 다 켜도 처리된다
-    assert res["summary"]["defect"] == 0
+    assert res["summary"]["defect"] == 0 and res["summary"]["held"] == 0
+    # 폭주 루프: 승인자가 매번 승인해도 빈도 탐지 → 즉시 중단이 6번째에서 멈춘다
+    run = by["runaway-loop"]
+    assert run["control"] == "human_approval" and run["if_approved"]["control"] == "kill_switch" and run["verdict"] == "good"
+
+
+def test_human_approval_only_is_held_not_blocked():
+    """사람 승인만 AI까지(한국 · EU 강제 규제 수준)인 회사 — 공격 대부분이 '사람 승인에 기댐' 이다."""
+    kr = dict(NONE, inventory=1, vendors=1, unique_id=1, least_privilege=1, human_approval=2, audit_trail=1, kill_switch=1)
+    res = cases.run_cases(agent(kr), approved=APPROVED, now=NOW)
+    by = {r["id"]: r for r in res["results"]}
+    assert by["vendor-email-spoof"]["verdict"] == "held"            # 승인자가 '정기 정산' 요약에 속으면 뚫린다
+    assert by["vendor-email-spoof"]["if_approved"]["outcome"] == "passed"
+    assert by["other-customer"]["verdict"] == "defect"              # 조회는 사람 승인 대상이 아니다
+    assert res["summary"]["held"] >= 6
 
 
 def test_runtime_matrix_shape_and_regime_gradient():
@@ -50,6 +64,7 @@ def test_runtime_matrix_shape_and_regime_gradient():
     assert cols["none"]["summary"]["defect"] > cols["all"]["summary"]["defect"]   # 규제가 셀수록 결함이 준다
     assert cols["none"]["cells"]["news-injection"]["verdict"] == "defect"
     assert cols["all"]["cells"]["news-injection"]["verdict"] == "good"
+    assert set(cols["none"]["summary"]) == set(cases.VERDICTS)
 
 
 def test_matrix_sandbox_does_not_mutate_agent():

@@ -178,3 +178,53 @@ def test_redteam_does_not_touch_the_real_agent():
     r = redteam.run(a, "rogue_agent", redteam.load_playbook()["rogue_agent"], APPROVED)
     assert r["outcome"] == "blocked" and r["control"] == "kill_switch" and r["detected"]
     assert a["status"] == "active"
+
+
+# ── 버그 회귀 (2026-11-12 버그 사냥) ──
+
+def test_amount_format_cannot_slip_past_the_limit():
+    """문자열 · NaN · 음수 · bool 금액이 한도 검사를 비켜 가던 것(fail-open)."""
+    a = agent()
+    trusted = [{"kind": "user", "trusted": True}]
+    for amt in ("90000000", float("nan"), -90_000_000, True):
+        r = policy.decide(a, {"tool": "transfer", "args": {"amount": amt}, "input_sources": trusted}, ctx())
+        assert (r["decision"], r["control"]) == ("deny", "least_privilege"), amt
+    assert policy.decide(a, {"tool": "transfer", "args": {"amount": 100}, "input_sources": trusted}, ctx())["decision"] == "require_approval"
+
+
+def test_customer_scope_needs_the_context():
+    r = policy.decide(agent(), {"tool": "market_news", "args": {"customer": "c-777"}}, ctx())
+    assert r["decision"] == "deny" and "밝히지" in r["reason"]
+
+
+def test_unregistered_tool_cannot_self_declare_low_risk():
+    """등록부 밖 도구가 kind: read 라고 신고하면 사람 승인을 건너뛰던 것."""
+    a = agent(dict(ALL2, inventory=0, least_privilege=0))
+    r = policy.decide(a, {"tool": "wire_out", "kind": "read", "args": {"amount": 90_000_000}}, ctx())
+    assert r["decision"] == "require_approval" and r["high"] and r["unregistered"]
+    r = policy.decide(agent(dict(ALL2, inventory=0)), {"tool": "wire_out", "kind": "read"}, ctx())
+    assert (r["decision"], r["control"]) == ("deny", "least_privilege")      # 최소 권한: 준 적 없는 도구
+    assert policy.decide(agent(NONE), {"tool": "wire_out", "kind": "read"}, ctx())["decision"] == "allow"   # 통제가 없으면 모른다
+
+
+def test_limits_reject_booleans(rt):
+    with pytest.raises(RuntimeError_):
+        reg(rt, limits={"max_amount": True})
+    with pytest.raises(RuntimeError_):
+        reg(rt, limits={"max_high_risk_per_min": True})
+
+
+def test_approved_action_is_counted_once_for_burst(rt):
+    """승인받은 행위를 두 번 세어, 정상 송금 몇 건만으로 자동 중단이 걸리던 것."""
+    a, key = reg(rt, limits={"max_amount": 1_000_000, "max_high_risk_per_min": 3})
+    h = "Bearer " + rt.exchange_token("Bearer " + key)["token"]
+    for i in range(3):                                   # 1분에 3건까지는 승인만 받으면 실행된다
+        body = {"tool": "transfer", "args": {"amount": 100 + i, "target": "v"}, "input_sources": [{"kind": "user", "trusted": True}]}
+        r1 = rt.decide(h, body)
+        rt.decide_approval(r1["approval_id"], True)
+        assert rt.decide(h, {**body, "approval_id": r1["approval_id"]})["decision"] == "allow", i
+    body = {"tool": "transfer", "args": {"amount": 999, "target": "v"}, "input_sources": [{"kind": "user", "trusted": True}]}
+    r1 = rt.decide(h, body)
+    rt.decide_approval(r1["approval_id"], True)
+    r = rt.decide(h, {**body, "approval_id": r1["approval_id"]})          # 4번째 — 3건 초과
+    assert r["decision"] == "deny" and r["control"] == "kill_switch" and r.get("suspended")

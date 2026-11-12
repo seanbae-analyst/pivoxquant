@@ -145,9 +145,9 @@ def clean_limits(limits: Any) -> dict[str, Any]:
         raise RuntimeError_("limits 는 {max_amount, max_high_risk_per_min}")
     ma = limits.get("max_amount", DEFAULT_LIMITS["max_amount"])
     mb = limits.get("max_high_risk_per_min", DEFAULT_LIMITS["max_high_risk_per_min"])
-    if ma is not None and (not isinstance(ma, int) or ma < 0):
+    if ma is not None and (isinstance(ma, bool) or not isinstance(ma, int) or ma < 0):
         raise RuntimeError_("max_amount 는 0 이상 정수 또는 null")
-    if not isinstance(mb, int) or not 1 <= mb <= 1000:
+    if isinstance(mb, bool) or not isinstance(mb, int) or not 1 <= mb <= 1000:
         raise RuntimeError_("max_high_risk_per_min 는 1~1000")
     return {"max_amount": ma, "max_high_risk_per_min": mb}
 
@@ -309,12 +309,13 @@ class Runtime:
             if ap and ap["agent_id"] != agent["id"]:
                 ap = None
         ts = time.time()
-        tool = next((t for t in agent.get("tools") or [] if t["name"] == req["tool"]), None)
-        kind = (tool or {}).get("kind") or req.get("kind") or "write"
         ctx = {"auth": auth, "now": now_utc(), "recent_high_risk": self.store.recent_high(agent["id"], ts),
                "approval": ap, "approved_components": self.store.components()}
         res = policy.decide(agent, req, ctx)
-        if kind in policy.HIGH:
+        # 빈도 탐지는 '행위' 를 센다: 승인 대기(require_approval)는 아직 행위가 아니므로 세지 않고, 승인 뒤 다시 묻는
+        # 같은 요청이 허용 · 거부로 끝날 때 한 번만 센다(예전에는 처음 물을 때와 승인 뒤 다시 물을 때 두 번 세어,
+        # 승인받은 정상 송금 몇 건만으로 자동 중단이 걸렸다). 거부된 시도는 공격 신호라 센다.
+        if res["high"] and res["decision"] != "require_approval":
             self.store.record_call(agent["id"], True, ts)
         out = {k: res[k] for k in ("decision", "control", "reason", "checks", "flags", "kind", "request_hash")}
         if res["decision"] == "require_approval":

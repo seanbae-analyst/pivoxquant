@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from datetime import datetime, timezone
 from typing import Any
 
@@ -36,6 +37,11 @@ def _untrusted(req: dict[str, Any]) -> bool:
     if req.get("on_behalf_of"):
         return True                                           # 다른 에이전트가 넘긴 일은 외부 입력으로 본다
     return any(not s.get("trusted", False) for s in req.get("input_sources") or [])
+
+
+def _amount_ok(v: Any) -> bool:
+    """금액은 0 이상 유한한 숫자만 — bool 은 int 의 하위형이라 따로 막는다."""
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v) and v >= 0
 
 
 def _expired(agent: dict[str, Any], now: datetime) -> bool:
@@ -67,6 +73,9 @@ def decide(agent: dict[str, Any], req: dict[str, Any], ctx: dict[str, Any] | Non
     tools = {t["name"]: t for t in agent.get("tools") or []}
     tool = tools.get(req.get("tool") or "")
     kind = (tool or {}).get("kind") or (req.get("kind") if req.get("kind") in KINDS else "write")
+    # 등록부에 없는 도구는 무엇을 하는지 모른다 — 요청이 스스로 '조회' 라고 신고해도 믿지 않고 고위험으로 다룬다
+    unknown = tool is None
+    high = kind in HIGH or unknown
 
     def out(decision: str, control: str | None, reason: str, suspend: bool = False) -> dict[str, Any]:
         for c in CONTROL_ORDER:            # 판정에 오지 않은 통제도 표에 남긴다
@@ -75,7 +84,7 @@ def decide(agent: dict[str, Any], req: dict[str, Any], ctx: dict[str, Any] | Non
                                "note": "" if on[c] else ("사람 절차만" if lv[c] == 1 else "없음")})
         checks.sort(key=lambda x: CONTROL_ORDER.index(x["control"]))
         return {"decision": decision, "control": control, "reason": reason, "checks": checks, "flags": flags,
-                "suspend": suspend, "kind": kind, "request_hash": rh}
+                "suspend": suspend, "kind": kind, "high": high, "unregistered": unknown, "request_hash": rh}
 
     def chk(control: str, result: str, note: str = "") -> None:
         checks.append({"control": control, "on": on[control], "result": result, "note": note})
@@ -144,16 +153,25 @@ def decide(agent: dict[str, Any], req: dict[str, Any], ctx: dict[str, Any] | Non
         if kind not in allowed:
             chk("least_privilege", "block", "도구 권한 밖")
             return out("deny", "least_privilege", f"{KIND_KO.get(kind, kind)} 는 이 에이전트의 권한 밖이다")
-        if untrusted and kind in HIGH:
+        if unknown:
+            chk("least_privilege", "block", "등록부에 없는 도구")
+            return out("deny", "least_privilege", f"'{req.get('tool')}' 도구에는 권한을 준 적이 없다(등록부에 없다)")
+        if untrusted and high:
             chk("least_privilege", "block", "외부 입력 + 고위험 도구")
             return out("deny", "least_privilege", "외부 입력이 섞인 작업에서는 고위험 도구를 쓸 수 없다")
         cust = (req.get("context") or {}).get("customer")
+        if args.get("customer") and not cust:
+            chk("least_privilege", "block", "응대 고객 미상")
+            return out("deny", "least_privilege", "지금 응대 중인 고객을 밝히지 않은 채 고객 데이터를 요청했다")
         if cust and args.get("customer") and args["customer"] != cust:
             chk("least_privilege", "block", "다른 고객의 데이터")
             return out("deny", "least_privilege", "지금 응대 중인 고객이 아닌 다른 고객의 데이터를 요청했다")
         mx = limits.get("max_amount")
         amt = args.get("amount")
-        if mx is not None and isinstance(amt, (int, float)) and amt > mx:
+        if "amount" in args and not _amount_ok(amt):
+            chk("least_privilege", "block", "금액 형식")
+            return out("deny", "least_privilege", "금액은 0 이상의 숫자여야 한다(문자열 · 음수 · NaN 은 한도를 비켜 간다)")
+        if mx is not None and amt is not None and amt > mx:
             chk("least_privilege", "block", "한도 초과")
             return out("deny", "least_privilege", f"금액 {amt:,} 이 한도 {mx:,} 를 넘는다")
         chk("least_privilege", "pass")
@@ -161,7 +179,7 @@ def decide(agent: dict[str, Any], req: dict[str, Any], ctx: dict[str, Any] | Non
         chk("least_privilege", "off", "사람 절차만" if lv["least_privilege"] == 1 else "없음")
 
     # 5. 사람 승인 — 고위험 행위는 이 요청 그대로 승인된 것만
-    if on["human_approval"] and kind in HIGH:
+    if on["human_approval"] and high:
         ap = ctx.get("approval")
         if ap and ap.get("status") == "approved" and ap.get("request_hash") == rh and ap.get("agent_id") == agent.get("id"):
             chk("human_approval", "pass", "승인됨")
@@ -178,7 +196,7 @@ def decide(agent: dict[str, Any], req: dict[str, Any], ctx: dict[str, Any] | Non
     if on["audit_trail"]:
         flags.append("provenance")
         burst = int(limits.get("max_high_risk_per_min") or 5)
-        if kind in HIGH and int(ctx.get("recent_high_risk") or 0) + 1 > burst:
+        if high and int(ctx.get("recent_high_risk") or 0) + 1 > burst:
             flags.append("burst")
             if on["kill_switch"]:
                 chk("audit_trail", "flag", f"1분에 고위험 {burst}건 초과")
