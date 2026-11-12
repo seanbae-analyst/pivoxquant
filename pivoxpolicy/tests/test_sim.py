@@ -90,6 +90,10 @@ def test_build_writes_page(tmp_path):
     assert len(sim.load_history(tmp_path / "h.jsonl")) == 1
     html = (tmp_path / "sim.html").read_text(encoding="utf-8")
     assert "{{" not in html and "<script>" not in html     # CSP script-src 'self' — 인라인 스크립트 없음
+    for part in ('id="band"', 'id="heat"', 'id="drawer"', 'id="acts"', 'id="acts-csv"', 'id="asi"', 'id="cmp-ctl"'):
+        assert part in html, part                            # 한눈에 · 히트맵 + 서랍 · 개선 조치 + CSV · OWASP · 변경안 비교
+    md = (tmp_path / "simulation.md").read_text(encoding="utf-8")
+    assert "## OWASP Agentic Top 10 커버리지" in md and "## 개선 조치" in md
     assert (tmp_path / "sim-data.js").read_text(encoding="utf-8").startswith("window.PIVOX_SIM = ")
 
 
@@ -104,11 +108,13 @@ def test_js_engine_matches_python(tmp_path):
         env = {"tools": rnd.choice(["read", "write", "pay"]), "untrusted_input": rnd.random() < 0.7, "open_components": rnd.random() < 0.5,
                "memory": rnd.random() < 0.5, "multi_agent": rnd.random() < 0.5}
         cases.append({"levels": levels, "env": env, "stated": rnd.random() < 0.5})
-    (tmp_path / "in.json").write_text(json.dumps({"scenarios": p["scenarios"], "fails": fails, "stage": STAGE_OF, "cases": cases}), encoding="utf-8")
+    (tmp_path / "in.json").write_text(json.dumps({"scenarios": p["scenarios"], "fails": fails, "stage": STAGE_OF, "cases": cases,
+                                                  "asi": p["owasp_asi"]["items"]}), encoding="utf-8")
     script = (
         "const E=require(process.argv[1]);const d=require(process.argv[2]);"
         "const out=d.cases.map(c=>({s:d.scenarios.map(s=>E.runScenario(s,c.env,c.levels)),"
-        "r:E.replay(d.fails,c.levels,d.stage,c.stated),b:E.bestNext(d.fails,c.levels,d.stage,c.stated)}));"
+        "r:E.replay(d.fails,c.levels,d.stage,c.stated),b:E.bestNext(d.fails,c.levels,d.stage,c.stated),"
+        "a:E.asiCoverage(d.scenarios,c.env,c.levels,d.asi),i:E.improvementActions(d.scenarios,c.env,d.fails,c.levels,d.stage,c.stated)}));"
         "process.stdout.write(JSON.stringify(out));"
     )
     res = subprocess.run(["node", "-e", script, str(ENGINE_JS), str(tmp_path / "in.json")], capture_output=True, text=True, check=True)
@@ -117,6 +123,19 @@ def test_js_engine_matches_python(tmp_path):
         assert [sim.run_scenario(s, c["env"], c["levels"]) for s in p["scenarios"]] == j["s"]
         assert sim.replay(fails, c["levels"], STAGE_OF, c["stated"]) == j["r"]
         assert [list(x) for x in sim.best_next(fails, c["levels"], STAGE_OF, c["stated"])] == j["b"]
+        assert sim.asi_coverage(p["scenarios"], c["env"], c["levels"], p["owasp_asi"]["items"]) == j["a"]
+        assert sim.improvement_actions(p["scenarios"], c["env"], fails, c["levels"], STAGE_OF, c["stated"]) == j["i"]
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node 없음")
+def test_csv_export_escapes_formulas():
+    """개선 조치 CSV — 엑셀에서 수식으로 실행될 글(= + - @)은 ' 를 붙여 글자로 만든다. 숫자는 그대로."""
+    rows = [['=HYPERLINK("x")', "+3", "@sum", "a,b"], [-2, "줄\n바꿈", None]]
+    script = "const E=require(process.argv[1]);process.stdout.write(JSON.stringify(E.toCSV(JSON.parse(process.argv[2]))));"
+    res = subprocess.run(["node", "-e", script, str(ENGINE_JS), json.dumps(rows)], capture_output=True, text=True, check=True)
+    out = json.loads(res.stdout)
+    assert out.startswith("\ufeff") and out.endswith("\r\n")
+    assert out[1:] == '"\'=HYPERLINK(""x"")",\'+3,\'@sum,"a,b"\r\n-2,"줄\n바꿈",\r\n'
 
 
 def test_regulation_basis_names_the_clause():
@@ -190,3 +209,52 @@ def test_pending_scores_filters_and_dismisses():
     assert [r["link"] for r in rows] == ["https://a.example/1?utm_source=rss"]
     assert rows[0]["score"] == 9 and rows[0]["why"] == ["에이전트", "금융", "보안·통제", "규범", "1차 출처"]
     assert sim.pending_regulations(items, docs, dismissed={"https://a.example/1"}) == []
+
+
+# ── OWASP 커버리지 · 개선 조치 ──
+
+def _scn(sid, basis, prevent=None, limit=None, requires=()):
+    checks = []
+    if prevent:
+        checks.append({"control": prevent, "layer": "agent", "effect": "prevent", "why": "w"})
+    if limit:
+        checks.append({"control": limit, "layer": "agent", "effect": "limit", "why": "w"})
+    return {"id": sid, "basis": basis, "requires": list(requires), "impact": {"fixed": "f"}, "stages": [{"checks": checks}]}
+
+
+def test_asi_coverage_statuses():
+    cat = [{"id": f"ASI0{k}"} for k in range(1, 6)]
+    scns = [_scn("a", ["OWASP ASI01 x"], prevent="least_privilege"),
+            _scn("b", ["OWASP ASI02 x", "OWASP ASI01 y"], limit="unique_id"),
+            _scn("c", ["OWASP ASI03 x"], prevent="human_approval"),
+            _scn("d", ["OWASP ASI04 x"], requires=["memory"])]
+    env = {"tools": "pay", "memory": False}
+    st = {c["id"]: c["status"] for c in sim.asi_coverage(scns, env, lv(least_privilege=2, unique_id=2), cat)}
+    assert st == {"ASI01": "partial", "ASI02": "partial", "ASI03": "gap", "ASI04": "na", "ASI05": "none"}
+    st = {c["id"]: c["status"] for c in sim.asi_coverage(scns, env, lv(least_privilege=2, human_approval=2), cat)}
+    assert (st["ASI01"], st["ASI02"], st["ASI03"]) == ("partial", "gap", "full")
+    assert sim.asi_of(scns[1]) == ["ASI01", "ASI02"] and sim.asi_of(_scn("e", ["OWASP LLM02:2025 x"])) == []
+
+
+def test_registry_asi_catalog():
+    data = sim.load_scenarios()
+    items = data["owasp_asi"]["items"]
+    assert [x["id"] for x in items] == [f"ASI{k:02d}" for k in range(1, 11)] and all(x["name"] and x["ko"] for x in items)
+    used = {a for s in data["scenarios"] for a in sim.asi_of(s)}
+    assert used == {x["id"] for x in items} - {"ASI05"}      # 코드 실행(ASI05) 원형은 아직 없다 — 페이지에 '원형 없음'
+    bad = dict(data, scenarios=[dict(data["scenarios"][0], basis=["OWASP ASI42 Imaginary"])])
+    assert any("ASI42" in x for x in sim.validate_scenarios(bad, set(CIDS), set()))
+
+
+def test_improvement_actions_effects_and_order():
+    scns = [_scn("a", ["OWASP ASI01 x"], prevent="least_privilege"), _scn("b", ["x"], limit="unique_id")]
+    fails = {"i1": [{"control": "least_privilege", "layer": "agent", "level": "stated"}],
+             "i2": [{"control": "least_privilege", "layer": "agent", "level": "stated"},
+                    {"control": "kill_switch", "layer": "agent", "level": "stated"}],
+             "i3": [{"control": "vendors", "layer": "analog", "level": "stated"}]}
+    acts = sim.improvement_actions(scns, {"tools": "pay"}, fails, lv(vendors=1, audit_trail=2), STAGE_OF)
+    assert [a["control"] for a in acts][:3] == ["least_privilege", "unique_id", "human_approval"]
+    lp = acts[0]
+    assert (lp["from"], lp["inc_lo"], lp["inc_hi"]) == (0, 1, 2) and lp["scenarios"] == [{"id": "a", "from": "damage", "to": "blocked"}]
+    assert acts[1]["scenarios"] == [{"id": "b", "from": "damage", "to": "reduced"}] and acts[1]["inc_hi"] == 0
+    assert "audit_trail" not in {a["control"] for a in acts}      # 이미 AI 까지면 조치가 아니다

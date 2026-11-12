@@ -338,3 +338,20 @@ agent_profiles:
   - {id: workflow, label: 멀티 에이전트 업무 자동화, tools: write, untrusted_input: true, open_components: true, memory: true, multi_agent: true}
   - {id: soc, label: 보안 운영(SOC) 에이전트, tools: write, untrusted_input: true, open_components: true, memory: false, multi_agent: false}
   - {id: loan, label: 대출 심사 보조 에이전트, tools: read, untrusted_input: true, open_components: false, memory: false, multi_agent: false}
+
+# OWASP Top 10 for Agentic Applications (2026판, 2025-12-09 발표 — 제목은 아래 출처 원문 그대로, 2026-11-12 확인).
+# 원형 basis 의 'OWASP ASIxx' 가 이 목록을 가리킨다. 페이지의 커버리지 표는 그 원형들의 결과로 계산한다 —
+# 자체 계산이고 OWASP 의 평가·인증이 아니다. 원형이 없는 항목은 '원형 없음'(이 테스트가 재지 않는다)으로 보인다.
+owasp_asi:
+  source: "https://genai.owasp.org/2025/12/09/owasp-top-10-for-agentic-applications-the-benchmark-for-agentic-security-in-the-age-of-autonomous-ai/"
+  items:
+    - {id: ASI01, name: "Agent Goal Hijack", ko: "에이전트 목표 탈취"}
+    - {id: ASI02, name: "Tool Misuse", ko: "도구 오용"}
+    - {id: ASI03, name: "Identity & Privilege Abuse", ko: "신원·권한 남용"}
+    - {id: ASI04, name: "Agentic Supply Chain Vulnerabilities", ko: "에이전트 공급망 취약점"}
+    - {id: ASI05, name: "Unexpected Code Execution", ko: "예상치 못한 코드 실행"}
+    - {id: ASI06, name: "Memory & Context Poisoning", ko: "메모리·컨텍스트 오염"}
+    - {id: ASI07, name: "Insecure Inter-Agent Communication", ko: "안전하지 않은 에이전트 간 통신"}
+    - {id: ASI08, name: "Cascading Failures", ko: "연쇄 장애"}
+    - {id: ASI09, name: "Human-Agent Trust Exploitation", ko: "사람-에이전트 신뢰 악용"}
+    - {id: ASI10, name: "Rogue Agents", ko: "통제를 벗어난 에이전트"}

@@ -203,6 +203,7 @@ footer.site .links{display:flex;flex-wrap:wrap;gap:4px 16px}
 @media(prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
 /* sim.css — 모의 테스트 페이지. 데스크톱(1280px 이상) 기준으로 짠다 — 폰 배치는 하지 않는다.
+   한눈에(KPI 3개) · 원형 표 · 원형 × 프리셋 히트맵 + 서랍 · 사건 다시 돌리기 · 개선 조치 · OWASP 커버리지 · 변경안 비교.
    토큰·뼈대는 tokens.css · base.css. 박스·알약·글로우·그라디언트·italic 없음, 빨강·초록 없음
    (막힘 = 브론즈, 피해 축소 = 옅은 브론즈, 통과·꺼짐 = 흐린 아이보리, 피해 = 아이보리 굵게). */
 
@@ -215,7 +216,7 @@ main{gap:32px}
 
 .sim{display:grid;grid-template-columns:420px minmax(0,1fr);gap:48px;align-items:start}
 .panel{position:sticky;top:16px;max-height:calc(100vh - 32px);overflow:auto;padding:2px 10px 8px 0;scrollbar-width:thin;scrollbar-color:var(--pq-ivory-line-strong) transparent}
-.results{display:grid;gap:48px;min-width:0}
+.results{display:grid;grid-template-columns:minmax(0,1fr);gap:48px;min-width:0}
 
 /* ── 설정 묶음 ── */
 .grp{padding:16px 0;border-top:1px solid var(--pq-ivory-line)}
@@ -341,8 +342,6 @@ select:hover{border-color:rgba(245,240,232,0.26)}
 .cards .card.hl .v{color:var(--pq-bronze)}
 .two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:40px;margin-top:8px}
 .h3{margin:20px 0 10px}
-#next ol{margin:0;padding-left:20px}
-#next li{margin:6px 0}
 #cmp td.num b{color:var(--pq-bronze)}
 #cmp tr.cur td{background:var(--pq-bronze-wash)}
 #per td:nth-child(3),#per td:nth-child(4){white-space:nowrap}
@@ -361,6 +360,147 @@ select:hover{border-color:rgba(245,240,232,0.26)}
 #pend>li{grid-template-columns:86px minmax(0,1fr)}
 #pend .t{font-weight:500;font-size:14px}
 
+/* ── 기준과 비교 (변경안) ── */
+.tag{color:var(--pq-bronze);font-weight:600}
+.cmp-ctl{display:flex;flex-wrap:wrap;gap:8px}
+.cmp-ctl .btn,.drawer-acts .btn{height:36px;font-size:13.5px;padding:0 14px}
+body.comparing .cmp-grp .lab{color:var(--pq-bronze)}
+.ctl.chg .nm{color:var(--pq-bronze)}
+.ctl .was-l{grid-column:1/-1;margin:-2px 0 4px;font-size:12px;color:var(--pq-ivory-dim)}
+.seg.chg{border-color:var(--pq-bronze)}
+.cmpbar:not(.on){display:none}
+.cmpbar{margin:0 0 16px;padding:14px 18px;border-radius:var(--pq-radius-ctl);background:var(--pq-bronze-wash);box-shadow:inset 0 0 0 1px var(--pq-bronze-line)}
+.cmpbar .k{font-size:13px;color:var(--pq-bronze);font-weight:600}
+.cmpbar .t{margin-top:4px;font-size:14px;color:var(--pq-ivory);max-width:none}
+.cmpbar .s{margin-top:4px;font-size:13px;color:var(--pq-ivory-soft);max-width:none}
+.was{display:block;font-size:12px;font-weight:500;color:var(--pq-ivory-dim);white-space:nowrap}
+.was-c{margin-top:2px;font-size:12.5px;color:var(--pq-bronze)}
+tr.chg>td{background:var(--pq-bronze-wash)}
+
+/* ── 한눈에: KPI 3개 (통제 없음 → 기준 → 지금/변경안 → 모두 AI 까지) ── */
+.band{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.kpi{min-width:0;padding:18px 20px 16px;border-radius:var(--pq-radius-card);background:var(--pq-card-veil);border:1px solid var(--pq-ivory-line)}
+.kpi .k{font-size:13px;color:var(--pq-ivory-dim)}
+.kpi .v{margin-top:4px;font-size:32px;font-weight:700;letter-spacing:-0.03em;line-height:1.15;color:var(--pq-bronze);font-variant-numeric:tabular-nums}
+.kpi .v small{margin-left:6px;font-size:14px;font-weight:500;letter-spacing:0;color:var(--pq-ivory-dim)}
+.kpi .d{margin-top:2px;font-size:13px;font-weight:600;color:var(--pq-ivory)}
+.kpi .h{margin-top:4px;font-size:12.5px;line-height:1.5;color:var(--pq-ivory-dim)}
+.mv{display:grid;grid-template-columns:76px minmax(0,1fr) auto;align-items:center;gap:7px 10px;margin:14px 0 0;padding-top:12px;border-top:1px solid var(--pq-ivory-line)}
+.mv dt{font-size:12.5px;color:var(--pq-ivory-dim);white-space:nowrap}
+.mv dd{margin:0;min-width:0}
+.mv .n{font-size:12.5px;color:var(--pq-ivory-dim);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.mv .cur{color:var(--pq-ivory);font-weight:600}
+.strip{display:flex;gap:2px}
+.strip i{display:block;flex:1 1 0;height:12px;border-radius:2px;box-shadow:inset 0 0 0 1px var(--pq-ivory-line-strong)}
+.strip i.blocked,.strip i.a-full,.legend i.blocked{background:var(--pq-bronze);box-shadow:none}
+.strip i.reduced,.strip i.a-partial,.legend i.reduced{background:var(--pq-bronze-line);box-shadow:none}
+.strip i.damage,.strip i.a-gap,.legend i.damage{background:rgba(245,240,232,0.72);box-shadow:none}
+.strip i.a-none{box-shadow:inset 0 0 0 1px var(--pq-ivory-line)}
+.track{position:relative;display:block;height:12px;border-radius:2px;background:var(--pq-ivory-line);overflow:hidden}
+.track .hi,.track .lo{position:absolute;left:0;top:0;bottom:0}
+.track .hi{background:var(--pq-bronze-line)}
+.track .lo{background:var(--pq-bronze)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:12px;font-size:12.5px;color:var(--pq-ivory-soft);max-width:none}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:2px;box-shadow:inset 0 0 0 1px var(--pq-ivory-line-strong)}
+
+/* ── ① 히트맵: 원형 × 프리셋 ── */
+.heat-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-top:28px}
+.heat-h .h3{margin:0 0 10px}
+.heat{border-collapse:separate;border-spacing:3px;table-layout:fixed}
+.heat th,.heat td{padding:0;border:0}
+.heat thead th{padding:0 2px 6px;font-size:12px;font-weight:500;line-height:1.35;text-align:center;white-space:normal;color:var(--pq-ivory-dim);vertical-align:bottom}
+.heat thead th b{display:block;font-size:12.5px;font-weight:600;color:var(--pq-ivory)}
+.heat .rh{width:172px;text-align:left;padding-right:8px}
+.heat tbody th.rh{vertical-align:middle;white-space:normal}
+.heat tbody th .t{display:block;font-size:13px;font-weight:600;color:var(--pq-ivory)}
+.heat tbody th .s{display:block;font-size:11.5px;font-weight:400;color:var(--pq-ivory-dim)}
+.heat .first{padding-left:12px}
+.heat thead th.mine b{color:var(--pq-bronze)}
+.hc{position:relative;display:flex;align-items:center;justify-content:center;width:100%;height:38px;padding:0;border:0;border-radius:4px;
+  font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;transition:outline-color 120ms var(--pq-ease)}
+.hc.blocked{background:var(--pq-bronze);color:var(--pq-ink)}
+.hc.reduced{background:var(--pq-bronze-line);color:var(--pq-ivory)}
+.hc.damage{background:rgba(245,240,232,0.10);color:var(--pq-ivory);box-shadow:inset 0 0 0 1px rgba(245,240,232,0.34)}
+.hc.no_surface{background:transparent;color:var(--pq-ivory-faint);font-weight:400;box-shadow:inset 0 0 0 1px var(--pq-ivory-line)}
+.hc:hover{outline:1px solid var(--pq-ivory-mid);outline-offset:1px}
+.hc:focus-visible,.hc.on{outline:2px solid var(--pq-ivory);outline-offset:1px}
+.hc.chg::after{content:"";position:absolute;top:4px;right:4px;width:6px;height:6px;border-radius:1px;background:var(--pq-ivory)}
+.hc.blocked.chg::after{background:var(--pq-ink)}
+
+/* ── 서랍: 칸 하나의 단계별 결정 기록 — 왼쪽 설정 패널 위에 연다(히트맵을 가리지 않게).
+   너비 = 화면 여백 + 패널(40 + 420) + 간격 일부 → 결과 열 시작(패널 + 48px) 앞에서 끝난다 ── */
+.drawer{position:fixed;top:0;left:0;bottom:0;z-index:40;width:calc(max(0px, (100vw - 1400px) / 2) + 484px);overflow:auto;
+  padding:24px 28px 40px calc(max(0px, (100vw - 1400px) / 2) + 40px);background:var(--pq-onyx);
+  border-right:1px solid var(--pq-ivory-line-strong);box-shadow:24px 0 48px rgba(0,0,0,0.55);overscroll-behavior:contain}
+.drawer[hidden]{display:none}
+.drawer-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.drawer-top .k{font-size:13px;color:var(--pq-bronze)}
+.drawer-top h2{margin-top:4px;font-size:21px}
+.drawer .s{margin-top:8px;font-size:13.5px;color:var(--pq-ivory-mid)}
+.drawer .meta{display:grid;grid-template-columns:68px minmax(0,1fr);gap:4px 10px;margin:14px 0 0;font-size:12.5px}
+.drawer .meta dt{color:var(--pq-ivory-dim)}
+.drawer .meta dd{margin:0;color:var(--pq-ivory-soft)}
+.drawer .res{margin-top:16px;padding:14px 16px;border-radius:var(--pq-radius-ctl);background:var(--pq-card-veil);box-shadow:inset 0 0 0 1px var(--pq-ivory-line)}
+.drawer .res .v{font-size:20px;font-weight:700;letter-spacing:-0.02em}
+.drawer .res .v.blocked{color:var(--pq-bronze)}
+.drawer .res .v.reduced{color:var(--pq-bronze-light)}
+.drawer .res .v.no_surface{color:var(--pq-ivory-mid)}
+.drawer .res p{margin-top:4px;font-size:13px}
+.log{list-style:none;margin:0;padding:0;border-top:1px solid var(--pq-ivory-line-strong)}
+.log>li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:2px 12px;margin:0;padding:12px 0;border-bottom:1px solid var(--pq-ivory-line)}
+.log .no{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;
+  border:1px solid var(--pq-ivory-line-strong);font-size:12px;font-weight:600;color:var(--pq-ivory-dim);font-variant-numeric:tabular-nums}
+.log .t{font-size:13.5px;font-weight:600}
+.log .dec{margin-top:2px;font-size:13px;font-weight:600;color:var(--pq-ivory-mid)}
+.log li.block .no{background:var(--pq-bronze);border-color:var(--pq-bronze);color:var(--pq-ink)}
+.log li.block .dec{color:var(--pq-bronze)}
+.log li.act .dec{color:var(--pq-bronze-light)}
+.log li.skip{opacity:0.4}
+.log ul{margin:6px 0 0;padding:0;list-style:none}
+.log ul li{margin:2px 0;font-size:12.5px;color:var(--pq-ivory-dim)}
+.log ul li.on{color:var(--pq-ivory)}
+.drawer-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+
+/* ── ③ 개선 조치 ── */
+.acts-tools{display:inline-flex;align-items:center;gap:12px}
+.acts-tools .btn{height:36px;font-size:13.5px;padding:0 14px}
+#acts-note{margin:0 0 10px;max-width:none}
+#acts td{vertical-align:top}
+#acts .act{min-width:280px}
+#acts .act b{font-weight:600;color:var(--pq-ivory)}
+#acts .act .fine{margin-top:2px}
+#acts .eff span,#acts .sc span,#acts .reg span{display:block;white-space:nowrap;font-size:13px}
+#acts .eff b{color:var(--pq-bronze)}
+#acts .sc b{font-weight:600;color:var(--pq-ivory-soft)}
+#acts .reg b{font-weight:500;color:var(--pq-ivory-dim)}
+#acts .reg b.must{font-weight:700;color:var(--pq-ivory)}
+#acts .prop,#acts .stg{white-space:nowrap}
+#acts .prop .btn{height:32px;font-size:13px;padding:0 12px}
+#acts .in{margin-right:8px;font-weight:600;color:var(--pq-bronze)}
+#acts tr.zero td{color:var(--pq-ivory-dim)}
+#acts tr.zero .act b{color:var(--pq-ivory-mid)}
+#acts tr.inprop>td{background:var(--pq-bronze-wash)}
+
+/* ── ④ OWASP 커버리지 ── */
+#asi td{vertical-align:top}
+#asi .it b{display:block;font-weight:600;color:var(--pq-ivory)}
+#asi .it .en{display:block;font-size:12px;color:var(--pq-ivory-dim)}
+.asi-st{font-weight:700;white-space:nowrap}
+.asi-st.full{color:var(--pq-bronze)}
+.asi-st.partial{color:var(--pq-bronze-light)}
+.asi-st.gap{color:var(--pq-ivory)}
+.asi-st.na,.asi-st.none{font-weight:500;color:var(--pq-ivory-dim)}
+#asi .sc span{display:inline-block;margin:0 16px 2px 0;font-size:13px;white-space:nowrap}
+#asi .sc .r{font-weight:600}
+#asi .sc .r.blocked{color:var(--pq-bronze)}
+#asi .sc .r.reduced{color:var(--pq-bronze-light)}
+#asi .sc .r.no_surface{color:var(--pq-ivory-dim);font-weight:500}
+.lnk{padding:0;font:inherit;color:var(--pq-ivory-soft);background:none;border:0;cursor:pointer;text-decoration:underline;text-decoration-color:var(--pq-ivory-line-strong);text-underline-offset:3px}
+.lnk:hover{color:var(--pq-bronze)}
+#asi-note{margin-top:10px;max-width:none}
+#cmp tr.base td{color:var(--pq-ivory-soft)}
+
 /* ── 인쇄 · PDF: 밝은 바탕, 설정은 고른 값만, 단계 펼침 ── */
 @media print{
   @page{size:A4 landscape;margin:12mm}
@@ -369,7 +509,15 @@ select:hover{border-color:rgba(245,240,232,0.26)}
     --pq-bronze:#7a5a2e;--pq-bronze-light:#8a6a3e;--pq-bronze-wash:#f6efe4;--pq-bronze-line:#d9c7ab}
   body{min-width:0;background:#fff;color:#111}
   .wrap.wide{max-width:none;padding:0}
-  .topbar .nav,.skip,.actions,.run,footer.site .links,#scn-cases,details:not([open]),.cases-grp,#updates{display:none!important}
+  .topbar .nav,.skip,.actions,.run,footer.site .links,#scn-cases,details:not([open]),.cases-grp,#updates,
+  .drawer,.cmp-ctl,.acts-tools,#acts th:last-child,#acts td.prop,.heat-h .fine,.lnk-hint{display:none!important}
+  .hc,.strip i,.track,.track span,.legend i,.seg input:checked+span{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .hc{height:26px;font-size:11px}
+  .hc.damage{background:#f3f3f3}
+  .strip i.damage,.strip i.a-gap,.legend i.damage{background:#555}
+  .band{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .kpi,.heat tr,#acts tr,#asi tr{break-inside:avoid}
+  #posture{break-after:avoid}
   .sim{grid-template-columns:300px minmax(0,1fr);gap:24px}
   .panel{position:static;max-height:none;overflow:visible}
   .seg label:not(:has(input:checked)){display:none}
@@ -399,7 +547,7 @@ select:hover{border-color:rgba(245,240,232,0.26)}
 <header class="hero compact" id="top">
 <span class="eyebrow">모의 테스트 · AI 에이전트 내부통제</span>
 <h1>통제를 켜고 끄며, 공격을 다시 돌려 본다</h1>
-<p class="lede">회사의 통제와 에이전트 환경을 맞추면 공격 원형 11개와 실제 사건 45건이 그 설정에서 어떻게 끝나는지 바로 보인다. 통제 이름을 누르면 실무 뜻과 관할별 규제 근거가 열린다.</p>
+<p class="lede">회사의 통제와 에이전트 환경을 맞추면 공격 원형 11개와 실제 사건 45건이 그 설정에서 어떻게 끝나는지 바로 보인다. '변경안 만들기' 로 지금 설정을 기준으로 고정하면, 바꾼 만큼의 차이가 모든 숫자 옆에 붙는다.</p>
 <noscript><p class="note">이 페이지는 자바스크립트로 계산한다. 같은 결과의 표는 <a href="./simulation.md">simulation.md</a>.</p></noscript>
 </header>
 
@@ -414,19 +562,25 @@ select:hover{border-color:rgba(245,240,232,0.26)}
 <p class="hint">고르면 아래 설정이 모두 그 케이스로 바뀐다. 발표 중에는 ← → 키로 넘긴다.</p>
 </div>
 
+<div class="grp cmp-grp" role="group" aria-labelledby="h-cmp">
+<span class="lab" id="h-cmp">기준과 비교</span>
+<div class="cmp-ctl" id="cmp-ctl"></div>
+<p class="hint" id="cmp-hint"></p>
+</div>
+
 <div class="grp">
-<label class="lab" for="preset">규제 프리셋</label>
+<label class="lab" for="preset">규제 프리셋 <span class="tag" data-tag></span></label>
 <select id="preset"></select>
 <p class="hint" id="preset-hint"></p>
 </div>
 
 <div class="grp" role="group" aria-labelledby="h-ctls">
-<div class="lab-row"><span class="lab" id="h-ctls">통제 7개</span><span class="hint">이름을 누르면 실무 뜻 · 규제 근거</span></div>
+<div class="lab-row"><span class="lab" id="h-ctls">통제 7개 <span class="tag" data-tag></span></span><span class="hint">이름을 누르면 실무 뜻 · 규제 근거</span></div>
 <div id="controls" class="ctls"></div>
 </div>
 
 <div class="grp" role="group" aria-labelledby="h-env">
-<span class="lab" id="h-env">에이전트 환경</span>
+<span class="lab" id="h-env">에이전트 환경 <span class="tag" data-tag></span></span>
 <div class="env">
 <label class="sub" for="profile">종류</label><select id="profile"></select>
 <span class="sub">도구 권한</span><div class="seg" role="radiogroup" aria-label="도구 권한" id="tools"></div>
@@ -450,6 +604,13 @@ select:hover{border-color:rgba(245,240,232,0.26)}
 
 <div class="case-banner" id="case-banner" aria-live="polite"></div>
 
+<section id="posture" aria-labelledby="h-pos">
+<div class="sec-h"><h2 id="h-pos">한눈에 — 통제 없음에서 모두 AI 까지, 지금은 어디쯤</h2><span id="pos-env"></span></div>
+<div class="cmpbar" id="cmpbar" aria-live="polite"></div>
+<div class="band" id="band"></div>
+<p class="legend" id="legend"></p>
+</section>
+
 <section id="scenario" aria-labelledby="h-scn">
 <div class="sec-h"><h2 id="h-scn">① 공격 원형 11개 — 지금 설정에서</h2><span>행을 고르고 '단계별로 보기'</span></div>
 <div class="tblwrap"><table class="ov" id="ov"></table></div>
@@ -459,21 +620,34 @@ select:hover{border-color:rgba(245,240,232,0.26)}
 <div class="outcome" id="outcome" aria-live="polite"></div>
 </div>
 <details id="scn-cases"><summary id="scn-cases-h">이 원형의 근거 사건</summary><ul class="rows" id="scn-list"></ul></details>
+
+<div class="heat-h"><h3 class="h3" id="h-heat">관할 프리셋별로 — 같은 에이전트 환경에서</h3><span class="fine">칸을 누르면 왼쪽에 단계별 결정 기록이 열린다 (Esc 로 닫기)</span></div>
+<div class="tblwrap"><table class="heat" id="heat" aria-labelledby="h-heat"></table></div>
 </section>
 
 <section id="replay" aria-labelledby="h-rep">
 <div class="sec-h"><h2 id="h-rep">② 실제 사건 45건 다시 돌리기</h2><span class="seg" role="radiogroup" aria-label="판정 기준" id="basis"></span></div>
 <div class="cards four" id="rep-cards"></div>
 <p class="fine" id="rep-explain"></p>
-<div class="two">
-<div><h3 class="h3">다음에 AI 까지 켤 통제</h3><div id="next"></div></div>
-<div><h3 class="h3">프리셋끼리 비교</h3><div class="tblwrap"><table id="cmp"></table></div></div>
-</div>
+<h3 class="h3">프리셋끼리 비교</h3>
+<div class="tblwrap"><table id="cmp"></table></div>
 <details><summary>사건별 결과</summary><div class="tblwrap"><table id="per"></table></div></details>
 </section>
 
+<section id="actions" aria-labelledby="h-act">
+<div class="sec-h"><h2 id="h-act">③ 개선 조치 — 통제 하나를 AI 까지 올리면</h2><span class="acts-tools"><button type="button" class="btn" id="acts-csv">CSV 내보내기</button><span class="fine" id="csv-msg" aria-live="polite"></span></span></div>
+<p class="fine" id="acts-note"></p>
+<div class="tblwrap"><table id="acts"></table></div>
+</section>
+
+<section id="owasp" aria-labelledby="h-asi">
+<div class="sec-h"><h2 id="h-asi">④ OWASP Agentic Top 10 커버리지</h2><span id="asi-sum"></span></div>
+<div class="tblwrap"><table id="asi"></table></div>
+<p class="fine" id="asi-note"></p>
+</section>
+
 <section id="updates" aria-labelledby="h-upd">
-<div class="sec-h"><h2 id="h-upd">③ 규제가 바뀌면</h2><span id="reg-meta"></span></div>
+<div class="sec-h"><h2 id="h-upd">⑤ 규제가 바뀌면</h2><span id="reg-meta"></span></div>
 <p class="fine">규제 문서가 레지스트리에 들어오고 코딩되면 프리셋 · 규제 근거 · 두 테스트가 다시 계산된다. 결과가 바뀐 때마다 이력이 남고, 결과가 달라진 데모 케이스에는 경고가 뜬다.</p>
 <div class="two">
 <div><h3 class="h3">업데이트 이력</h3><ol class="hist" id="hist"></ol></div>
@@ -488,8 +662,10 @@ select:hover{border-color:rgba(245,240,232,0.26)}
 <li><b>예측이 아니라 반사실 연습이다.</b> ②는 "그 사건에서 실패했다고 판정된 통제가 켜져 있었다면" 을 가정한다. 통제가 있어도 뚫릴 수 있고, 다른 경로가 있었을 수 있다 — 그래서 막힘을 하한~상한으로 낸다.</li>
 <li><b>판단 근거 없음</b> 은 공개 자료가 피해 쪽 통제를 적지 않은 사건이다(대부분 공격자가 AI 를 쓴 사건). 막혔다는 뜻도, 못 막았다는 뜻도 아니다.</li>
 <li>사건 판정은 서로 보지 않은 AI 코더 두 팀(κ 0.96)과 조정을 거쳤다. ①의 공격 원형·단계·통제 배치, 통제의 실무 뜻, 데모 케이스(가상 회사)는 저자 설계로, 블라인드 코딩을 거치지 않았다. 원형 6개는 실제 사건이 아니라 OWASP Agentic Top 10 같은 위협 목록에서 왔다('사건 없음' 표시).</li>
+<li><b>④ OWASP 커버리지는 자체 계산이다.</b> 그 항목을 근거로 둔 원형들의 결과를 모았을 뿐, OWASP 의 평가·인증이 아니다. 원형이 없는 항목(예: 코드 실행)은 재지 않는다.</li>
+<li><b>③ 개선 조치의 효과는 하나씩 따로 잰 값이다.</b> 둘을 더하면 겹치는 사건이 두 번 세어진다 — 합친 효과는 변경안에 넣어 위 숫자로 본다. 비용·난이도는 따지지 않는다.</li>
 <li>규제 프리셋은 문서가 요구하는 통제를 이 에이전트에 모두 적용했다고 가정한다. 적용 대상(예: AI 기본법의 사람 관리·감독은 고영향 AI 만)은 따지지 않는다.</li>
-<li>이 페이지는 아무것도 저장하거나 보내지 않는다. 설정은 주소창의 # 뒤에만 있다.</li>
+<li>이 페이지는 아무것도 저장하거나 보내지 않는다. 설정은 주소창의 # 뒤에만 있고, CSV 는 이 브라우저에서 만들어 내려받는다.</li>
 </ul>
 </section>
 
@@ -504,6 +680,12 @@ select:hover{border-color:rgba(245,240,232,0.26)}
 </footer>
 
 </div>
+
+<aside class="drawer" id="drawer" role="dialog" aria-modal="false" aria-labelledby="drawer-h" hidden>
+<div class="drawer-top"><div><div class="k" id="drawer-k"></div><h2 id="drawer-h"></h2></div><button type="button" class="btn sq" id="drawer-x" aria-label="닫기 (Esc)">×</button></div>
+<div id="drawer-body"></div>
+</aside>
+
 <script src="./sim-data.js"></script>
 <script src="./sim-engine.js"></script>
 <script src="./sim-ui.js"></script>

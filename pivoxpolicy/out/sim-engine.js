@@ -1,5 +1,6 @@
-/* sim-engine.js — 모의 테스트 계산. pivoxpolicy/sim.py 의 run_scenario · replay_one · replay · best_next 를 그대로 옮긴 것.
-   규칙을 바꾸면 sim.py 도 같이 바꾼다 — tests/test_sim.py 가 node 로 두 구현의 결과를 대조한다. 화면 코드 없음. */
+/* sim-engine.js — 모의 테스트 계산. pivoxpolicy/sim.py 의 run_scenario · replay_one · replay · best_next ·
+   asi_coverage · improvement_actions 를 그대로 옮긴 것. 규칙을 바꾸면 sim.py 도 같이 바꾼다 —
+   tests/test_sim.py 가 node 로 두 구현의 결과를 대조한다. 화면 코드 없음(toCSV 만 파이썬 짝이 없는 내보내기 도우미). */
 (function (root) {
   "use strict";
 
@@ -72,7 +73,62 @@
     return out;
   }
 
-  var api = { covers: covers, runScenario: runScenario, replayOne: replayOne, replay: replay, bestNext: bestNext };
+  var ASI_RE = /\bOWASP (ASI\d{2})\b/g;
+  function asiOf(scn) {
+    var seen = {};
+    (scn.basis || []).forEach(function (b) {
+      String(b).replace(ASI_RE, function (_, a) { seen[a] = true; return _; });
+    });
+    return Object.keys(seen).sort();
+  }
+
+  function asiCoverage(scenarios, env, levels, catalog) {
+    return catalog.map(function (item) {
+      var rows = scenarios.filter(function (s) { return asiOf(s).indexOf(item.id) >= 0; })
+        .map(function (s) { return { id: s.id, outcome: runScenario(s, env, levels).outcome }; });
+      var live = rows.filter(function (r) { return r.outcome !== "no_surface"; });
+      var status = !rows.length ? "none" : !live.length ? "na"
+        : live.every(function (r) { return r.outcome === "blocked"; }) ? "full"
+        : live.every(function (r) { return r.outcome === "damage"; }) ? "gap" : "partial";
+      return { id: item.id, status: status, scenarios: rows };
+    });
+  }
+
+  function improvementActions(scenarios, env, failures, levels, stageOf, statedOnly) {
+    var baseR = replay(failures, levels, stageOf, statedOnly), baseS = {}, out = [];
+    scenarios.forEach(function (s) { baseS[s.id] = runScenario(s, env, levels).outcome; });
+    Object.keys(levels).sort().forEach(function (c) {
+      if (levels[c] >= 2) return;
+      var up = Object.assign({}, levels); up[c] = 2;
+      var r = replay(failures, up, stageOf, statedOnly), changed = [];
+      scenarios.forEach(function (s) {
+        var o = runScenario(s, env, up).outcome;
+        if (o !== baseS[s.id]) changed.push({ id: s.id, from: baseS[s.id], to: o });
+      });
+      out.push({ control: c, from: Number(levels[c]), inc_lo: r.blocked_lo - baseR.blocked_lo,
+                 inc_hi: r.blocked_hi - baseR.blocked_hi, scenarios: changed });
+    });
+    out.sort(function (a, b) {
+      return b.inc_lo - a.inc_lo || b.inc_hi - a.inc_hi || b.scenarios.length - a.scenarios.length ||
+        (a.control < b.control ? -1 : a.control > b.control ? 1 : 0);
+    });
+    return out;
+  }
+
+  // CSV — 엑셀이 한글을 읽게 BOM, 줄 끝 CRLF. 수식으로 읽힐 글(= + - @ 탭 CR 로 시작)은 앞에 ' 를 붙인다(CSV 수식 주입).
+  function csvCell(v) {
+    if (v === null || v === undefined) return "";
+    if (typeof v === "number") return String(v);
+    var t = String(v);
+    if (/^[=+\-@\t\r]/.test(t)) t = "'" + t;
+    return /[",\r\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
+  }
+  function toCSV(rows) {
+    return "\ufeff" + rows.map(function (r) { return r.map(csvCell).join(","); }).join("\r\n") + "\r\n";
+  }
+
+  var api = { covers: covers, runScenario: runScenario, replayOne: replayOne, replay: replay, bestNext: bestNext,
+              asiOf: asiOf, asiCoverage: asiCoverage, improvementActions: improvementActions, toCSV: toCSV };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.PivoxSimEngine = api;
 })(this);
