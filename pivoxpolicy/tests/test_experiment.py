@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 import pytest
 
 from pivoxpolicy import experiment as X
@@ -50,7 +52,7 @@ def test_outputs(R, tmp_path):
     md = (tmp_path / "summary.md").read_text(encoding="utf-8")
     assert "## 결과 요약" in md and "표 4." in md
     page = X.page(R)
-    assert "<script" not in page and "그림 1" in page and "그림 2" in page and "표 1" in page and "명문 기준" in page
+    assert re.findall(r"<script[^>]*>", page) == ['<script src="./pager.js">'] and "그림 1" in page and "그림 2" in page and "표 1" in page and "명문 기준" in page
     assert "gen-" not in page                                                   # 페이지는 식별자 대신 공격 유형 이름을 쓴다
     assert "least_privilege" not in " ".join(X.findings(R))                     # 요약 문장은 통제 이름을 한국어로
 

@@ -25,11 +25,11 @@ def test_offline_pages_are_self_contained(tmp_path):
                                          '<a href="sim.html">s</a><a href="dashboard.html#matrix">d</a><a href="offline/pivoxpolicy-sim.html" download>o</a></body></html>', encoding="utf-8")
     (tmp_path / "dashboard.html").write_text('<!doctype html><html><head><meta charset="utf-8" /></head><body></body></html>', encoding="utf-8")
     from pivoxpolicy import experiment
-    (tmp_path / "experiment.html").write_text(experiment.page(experiment.run()), encoding="utf-8")
+    experiment.build(out_dir=tmp_path)                      # experiment.html + pager.js(화면 넘김)
     names = {p.name for p in bundle.build(out_dir=tmp_path)}
     assert {"pivoxpolicy-home.html", "pivoxpolicy-dashboard.html", "pivoxpolicy-sim.html", "pivoxpolicy-experiment.html", "simulation.md"} <= names
     exp = (tmp_path / "offline" / "pivoxpolicy-experiment.html").read_text(encoding="utf-8")
-    assert "<script" not in exp and 'href="pivoxpolicy-sim.html"' in exp and "script-src 'none'" in exp
+    assert 'href="pivoxpolicy-sim.html"' in exp and "<script src=" not in exp and "script-src 'sha256-" in exp   # 화면 넘김 스크립트만 인라인, 해시로만 실행
     page = (tmp_path / "offline" / "pivoxpolicy-sim.html").read_text(encoding="utf-8")
     assert not re.search(r"<script\s+src=", page) and page.count("<script>") == 3
     csp = re.search(r'http-equiv="Content-Security-Policy" content="([^"]+)"', page).group(1)

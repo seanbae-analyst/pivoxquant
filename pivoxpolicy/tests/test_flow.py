@@ -73,7 +73,8 @@ def test_flow_escapes_and_has_no_script():
 def test_experiment_page(F):
     R = X.run()
     page = X.page(R, F)
-    assert "명령 흐름" in page and "<svg" not in page and "<script" not in page
+    assert "명령 흐름" in page and "<svg" not in page and re.findall(r"<script[^>]*>", page) == ['<script src="./pager.js">']
+    assert [m for m in re.findall(r'<section class="pg[^"]*" id="([a-z]+)"', page)] == ["cover", "result", "flow", "all", "types", "more"]
     assert page.count('<div class="fr-row">') == sum(len(f["cases"]) for f in F.values())       # 시나리오마다 한 줄
     assert page.count('class="cmp-row') == 3 and 'class="d v-' not in page                        # 그림 1: 기준 셋 막대
     assert "border-radius:50%" not in flow.CSS and "dotted" not in flow.CSS and "dashed" not in flow.CSS   # 동그라미 · 점선 없음

@@ -231,7 +231,7 @@ def build(out_dir: Path = OUT_DIR, snapshot_dir: Path = SNAPSHOT_DIR, now: datet
 
     preview, preview_cap = _preview(f)
     repl = {
-        "TOKENS_CSS": _tpl("tokens.css"), "BASE_CSS": _tpl("base.css"), "FLOW_CSS": _tpl("flow.css"), "LANDING_CSS": _tpl("landing.css"),
+        "TOKENS_CSS": _tpl("tokens.css"), "BASE_CSS": _tpl("base.css"), "FLOW_CSS": _tpl("flow.css"), "LANDING_CSS": _tpl("landing.css"), "PAGER_CSS": _tpl("pager.css"),
         "BUILT_AT_ISO": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "BUILT_AT": f"{now.year}년 {now.month}월 {now.day}일",
         "N_DOCS": str(f["n_docs"]), "N_NORM": str(f["n_norm"]), "N_INC": str(f["n_inc"]), "JUDGED": str(f["judged"]),
         "N_SCN": str(f["n_scn"]), "N_CASES": str(f["n_cases"]), "N_PROFILES": str(f["n_profiles"]),
@@ -247,4 +247,5 @@ def build(out_dir: Path = OUT_DIR, snapshot_dir: Path = SNAPSHOT_DIR, now: datet
     out_dir.mkdir(parents=True, exist_ok=True)
     p = out_dir / "index.html"
     p.write_text(page, encoding="utf-8")
+    (out_dir / "pager.js").write_text(_tpl("pager.js"), encoding="utf-8")   # 화면 넘김(실험 페이지와 같은 파일)
     return p

@@ -13,6 +13,7 @@
 {{BASE_CSS}}
 {{FLOW_CSS}}
 {{LANDING_CSS}}
+{{PAGER_CSS}}
 </style>
 </head>
 <body>
@@ -25,17 +26,22 @@
 <a href="sim.html">모의 테스트</a><a href="experiment.html">실험</a><a href="dashboard.html">대시보드</a><a href="#method">방법</a>
 </nav>
 </header>
+<nav class="pg-railbar" data-pager-rail aria-label="화면"></nav>
 
-<main id="main">
+<main id="main" data-pager>
 
-<header class="masthead" id="top">
-<p class="kicker">연구 노트 <time datetime="{{BUILT_AT_ISO}}">{{BUILT_AT}}</time> 기준</p>
-<h1>AI 에이전트 시대, 금융회사 내부통제는 안전한가</h1>
-<p class="deck">규제가 요구하는 통제를 두 갈래로 나눠 읽었다. 직원과 계정에 거는 통제가 하나, 같은 통제를 AI 에이전트에 거는 것이 또 하나다. 한국과 미국, EU의 문서 {{N_DOCS}}건을 이렇게 다시 판정하고, 공개된 AI 에이전트 사건 {{N_INC}}건에 비춰 봤다.</p>
-<p class="go"><a class="btn btn-primary" href="sim.html">모의 테스트 열기</a><a class="more" href="dashboard.html">대시보드에서 문서와 조문 보기</a></p>
-</header>
+<section class="pg pg-cover" id="top" data-title="표지" aria-labelledby="h-top">
+<div class="pg-spot" aria-hidden="true"></div>
+<p class="pg-kicker">연구 노트 · <time datetime="{{BUILT_AT_ISO}}">{{BUILT_AT}}</time> 기준</p>
+<p class="pg-wordmark" aria-hidden="true">Pivox<span>Policy</span></p>
+<h1 class="pg-q" id="h-top">AI 에이전트 시대, 금융회사 내부통제는 안전한가</h1>
+<p class="pg-sub">규제가 요구하는 통제를 두 갈래로 나눠 읽었다. 직원과 계정에 거는 통제가 하나, 같은 통제를 AI 에이전트에 거는 것이 또 하나다. 한국과 미국, EU의 문서 {{N_DOCS}}건을 이렇게 다시 판정하고, 공개된 AI 에이전트 사건 {{N_INC}}건에 비춰 봤다.</p>
+<a class="pg-start" href="#finding" data-pager-start>시작하기 <span aria-hidden="true">→</span></a>
+<p class="pg-links"><a href="sim.html">모의 테스트</a><a href="experiment.html">실험</a><a href="dashboard.html">대시보드</a></p>
+<p class="pg-hint">화면을 누르면 넘어간다</p>
+</section>
 
-<section class="sh lead" id="finding" aria-labelledby="h-sum">
+<section class="pg sh lead" id="finding" data-title="요약" aria-labelledby="h-sum">
 <h2 id="h-sum">요약</h2>
 <div class="lead-grid">
 <div class="summary">
@@ -51,7 +57,7 @@
 </div>
 </section>
 
-<section class="sh" id="sim" aria-labelledby="h-sim">
+<section class="pg sh" id="sim" data-title="모의 테스트" aria-labelledby="h-sim">
 <h2 id="h-sim">모의 테스트</h2>
 <div>
 <p class="body">회사의 통제 수준과 에이전트 환경을 고르면 두 가지가 바로 계산된다. 공격 원형 {{N_SCN}}개가 단계마다 어떤 통제 앞에서 멈추는지, 그리고 공개 사건 {{N_INC}}건이 그 설정이었다면 어떻게 끝났을지. 가상 회사 데모 케이스 {{N_CASES}}개가 들어 있어 발표 중에 넘겨 가며 쓸 수 있다.</p>
@@ -76,7 +82,7 @@
 </div>
 </section>
 
-<section class="sh" id="method" aria-labelledby="h-method">
+<section class="pg sh" id="method" data-title="방법" aria-labelledby="h-method">
 <h2 id="h-method">방법</h2>
 <div>
 <div class="tblwrap">{{METHOD}}</div>
@@ -84,7 +90,7 @@
 </div>
 </section>
 
-<section class="sh" id="limits" aria-labelledby="h-lim">
+<section class="pg sh" id="limits" data-title="한계" aria-labelledby="h-lim">
 <h2 id="h-lim">한계</h2>
 <ul class="lim">
 <li>법률 자문이 아니다. 공개된 문서와 사건 자료로 무엇이 요구되는지, 그리고 공개된 증거가 어느 수준인지를 잴 뿐이다. 회사가 실제로 통제를 갖췄는지는 알 수 없다.</li>
@@ -95,6 +101,11 @@
 </section>
 
 </main>
+<div class="pg-nav" data-pager-nav>
+<button type="button" class="pg-btn prev" data-pager-prev><span aria-hidden="true">←</span><span class="lab">이전</span></button>
+<span class="pg-count" data-pager-count></span>
+<button type="button" class="pg-btn next" data-pager-next><span data-pager-next-label>다음</span><span aria-hidden="true">→</span></button>
+</div>
 
 <footer class="site">
 <span>PivoxPolicy 정책 연구. 법률 자문이 아니다.</span>
@@ -102,5 +113,6 @@
 </footer>
 
 </div>
+<script src="./pager.js"></script>
 </body>
 </html>

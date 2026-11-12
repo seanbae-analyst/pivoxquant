@@ -396,27 +396,33 @@ def page(R: dict[str, Any], F: dict[str, dict[str, Any]] | None = None) -> str:
 
     dep_rows = "".join(f"<li><b>{e(x['id'] + ' ' + x['label'])}</b> {e(', '.join(_dep_names(x)) or '없음')}</li>" for x in R["agents"])
     body = f"""
-<header class="masthead" id="top">
-<p class="kicker">실험 노트 · {e(m['generated_at'][:10])} 기준</p>
-<h1>같은 공격, 규제를 어떻게 읽느냐에 따라</h1>
-<p class="deck">증권사 AI 에이전트 {len(R['agents'])}개 유형에 공격 시나리오 {total}개를 같은 런타임으로 돌렸다. 바꾼 것은 규제를 읽는 방식 하나다.</p>
-</header>
-<section class="sh lead" aria-labelledby="h-r"><h2 id="h-r">결과</h2><div>
+<section class="pg pg-cover" id="cover" data-title="표지" aria-labelledby="h-cover">
+<div class="pg-spot" aria-hidden="true"></div>
+<p class="pg-kicker">실험 노트 · {e(m['generated_at'][:10])} 기준</p>
+<p class="pg-wordmark" aria-hidden="true">Pivox<span>Policy</span></p>
+<h1 class="pg-q" id="h-cover">같은 공격, 규제를 어떻게 읽느냐에 따라</h1>
+<p class="pg-sub">증권사 AI 에이전트 {len(R['agents'])}개 유형, 공격 시나리오 {total}개를 같은 런타임으로 돌렸다. 바꾼 것은 규제를 읽는 방식 하나다.</p>
+<a class="pg-start" href="#result" data-pager-start>시작하기 <span aria-hidden="true">→</span></a>
+<p class="pg-hint">화면을 누르면 넘어간다</p>
+</section>
+<section class="pg sh lead" id="result" data-title="결과" aria-labelledby="h-r"><h2 id="h-r">결과</h2><div>
 <figure class="fig"><figcaption><b>그림 1</b> 막대 하나가 공격 시나리오 {total}개 전체다. 밝은 부분이 막지 못한 것이다.</figcaption>{bar_key()}{figure_compare(R)}</figure>
 <p class="callout"><b>{dep}개</b>({round(100 * dep / total) if total else 0}%)는 규제를 어떻게 읽느냐에 따라 판정이 바뀐다.</p>
 </div></section>
-<section class="sh" aria-labelledby="h-f"><h2 id="h-f">명령 흐름</h2><div>
+<section class="pg sh" id="flow" data-title="명령 흐름" aria-labelledby="h-f"><h2 id="h-f">명령 흐름</h2><div>
 <p class="body">명령 하나는 런타임의 관문 일곱 개를 차례로 지난다. 명문 기준에서는 관문 대부분이 비어 있어 명령이 그대로 지나간다.</p>
 {flow.legend()}{flow.gate_list()}
 {flow_figs}
-<h3 class="deph">시나리오 전체</h3>
-{flow_catalog(F)}
 </div></section>
-<section class="sh" aria-labelledby="h-a"><h2 id="h-a">유형별</h2><div>
+<section class="pg sh" id="all" data-title="시나리오 전체" aria-labelledby="h-all"><h2 id="h-all">시나리오 전체</h2><div>
+<p class="body">유형을 펼치면 시나리오마다 작은 노선 두 개(명문 기준 · 확장 해석)가 나온다.</p>
+{flow.legend()}{flow_catalog(F)}
+</div></section>
+<section class="pg sh" id="types" data-title="유형별" aria-labelledby="h-a"><h2 id="h-a">유형별</h2><div>
 <figure class="fig"><figcaption><b>그림 {nxt}</b> 유형별 판정. 숫자는 미차단 수다.</figcaption>{bar_key()}{figure_types(R)}</figure>
 <p class="callout">명문 기준이 AI 수준 통제를 하나도 요구하지 않는 유형: <b>{e(', '.join(none_ai) or '없음')}</b></p>
 </div></section>
-<section class="sh" aria-labelledby="h-d"><h2 id="h-d">자세히</h2><div>
+<section class="pg sh" id="more" data-title="자세히" aria-labelledby="h-d"><h2 id="h-d">자세히</h2><div>
 <details class="more"><summary>요약 문장</summary><div class="summary">{''.join(f'<p>{e(x)}</p>' for x in findings(R))}</div></details>
 <details class="more"><summary>표 1 · 2 유형별 적용 조문과 판정</summary>{table(T[0])}{table(T[1])}</details>
 <details class="more"><summary>표 3 공격 유형별 판정과 해석 의존 시나리오</summary>{table(T[2])}<ul class="dep">{dep_rows}</ul></details>
@@ -509,6 +515,7 @@ def page(R: dict[str, Any], F: dict[str, dict[str, Any]] | None = None) -> str:
 {_tpl("base.css")}
 {_tpl("landing.css")}
 {css}
+{_tpl("pager.css")}
 </style>
 </head>
 <body>
@@ -518,10 +525,17 @@ def page(R: dict[str, Any], F: dict[str, dict[str, Any]] | None = None) -> str:
 <a class="brand" href="./" aria-label="PivoxPolicy 홈">Pivox<span class="b">Policy</span></a>
 <nav class="nav" aria-label="페이지"><a href="sim.html">모의 테스트</a><a href="dashboard.html">대시보드</a><a href="./">첫 화면</a></nav>
 </header>
-<main id="main">{body}
+<nav class="pg-railbar" data-pager-rail aria-label="화면"></nav>
+<main id="main" data-pager>{body}
 </main>
+<div class="pg-nav" data-pager-nav>
+<button type="button" class="pg-btn prev" data-pager-prev><span aria-hidden="true">←</span><span class="lab">이전</span></button>
+<span class="pg-count" data-pager-count></span>
+<button type="button" class="pg-btn next" data-pager-next><span data-pager-next-label>다음</span><span aria-hidden="true">→</span></button>
+</div>
 <footer class="site"><span>PivoxPolicy 실험 노트. 법률 자문이 아니다.</span><span class="links"><a href="./">첫 화면</a></span></footer>
 </div>
+<script src="./pager.js"></script>
 </body>
 </html>
 """
@@ -533,4 +547,7 @@ def build(out_dir: Path = OUT_DIR) -> list[Path]:
     paths = write_all(out_dir / "experiment", R)
     p = out_dir / "experiment.html"
     p.write_text(page(R), encoding="utf-8")
-    return [p, *paths]
+    from .landing import _tpl
+    js = out_dir / "pager.js"                 # 화면 넘김(templates/pager.js) — 배포는 파일로, 오프라인 사본은 bundle 이 인라인한다
+    js.write_text(_tpl("pager.js"), encoding="utf-8")
+    return [p, js, *paths]

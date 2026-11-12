@@ -13,7 +13,8 @@ def test_landing_builds_from_registry(tmp_path):
     p = landing.build(out_dir=tmp_path, now=datetime(2026, 11, 12, tzinfo=timezone.utc))
     assert p.name == "index.html"
     page = p.read_text(encoding="utf-8")
-    assert "{{" not in page and "<script" not in page                 # CSP script-src 'self' — 첫 화면은 스크립트가 없다
+    assert "{{" not in page and re.findall(r"<script[^>]*>", page) == ['<script src="./pager.js">']   # CSP script-src 'self' — 스크립트는 화면 넘김(pager.js) 하나
+    assert page.count('class="pg ') + page.count('class="pg"') == 5 and 'data-pager' in page and (tmp_path / "pager.js").exists()
     for w in ("추천", "조언", "안전합니다", "적정합니다", "보장합니다"):
         assert w not in page, w
     for href in ('href="sim.html"', 'href="dashboard.html"', 'href="dashboard.html#method"', 'href="#method"'):
