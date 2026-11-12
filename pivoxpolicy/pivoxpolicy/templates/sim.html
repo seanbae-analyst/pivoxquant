@@ -95,9 +95,11 @@
 </section>
 
 <section id="scenario" aria-labelledby="h-scn">
-<div class="sec-h"><h2 id="h-scn">① 공격 원형 {{N_SCENARIOS}}개 — 지금 설정에서</h2><span>행을 고르고 '단계별로 보기'</span></div>
+<div class="sec-h"><h2 id="h-scn">① 공격 원형 {{N_SCENARIOS}}개 — 지금 설정에서</h2><span>행을 고르면 아래에 그 원형의 공격 흐름</span></div>
 <div class="tblwrap"><table class="ov" id="ov"></table></div>
-<p class="run"><button type="button" class="btn btn-primary" id="run">단계별로 보기</button><span class="dim" id="run-hint"></span></p>
+<div class="flow-h"><h3 class="h3" id="h-flow">공격 흐름 — <span id="flow-name"></span></h3><span class="fine flow-key"><i class="k-on"></i>켜진 통제 <i class="k-off"></i>꺼진 통제 · 통제에 마우스를 올리면 그 단계에 있는 이유</span></div>
+<div class="flow-wrap" id="flow"></div>
+<p class="run"><button type="button" class="btn btn-primary" id="run">흐름 따라 보기</button><span class="dim" id="run-hint">공격이 단계를 지나는 순서대로 보여 주고, 아래에 단계마다 근거를 편다</span></p>
 <div class="walk">
 <ol class="stages" id="stages" aria-label="공격 단계"></ol>
 <div class="outcome" id="outcome" aria-live="polite"></div>

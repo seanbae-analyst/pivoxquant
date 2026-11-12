@@ -90,7 +90,7 @@ def test_build_writes_page(tmp_path):
     assert len(sim.load_history(tmp_path / "h.jsonl")) == 1
     html = (tmp_path / "sim.html").read_text(encoding="utf-8")
     assert "{{" not in html and "<script>" not in html     # CSP script-src 'self' — 인라인 스크립트 없음
-    for part in ('id="band"', 'id="heat"', 'id="drawer"', 'id="acts"', 'id="acts-csv"', 'id="asi"', 'id="cmp-ctl"'):
+    for part in ('id="band"', 'id="flow"', 'id="heat"', 'id="drawer"', 'id="acts"', 'id="acts-csv"', 'id="asi"', 'id="cmp-ctl"'):
         assert part in html, part                            # 한눈에 · 히트맵 + 서랍 · 개선 조치 + CSV · OWASP · 변경안 비교
     md = (tmp_path / "simulation.md").read_text(encoding="utf-8")
     assert "## OWASP Agentic Top 10 커버리지" in md and "## 개선 조치" in md

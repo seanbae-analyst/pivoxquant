@@ -13,6 +13,8 @@
   var STAGE_KO = { before: "배치 전", in_use: "사용 중", after: "사후" };
   var EFFECT_ON = { prevent: "막음", limit: "닿는 범위를 줄임", detect: "알아챔", contain: "멈추고 회수" };
   var DECISION = { prevent: "차단", limit: "범위 제한", detect: "기록·탐지", contain: "멈춤·회수" };
+  var ENTRY_KO = { untrusted_input: "외부 입력을 읽는다", open_components: "외부 구성요소를 들인다",
+                   memory: "장기 메모리를 쓴다", multi_agent: "다른 에이전트와 일을 주고받는다" };
   var TOOLS = [["read", "조회만"], ["write", "쓰기·실행"], ["pay", "송금·결제"]];
   var REQ_KO = { untrusted_input: "외부 입력을 읽지 않는다", open_components: "외부 구성요소를 들이지 않는다",
                  memory: "장기 메모리를 쓰지 않는다", multi_agent: "다른 에이전트와 일을 주고받지 않는다" };
@@ -436,7 +438,6 @@
   function renderWalk(animate) {
     var s = scnById[state.scenario], r = E.runScenario(s, state.env, state.levels);
     var ol = clear($("stages")), out = clear($("outcome")), items = [];
-    $("run-hint").textContent = s.title;
     if (r.outcome === "no_surface") {
       ol.appendChild(el("li", { cls: "stage blocked" }, [el("span", { cls: "no", text: "–" }), el("div", null, [
         el("div", { cls: "t", text: "이 공격은 시작되지 않는다" }),
@@ -478,6 +479,75 @@
     } else show();
     renderCases(s);
   }
+  // ── ① 공격 흐름: 진입 → 단계 → 결과, 단계마다 통제(켜짐/꺼짐) ──
+  function flowStates(s, r) {
+    return s.stages.map(function (st, idx) {
+      var step = r.steps[idx];
+      if (!step) return "after";
+      if (step.blocked_by) return "stop";
+      return step.checks.some(function (c) { return c.on; }) ? "touch" : "pass";
+    });
+  }
+  function flowRow(s, levels, env, label, baseStates, baseOutcome) {
+    var r = E.runScenario(s, env, levels), row = el("div", { cls: "flow-row" });
+    var req = s.requires || [];
+    var head = el("div", { cls: "flow-top" }, [label ? el("span", { cls: "flow-l", text: label }) : null,
+      el("span", { cls: "entry", text: req.length ? "진입 조건 — 에이전트가 " + req.map(function (x) { return ENTRY_KO[x]; }).join(" · ") : "진입 조건 없음 — 어느 에이전트에서나 시작될 수 있다" })]);
+    row.appendChild(head);
+    if (r.outcome === "no_surface") {
+      row.appendChild(el("div", { cls: "flow-none" }, [el("b", { text: "시작되지 않음" }),
+        " — 지금 환경에서 에이전트가 " + r.missing.map(function (x) { return REQ_KO[x]; }).join(", ") + ". 공격 흐름이 없다."]));
+      return row;
+    }
+    var states = flowStates(s, r);
+    var ol = el("ol", { cls: "flow", "aria-label": (label ? label + " — " : "") + short(s) + " 공격 흐름" });
+    ol.style.gridTemplateColumns = "repeat(" + s.stages.length + ", minmax(0,1fr)) 176px";
+    s.stages.forEach(function (st, idx) {
+      var step = r.steps[idx], stt = states[idx], on = [];
+      var gates = el("ul", { cls: "gates" });
+      (st.checks || []).forEach(function (c, j) {
+        var lv = Number(levels[c.control] || 0), o = step ? step.checks[j].on : E.covers(lv, c.layer);
+        if (o && step) on.push(DECISION[c.effect]);
+        gates.appendChild(el("li", { cls: o ? "on " + c.effect : "off", title: cname(c.control) + " · " + LAYER_KO[c.layer] + " — " + c.why +
+            (o ? "" : " (이 설정: " + LEVEL_KO[lv] + ")") }, [
+          el("i"), el("span", { cls: "g", text: cname(c.control) + " " + (c.layer === "agent" ? "AI" : "사람") }),
+          el("span", { cls: "e", text: o ? DECISION[c.effect] : "꺼짐" })]));
+      });
+      if (!(st.checks || []).length) gates.appendChild(el("li", { cls: "none", text: "끼어드는 통제 없음" }));
+      var tag = stt === "stop" ? "여기서 차단" : stt === "after" ? "도달 안 함" : stt === "touch" ? on.join(" · ") : "통과";
+      var moved = baseStates && baseStates[idx] !== stt;
+      ol.appendChild(el("li", { cls: "fn " + stt + (moved ? " chg" : "") }, [
+        el("div", { cls: "fh" }, [el("span", { cls: "no", text: String(idx + 1) }), el("span", { cls: "tag", text: tag })]),
+        el("div", { cls: "ft", text: st.title }), gates]));
+    });
+    var endMoved = baseOutcome && baseOutcome !== r.outcome;
+    ol.appendChild(el("li", { cls: "fn end " + r.outcome + (endMoved ? " chg" : "") }, [
+      el("div", { cls: "fh" }, [el("span", { cls: "tag", text: "결과" })]),
+      el("div", { cls: "ft", text: RESULT_KO[r.outcome] + (r.outcome === "blocked" ? " · " + r.stage + "단계" : "") }),
+      el("p", { cls: "fi", text: r.outcome === "blocked" ? "막지 못했다면: " + r.impact :
+        r.outcome === "reduced" ? "줄인 통제: " + whereText(r).split(" — ")[0] + " · 남은 피해: " + r.impact :
+        r.impact + (r.contained === "late" ? " · 멈출 수단은 있었지만 늦게" : "") })]));
+    row.appendChild(ol);
+    return row;
+  }
+  function renderFlow(animate) {
+    var s = scnById[state.scenario], box = clear($("flow"));
+    $("flow-name").textContent = short(s);
+    if (state.base) {
+      var rb = E.runScenario(s, state.base.env, state.base.levels);
+      box.appendChild(flowRow(s, state.base.levels, state.base.env, "기준"));
+      box.appendChild(flowRow(s, state.levels, state.env, "변경안", rb.outcome === "no_surface" ? null : flowStates(s, rb), rb.outcome));
+    } else box.appendChild(flowRow(s, state.levels, state.env, ""));
+    if (animate && !reduceMotion) {
+      Array.prototype.forEach.call(box.querySelectorAll(".flow"), function (ol) {
+        Array.prototype.forEach.call(ol.children, function (li, i) {
+          li.classList.add("pending");
+          setTimeout(function () { li.classList.remove("pending"); }, 120 + i * 420);
+        });
+      });
+    }
+  }
+
   function renderCases(s) {
     $("scn-cases-h").textContent = s.incidents.length ? "이 원형의 근거 사건 " + s.incidents.length + "건" : "이 원형의 근거 — " + (s.basis || []).join(" · ");
     var ul = clear($("scn-list"));
@@ -593,9 +663,9 @@
     }
     body.appendChild(ol);
     var acts = el("div", { cls: "drawer-acts" });
-    acts.appendChild(button("①에서 단계별로 보기", "", function () {
-      state.scenario = s.id; closeDrawer(); update(); renderWalk(true);
-      var o = $("stages");
+    acts.appendChild(button("①에서 흐름 따라 보기", "", function () {
+      state.scenario = s.id; closeDrawer(); update(); renderFlow(true); renderWalk(true);
+      var o = $("h-flow");
       if (o.scrollIntoView) o.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
     }));
     if (col.preset) {
@@ -854,7 +924,7 @@
     var fid = pendingFocus || (document.activeElement && document.activeElement.id);
     pendingFocus = null;
     renderCompareCtl(); renderPresetHint(); renderControls(); renderEnv(); renderCaseBanner(); renderCompareBar(); renderBand();
-    renderOverview(); renderWalk(false); renderHeat(); renderReplay(); renderActions(); renderAsi();
+    renderOverview(); renderFlow(false); renderWalk(false); renderHeat(); renderReplay(); renderActions(); renderAsi();
     if (state.drawer) renderDrawer();
     writeHash();
     var f = fid && $(fid);
@@ -884,9 +954,9 @@
     update();
   });
   $("run").addEventListener("click", function () {
-    renderWalk(true);
-    var ol = $("stages");
-    if (ol.scrollIntoView) ol.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+    renderFlow(true); renderWalk(true);
+    var f = $("h-flow");
+    if (f.scrollIntoView) f.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
   });
   $("acts-csv").addEventListener("click", exportCSV);
   $("print").addEventListener("click", function () { window.print(); });
