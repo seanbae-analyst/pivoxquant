@@ -55,6 +55,26 @@ SCENARIO = {"prompt_injection": "간접 프롬프트 주입", "approval_exploita
 CONFLICT = "구성상 저촉"
 
 
+def _final(word: str) -> tuple[bool, bool]:
+    """(받침이 있나, 그 받침이 ㄹ 인가). 한글은 글자로, 영문 · 숫자는 읽는 소리로(order 오더, news 뉴스, tool 툴, 10 십)."""
+    ch = word.strip()[-1:] or " "
+    if "가" <= ch <= "힣":
+        f = (ord(ch) - 0xAC00) % 28
+        return f != 0, f == 8
+    c = ch.upper()
+    if c in "L1":             # 툴 · 일 — ㄹ 받침으로 읽는다
+        return True, True          # R 로 끝나는 말은 받침 없이 읽는다(order 오더 → 를, user 유저 → 를)
+    return c in "MN03678", False
+
+
+def josa(word: str, with_final: str, without: str) -> str:
+    """단어 + 조사 하나(을/를, 이/가, 은/는, 과/와, 으로/로). '으로' 는 ㄹ 받침 뒤에서 '로' 가 된다."""
+    fin, rieul = _final(word)
+    if with_final == "으로":
+        return word + ("으로" if fin and not rieul else "로")
+    return word + (with_final if fin else without)
+
+
 def coverage(layer: str | None, extends: str | None, binding: bool = True) -> str:
     """조문이 에이전트에 미치는 방식."""
     if layer == "agent":

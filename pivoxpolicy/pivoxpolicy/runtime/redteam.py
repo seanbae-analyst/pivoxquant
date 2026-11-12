@@ -59,7 +59,7 @@ def walk_steps(agent: dict[str, Any], steps: list[dict[str, Any]] | None, approv
     """단계 목록을 샌드박스 복사본의 정책 엔진으로 흘려보낸다(redteam · cases 공용).
     → {outcome: blocked|passed|no_surface, steps, stopped_at, control, detected}. 단계가 모두 허용되면 passed.
     approver: refuse — 사람 승인 요청에서 멈춘다(공격자는 승인을 받을 수 없다는 가정).
-              approve — 승인자가 화면만 보고 승인한다고 치고(요약에 속거나 승인 피로) 그 요청에 묶인 승인으로 다시 묻는다.
+              approve — 승인자가 화면만 보고 승인한다고 가정하고(왜곡된 요약, 승인 피로) 그 요청에 묶인 승인으로 다시 묻는다.
               사람 승인을 '실패할 수 있는 통제' 로 다루려는 것이다."""
     a = copy.deepcopy(agent)
     recent, out, detected = 0, [], False

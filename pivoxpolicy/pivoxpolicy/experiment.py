@@ -28,7 +28,7 @@ from typing import Any
 
 import yaml
 
-from . import intake, terms
+from . import flow, intake, terms
 from . import obligations as obl
 from .registry import OUT_DIR, REGISTRY_DIR
 from .runtime import cases as cases_mod
@@ -60,15 +60,33 @@ def _git_rev() -> str:
     return g()
 
 
+def _prepare(a: dict[str, Any], lib: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, dict[str, int]]]:
+    """유형 하나 → (intake 결과, 조문 평가, 샌드박스 에이전트, 기준별 통제 수준)."""
+    b = intake.build(a["spec"])
+    A = obl.assess(lib, b["compliance"])
+    base = {"id": f"agt_exp{a['id'].lower()}", "status": "active", "expires_at": None, **b["agent"]}
+    lv = {"none": {c: 0 for c in policy.CONTROL_ORDER}, "all": {c: 2 for c in policy.CONTROL_ORDER}, **A["levels"]}
+    return b, A, base, lv
+
+
+def flows(path: Path = AGENTS_PATH, readings: tuple[str, ...] = ("binding_explicit", "binding_interpretive")) -> dict[str, dict[str, Any]]:
+    """명령 흐름 그림용 — 유형마다 시나리오별로 기준마다 run_case 결과(단계별 판정 checks 포함). run() 과 같은 준비 · 같은 엔진."""
+    lib = obl.load_library()
+    out = {}
+    for a in load_agents(path):
+        b, A, base, lv = _prepare(a, lib)
+        out[a["id"]] = {"label": a["label"], "levels": {rd: lv[rd] for rd in readings},
+                        "cases": [(c, {rd: cases_mod.run_case({**base, "levels": lv[rd]}, c, b["components"]) for rd in readings})
+                                  for c in b["cases"]]}
+    return out
+
+
 def run(path: Path = AGENTS_PATH, readings: tuple[str, ...] = READINGS, p_grid: tuple[float, ...] = P_GRID) -> dict[str, Any]:
     lib = obl.load_library()
     specs = load_agents(path)
     agents = []
     for a in specs:
-        b = intake.build(a["spec"])
-        A = obl.assess(lib, b["compliance"])
-        base = {"id": f"agt_exp{a['id'].lower()}", "status": "active", "expires_at": None, **b["agent"]}
-        lv = {"none": {c: 0 for c in policy.CONTROL_ORDER}, "all": {c: 2 for c in policy.CONTROL_ORDER}, **A["levels"]}
+        b, A, base, lv = _prepare(a, lib)
         per: dict[str, Any] = {}
         verdicts: dict[str, dict[str, str]] = {}
         scn = {c["id"]: c["scenario"] for c in b["cases"]}
@@ -147,57 +165,111 @@ def findings(R: dict[str, Any]) -> list[str]:
     return out
 
 
-# ── 그림(인라인 SVG, 스크립트 없음) ──
+# ── 그림(HTML · CSS, 스크립트 없음) ──
+# SVG viewBox 로 그리면 폰에서 글자가 화면 폭에 비례해 줄어든다(390px 폭에서 5.4px). 막대도 글자도 HTML 로 그려 글자 크기를 고정한다.
+# 색은 노출 정도의 순서 척도(한 색상, 밝을수록 노출): 자동 차단 #5E4A31 → 승인 의존 #B8956A → 미차단 #F5F0E8
+# (dataviz validate_palette --ordinal --mode dark --surface #050505 통과). 정의는 flow.CSS 의 .v-* 와 같다.
 
-COL = {"good": "var(--pq-bronze)", "held": "var(--pq-bronze-deep)", "defect": "var(--pq-ivory)", "na": "var(--pq-ivory-line)"}
 LBL = {"good": "자동 차단", "held": "승인 의존", "defect": "미차단", "na": "공격면 없음"}
 
 
-def _bar(x: float, y: float, w: float, h: float, parts: list[tuple[str, int]], total: int) -> str:
-    out, cx = [], x
+def segbar(parts: list[tuple[str, int]], total: int, min_share: float = 0.08, cls: str = "sb") -> str:
+    """하나의 전체(공격 시나리오 수)를 판정별로 나눈 막대. 칸이 넉넉할 때만 칸 안에 수를 적는다(나머지는 title · 표)."""
+    segs = []
     for k, v in parts:
-        if not v or not total:
+        if not v:
             continue
-        ww = w * v / total
-        out.append(f'<rect x="{cx:.1f}" y="{y:.1f}" width="{ww:.1f}" height="{h:.1f}" fill="{COL[k]}"><title>{LBL[k]} {v}</title></rect>')
-        cx += ww
-    return "".join(out)
+        lab = str(v) if total and v / total >= min_share else ""
+        segs.append(f'<span class="v-{k}" style="flex-grow:{v}" title="{LBL[k]} {v}">{lab}</span>')
+    aria = ", ".join(f"{LBL[k]} {v}" for k, v in parts if v) + f" (전체 {total})"
+    return f'<div class="{cls}" role="img" aria-label="{html.escape(aria)}">' + "".join(segs) + "</div>"
 
 
 def figure_aggregate(R: dict[str, Any]) -> str:
     """그림: 규제 기준별 공격 시나리오 판정(전체 유형 합)."""
-    rows, W, L, H, G = R["readings"], 760, 170, 26, 14
+    rows = R["readings"]
     total = R["aggregate"][rows[0]]["attacks"]
-    svg = [f'<svg viewBox="0 0 {W} {len(rows) * (H + G) + 28}" role="img" aria-label="규제 기준별 공격 시나리오 판정" class="xfig">']
-    for i, rd in enumerate(rows):
-        y = i * (H + G)
+    dep = sum(len(x["interpretation_dependent"]) for x in R["agents"])
+    out = ['<div class="agg">']
+    for rd in rows:
         a = R["aggregate"][rd]
-        svg.append(f'<text x="0" y="{y + H * 0.68:.1f}" class="t">{html.escape(READING_KO[rd])}</text>')
-        svg.append(_bar(L, y, W - L - 70, H, [(k, a[k]) for k in ATTACK_KEYS], total))
-        svg.append(f'<text x="{W - 62}" y="{y + H * 0.68:.1f}" class="n">미차단 {a["defect"]}</text>')
-    svg.append(f'<text x="{L}" y="{len(rows) * (H + G) + 16}" class="s">공격 시나리오 {total}개(유형 {len(R["agents"])}개 합)</text></svg>')
-    return "".join(svg)
+        cur = " is-key" if rd == "binding_explicit" else ""
+        out.append(f'<div class="agg-row{cur}"><span class="agg-l">{html.escape(READING_KO[rd])}</span>'
+                   + segbar([(k, a[k]) for k in ATTACK_KEYS], total)
+                   + f'<span class="agg-v"><b>{a["defect"]}</b> 미차단</span></div>')
+        if rd == "binding_explicit" and "binding_interpretive" in rows:
+            out.append(f'<p class="agg-note">명문 기준과 확장 해석 기준 사이에서 판정이 바뀌는 시나리오 {dep}개(해석 의존)</p>')
+    out.append(f'<p class="agg-foot">막대 하나 = 공격 시나리오 {total}개(유형 {len(R["agents"])}개 합)</p></div>')
+    return "".join(out)
 
 
 def figure_agents(R: dict[str, Any]) -> str:
-    """그림: 유형별 × 기준별 작은 막대(명문 · 확장 해석 · 자율규범 포함)."""
+    """그림: 유형별 × 기준별 작은 막대(명문 · 확장 해석 · 자율규범 포함). 폰에서는 유형마다 세 줄로 쌓는다."""
     rds = [r for r in ("binding_explicit", "binding_interpretive", "guideline") if r in R["readings"]]
-    W, L, H, G, colw = 760, 170, 18, 12, (760 - 170) / len(rds)
-    out = [f'<svg viewBox="0 0 {W} {len(R["agents"]) * (H + G) + 30}" role="img" aria-label="에이전트 유형별 판정" class="xfig">']
-    for j, rd in enumerate(rds):
-        out.append(f'<text x="{L + j * colw:.1f}" y="12" class="h">{html.escape(READING_KO[rd])}</text>')
-    for i, x in enumerate(R["agents"]):
-        y = 22 + i * (H + G)
-        out.append(f'<text x="0" y="{y + H * 0.75:.1f}" class="t">{html.escape(x["id"] + " " + x["label"])}</text>')
-        for j, rd in enumerate(rds):
-            m = x["readings"][rd]
-            out.append(_bar(L + j * colw, y, colw - 16, H, [(k, m[k]) for k in ATTACK_KEYS], m["attacks"]))
-    out.append("</svg>")
+    out = ['<div class="am"><div class="am-row am-head"><span></span>' + "".join(f"<span>{html.escape(READING_KO[r])}</span>" for r in rds) + "</div>"]
+    for x in R["agents"]:
+        cells = "".join(f'<div class="am-cell" data-r="{html.escape(READING_KO[rd])}">'
+                        + segbar([(k, x["readings"][rd][k]) for k in ATTACK_KEYS], x["readings"][rd]["attacks"], 0.18, "sb sb-s") + "</div>"
+                        for rd in rds)
+        out.append(f'<div class="am-row"><span class="am-l"><b>{html.escape(x["id"])}</b> {html.escape(x["label"])}'
+                   f'<small>공격 {x["readings"][rds[0]]["attacks"]}개</small></span>{cells}</div>')
+    out.append("</div>")
     return "".join(out)
 
 
 def legend() -> str:
-    return '<p class="key">' + "".join(f'<span><i style="background:{COL[k]}"></i>{LBL[k]}</span>' for k in ATTACK_KEYS) + "</p>"
+    return '<p class="key">' + "".join(f'<span><i class="v-{k}"></i>{LBL[k]}</span>' for k in ATTACK_KEYS) + "</p>"
+
+
+def _featured(F: dict[str, dict[str, Any]]) -> list[tuple[str, dict[str, Any], dict[str, Any]]]:
+    """그림에 크게 싣는 흐름 두 개 — 해석 의존의 두 갈래(명문 기준에서 미차단 / 승인 의존 → 확장 해석 기준에서 자동 차단).
+    손으로 고르지 않고 규칙으로 고른다: 유형 순서대로 처음 나오는 것, 미차단 쪽은 간접 프롬프트 주입을 먼저."""
+    pick = []
+    for want, pref in (("defect", "prompt_injection"), ("held", None)):
+        cands = [(aid, c, rs) for aid, f in F.items() for c, rs in f["cases"]
+                 if c.get("kind", "attack") == "attack" and rs["binding_explicit"]["verdict"] == want
+                 and rs["binding_interpretive"]["verdict"] == "good"]
+        cands.sort(key=lambda t: (t[1].get("scenario") != pref, list(F).index(t[0])))
+        if cands:
+            pick.append(cands[0])
+    return pick
+
+
+def _ai_sub(levels: dict[str, int]) -> str:
+    on = [terms_name(c) for c, v in levels.items() if v == 2]
+    return "AI 수준 통제: " + (", ".join(on) if on else "없음")
+
+
+def flow_figures(F: dict[str, dict[str, Any]], start: int) -> tuple[str, int]:
+    """대표 흐름 그림(그림 start, start+1 …)."""
+    out, n = [], start
+    for aid, c, rs in _featured(F):
+        f = F[aid]
+        lanes = [(READING_KO[rd], _ai_sub(f["levels"][rd]), rs[rd]) for rd in ("binding_explicit", "binding_interpretive")]
+        vl = terms.verdict_label("attack", rs["binding_explicit"]["verdict"])
+        out.append(f'<figure class="fig flowfig"><figcaption><b>그림 {n}</b> 명령 한 건의 흐름. {html.escape(aid + " " + f["label"])}. '
+                   f'명문 기준에서는 {html.escape(vl)}, 확장 해석 기준에서는 자동 차단이다. 칸은 정책 엔진이 실제로 남긴 단계별 판정이다.</figcaption>'
+                   + flow.compare(c, lanes) + "</figure>")
+        n += 1
+    return "".join(out), n
+
+
+def flow_catalog(F: dict[str, dict[str, Any]]) -> str:
+    """시나리오 전체의 흐름 — 유형마다 접어 둔다(스크립트 없는 details)."""
+    out = []
+    for aid, f in F.items():
+        items = []
+        for c, rs in f["cases"]:
+            ve, vi = (terms.verdict_label(c.get("kind", "attack"), rs[rd]["verdict"], rs[rd].get("control"))
+                      for rd in ("binding_explicit", "binding_interpretive"))
+            lanes = [(READING_KO[rd], _ai_sub(f["levels"][rd]), rs[rd]) for rd in ("binding_explicit", "binding_interpretive")]
+            tag = "정상 업무" if c.get("kind") == "benign" else "공격"
+            items.append(f'<details class="fc-case"><summary><span class="fc-t">{html.escape(c.get("title") or c["id"])}</span>'
+                         f'<span class="fc-v">{tag} · 명문 {html.escape(ve)} → 확장 해석 {html.escape(vi)}</span></summary>'
+                         + flow.compare(c, lanes, title="") + "</details>")
+        out.append(f'<details class="fc-agent"><summary><b>{html.escape(aid)} {html.escape(f["label"])}</b><span>시나리오 {len(f["cases"])}개</span></summary>'
+                   + "".join(items) + "</details>")
+    return '<div class="fc">' + "".join(out) + "</div>"
 
 
 # ── 표 ──
@@ -309,12 +381,14 @@ def write_all(out_dir: Path = OUT_DIR / "experiment", R: dict[str, Any] | None =
     return paths
 
 
-def page(R: dict[str, Any]) -> str:
+def page(R: dict[str, Any], F: dict[str, dict[str, Any]] | None = None) -> str:
     """연구 노트 형식의 실험 페이지(out/experiment.html). 첫 화면과 같은 틀 · 토큰 · 규칙(그림 N 캡션, 상자는 그림에만)."""
     from .landing import _tpl
     e = html.escape
     m = R["manifest"]
     T = tables(R)
+    F = F if F is not None else flows()
+    flow_figs, nxt = flow_figures(F, 2)
 
     def table(t):
         title, head, rows = t
@@ -331,10 +405,18 @@ def page(R: dict[str, Any]) -> str:
 </header>
 <section class="sh lead" aria-labelledby="h-r"><h2 id="h-r">결과</h2><div>
 <div class="summary">{''.join(f'<p>{e(s)}</p>' for s in findings(R))}</div>
-<figure class="fig"><figcaption><b>그림 1</b> 규제 기준별 공격 시나리오 판정. 일곱 유형의 시나리오를 합했다. 맨 위와 맨 아래는 기준선이다.</figcaption>{figure_aggregate(R)}{legend()}</figure>
+<figure class="fig"><figcaption><b>그림 1</b> 규제 기준별 공격 시나리오 판정. 일곱 유형의 시나리오를 합했다. 통제 없음과 모든 통제 AI 수준은 기준선이다.</figcaption>{legend()}{figure_aggregate(R)}</figure>
+</div></section>
+<section class="sh" aria-labelledby="h-f"><h2 id="h-f">명령 흐름</h2><div>
+<p class="body">명령 하나(에이전트의 도구 호출)는 지시 출처에서 시작해 런타임의 판정 일곱 단계를 차례로 지난다. 어느 단계에서 멈추는지, 어느 단계를 검사 없이 지나는지가 판정을 가른다. 아래 그림의 칸은 정책 엔진이 그 명령에 실제로 남긴 단계별 판정이다.</p>
+{flow.order_legend()}
+{flow_figs}
+<h3 class="deph">시나리오 전체</h3>
+<p class="body">유형마다 모든 시나리오의 흐름을 명문 기준과 확장 해석 기준으로 나란히 볼 수 있다. 제목을 누르면 펼쳐진다.</p>
+{flow_catalog(F)}
 </div></section>
 <section class="sh" aria-labelledby="h-a"><h2 id="h-a">유형별</h2><div>
-<figure class="fig"><figcaption><b>그림 2</b> 유형별 판정. 막대 하나가 그 유형의 공격 시나리오 전체다.</figcaption>{figure_agents(R)}{legend()}</figure>
+<figure class="fig"><figcaption><b>그림 {nxt}</b> 유형별 판정. 막대 하나가 그 유형의 공격 시나리오 전체다.</figcaption>{legend()}{figure_agents(R)}</figure>
 {table(T[0])}{table(T[1])}
 </div></section>
 <section class="sh" aria-labelledby="h-s"><h2 id="h-s">공격 유형별</h2><div>
@@ -356,23 +438,64 @@ def page(R: dict[str, Any]) -> str:
 <p class="note-s">재현: 도구 버전 {e(m['tool_rev'])} · 에이전트 정의 지문 {e(m['agents_hash'])} · 시나리오 지문 {e(', '.join(f'{k} {v}' for k, v in m['case_hashes'].items()))}. 원자료는 experiment/results.csv · results.json.</p>
 </div></section>"""
     css = """
-.xfig{width:100%;height:auto;margin:4px 0 0}
-.xfig .t{font-size:12.5px;fill:var(--pq-ivory-soft)}
-.xfig .h{font-size:12px;font-weight:600;fill:var(--pq-ivory-dim)}
-.xfig .n{font-size:12px;fill:var(--pq-ivory)}
-.xfig .s{font-size:11.5px;fill:var(--pq-ivory-dim)}
-.key{display:flex;flex-wrap:wrap;gap:6px 16px;margin:10px 0 0;font-size:12.5px;color:var(--pq-ivory-dim)}
-.key i{display:inline-block;width:12px;height:12px;margin-right:6px;vertical-align:-1px;border-radius:2px;box-shadow:inset 0 0 0 1px var(--pq-ivory-line)}
-.tblfig{margin:28px 0 0}
-.xt{font-size:13px}
+.fig figcaption{font-size:14.5px;max-width:72ch}
+.key{display:flex;flex-wrap:wrap;gap:8px 18px;margin:0 0 14px;font-size:14.5px;color:var(--pq-ivory-soft)}
+.key i{display:inline-block;width:14px;height:14px;margin-right:7px;vertical-align:-2px;border-radius:3px}
+.key i.v-na{box-shadow:inset 0 0 0 1px var(--pq-ivory-line-strong)}
+.sb{display:flex;gap:2px;height:28px;min-width:0}
+.sb span{display:flex;align-items:center;flex:1 1 0;min-width:2px;padding:0 0 0 8px;border-radius:4px;font-size:14px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.sb-s{height:22px}
+.sb-s span{padding-left:6px;font-size:13px}
+.agg{display:flex;flex-direction:column;gap:10px}
+.agg-row{display:grid;grid-template-columns:10.5em minmax(0,1fr) 6.5em;align-items:center;gap:14px}
+.agg-l{font-size:15.5px;color:var(--pq-ivory-soft)}
+.agg-row.is-key .agg-l{font-weight:700;color:var(--pq-ivory)}
+.agg-v{font-size:15px;color:var(--pq-ivory-dim);white-space:nowrap}
+.agg-v b{font-size:18px;color:var(--pq-ivory);margin-right:4px}
+.agg-note{margin:-2px 0 2px calc(10.5em + 14px);padding-left:12px;border-left:2px solid var(--pq-bronze);font-size:14px;line-height:1.6;color:var(--pq-bronze)}
+.agg-foot{margin:6px 0 0;font-size:13.5px;color:var(--pq-ivory-dim)}
+.am{display:flex;flex-direction:column;gap:12px}
+.am-row{display:grid;grid-template-columns:13em repeat(3,minmax(0,1fr));align-items:center;gap:14px}
+.am-head span{font-size:14px;font-weight:600;color:var(--pq-ivory-dim)}
+.am-l{font-size:15px;color:var(--pq-ivory-soft);line-height:1.35}
+.am-l b{margin-right:4px;color:var(--pq-ivory)}
+.am-l small{display:block;font-size:13px;color:var(--pq-ivory-dim)}
+.tblfig{margin:32px 0 0}
+.xt{font-size:14.5px}
 .xt td:first-child{white-space:nowrap;font-weight:600}
 .xt th{white-space:nowrap}
-.deph{margin:36px 0 6px}
-.dep{margin:8px 0 0;padding-left:18px;font-size:13.5px;color:var(--pq-ivory-soft)}
+.deph{margin:40px 0 8px;font-size:18px}
+.dep{margin:8px 0 0;padding-left:18px;font-size:15px;line-height:1.7;color:var(--pq-ivory-soft)}
 .dep li{margin:4px 0}
-.lim{margin:0;padding-left:18px;color:var(--pq-ivory-soft);font-size:14px;line-height:1.7}
-.summary p{margin:0 0 10px}
-"""
+.lim{margin:0;padding-left:18px;color:var(--pq-ivory-soft);font-size:15px;line-height:1.75}
+.summary p{margin:0 0 12px}
+.flowfig{margin:28px 0 8px}
+.fc{display:flex;flex-direction:column;gap:8px;margin:8px 0 0}
+.fc details{border:0}
+.fc summary{justify-content:flex-start;flex-wrap:wrap;align-items:baseline;gap:4px 12px;padding:12px 14px;border:1px solid var(--pq-ivory-line-strong);border-radius:8px;font-weight:400}
+.fc summary::after{margin-left:auto;align-self:center}
+.fc details>summary::after{transform:none}
+.fc details[open]>summary::after{transform:rotate(45deg)}
+.fc details>:not(summary){padding-bottom:0}
+.fc-agent>summary b{font-size:16px;color:var(--pq-ivory)}
+.fc-agent>summary span{font-size:14px;color:var(--pq-ivory-dim)}
+.fc-agent[open]{padding-bottom:6px}
+.fc-agent>.fc-case{margin:8px 0 0 14px}
+.fc-case>summary{padding:10px 12px}
+.fc-t{font-size:15px;color:var(--pq-ivory)}
+.fc-v{font-size:14px;color:var(--pq-ivory-dim)}
+.fc-case>.fl{margin:12px 0 18px 4px}
+@media(max-width:760px){
+  .agg-row{grid-template-columns:minmax(0,1fr) auto;gap:6px 10px}
+  .agg-row .sb{grid-column:1 / -1;grid-row:2}
+  .agg-note{margin-left:0}
+  .am-head{display:none}
+  .am-row{grid-template-columns:minmax(0,1fr);gap:6px;padding-bottom:12px;border-bottom:1px solid var(--pq-ivory-line)}
+  .am-cell{display:grid;grid-template-columns:7.5em minmax(0,1fr);align-items:center;gap:8px}
+  .am-cell::before{content:attr(data-r);font-size:13.5px;color:var(--pq-ivory-dim)}
+  .fc-agent>.fc-case{margin-left:0}
+}
+""" + flow.CSS
     return f"""<!doctype html>
 <html lang="ko">
 <head>

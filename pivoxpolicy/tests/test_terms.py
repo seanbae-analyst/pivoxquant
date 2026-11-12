@@ -11,9 +11,9 @@ FILES = ["pivoxpolicy/templates/runtime-ui.js", "pivoxpolicy/templates/runtime.h
          "pivoxpolicy/runtime/cases.py", "pivoxpolicy/runtime/llm_redteam.py", "registry/obligations/kr-securities.yaml",
          "pivoxpolicy/intake.py", "pivoxpolicy/experiment.py", "pivoxpolicy/cli.py", "pivoxpolicy/templates/sim.html",
          "registry/runtime_cases.yaml", "registry/redteam.yaml", "registry/sim_scenarios.yaml", "registry/sim_cases.yaml",
-         "registry/experiment_agents.yaml", "README.md"]
+         "registry/experiment_agents.yaml", "README.md", "pivoxpolicy/flow.py", "pivoxpolicy/runtime/redteam.py"]
 RETIRED = ["사람 승인에 기댐", "승인 기댐", "결함(뚫림)", "업무 마찰", "처방", "설계 충돌", "위반 소지", "칸 해부", "공격 팀", "규제 공백",
-           "가이드라인 미이행", "뚫리", "뚫린", "뚫림", "기댐", "바꿔치기", "속은 승인자", "받아 내", "몰래", "털리"]
+           "가이드라인 미이행", "뚫리", "뚫린", "뚫림", "기댐", "바꿔치기", "속은 승인자", "받아 내", "몰래", "털리", "속음", "속거나"]
 
 
 def test_retired_terms_do_not_come_back():
@@ -41,3 +41,10 @@ def test_generated_case_titles_name_the_attack_type():
     assert att
     for c in att:
         assert c["title"].startswith(terms.SCENARIO[c["scenario"]] + ": "), c["title"]
+
+
+def test_josa_reads_latin_by_sound():
+    J = terms.josa
+    assert [J(w, "을", "를") for w in ("place_order", "send_email", "approve_margin_loan", "API", "10", "인벤토리")] == \
+        ["place_order를", "send_email을", "approve_margin_loan을", "API를", "10을", "인벤토리를"]
+    assert [J(w, "으로", "로") for w in ("fetch_news", "tool", "고객", "파일")] == ["fetch_news로", "tool로", "고객으로", "파일로"]

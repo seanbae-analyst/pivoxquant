@@ -19,6 +19,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from . import flow
 from . import obligations as obl
 from . import terms as T
 from .runtime import cases as cases_mod
@@ -57,13 +58,8 @@ def _git_rev() -> str:
 
 
 def _josa(word: str, with_final: str, without: str) -> str:
-    """받침 따라 조사 하나만(을/를, 이/가 …). 영문 · 숫자는 읽는 소리로(AI를, API를, 10을)."""
-    ch = word.strip()[-1:] or " "
-    if "가" <= ch <= "힣":
-        final = (ord(ch) - 0xAC00) % 28 != 0
-    else:
-        final = ch.upper() in "LMNR013678"
-    return word + (with_final if final else without)
+    """받침 따라 조사 하나만(을/를, 이/가 …). 영문 · 숫자는 읽는 소리로(AI를, API를, 10을). 구현은 terms.josa 하나."""
+    return T.josa(word, with_final, without)
 
 
 def _ref(r: dict[str, Any]) -> str:
@@ -115,7 +111,7 @@ def diagnose(agent: dict[str, Any], approved: list[dict[str, Any]], cases: list[
             "company": company, "agent": agent, "profile": prof, "assessment": A, "attack": res, "matrix": mx,
             "controls": ctls, "rcm": _rcm(A, res, levels, ctls, by_ob), "actions": _actions(A, res, levels, ctls),
             "owners": _owners(A), "intake": agent.get("intake") or {}, "audit": audit, "lib": lib,
-            "case_hash": hashlib.sha256(policy.canonical(cs).encode("utf-8")).hexdigest()[:16], "rev": _git_rev(),
+            "case_hash": hashlib.sha256(policy.canonical(cs).encode("utf-8")).hexdigest()[:16], "rev": _git_rev(), "case_defs": by_case,
             "case_source": "이 에이전트의 도구로 만든 케이스" if (cases or agent.get("cases")) else "데모 케이스 라이브러리"}
 
 
@@ -248,7 +244,7 @@ def sections(D: dict[str, Any]) -> list[tuple]:
         S.append(("table", ["조문", "요구", "해소 방법"], [[_ref(r), r["requires"], r.get("unless") or ""] for r in cf]))
     # 공격 시험
     S.append(("h2", "5. 시나리오 시험 결과"))
-    S.append(("p", f"{D['case_source']}를 지금 통제로 샌드박스에서 돌렸다. 사람 승인 단계에서 멈춘 공격은 승인자가 승인한다고 가정하고(요약에 속음, 승인 피로) "
+    S.append(("p", f"{D['case_source']}를 지금 통제로 샌드박스에서 돌렸다. 사람 승인 단계에서 멈춘 공격은 승인자가 승인한다고 가정하고(왜곡된 요약, 승인 피로) "
                    "한 번 더 돌려, 뒤의 통제가 막으면 자동 차단, 실행되면 승인 의존으로 분류한다. 단일 보완 통제는 통제 하나를 AI 수준으로 올려 다시 돌려 "
                    "자동 차단으로 바뀌는 것만 적는다."))
     rows = []
@@ -260,6 +256,11 @@ def sections(D: dict[str, Any]) -> list[tuple]:
         lk = "" if not link else (T.STOP if link.get("basis") == "stop" else T.LINK)[link["kind"]]
         rows.append([r["title"], "공격" if r["kind"] == "attack" else "정상 업무", vk, stop, ", ".join(name[c] for c in r.get("fixes") or []) or "—", lk or "—"])
     S.append(("table", ["시나리오", "종류", "판정", "멈춘 곳", "단일 보완 통제", "조문과의 관계"], rows))
+    open_ = [r for r in res["results"] if r["kind"] == "attack" and r["verdict"] in ("defect", "held")]
+    if open_ and D.get("case_defs"):
+        S.append(("p", f"아래는 미차단 · 승인 의존인 공격 {len(open_)}개의 명령 흐름이다. 단계마다 지시 출처와 도구 호출, 런타임 판정 일곱 단계의 실제 결과를 보인다. "
+                       "검사 안 함은 그 통제가 AI 수준이 아니어서 런타임이 보지 않은 단계다."))
+        S.append(("flows", [(D["case_defs"][r["id"]], r) for r in open_ if r["id"] in D["case_defs"]]))
     # 조문별 충족
     S.append(("h2", "6. 조문별 충족"))
     rows = [[_ref(r), r["force_ko"], _strength(r), r["requires"], (name.get(r["control"], "") if r["runtime"] else (r.get("category") or "")),
@@ -325,6 +326,12 @@ def to_markdown(D: dict[str, Any]) -> str:
             out += ["| " + " | ".join(esc(c) for c in row) + " |" for row in blk[2]] + [""]
         elif k == "details":
             out += [f"<details><summary>{html.escape(blk[1])}</summary>", ""] + [f"- {x}" for x in blk[2]] + ["", "</details>", ""]
+        elif k == "flows":                         # 마크다운에는 단계별 결정만 줄글로
+            for c, r in blk[1]:
+                out.append(f"- **{r['title']}**: " + " → ".join(
+                    f"{s['tool']} {flow.DECISION.get(s['decision'], s['decision'])}" + (f"({flow.gate_name(s['control'])})" if s.get("control") else "")
+                    for s in flow._last_per_step(r["steps"])))
+            out.append("")
     return "\n".join(out)
 
 
@@ -381,11 +388,16 @@ def to_html(D: dict[str, Any]) -> str:
             body.append(f'<div class="tw"><table{cls}><thead><tr>{th}</tr></thead><tbody>{tr}</tbody></table></div>')
         elif k == "details":
             body.append(f"<details><summary>{e(blk[1])}</summary><ul>" + "".join(f"<li>{e(x)}</li>" for x in blk[2]) + "</ul></details>")
+        elif k == "flows":
+            lv = D["agent"].get("levels") or {}
+            on = [c["name"] for c in D["controls"] if int(lv.get(c["id"], 0)) >= 2]
+            sub = "AI 수준 통제: " + (", ".join(on) if on else "없음")
+            body.append("".join(flow.compare(c, [("지금 통제", sub, r)]) for c, r in blk[1]))
     body.append('<footer>PivoxPolicy 진단 보고서. 법률 자문이 아니다. 조문 인용은 국가법령정보센터 현행 원문 등에서 대조했고 출처는 조문별 충족 표의 인용 열을 본다.</footer>')
     return ('<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
             f'<title>진단 보고서: {e(a["name"])}</title><meta name="robots" content="noindex">'
             '<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">'
-            f"<style>{CSS}</style></head><body><main>" + "".join(body) + "</main></body></html>")
+            f"<style>{CSS}{flow.CSS}{flow.CSS_LIGHT}</style></head><body><main>" + "".join(body) + "</main></body></html>")
 
 
 def _csv(header: list[str], rows: list[list[Any]]) -> str:
