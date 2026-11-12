@@ -76,9 +76,9 @@ def cmd_matrix(args: argparse.Namespace) -> int:
         sys.stdout.write(matrix_mod.render_csv(m, controls) if args.csv
                          else matrix_mod.render_markdown(m, controls, coder, docs, layer) + "\n")
         return 0
-    if args.csv:
-        print("두 층 코딩의 CSV 는 층을 골라야 한다: --layer analog | agent")
-        return 2
+    if args.csv:  # 층을 안 고르면 AI·에이전트 층 (논문의 본 표)
+        sys.stdout.write(matrix_mod.render_csv(ms["agent"], controls))
+        return 0
     print(matrix_mod.render_layers(ms["analog"], ms["agent"], controls, coder))
     return 0
 

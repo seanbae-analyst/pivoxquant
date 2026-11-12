@@ -1,0 +1,8 @@
+control_num,control_id,KR,US,EU,INTL
+1,inventory,2,2,0,1
+2,vendors,2,2,0,0
+3,unique_id,2,1,0,0
+4,least_privilege,2,2,0,0
+5,human_approval,2,2,0,0
+6,audit_trail,2,2,0,1
+7,kill_switch,2,2,0,0

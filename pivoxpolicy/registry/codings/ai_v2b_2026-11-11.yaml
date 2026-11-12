@@ -1,0 +1,593 @@
+# 두 층 코딩(코드북 v2) — AI 코더 ai_v2b_2026-11-11. 판정 기준은 registry/controls.yaml, 원문은 고정 코퍼스(snapshots/corpus.json).
+# 배치 4개(KR · US1 · US2 · EU/INTL)를 서로 독립된 에이전트가 코딩했다. 다른 팀의 결과·이전 코딩·문서 요약을 보지 않았고 웹도 쓰지 않았다.
+# 두 팀(ai_v2a · ai_v2b)은 같은 모델 계열이다 — 둘 사이 κ 는 '같은 코드북을 두 번 독립 적용했을 때의 재현성' 이지 사람 코더 간 신뢰도가 아니다.
+# ISO/IEC 27001 · 42001 은 원문이 유료라 코퍼스에 없다 — null(미코딩).
+coder: "ai_v2b_2026-11-11"
+coded_at: "2026-11-11"
+codebook: 2
+basis: "고정 코퍼스 원문(snapshots/corpus.json) — 블라인드, 웹 사용 안 함"
+provisional: true
+items:
+  "eu-ai-act-art14":
+    inventory:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+      note: "Scope Art. 14 only; all obligations target high-risk AI systems (not agent-named), so subject=ai. analog all false: no human/account/general-IT target. audit_trail false: Art.14 requires monitoring/understanding, no log/record duty. vendors false: provider-to-deployer provision is not due-diligence/contract/monitoring of third parties. 14(5) two-person confirmation is also human_approval for AI output (agent)."
+    vendors:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+    unique_id:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+    least_privilege:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+    human_approval:
+      analog: {covered: false}
+      agent: {covered: true, subject: ai, evidence: "Art. 14(4)(d): \"to decide, in any particular situation, not to use the high-risk AI system or to otherwise disregard, override or reverse the output of the high-risk AI system\""}
+    audit_trail:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+    kill_switch:
+      analog: {covered: false}
+      agent: {covered: true, subject: ai, evidence: "Art. 14(4)(e): \"to intervene in the operation of the high-risk AI system or interrupt the system through a ‘stop’ button or a similar procedure that allows the system to come to a halt in a safe state\""}
+  "intl-fsb-ai-sound-practices-2026-10":
+    inventory:
+      analog: {covered: false}
+      agent: {covered: true, subject: ai, evidence: "SP3 (PAGE 29): \"Financial institutions leverage existing processes and repositories, such as use case and model inventories, third-party registries, or systems registry.\""}
+      note: "Final report read in full for SP1-12 and Annex (sec 1 overview skimmed as background). borderline: analog audit_trail rests on general-ICT 'monitoring and logging of anomalies and cyber incidents' (AI-threat hardening of general IT, G3). Analog false by close reading: inventory (documenting Internet-connected systems is not a maintained list), vendors (all third-party text targets AI providers), unique_id (IAM/MFA named only as topics), least_privilege, human_approval, kill_switch. strong: agent unique_id/least_privilege/human_approval/audit_trail/kill_switch all at agent level. borderline: agent inventory is documentation + 'use case and model inventories' (agent-specific attributes only in a case study)."
+    vendors:
+      analog: {covered: false}
+      agent: {covered: true, subject: agent, evidence: "SP12 (PAGE 65): \"including liability for actions taken by highly autonomous AI agents\""}
+    unique_id:
+      analog: {covered: false}
+      agent: {covered: true, subject: agent, evidence: "SP3 (PAGE 30): \"Visibility assigns individual unique identifiers to each AI agent so that financial institutions can see which actions it took\""}
+    least_privilege:
+      analog: {covered: false}
+      agent: {covered: true, subject: agent, evidence: "SP11 (PAGE 63): \"Financial institutions adapt ICT controls to agents, including Identity and Access Management (IAM) and least privilege, which grants agents the minimum permissions needed to achieve their goals\""}
+    human_approval:
+      analog: {covered: false}
+      agent: {covered: true, subject: agent, evidence: "SP10 (PAGE 56): \"setting clear, risk-based triggers for when an agent must seek human approval, confirmation or review\""}
+    audit_trail:
+      analog: {covered: true, evidence: "SP11 (PAGE 60): \"enhancing monitoring and logging of anomalies and cyber incidents with controls on data provenance, cross-validation of datasets and model behaviour tracking.\""}
+      agent: {covered: true, subject: agent, evidence: "SP3 (PAGE 30): \"In the case of agentic AI, financial institutions establish effective record-keeping to enable them to: attribute actions (decisions, intermediate steps, escalation to a human\""}
+    kill_switch:
+      analog: {covered: false}
+      agent: {covered: true, subject: agent, evidence: "SP10 (PAGE 57): \"implementing and testing risk-based ‘kill-switch’ mechanisms to pause, limit, override or remove an agent's access to systems\""}
+  "intl-fsb-ai-sound-practices-consultation-2026-06":
+    inventory:
+      analog: {covered: false}
+      agent: {covered: true, subject: ai, evidence: "SP3 (PAGE 26): \"This may leverage existing processes like use case and model inventory, third-party or systems registry, etc.\""}
+      note: "Consultation draft read in full for SP1-12 and Annexes. borderline: analog audit_trail rests on general-ICT 'monitoring and logging of anomalies and cyber incidents' (G3 hardening of general IT). Analog false for the other six (same reasoning as final report). strong: agent human_approval (human approval or dual authorisation for transactions above a value). borderline: agent inventory is AI-use-case documentation referencing inventories; kill_switch subject=ai since the 'Kill switch' form is defined for AI operations generally."
+    vendors:
+      analog: {covered: false}
+      agent: {covered: true, subject: ai, evidence: "SP12 (PAGE 52): \"conduct appropriate due diligence on prospective third-party AI providers\""}
+    unique_id:
+      analog: {covered: false}
+      agent: {covered: true, subject: agent, evidence: "SP10 (PAGE 47): \"assigning and documenting individual identifiers to AI agents to facilitate monitoring and identity management\""}
+    least_privilege:
+      analog: {covered: false}
+      agent: {covered: true, subject: agent, evidence: "SP11 (PAGE 49): \"applying the principle of ‘least privilege’ to AI agents and their sub-agents (giving them the minimum permissions and access controls necessary to accomplish their tasks)\""}
+    human_approval:
+      analog: {covered: false}
+      agent: {covered: true, subject: agent, evidence: "SP10 (PAGE 47): \"placing boundaries on AI agents, such as defining actions that are prohibited or that require human approval at appropriate checkpoints\""}
+    audit_trail:
+      analog: {covered: true, evidence: "SP11 (PAGE 49): \"enhancing monitoring and logging of anomalies and cyber incidents with controls on data provenance, cross-validation of datasets, and model behaviour tracking.\""}
+      agent: {covered: true, subject: agent, evidence: "SP10 (PAGE 47): \"and maintaining audit trails of agent transactions\""}
+    kill_switch:
+      analog: {covered: false}
+      agent: {covered: true, subject: ai, evidence: "SP10 (PAGE 46): \"‘Kill switch’: mechanisms enabling human intervention to halt or constrain AI operations\""}
+  "intl-iso-iec-27001-2022":
+    inventory:
+      analog: {covered: null}
+      agent: {covered: null, subject: null}
+      note: "원문 유료 — 코퍼스에 없음"
+    vendors:
+      analog: {covered: null}
+      agent: {covered: null, subject: null}
+      note: "원문 유료 — 코퍼스에 없음"
+    unique_id:
+      analog: {covered: null}
+      agent: {covered: null, subject: null}
+      note: "원문 유료 — 코퍼스에 없음"
+    least_privilege:
+      analog: {covered: null}
+      agent: {covered: null, subject: null}
+      note: "원문 유료 — 코퍼스에 없음"
+    human_approval:
+      analog: {covered: null}
+      agent: {covered: null, subject: null}
+      note: "원문 유료 — 코퍼스에 없음"
+    audit_trail:
+      analog: {covered: null}
+      agent: {covered: null, subject: null}
+      note: "원문 유료 — 코퍼스에 없음"
+    kill_switch:
+      analog: {covered: null}
+      agent: {covered: null, subject: null}
+      note: "원문 유료 — 코퍼스에 없음"
+  "intl-iso-iec-42001-2023":
+    inventory:
+      analog: {covered: null}
+      agent: {covered: null, subject: null}
+      note: "원문 유료 — 코퍼스에 없음"
+    vendors:
+      analog: {covered: null}
+      agent: {covered: null, subject: null}
+      note: "원문 유료 — 코퍼스에 없음"
+    unique_id:
+      analog: {covered: null}
+      agent: {covered: null, subject: null}
+      note: "원문 유료 — 코퍼스에 없음"
+    least_privilege:
+      analog: {covered: null}
+      agent: {covered: null, subject: null}
+      note: "원문 유료 — 코퍼스에 없음"
+    human_approval:
+      analog: {covered: null}
+      agent: {covered: null, subject: null}
+      note: "원문 유료 — 코퍼스에 없음"
+    audit_trail:
+      analog: {covered: null}
+      agent: {covered: null, subject: null}
+      note: "원문 유료 — 코퍼스에 없음"
+    kill_switch:
+      analog: {covered: null}
+      agent: {covered: null, subject: null}
+      note: "원문 유료 — 코퍼스에 없음"
+  "kr-ai-basic-act":
+    inventory:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+      note: "agent false: 제33조는 고영향 해당 여부의 사전 검토뿐이고 목록 유지 문언 없음."
+    vendors:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+      note: "agent false: 제36조 국내대리인은 법률상 대리인이지 공급자 실사·계약 요구가 아님."
+    unique_id:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+    least_privilege:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+    human_approval:
+      analog: {covered: false}
+      agent: {covered: true, subject: ai, evidence: "제34조제1항 \"3. 이용자 보호 방안의 수립ㆍ운영 4. 고영향 인공지능에 대한 사람의 관리ㆍ감독 5. 안전성ㆍ신뢰성 확보를 위한 조치의 내용을 확인할 수 있는 문서의 작성과 보관\""}
+      note: "oversight only: 승인 절차 문언 없이 고영향 AI 에 대한 사람의 관리·감독만 요구."
+    audit_trail:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+      note: "agent false: 제34조제1항제5호는 조치 내용 확인 문서의 작성·보관(문서화)이라 기록·추적 요구가 아님."
+    kill_switch:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+      note: "agent false: 제13조제2항제2호의 비상정지 기능은 정부의 기술 연구 지원 조항."
+  "kr-efsr-art13":
+    inventory:
+      analog: {covered: true, evidence: "제13조제1항제2호 \"전산자료의 보유현황을 관리하고 책임자를 지정ㆍ운영할 것\""}
+      agent: {covered: false, subject: null}
+    vendors:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+      note: "false: 제3자 관련 문언 없음. 제13조 범위만 코딩, AI 언급 없어 agent 층 전부 false."
+    unique_id:
+      analog: {covered: true, evidence: "제13조제1항제1호 \"사용자 인증 수단을 개인별로 부여하고 접근권한은 최소한으로 부여하는 등 적절한 접근권한 관리 및 통제 절차를 수립ㆍ운용할 것\""}
+      agent: {covered: false, subject: null}
+    least_privilege:
+      analog: {covered: true, evidence: "제13조제1항제1호 \"사용자 인증 수단을 개인별로 부여하고 접근권한은 최소한으로 부여하는 등 적절한 접근권한 관리 및 통제 절차를 수립ㆍ운용할 것\""}
+      agent: {covered: false, subject: null}
+    human_approval:
+      analog: {covered: true, evidence: "제13조제1항제10호 \"다만, 불가피하게 단말기에 보관할 필요가 있는 경우 보관사유, 보관기간 및 관리 비밀번호 등을 정하여 책임자의 승인을 받아야 한다\""}
+      agent: {covered: false, subject: null}
+    audit_trail:
+      analog: {covered: true, evidence: "제13조제1항제9호 \"정보처리시스템의 가동기록은 금융감독원장이 정하는 사항을 접속의 성공여부와 상관없이 자동적으로 기록ㆍ유지하고 1년 이상 보존할 것\""}
+      agent: {covered: false, subject: null}
+    kill_switch:
+      analog: {covered: true, evidence: "제13조제1항제11호 \"사용자가 전출ㆍ퇴직 등 인사조치가 있을 때에는 지체 없이 해당 사용자계정 삭제, 계정 사용 중지, 공동 사용 계정 변경 등 정보처리시스템에 대한 접근을 통제할 것\""}
+      agent: {covered: false, subject: null}
+  "kr-efsr-art37-2":
+    inventory:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+      note: "false: 취약점 분석·평가는 일회성 평가 절차이고 목록 유지 문언 없음. AI 언급 없어 agent 전부 false."
+    vendors:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+      note: "false: 제2항 평가전문기관 위탁 허용·제6항 전자금융보조업자 협조 요청은 허용/협조 규정."
+    unique_id:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+    least_privilege:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+    human_approval:
+      analog: {covered: true, evidence: "제37조의2제5항제2호 \"취약점의 제거 또는 이에 상응하는 조치가 불가한 경우에는 최고경영자 승인을 득할 것\""}
+      agent: {covered: false, subject: null}
+    audit_trail:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+      note: "false: 이행계획 결과의 최고경영자 보고뿐 기록·보존 요구 없음."
+    kill_switch:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+  "kr-fsc-ai-guidelines-2026-06":
+    inventory:
+      analog: {covered: true, evidence: "7.7 망분리 대체 정보보호통제 \"접속 단말기 및 사용자ㆍ관리자 등록ㆍ관리, AIㆍSaaS 관리자 계정 등 다중 인증 방식 적용\""}
+      agent: {covered: true, subject: ai, evidence: "7.3 점검 항목 ⑭ \"사용되는 데이터 및 모델의 목록을 관리하고, 데이터 및 모델에 대한 접근 권한과 변경·삭제에 대한 기록을 관리하는가?\""}
+      note: "borderline: analog 는 AI·SaaS 이용 사용자·단말기 등록 관리 문언을 인사 명부류로 봄. strong: AI 모델·데이터 목록 + 접근권한·변경 기록."
+    vendors:
+      analog: {covered: true, evidence: "5.3 제3자 IT리스크 관리 \"금융회사가 정보처리를 수반한 업무를 제3자에게 위탁하는 경우 기본적으로 금융회사의 정보처리업무 위탁에 관한 규정을 따르도록 규율하고 있는바\""}
+      agent: {covered: true, subject: ai, evidence: "7.4 점검 항목 ㉒ \"외부 인공지능서비스 제공 업체와의 계약 시에는 인공지능 특화 보안 위협 대응 능력과 거버넌스 수준을 평가하는가?\""}
+    unique_id:
+      analog: {covered: true, evidence: "7.7 망분리 대체 정보보호통제 \"API key, 관리자 계정 등 주요 인증정보에 대한 보호ㆍ점검 및 관리절차 수립\""}
+      agent: {covered: false, subject: null}
+      note: "borderline: analog 는 AI·SaaS 의 API key·관리자 계정 인증정보 관리절차. agent false: AI 에 고유 식별자 부여·귀속 요구 없음(준수 사례의 서비스 계정 키 보관은 자격증명 보관)."
+    least_privilege:
+      analog: {covered: true, evidence: "7.7 망분리 대체 정보보호통제 \"AIㆍSaaS 관리자 계정 등 다중 인증 방식 적용, 최소 권한 부여 등 접근 제어 및 권한 관리\""}
+      agent: {covered: true, subject: ai, evidence: "7.5 점검 항목 ㉔ \"인공지능시스템의 자동화된 접근 패턴을 별도로 모니터링하고, 업무 목적에 필요한 최소한의 권한만 부여하는가?\""}
+      note: "agent: 자동화된 접근 패턴 모니터링+최소 권한(㉔) 및 모델·학습데이터 접근통제 강화."
+    human_approval:
+      analog: {covered: true, evidence: "7.5 준수 사례 \"접근 권한 그룹을 세분화하고, 접근 시 사용자 인증 및 승인을 받도록 하였다.\""}
+      agent: {covered: true, subject: ai, evidence: "3. 점검 항목 ⑥ \"고위험 인공지능에 대해서는 최종 의사결정을 인공지능이 수행하지 않도록 하는 HITL(Human-in-the-Loop) 방식이 적용되어 있는가?\""}
+      note: "borderline: analog 는 준수 사례의 접근·운영 이관 승인. strong: HITL·override·최종 의사결정 임직원."
+    audit_trail:
+      analog: {covered: true, evidence: "7.7 망분리 대체 정보보호통제 \"접속ㆍ이용 내역, 관리자 활동, 이상행위 등에 대한 모니터링 및 로그 수집(1년 이상 보존)\""}
+      agent: {covered: true, subject: ai, evidence: "7.6 생성형 인공지능 연계 이용 보안대책 평가 기준 1.2 \"해당 생성형 인공지능서비스 입출력 데이터 로그(입출력 데이터 내역 포함)를 기록하고\""}
+      note: "agent 근거 외 3.2 의 인적 개입 결과 사후 추적 가능한 로그 보존도 있음."
+    kill_switch:
+      analog: {covered: true, evidence: "7.2 준수 사례 \"프롬프트 인젝션 시도가 5회 이상 탐지된 사용자에게 경고하고, 10회 이상 시도 시 30분간 자동 차단하는 정책을 적용하였다.\""}
+      agent: {covered: true, subject: ai, evidence: "3.2 인적 개입 방법 표 \"이상 또는 긴급 상황 발생 시 해당 인공지능시스템을 즉시 중단하고 문제 요소 격리\""}
+      note: "strong: agent 는 긴급정지 기능 필수 적용(Kill switch) 표. borderline: analog 는 준수 사례의 사용자 자동 차단."
+  "kr-fsc-frontier-ai-guide-2026-07":
+    inventory:
+      analog: {covered: true, evidence: "2.다. 자산ㆍ공급망 관리 강화 \"시스템, 애플리케이션, API, 클라우드, 오픈소스, 위탁 업체, 제3자 소프트웨어 등 모든 자산을 통합적으로 관리할 필요\""}
+      agent: {covered: false, subject: null}
+    vendors:
+      analog: {covered: true, evidence: "2.다. 3rd 제품 도입 시 검증 강화 예시 \"외부 업체 솔루션 및 신규 오픈소스 소프트웨어 도입 시, 내부망과 격리된 샌드박스 검증 환경 구축ㆍ운영\""}
+      agent: {covered: false, subject: null}
+      note: "agent false: 외부 AI 모델 도입 지연은 해외 기관 비교표(배경)에만 있음."
+    unique_id:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+      note: "false: 제로트러스트 식별자·신원은 비교표(배경)에만 있음."
+    least_privilege:
+      analog: {covered: true, evidence: "2.바. 침해 확산 방지 \"다중 인증, 최소 권한, 마이크로세그멘테이션, 휴면계정 제거, API 접근통제, 중요 데이터 접근 검증 등 핵심 통제 강화\""}
+      agent: {covered: true, subject: ai, evidence: "2.라. 위험 수준별 인적개입 차등화 예시 \"보안 장애 및 오탐으로 인한 서비스 중단을 방지하기 위해 AI의 자율 제어 권한을 3단계로 차등화\""}
+      note: "borderline: agent 는 AI 를 방어 도구로 쓰는 맥락이지만 AI 의 자율 제어 권한 범위를 위험 수준별로 제한하라는 조항이라 true."
+    human_approval:
+      analog: {covered: false}
+      agent: {covered: true, subject: ai, evidence: "2.라. AI 기반 방어 자동화 \"(일부 자동화+인간개입) 계정 잠금, 트래픽 차단, 시스템 격리, 패치 배포 등은 사전 시뮬레이션과 인간 승인을 전제로 운영\""}
+    audit_trail:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+      note: "false: 로그 분석·모니터링 언급뿐, 조치 결과 로그만 모니터링(저위험 AI 자동화)은 모니터링 요구."
+    kill_switch:
+      analog: {covered: true, evidence: "2.바. 계정ㆍ권한 관리 자동화 예시 \"인사관리 시스템과 권한관리 시스템을 실시간 연동 - 인사정보 변경 시 즉시 권한 삭제\""}
+      agent: {covered: true, subject: ai, evidence: "[B] 금융위 보도자료 면책조치 신속한 복구 수단 예시 \"[예시] 롤백(Rollback), 킬스위치(Kill Switch), 서비스 모듈 격리(Isolation) 등\""}
+      note: "borderline: agent 근거는 보안목적 AI 테스트 면책 요건(복구 수단)의 예시로 든 킬스위치. 구속력 판단 안 함."
+  "kr-fsi-agent-criteria-2026-10":
+    inventory:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+      note: "false: 17개 점검 항목 제목 중 목록 관리 항목 없음."
+    vendors:
+      analog: {covered: false}
+      agent: {covered: true, subject: agent, evidence: "점검항목 표 2. 모델 오염 공격 대응 \"검증 대상이 모델에서 외부도구·플러그인 등 구성요소 전반으로 확대 ⑫공급망 보안\""}
+    unique_id:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+      note: "false: 에이전트 식별자·계정 항목 없음(⑪은 에이전트 간 통신보안)."
+    least_privilege:
+      analog: {covered: false}
+      agent: {covered: true, subject: agent, evidence: "점검항목 표 5. AI 에이전트 보안 \"★⑤취약한 도구 사용금지 ★⑥도구 권한 제어 ★⑦샌드박스 환경구축\""}
+      note: "strong 아님: 항목 제목만 공개(세부 비공개). 중점 점검에 '실행 권한 및 격리 관리 여부'."
+    human_approval:
+      analog: {covered: false}
+      agent: {covered: true, subject: agent, evidence: "점검항목 표 5. AI 에이전트 보안 \"★⑦샌드박스 환경구축 ★⑬인적 승인체계 구축 ★⑭인적 개입 과부하 방지\""}
+      note: "중점 점검 '도구 실행 및 승인 통제 여부'."
+    audit_trail:
+      analog: {covered: false}
+      agent: {covered: true, subject: agent, evidence: "점검항목 표 4. 회피 공격 대응 \"①인터페이스 보안 ②환각·오정보 대응 ⑰로깅 및 감사체계 구축\""}
+    kill_switch:
+      analog: {covered: false}
+      agent: {covered: true, subject: agent, evidence: "점검항목 표 5. AI 에이전트 보안 \"★⑭인적 개입 과부하 방지 ⑮자원 고갈 방지 ⑯킬스위치 구현 ★⑪에이전트 간 통신보안\""}
+      note: "중점 점검 '자율 실행 제한 및 중단 여부'. 일반 통제 analog 는 보도자료에 없어 전부 false."
+  "kr-fss-fsi-pentest-standards-2026":
+    inventory:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+      note: "전 통제 false: 블라인드 모의해킹 훈련 보도자료이며 AI 레드티밍은 대고객 생성형 AI 서비스 점검으로 7개 통제 어느 것도 요구하지 않음."
+    vendors:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+    unique_id:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+    least_privilege:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+    human_approval:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+    audit_trail:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+    kill_switch:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+  "kr-outsourcing-regulation":
+    inventory:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+      note: "false: 제7조제4항 반기 현황은 감독당국 보고뿐. borderline 아님."
+    vendors:
+      analog: {covered: true, evidence: "제4조제3항 \"금융회사는 제1항에 따른 정보처리 위탁계약을 체결할 경우 데이터에 대한 접근통제, 전산사고 등에 따른 이용자 피해에 대한 위ㆍ수탁회사간의 책임관계, 수탁회사에 대한 감독당국의 감독ㆍ검사 수용의무\""}
+      agent: {covered: false, subject: null}
+    unique_id:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+    least_privilege:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+      note: "false: 제4조제3항의 접근통제는 계약 포함사항일 뿐 최소화 개념 없고 제4조제5항은 목적 외 이용 금지."
+    human_approval:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+      note: "false: 제7조제1항제3호 준법감시인 검토의견은 보고 첨부 의견. AI 언급 없어 agent 전부 false."
+    audit_trail:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+    kill_switch:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+  "us-cisa-bod-26-04":
+    inventory:
+      analog: {covered: true, evidence: "Scope: \"each agency is responsible for maintaining an inventory of those systems\""}
+      agent: {covered: false, subject: null}
+      note: "Inventory of third-party-hosted federal systems; also asset tagging in Phase III. AI appears only as a threat in Background."
+    vendors:
+      analog: {covered: true, evidence: "Scope: \"FCEB agencies must review all contracts to determine what modifications are necessary to comply with the required actions of this Directive\""}
+      agent: {covered: false, subject: null}
+    unique_id:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+    least_privilege:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+      note: "no privilege provisions; patch-focused."
+    human_approval:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+    audit_trail:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+    kill_switch:
+      analog: {covered: true, evidence: "Appendix A: \"one valid mitigation is to remove the system from the internet\""}
+      agent: {covered: false, subject: null}
+      note: "borderline: isolation of vulnerable asset is an allowed mitigation within patch timelines, not a mandated kill switch."
+  "us-fed-sr-26-2":
+    inventory:
+      analog: {covered: true, evidence: "VI. Model Inventory, p.11: \"an effective model inventory includes sufficient information to understand model risks\""}
+      agent: {covered: false, subject: null}
+      note: "Agent false: footnote 3 on p.3 excludes generative and agentic AI models from scope; guidance applies to statistical models and non-generative, non-agentic AI. Per G3 agent layer all false."
+    vendors:
+      analog: {covered: true, evidence: "VII, p.12: \"sound practice involves conducting ongoing monitoring and outcome analysis to assess whether vendor models are accurate\""}
+      agent: {covered: false, subject: null}
+    unique_id:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+    least_privilege:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+    human_approval:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+      note: "effective challenge / validation only; no per-item approval."
+    audit_trail:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+    kill_switch:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+  "us-nist-csf-2-0":
+    inventory:
+      analog: {covered: true, evidence: "ID.AM-01: \"Inventories of hardware managed by the organization are maintained\""}
+      agent: {covered: false, subject: null}
+      note: "Agent false: p.5 says Core applies to AI systems, and 5.2 mentions AI RMF, but no subcategory names AI (G3: no 'AI is an information system' reading)."
+    vendors:
+      analog: {covered: true, evidence: "GV.SC-05: \"Requirements to address cybersecurity risks in supply chains are established, prioritized, and integrated into contracts\""}
+      agent: {covered: false, subject: null}
+    unique_id:
+      analog: {covered: true, evidence: "PR.AA-01: \"Identities and credentials for authorized users, services, and hardware are managed by the organization\""}
+      agent: {covered: false, subject: null}
+    least_privilege:
+      analog: {covered: true, evidence: "PR.AA-05: \"incorporate the principles of least privilege and separation of duties\""}
+      agent: {covered: false, subject: null}
+    human_approval:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+      note: "borderline: ID.RA-07 changes and exceptions managed/recorded, no approval wording; coded false."
+    audit_trail:
+      analog: {covered: true, evidence: "PR.PS-04: \"Log records are generated and made available for continuous monitoring\""}
+      agent: {covered: false, subject: null}
+    kill_switch:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+      note: "borderline: RS.MI-01 'Incidents are contained' is an outcome sentence only; coded false."
+  "us-nist-ir-8596-cyber-ai-profile":
+    inventory:
+      analog: {covered: true, evidence: "ID.AM-02 (p.45): \"Inventories of software, services, and systems managed by the organization are maintained\""}
+      agent: {covered: true, subject: agent, evidence: "ID.AM-02 Secure (p.45): \"Inventories should include AI models, APIs, keys, agents, data\""}
+      note: "Profile-table doc (CSF 2.0 core outcomes + AI considerations). analog = CSF core outcome text; agent = AI-specific considerations. human_approval analog false: no per-item approval for people/systems found (leadership approval items are AI-specific). kill_switch analog borderline: Thwart isolate/block systems; strong: PR.AA-01 traceability of AI actions also in audit; RS.MA-05 rollback triggers for AI components."
+    vendors:
+      analog: {covered: true, evidence: "GV.SC-05 (p.41): \"Requirements to address cybersecurity risks in supply chains are established, prioritized, and integrated into contracts and other types of agreements with suppliers\""}
+      agent: {covered: true, subject: ai, evidence: "GV.SC-05 Secure (p.41): \"Require vendors to disclose both model and data scope, as well as incident support for AI tools.\""}
+    unique_id:
+      analog: {covered: true, evidence: "PR.AA-01 (p.60): \"Identities and credentials for authorized users, services, and hardware are managed by the organization\""}
+      agent: {covered: true, subject: agent, evidence: "PR.AA-03 Defend (p.61): \"Assign each AI agent with a unique identity and credentials and treat them with the same security precautions as privileged users.\""}
+    least_privilege:
+      analog: {covered: true, evidence: "PR.AA-05 (p.62): \"Access permissions, entitlements, and authorizations are defined in a policy, managed, enforced, and reviewed, and incorporate the principles of least privilege and separation of duties\""}
+      agent: {covered: true, subject: agent, evidence: "PR.AA-05 General (p.62): \"Apply the principle of least privilege to AI agents by granting only the permissions necessary to carry out their role.\""}
+    human_approval:
+      analog: {covered: false}
+      agent: {covered: true, subject: ai, evidence: "PR.IR-01 Defend (p.71): \"Gate AI-initiated network changes and privilege use by implementing human approval or policy-based checks.\""}
+    audit_trail:
+      analog: {covered: true, evidence: "PR.PS-04 (p.69): \"Log records are generated and made available for continuous monitoring\""}
+      agent: {covered: true, subject: ai, evidence: "PR.PS-04 Secure (p.69): \"AI presents a new set of metrics and parameters that need to be logged to have a complete picture of the system.\""}
+    kill_switch:
+      analog: {covered: true, evidence: "RS.MI-01 Thwart (p.90): \"leverage mitigations to block and/or isolate systems to ensure AI-enabled attacks cannot proliferate within the system\""}
+      agent: {covered: true, subject: agent, evidence: "RS.MI-01 Defend (p.90): \"Containment procedures include AI-specific steps, such as rapidly disabling the autonomy/privileges of a compromised AI agent to a validated, trusted state.\""}
+  "us-nist-nccoe-agent-identity-2026-02":
+    inventory:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+      note: "no register/inventory of agents in Areas of Interest."
+    vendors:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+      note: "external/untrusted agents explicitly out of scope (Sec.3)."
+    unique_id:
+      analog: {covered: true, evidence: "Sec.2 SPIFFE/SPIRE: \"framework for issuing and managing cryptographic identities to workloads and\""}
+      agent: {covered: true, subject: agent, evidence: "Areas of Interest, Identification of AI and Software Systems: \"access management systems can distinguish between agent and human\""}
+      note: "borderline: analog true rests on workload/software identity (SPIFFE) in a doc whose subject is software and AI agents. Reader questions on p.4 not used as evidence."
+    least_privilege:
+      analog: {covered: false}
+      agent: {covered: true, subject: agent, evidence: "Sec.2 NGAC: \"also supports event driven policy updates, native delegation and least privilege\""}
+      note: "borderline: Authorization area names no minimization; least privilege appears only in NGAC description among standards under consideration. Draft concept paper; areas of interest taken as presented practice (G1)."
+    human_approval:
+      analog: {covered: false}
+      agent: {covered: true, subject: agent, evidence: "Areas of Interest, Identification of AI and Software Systems: \"controlled human-in-the-loop approval to autonomous action in response to an\""}
+    audit_trail:
+      analog: {covered: false}
+      agent: {covered: true, subject: agent, evidence: "Areas of Interest, Logging and Transparency: \"Link specific AI agent and software systems actions\""}
+    kill_switch:
+      analog: {covered: false}
+      agent: {covered: true, subject: agent, evidence: "Sec.2 SCIM: \"update and revoke agent identities across systems.\""}
+      note: "borderline: revoke of agent identities is described as a potential SCIM capability in the standards considered; no explicit stop/kill."
+  "us-nydfs-letter-2024-10-16":
+    inventory:
+      analog: {covered: true, evidence: "Data Management: \"Covered Entities should maintain and update data inventories as they are crucial for assessing potential risks\""}
+      agent: {covered: true, subject: ai, evidence: "Data Management: \"These entities also should maintain an inventory of all such systems and prioritize implementing mitigations\""}
+    vendors:
+      analog: {covered: true, evidence: "TPSP and Vendor Management: \"Covered Entities should require TPSPs to provide timely notification of any Cybersecurity Event that directly impacts\""}
+      agent: {covered: true, subject: ai, evidence: "TPSP and Vendor Management: \"if TPSPs are using AI, Covered Entities should consider incorporating additional representations and warranties\""}
+    unique_id:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+      note: "MFA only (strength), no unique-ID provision."
+    least_privilege:
+      analog: {covered: true, evidence: "Access Controls: \"limit the number of Authorized Users with elevated permissions and access to NPI\""}
+      agent: {covered: false, subject: null}
+      note: "Agent false: access controls here target authorized users; blocking queries to public AI is about personnel."
+    human_approval:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+      note: "borderline: Training para says verification procedures must include human review for unusual money transfer requests; this is a training topic about people, coded false."
+    audit_trail:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+      note: "Monitoring section requires monitoring only (and unusual AI query behavior monitoring), no log record/retention wording; coded false."
+    kill_switch:
+      analog: {covered: true, evidence: "Access Controls: \"promptly terminate access privileges following departures\""}
+      agent: {covered: false, subject: null}
+  "us-nydfs-letter-2026-09-10":
+    inventory:
+      analog: {covered: true, evidence: "3. Scope and Coverage, All Assets: \"Covered Entities are required to maintain an accurate and current asset inventory.\""}
+      agent: {covered: false, subject: null}
+      note: "Agent false: AI named only as an emerging risk to consider in Risk Assessment scope."
+    vendors:
+      analog: {covered: true, evidence: "3. Scope and Coverage, Third-Party and Supply Chain Risk: \"Risk Assessments should evaluate cybersecurity risks associated with Third-Party Service Providers based on the criticality of the services provided\""}
+      agent: {covered: false, subject: null}
+    unique_id:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+    least_privilege:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+    human_approval:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+      note: "borderline: policies approved annually by senior officer and risk acceptance documentation are periodic/documentation items; coded false."
+    audit_trail:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+      note: "Documentation and Traceability concerns risk assessment documents, not access/activity logs; coded false."
+    kill_switch:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+  "us-nydfs-letters-2026-05-21":
+    inventory:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+      note: "borderline: 'dependency maps' of third-party providers is not an asset inventory; coded false."
+    vendors:
+      analog: {covered: true, evidence: "[B] 2.6: \"Engage with critical Third-Party Service Providers to confirm awareness of and appropriate action on heightened cybersecurity risks\""}
+      agent: {covered: false, subject: null}
+    unique_id:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+      note: "1.3 concerns MFA enrollment control; no unique ID provision."
+    least_privilege:
+      analog: {covered: true, evidence: "[B] 1.7: \"Conduct privileged access reviews, especially for threat-relevant users, systems, and devices\""}
+      agent: {covered: false, subject: null}
+      note: "borderline for agent: [A] says AI used for remediation should employ secure programming practices to prevent unknown changes or destruction; no privilege limiting of AI; coded false."
+    human_approval:
+      analog: {covered: true, evidence: "[B] 1.3: \"consider requiring IT approvals for adding new MFA authenticator devices, applications, and accounts\""}
+      agent: {covered: true, subject: ai, evidence: "[A] Strengthen Security of Programming Practices: \"additional testing and validation procedures, including human oversight, for AI-generated code prior to deployment in production environments\""}
+      note: "Agent: human oversight of AI-generated code before production deployment."
+    audit_trail:
+      analog: {covered: true, evidence: "[B] 2.2: \"Confirm that log and security event alerting data is captured on Information Systems\""}
+      agent: {covered: false, subject: null}
+    kill_switch:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+      note: "1.2 disabling unused ports/protocols and segmentation are not account/asset quarantine; coded false."
+  "us-nydfs-part500":
+    inventory:
+      analog: {covered: true, evidence: "500.13(a): \"produce and maintain a complete, accurate and documented asset inventory\""}
+      agent: {covered: false, subject: null}
+      note: "Agent false: no AI text in regulation."
+    vendors:
+      analog: {covered: true, evidence: "500.11(a)(1): \"the identification and risk assessment of third-party service providers\""}
+      agent: {covered: false, subject: null}
+    unique_id:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+      note: "500.3(d) lists identity management only as policy topic (false_if); coded false."
+    least_privilege:
+      analog: {covered: true, evidence: "500.7(a)(1): \"limit user access privileges to information systems that provide access to nonpublic\""}
+      agent: {covered: false, subject: null}
+    human_approval:
+      analog: {covered: true, evidence: "500.12(b): \"the CISO may approve in writing the use of reasonably equivalent or more secure compensating controls\""}
+      agent: {covered: false, subject: null}
+      note: "borderline: approval of compensating controls/exceptions (also 500.7(c)(2), 500.15(b)); not per-transaction."
+    audit_trail:
+      analog: {covered: true, evidence: "500.6(a)(2): \"include audit trails designed to detect and respond to cybersecurity events\""}
+      agent: {covered: false, subject: null}
+    kill_switch:
+      analog: {covered: true, evidence: "500.7(a)(6): \"promptly terminate access following departures\""}
+      agent: {covered: false, subject: null}
+  "us-treasury-fs-ai-rmf-2026-02":
+    inventory:
+      analog: {covered: false}
+      agent: {covered: true, subject: ai, evidence: "GV-1.6.1: \"The organization maintains a regularly updated inventory of its AI systems, including purpose, data sources, responsible personnel, risk ratings\""}
+      note: "All 230 objectives are AI-system-directed (AI RMF), so analog is mostly false by G3. GV-1.6.3 (shadow/purchased AI inventory) and GV-6.1.x are AI-specific -> agent only. unique_id/least_privilege: checked, no identity or privilege clause (GV-1.4.3 role-based access to AI documentation is people access but no need-to-know/least-privilege wording -> false)."
+    vendors:
+      analog: {covered: true, evidence: "MG-3.1.5: \"including the ongoing monitoring of SLAs and contract compliance to ensure adherence to contractual commitments and mitigate associated risks\""}
+      agent: {covered: true, subject: ai, evidence: "GV-6.2.3: \"establishes service level agreements (SLAs) and contractual provisions with high-risk third-party AI providers, defining obligations, liabilities, remedies, performance metrics\""}
+      note: "borderline: analog true only on MG-3.1.5, which lists consultants/contractors/external personnel as third-party resources besides models/data."
+    unique_id:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+    least_privilege:
+      analog: {covered: false}
+      agent: {covered: false, subject: null}
+    human_approval:
+      analog: {covered: false}
+      agent: {covered: true, subject: ai, evidence: "MP-3.5.3: \"documents and communicates criteria and thresholds for human intervention in AI system operation, procedures for escalating issues, and guidelines for making oversight decisions\""}
+    audit_trail:
+      analog: {covered: false}
+      agent: {covered: true, subject: ai, evidence: "MS-2.7.4: \"AI-specific security logs and monitoring outputs are integrated into centralized security information and event management (SIEM) systems\""}
+    kill_switch:
+      analog: {covered: false}
+      agent: {covered: true, subject: ai, evidence: "MG-2.4.3: \"designs, implements, and regularly tests technical mechanisms and safeguards, including fallback, rollback, contingency, and deactivation systems, for the rapid, controlled disengagement of AI systems\""}
