@@ -1,0 +1,17 @@
+{
+ "generated_at": "2026-11-12 11:20 UTC",
+ "tool_rev": "6051e2a",
+ "library_as_of": "2026-11-12",
+ "obligations": 61,
+ "reviewed_by_counsel": false,
+ "agents_hash": "af6ca89236e321e5",
+ "case_hashes": {
+  "A1": "7a3c3a4a40b69f04",
+  "A2": "2ba15ebedbe4fcbb",
+  "A3": "7089cbb638b0c4a9",
+  "A4": "694c0abea8ce8454",
+  "A5": "bbda2a7f69afd12a",
+  "A6": "08ac09a09663a4da",
+  "A7": "946e68db780a5b36"
+ }
+}

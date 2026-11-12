@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>실험: 에이전트 유형 × 규제 기준 · PivoxPolicy</title>
+<meta name="description" content="증권사 AI 에이전트 일곱 유형에 걸리는 조문으로 통제 수준을 도출하고 공격 시나리오를 돌린 실험." />
+<meta name="theme-color" content="#050505" />
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<style>
+:root {
+  /* pivoxmap/frontend/src/app/globals.css :root (L11-64) 에서 이름·값 그대로 복사 — 이 정적 페이지가 쓰는 것만.
+     pivoxquant globals.css :root(L200-470) 와 대조: 아래 값은 전부 같다. 단 --pq-ivory-faint 만 pivoxquant 는 0.50 (2026-09-10 AA 보정) —
+     여기선 pivoxmap 값(0.45)을 그대로 두되 본문 글자색으로는 쓰지 않는다(rules 참고). 가격색 --pq-up/--pq-down 은 이 페이지에 가격이 없어 뺐다. */
+  --pq-ink: #050505;
+  --pq-ivory: #F5F0E8;
+  --pq-bronze: #B8956A;
+  --pq-bronze-light: #A3845C;
+  --pq-bronze-deep: #6F5636;
+  --pq-onyx: #111111;
+
+  --pq-ivory-soft: rgba(245, 240, 232, 0.78);
+  --pq-ivory-mid: rgba(245, 240, 232, 0.65);
+  --pq-ivory-dim: rgba(245, 240, 232, 0.55);
+  --pq-ivory-faint: rgba(245, 240, 232, 0.45);
+  --pq-ivory-line: rgba(245, 240, 232, 0.08);
+  --pq-ivory-line-soft: rgba(245, 240, 232, 0.06);
+  --pq-ivory-line-faint: rgba(245, 240, 232, 0.04);
+  --pq-card-veil: var(--pq-ivory-line-faint);
+  --pq-card-veil-strong: var(--pq-ivory-line-soft);
+
+  --pq-live: #7db487;
+  --pq-stale: #a88f4a;
+  --pq-error: #d18888;
+  /* 알림 칸 바탕 · 테두리 (로그인 화면 Callout — 강조색을 옅게 깐다) */
+  --pq-bronze-wash: rgba(184, 149, 106, 0.07);
+  --pq-bronze-line: rgba(184, 149, 106, 0.30);
+  /* 버튼 · 입력 테두리 (헤어라인 0.08 보다 한 단 진하게 — 2026-10-15 새 흐름) */
+  --pq-ivory-line-strong: rgba(245, 240, 232, 0.16);
+  /* 화면 넘김 (components/Screen.tsx · AppShell) */
+  --pq-ease: cubic-bezier(0.2, 0.75, 0.2, 1);
+
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
+  --font-code: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;   /* kbd · code 만 */
+
+  --pq-radius-card: 14px;
+  --pq-radius-ctl: 10px;
+  --pq-radius-chip: 6px;
+}
+/* base.css — Pivox 연구 대시보드(정적 HTML 한 장). 토큰은 tokens_css(pivoxmap globals.css :root 복사).
+   레이아웃 뼈대는 pivoxdata(research.css .wrap · ui.css .topbar/.nav/footer.site · index.html .sec-h),
+   글꼴·자간·모서리·컴포넌트 리듬은 pivoxmap globals.css(2026-10-15) 를 따른다. 박스·알약 배지·글로우·그라디언트·italic 없음. */
+
+*,*::before,*::after{box-sizing:border-box}
+html{color-scheme:dark;accent-color:var(--pq-bronze);-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh;background:var(--pq-ink);color:var(--pq-ivory);font-family:var(--font-sans);font-size:15px;line-height:1.6;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-feature-settings:"ss05";
+  word-break:keep-all;overflow-wrap:break-word;text-wrap:pretty}   /* keep-all = 어절 단위 줄바꿈. anywhere 가 아니라 break-word — 칸이 한 글자씩 세로로 눌리지 않게 */
+::selection{background:rgba(184,149,106,0.35)}
+:focus-visible{outline:2px solid var(--pq-bronze);outline-offset:2px;border-radius:var(--pq-radius-chip)}
+img,svg{max-width:100%;height:auto}
+.skip{position:absolute;left:-9999px;top:8px;z-index:100;padding:8px 12px;border-radius:var(--pq-radius-ctl);background:var(--pq-onyx);border:1px solid var(--pq-ivory-line-strong);color:var(--pq-ivory)}
+.skip:focus{left:16px}
+
+/* ── 레이아웃: 한 칸, 위아래로 읽는다. 가로 스크롤은 .tblwrap 과 폰의 .nav 안에서만 ── */
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px 72px}
+main{display:grid;gap:56px;padding-top:28px}
+main>*,section>*{min-width:0}   /* 넓은 표가 칸(그리드 항목)을 넓혀 페이지를 옆으로 밀지 않게 */
+@media(max-width:560px){.wrap{padding:0 16px 56px}main{gap:44px;padding-top:16px}}
+
+/* ── 글 ── */
+h1,h2,h3{margin:0;font-family:var(--font-sans);font-style:normal;text-wrap:balance}
+h1{font-size:clamp(28px,3.2vw,36px);font-weight:700;letter-spacing:-0.03em;line-height:1.2}   /* 머리말은 포스터가 아니라 신문 제호 크기 */
+h2{font-size:20px;font-weight:650;letter-spacing:-0.02em;line-height:1.3}
+h3{font-size:16px;font-weight:600;letter-spacing:-0.01em;line-height:1.4}
+p{margin:0;color:var(--pq-ivory-soft);max-width:72ch}
+p+p{margin-top:10px}
+.lede{font-size:17px;line-height:1.75;letter-spacing:-0.01em;color:var(--pq-ivory-soft);max-width:64ch}
+.eyebrow{font-size:13px;letter-spacing:0.01em;color:var(--pq-bronze);font-weight:500}   /* pivoxmap .pq-eyebrow 그대로 — 대문자·넓은 자간 없음 */
+.meta,.fine{font-size:13px;line-height:1.6;color:var(--pq-ivory-dim)}
+b,strong{font-weight:600;color:var(--pq-ivory)}
+a{color:var(--pq-bronze);text-decoration:none}
+a:hover{text-decoration:underline;text-underline-offset:3px}
+ul,ol{margin:0;padding-left:20px}
+li{margin:4px 0}
+li::marker{color:var(--pq-ivory-faint)}
+time{font-variant-numeric:tabular-nums}
+code,kbd{font-family:var(--font-code);font-size:0.86em}
+code{padding:1px 6px;border:1px solid var(--pq-ivory-line);border-radius:var(--pq-radius-chip);background:var(--pq-onyx);color:var(--pq-ivory-soft)}
+
+/* ── 머리 띠: 이름 + 메뉴 한 줄 (pivoxdata ui.css .topbar/.brand/.nav) ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;height:64px}
+.brand{display:inline-flex;align-items:center;flex-shrink:0;white-space:nowrap;font-size:18px;font-weight:700;letter-spacing:-0.02em;color:var(--pq-ivory)}
+.brand:hover{text-decoration:none}
+.brand .b{color:var(--pq-bronze)}   /* 'Pivox' 아이보리 + 접미 브론즈 — 세 제품 공통 워드마크 */
+.nav{display:flex;align-items:center;gap:4px;margin-left:auto;font-size:14px}
+.nav a{color:var(--pq-ivory-dim);padding:7px 11px;border-radius:var(--pq-radius-ctl);white-space:nowrap;transition:color 150ms,background-color 150ms}
+.nav a:hover{color:var(--pq-ivory);background:var(--pq-card-veil-strong);text-decoration:none}
+.nav a[aria-current]{color:var(--pq-ivory)}
+@media(max-width:780px){.nav a{padding-left:8px;padding-right:8px}.topbar{gap:8px}}
+@media(max-width:640px){
+  .topbar{flex-wrap:wrap;height:auto;padding:10px 0 0;row-gap:2px;border-bottom:1px solid var(--pq-ivory-line)}
+  .brand{min-height:44px}
+  /* 폰: 메뉴가 둘째 줄에 한 줄로, 넘치면 옆으로 민다(거터 밖까지). 아래 탭 바 없음 */
+  .nav{flex:1 0 100%;gap:0;margin:0 -16px;padding:0 12px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .nav::-webkit-scrollbar{display:none}
+  .nav a{display:inline-flex;align-items:center;min-height:44px;padding:0 10px;font-size:14.5px;border-radius:0}
+  .nav a[aria-current]{box-shadow:inset 0 -2px 0 var(--pq-bronze)}
+}
+
+/* ── 머리말 한 줄 ── */
+.hero .eyebrow{display:block;margin-bottom:14px}
+.hero h1{margin-bottom:10px}
+.hero .meta{margin-top:14px}
+
+/* ── 섹션: 앵커 · 헤딩 줄(제목 + 오른쪽 흐린 설명) · 끝에 '출처 · 기준일' 한 줄 ── */
+section{scroll-margin-top:16px}
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:0 0 14px}
+.sec-h h2 a{color:inherit}
+.sec-h h2 a:hover{text-decoration:underline;text-underline-offset:4px}
+.sec-h span{font-size:13px;color:var(--pq-ivory-dim);text-align:right}
+.src{display:flex;flex-wrap:wrap;gap:2px 10px;margin:16px 0 0;max-width:none;font-size:13px;line-height:1.6;color:var(--pq-ivory-dim)}
+/* 항목 사이는 '·' 대신 1px 헤어라인 — 줄이 바뀌어도 구분자가 줄 머리에 남지 않는다 (pivoxdata ui.css .r-k) */
+.src>*:not(:last-child)::after{content:"";display:inline-block;width:1px;height:10px;margin-left:10px;background:var(--pq-ivory-line-strong);vertical-align:-1px}
+.src a{color:var(--pq-ivory-dim);text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--pq-ivory-line-strong)}
+.src a:hover{color:var(--pq-ivory)}
+
+/* ── 카드: 14px · veil 바탕 · 헤어라인 테두리. 꼭 필요한 곳(평가 프로필 숫자 칸)에만 — 목록은 카드로 감싸지 않는다 ── */
+.card{background:var(--pq-card-veil);border:1px solid var(--pq-ivory-line);border-radius:var(--pq-radius-card);padding:18px 20px;min-width:0}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.card .k{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--pq-ivory-dim)}
+.card .v{margin-top:6px;font-size:28px;font-weight:700;letter-spacing:-0.03em;line-height:1.15;font-variant-numeric:tabular-nums}
+.card .h{margin-top:2px;font-size:13px;color:var(--pq-ivory-dim)}
+
+/* ── 표: 헤더 행 헤어라인(한 단 진한 0.16), 본문 행 헤어라인 0.08, 숫자 tabular, 행 hover 는 card-veil ── */
+.tblwrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+th,td{padding:10px 12px;text-align:left;vertical-align:top;overflow-wrap:break-word}
+th{font-size:13px;font-weight:600;letter-spacing:0.01em;color:var(--pq-ivory-dim);white-space:nowrap;border-bottom:1px solid var(--pq-ivory-line-strong)}
+td{border-bottom:1px solid var(--pq-ivory-line)}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:var(--pq-card-veil)}
+.num{text-align:right;white-space:nowrap}
+td time{white-space:nowrap}
+/* 매트릭스(통제 × 관할): 첫 열은 통제 이름, 나머지 칸은 점수(heat_scale 의 .h-0 ~ .h-3 · .h-x) */
+.matrix th:first-child,.matrix td:first-child{min-width:160px}
+.matrix th:not(:first-child),.matrix td:not(:first-child){text-align:center;min-width:64px}
+.matrix td:not(:first-child){font-weight:600}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin:10px 0 0;max-width:none;font-size:13px;color:var(--pq-ivory-dim)}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:3px;margin-right:7px;vertical-align:-2px}
+.legend i.h-x{outline-offset:-1px}
+
+/* ── 줄 목록: 사건 · 지금 바뀐 것 · 연표 · 공백 — 박스 없이 헤어라인, 날짜 열 + 내용 열 (pivoxdata .events/.case) ── */
+.rows{list-style:none;margin:0;padding:0;border-top:1px solid var(--pq-ivory-line-strong)}
+.rows>li{display:grid;grid-template-columns:96px minmax(0,1fr);gap:4px 14px;margin:0;padding:12px 0;border-bottom:1px solid var(--pq-ivory-line)}
+.rows time,.rows .d{font-size:13px;color:var(--pq-ivory-dim);white-space:nowrap;padding-top:2px}
+.rows .t{font-weight:600;color:var(--pq-ivory)}
+.rows .t a{color:inherit}
+.rows .s{margin-top:2px;font-size:14px;line-height:1.6;color:var(--pq-ivory-mid);max-width:72ch}
+.rows .k{font-size:13px;color:var(--pq-ivory-dim)}   /* 분류(관할 · 통제 · 종류) 한 줄 — 칩 아님 */
+@media(max-width:560px){.rows>li{grid-template-columns:1fr;gap:2px}}
+
+/* ── 상태 글자: live / stale / error 는 색 글자(+점)뿐. 바탕·테두리·알약 없음 ── */
+.st{font-size:13px;font-weight:600;white-space:nowrap}
+.st::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor;margin-right:6px;vertical-align:1px}
+.st-live{color:var(--pq-live)}
+.st-stale{color:var(--pq-stale)}
+.st-error{color:var(--pq-error)}
+
+/* ── 안내 칸: 네 변 테두리(한쪽 막대 아님). 범위·한계 설명 같은 읽을거리 ── */
+.note{padding:12px 16px;border-radius:var(--pq-radius-ctl);background:var(--pq-card-veil);box-shadow:inset 0 0 0 1px var(--pq-ivory-line);font-size:13px;line-height:1.65;color:var(--pq-ivory-dim);max-width:none}
+.note-bronze{background:var(--pq-bronze-wash);box-shadow:inset 0 0 0 1px var(--pq-bronze-line);color:var(--pq-ivory-soft)}
+.note b{color:var(--pq-bronze);font-weight:600}
+
+/* ── 버튼: 꼭 필요한 곳(파일 받기)에만 — pivoxmap .pq-btn/.pq-btn-line/.pq-btn-md 리듬 ── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:42px;padding:0 16px;font:inherit;font-size:15px;font-weight:500;letter-spacing:0.01em;
+  border-radius:var(--pq-radius-ctl);white-space:nowrap;cursor:pointer;border:1px solid var(--pq-ivory-line-strong);color:var(--pq-ivory);background:transparent;
+  transition:background-color 220ms var(--pq-ease),color 220ms var(--pq-ease),border-color 220ms var(--pq-ease)}
+.btn:hover{background:var(--pq-card-veil-strong);border-color:rgba(245,240,232,0.26);text-decoration:none}
+.btn-primary{background:var(--pq-bronze);color:var(--pq-ink);border-color:transparent}
+.btn-primary:hover{background:var(--pq-bronze-light)}
+.btn[disabled]{opacity:0.45;pointer-events:none}
+
+/* ── 접기: 방법 · 긴 목록 (pivoxmap details.pq-faq — 헤어라인 위아래, 브론즈 '+') ── */
+details{border-top:1px solid var(--pq-ivory-line)}
+details:last-of-type{border-bottom:1px solid var(--pq-ivory-line)}
+summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 0;font-size:15px;font-weight:600;color:var(--pq-ivory)}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";flex:none;width:1em;line-height:1;text-align:center;color:var(--pq-bronze);transition:transform 250ms}
+details[open] summary::after{transform:rotate(45deg)}
+details>:not(summary){padding-bottom:16px}
+
+/* ── 바닥 (pivoxdata ui.css footer.site) ── */
+footer.site{margin-top:72px;padding:22px 0 8px;border-top:1px solid var(--pq-ivory-line);display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center;justify-content:space-between;font-size:13px;color:var(--pq-ivory-dim)}
+footer.site a{color:var(--pq-ivory-dim)}
+footer.site a:hover{color:var(--pq-ivory)}
+footer.site .links{display:flex;flex-wrap:wrap;gap:4px 16px}
+@media(max-width:640px){footer.site{margin-top:40px}}
+@media(max-width:560px){footer.site .links{gap:0 4px}footer.site .links a{display:inline-flex;align-items:center;min-height:44px;padding:0 8px}}
+
+/* ── 움직임 ── */
+@media(prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
+/* landing.css — 첫 화면(out/index.html). 연구 노트처럼: 머리말 → 요약과 그림 1 → 모의 테스트(그림 2·3) → 방법 표 → 한계.
+   섹션 제목은 왼쪽 칸(사이드헤드), 내용은 오른쪽. 상자는 그림에만 쓰고 나머지는 선과 여백으로 나눈다.
+   토큰 · 뼈대는 tokens.css · base.css, 흐름도는 flow.css. 알약 · 글로우 · 그라디언트 · 빨강/초록 없음. 폰에서도 읽힌다. */
+
+.wrap.land{max-width:1160px}
+main{gap:0}
+
+/* 머리말 */
+.masthead{padding:56px 0 48px;max-width:860px}
+.kicker{margin:0 0 18px;font-size:13px;color:var(--pq-ivory-dim);letter-spacing:0}
+.kicker time{color:var(--pq-ivory-soft)}
+.masthead h1{font-size:clamp(30px,4.2vw,48px);line-height:1.18;letter-spacing:-0.035em;max-width:18ch}
+.deck{margin:22px 0 0;font-size:18px;line-height:1.75;color:var(--pq-ivory-soft);max-width:60ch}
+.go{display:flex;flex-wrap:wrap;align-items:center;gap:12px 22px;margin:30px 0 0}
+.go .more{font-size:15px;color:var(--pq-ivory-soft);text-decoration:underline;text-decoration-color:var(--pq-ivory-line-strong);text-underline-offset:5px}
+.go .more:hover{color:var(--pq-ivory);text-decoration-color:var(--pq-bronze)}
+
+/* 사이드헤드 섹션 — 제목 왼쪽, 내용 오른쪽, 위에 선 하나 */
+.sh{display:grid;grid-template-columns:168px minmax(0,1fr);gap:0 40px;padding:36px 0 52px;border-top:1px solid var(--pq-ivory-line-strong)}
+.sh>h2{font-size:15px;font-weight:600;letter-spacing:-0.01em;color:var(--pq-ivory);padding-top:3px}
+.body{margin:0 0 26px;font-size:16px;line-height:1.8;color:var(--pq-ivory-soft);max-width:66ch}
+
+/* 요약 + 그림 1 */
+.lead-grid{display:grid;grid-template-columns:minmax(0,0.9fr) minmax(0,1.1fr);gap:44px;align-items:start}
+.summary p{margin:0 0 16px;font-size:16.5px;line-height:1.8;color:var(--pq-ivory-soft);max-width:none}
+.summary p:first-child{font-size:19px;line-height:1.65;color:var(--pq-ivory)}
+
+/* 그림 — 번호 붙은 캡션이 위에 */
+.fig{margin:0}
+.fig figcaption{margin:0 0 14px;font-size:13px;line-height:1.6;color:var(--pq-ivory-dim);max-width:62ch}
+.fig figcaption b{margin-right:6px;font-weight:700;color:var(--pq-ivory)}
+.fig.wide{margin-bottom:34px}
+.preview{display:grid;gap:18px}
+.key{display:flex;flex-wrap:wrap;gap:6px 16px;margin:10px 0 0;font-size:12px;color:var(--pq-ivory-dim)}
+.key span{display:inline-flex;align-items:center;gap:6px}
+.key i{display:inline-block;width:11px;height:11px;border-radius:2px}
+.key i.s2{background:var(--pq-bronze)}
+.key i.s1{background:var(--pq-bronze-line)}
+.key i.s0{box-shadow:inset 0 0 0 1px var(--pq-ivory-line-strong)}
+.note-s{margin:12px 0 0;font-size:12.5px;line-height:1.65;color:var(--pq-ivory-dim);max-width:70ch}
+
+/* 작은 매트릭스 */
+.mini{width:100%;border-collapse:separate;border-spacing:2px;table-layout:fixed;font-size:12px}
+.mini th,.mini td{border:0;padding:0}
+.mini thead th{padding:0 2px 6px;text-align:center;font-size:12.5px;font-weight:600;color:var(--pq-ivory);white-space:normal}
+.mini thead th small{display:block;font-size:11px;font-weight:500;color:var(--pq-ivory-dim)}
+.mini thead th:first-child{width:32%;text-align:left}
+.mini tbody th{padding:0 8px 0 0;font-size:13px;font-weight:500;color:var(--pq-ivory-soft);text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mini td{height:28px;text-align:center;vertical-align:middle;border-radius:2px;font-weight:600}
+.mini td.s0{box-shadow:inset 0 0 0 1px var(--pq-ivory-line)}
+.mini td.s1{background:var(--pq-bronze-line);color:var(--pq-ivory)}
+.mini td.s2{background:var(--pq-bronze);color:var(--pq-ink)}
+.mini td.s3{background:var(--pq-ivory);color:var(--pq-ink)}
+
+/* 그림 3 + 쓰는 법 */
+.sim-two{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:44px}
+.bars{display:grid;grid-template-columns:minmax(120px,auto) minmax(0,1fr) auto;align-items:center;gap:10px 12px;margin:0}
+.bars dt{font-size:13px;color:var(--pq-ivory-soft);white-space:nowrap}
+.bars dd{margin:0;min-width:0}
+.bars .n{font-size:13px;font-weight:600;color:var(--pq-ivory);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.track{position:relative;display:block;height:10px;border-radius:1px;background:var(--pq-ivory-line);overflow:hidden}
+.track .hi,.track .lo{position:absolute;left:0;top:0;bottom:0}
+.track .hi{background:var(--pq-bronze-line)}
+.track .lo{background:var(--pq-bronze)}
+.uses h3{margin:0 0 12px;font-size:15px;font-weight:600}
+.uses p{margin:0 0 12px;font-size:15px;line-height:1.75;color:var(--pq-ivory-soft);max-width:none}
+.uses p:last-child{margin:20px 0 0}
+
+/* 방법 표 */
+.method{font-size:14px}
+.method th,.method td{vertical-align:top;padding:12px 12px 12px 0}
+.method thead th{padding-top:0}
+.method tbody th{font-weight:600;color:var(--pq-ivory);white-space:nowrap}
+.method td{color:var(--pq-ivory-soft);line-height:1.6}
+.method .n{width:22px;color:var(--pq-ivory-dim);font-variant-numeric:tabular-nums}
+.method .who{white-space:nowrap;color:var(--pq-bronze)}
+.method .now{color:var(--pq-ivory-mid);font-size:13px}
+
+/* 한계 */
+.lim{margin:0;padding:0;list-style:none;max-width:76ch}
+.lim li{margin:0;padding:12px 0;border-top:1px solid var(--pq-ivory-line);font-size:14.5px;line-height:1.75;color:var(--pq-ivory-soft)}
+.lim li:first-child{border-top:0;padding-top:0}
+
+@media(max-width:980px){
+  .lead-grid,.sim-two{grid-template-columns:minmax(0,1fr)}
+  .sh{grid-template-columns:minmax(0,1fr);gap:14px}
+}
+@media(max-width:640px){
+  .masthead{padding:32px 0 32px}
+  .deck{font-size:16.5px}
+  .sh{padding:28px 0 36px}
+  .method .now,.method thead th:last-child{display:none}
+  .mini tbody th{white-space:normal;font-size:12px}
+  .mini thead th:first-child{width:28%}
+  .bars{grid-template-columns:minmax(0,1fr) auto}
+  .bars dt{grid-column:1/-1;margin-bottom:-6px}
+}
+
+
+.xfig{width:100%;height:auto;margin:4px 0 0}
+.xfig .t{font-size:12.5px;fill:var(--pq-ivory-soft)}
+.xfig .h{font-size:12px;font-weight:600;fill:var(--pq-ivory-dim)}
+.xfig .n{font-size:12px;fill:var(--pq-ivory)}
+.xfig .s{font-size:11.5px;fill:var(--pq-ivory-dim)}
+.key{display:flex;flex-wrap:wrap;gap:6px 16px;margin:10px 0 0;font-size:12.5px;color:var(--pq-ivory-dim)}
+.key i{display:inline-block;width:12px;height:12px;margin-right:6px;vertical-align:-1px;border-radius:2px;box-shadow:inset 0 0 0 1px var(--pq-ivory-line)}
+.tblfig{margin:28px 0 0}
+.xt{font-size:13px}
+.xt td:first-child{white-space:nowrap;font-weight:600}
+.xt th{white-space:nowrap}
+.deph{margin:36px 0 6px}
+.dep{margin:8px 0 0;padding-left:18px;font-size:13.5px;color:var(--pq-ivory-soft)}
+.dep li{margin:4px 0}
+.lim{margin:0;padding-left:18px;color:var(--pq-ivory-soft);font-size:14px;line-height:1.7}
+.summary p{margin:0 0 10px}
+
+</style>
+</head>
+<body>
+<a class="skip" href="#main">본문으로</a>
+<div class="wrap land">
+<header class="topbar">
+<a class="brand" href="./" aria-label="PivoxPolicy 홈">Pivox<span class="b">Policy</span></a>
+<nav class="nav" aria-label="페이지"><a href="sim.html">모의 테스트</a><a href="dashboard.html">대시보드</a><a href="./">첫 화면</a></nav>
+</header>
+<main id="main">
+<header class="masthead" id="top">
+<p class="kicker">실험 노트 · 2026-11-12 기준</p>
+<h1>에이전트 유형마다, 규제를 어떻게 읽느냐에 따라</h1>
+<p class="deck">증권사의 대표적인 AI 에이전트 일곱 유형에 실제로 걸리는 조문을 골라 통제 수준을 세 가지 기준으로 도출하고, 각 유형의 도구로 만든 공격 시나리오를 같은 정책 엔진으로 돌렸다. 기준은 명문 기준, 확장 해석 기준, 자율규범 포함 기준이다.</p>
+</header>
+<section class="sh lead" aria-labelledby="h-r"><h2 id="h-r">결과</h2><div>
+<div class="summary"><p>에이전트 유형 7개, 공격 시나리오 45개. 명문 기준만 따르면 미차단 29개(64%), 승인 의존 5개(11%), 자동 차단 11개(24%)다.</p><p>확장 해석 기준에서는 미차단 0개, 승인 의존 2개, 자율규범 포함 기준에서는 미차단 0개, 승인 의존 0개다.</p><p>명문 기준이 어떤 통제도 AI 수준까지 요구하지 않는 유형이 4개다(거래처 정산, 고객 상담, 리서치 · 보고서, 전산 운영 자동화). AI 수준 요구가 생기는 유형은 주문 집행 보조(최소 권한, 감사 기록), 로보어드바이저 투자자문(최소 권한, 감사 기록), 신용공여 심사(사람 승인, 감사 기록)이다.</p><p>판정이 명문 기준과 확장 해석 기준 사이에서 바뀌는 공격 시나리오(해석 의존)는 34개(76%)다. 사람·계정을 대상으로 쓴 조문을 에이전트에도 적용하느냐가 결과를 가른다.</p><p>승인자가 승인 의존 시나리오의 30%를 잘못 승인한다고 가정하면 명문 기준의 기대 미차단은 30.5개다.</p><p>공격 유형 가운데 자율 실행 일탈, 공급망 변조는 모든 시나리오의 판정이 명문 기준과 확장 해석 기준 사이에서 바뀐다.</p><p>구성상 저촉은 외부 클라우드 · 해외 API 모델을 쓰는 유형 4개(주문 집행 보조, 고객 상담, 로보어드바이저 투자자문, 리서치 · 보고서)에서 나타난다. 통제 수준과 상관없이 구성을 바꾸거나 예외 사유가 있어야 한다.</p></div>
+<figure class="fig"><figcaption><b>그림 1</b> 규제 기준별 공격 시나리오 판정. 일곱 유형의 시나리오를 합했다. 맨 위와 맨 아래는 기준선이다.</figcaption><svg viewBox="0 0 760 228" role="img" aria-label="규제 기준별 공격 시나리오 판정" class="xfig"><text x="0" y="17.7" class="t">통제 없음</text><rect x="170.0" y="0.0" width="520.0" height="26.0" fill="var(--pq-ivory)"><title>미차단 45</title></rect><text x="698" y="17.7" class="n">미차단 45</text><text x="0" y="57.7" class="t">명문 기준</text><rect x="170.0" y="40.0" width="127.1" height="26.0" fill="var(--pq-bronze)"><title>자동 차단 11</title></rect><rect x="297.1" y="40.0" width="57.8" height="26.0" fill="var(--pq-bronze-deep)"><title>승인 의존 5</title></rect><rect x="354.9" y="40.0" width="335.1" height="26.0" fill="var(--pq-ivory)"><title>미차단 29</title></rect><text x="698" y="57.7" class="n">미차단 29</text><text x="0" y="97.7" class="t">확장 해석 기준</text><rect x="170.0" y="80.0" width="496.9" height="26.0" fill="var(--pq-bronze)"><title>자동 차단 43</title></rect><rect x="666.9" y="80.0" width="23.1" height="26.0" fill="var(--pq-bronze-deep)"><title>승인 의존 2</title></rect><text x="698" y="97.7" class="n">미차단 0</text><text x="0" y="137.7" class="t">자율규범 포함 기준</text><rect x="170.0" y="120.0" width="520.0" height="26.0" fill="var(--pq-bronze)"><title>자동 차단 45</title></rect><text x="698" y="137.7" class="n">미차단 0</text><text x="0" y="177.7" class="t">모든 통제 AI 수준</text><rect x="170.0" y="160.0" width="520.0" height="26.0" fill="var(--pq-bronze)"><title>자동 차단 45</title></rect><text x="698" y="177.7" class="n">미차단 0</text><text x="170" y="216" class="s">공격 시나리오 45개(유형 7개 합)</text></svg><p class="key"><span><i style="background:var(--pq-bronze)"></i>자동 차단</span><span><i style="background:var(--pq-bronze-deep)"></i>승인 의존</span><span><i style="background:var(--pq-ivory)"></i>미차단</span><span><i style="background:var(--pq-ivory-line)"></i>공격면 없음</span></p></figure>
+</div></section>
+<section class="sh" aria-labelledby="h-a"><h2 id="h-a">유형별</h2><div>
+<figure class="fig"><figcaption><b>그림 2</b> 유형별 판정. 막대 하나가 그 유형의 공격 시나리오 전체다.</figcaption><svg viewBox="0 0 760 240" role="img" aria-label="에이전트 유형별 판정" class="xfig"><text x="170.0" y="12" class="h">명문 기준</text><text x="366.7" y="12" class="h">확장 해석 기준</text><text x="563.3" y="12" class="h">자율규범 포함 기준</text><text x="0" y="35.5" class="t">A1 주문 집행 보조</text><rect x="170.0" y="22.0" width="135.5" height="18.0" fill="var(--pq-bronze)"><title>자동 차단 6</title></rect><rect x="305.5" y="22.0" width="45.2" height="18.0" fill="var(--pq-ivory)"><title>미차단 2</title></rect><rect x="366.7" y="22.0" width="180.7" height="18.0" fill="var(--pq-bronze)"><title>자동 차단 8</title></rect><rect x="563.3" y="22.0" width="180.7" height="18.0" fill="var(--pq-bronze)"><title>자동 차단 8</title></rect><text x="0" y="65.5" class="t">A2 거래처 정산</text><rect x="170.0" y="52.0" width="180.7" height="18.0" fill="var(--pq-ivory)"><title>미차단 7</title></rect><rect x="366.7" y="52.0" width="154.9" height="18.0" fill="var(--pq-bronze)"><title>자동 차단 6</title></rect><rect x="521.5" y="52.0" width="25.8" height="18.0" fill="var(--pq-bronze-deep)"><title>승인 의존 1</title></rect><rect x="563.3" y="52.0" width="180.7" height="18.0" fill="var(--pq-bronze)"><title>자동 차단 7</title></rect><text x="0" y="95.5" class="t">A3 고객 상담</text><rect x="170.0" y="82.0" width="180.7" height="18.0" fill="var(--pq-ivory)"><title>미차단 6</title></rect><rect x="366.7" y="82.0" width="180.7" height="18.0" fill="var(--pq-bronze)"><title>자동 차단 6</title></rect><rect x="563.3" y="82.0" width="180.7" height="18.0" fill="var(--pq-bronze)"><title>자동 차단 6</title></rect><text x="0" y="125.5" class="t">A4 로보어드바이저 투자자문</text><rect x="170.0" y="112.0" width="112.9" height="18.0" fill="var(--pq-bronze)"><title>자동 차단 5</title></rect><rect x="282.9" y="112.0" width="67.8" height="18.0" fill="var(--pq-ivory)"><title>미차단 3</title></rect><rect x="366.7" y="112.0" width="180.7" height="18.0" fill="var(--pq-bronze)"><title>자동 차단 8</title></rect><rect x="563.3" y="112.0" width="180.7" height="18.0" fill="var(--pq-bronze)"><title>자동 차단 8</title></rect><text x="0" y="155.5" class="t">A5 신용공여 심사</text><rect x="170.0" y="142.0" width="150.6" height="18.0" fill="var(--pq-bronze-deep)"><title>승인 의존 5</title></rect><rect x="320.6" y="142.0" width="30.1" height="18.0" fill="var(--pq-ivory)"><title>미차단 1</title></rect><rect x="366.7" y="142.0" width="180.7" height="18.0" fill="var(--pq-bronze)"><title>자동 차단 6</title></rect><rect x="563.3" y="142.0" width="180.7" height="18.0" fill="var(--pq-bronze)"><title>자동 차단 6</title></rect><text x="0" y="185.5" class="t">A6 리서치 · 보고서</text><rect x="170.0" y="172.0" width="180.7" height="18.0" fill="var(--pq-ivory)"><title>미차단 5</title></rect><rect x="366.7" y="172.0" width="180.7" height="18.0" fill="var(--pq-bronze)"><title>자동 차단 5</title></rect><rect x="563.3" y="172.0" width="180.7" height="18.0" fill="var(--pq-bronze)"><title>자동 차단 5</title></rect><text x="0" y="215.5" class="t">A7 전산 운영 자동화</text><rect x="170.0" y="202.0" width="180.7" height="18.0" fill="var(--pq-ivory)"><title>미차단 5</title></rect><rect x="366.7" y="202.0" width="144.5" height="18.0" fill="var(--pq-bronze)"><title>자동 차단 4</title></rect><rect x="511.2" y="202.0" width="36.1" height="18.0" fill="var(--pq-bronze-deep)"><title>승인 의존 1</title></rect><rect x="563.3" y="202.0" width="180.7" height="18.0" fill="var(--pq-bronze)"><title>자동 차단 5</title></rect></svg><p class="key"><span><i style="background:var(--pq-bronze)"></i>자동 차단</span><span><i style="background:var(--pq-bronze-deep)"></i>승인 의존</span><span><i style="background:var(--pq-ivory)"></i>미차단</span><span><i style="background:var(--pq-ivory-line)"></i>공격면 없음</span></p></figure>
+<figure class="fig tblfig"><figcaption><b>표 1</b> 에이전트 유형별 적용 조문. 강제는 걸리는 조문 가운데 강제 조문, AI 수준 강제는 그 가운데 AI를 명시하거나 행위 자체를 규율하는 조문이다.</figcaption><div class="tblwrap"><table class="xt"><thead><tr><th>유형</th><th>하는 일</th><th>모델</th><th>걸리는 조문</th><th>강제</th><th>AI 수준 강제</th><th>구성상 저촉</th><th>명문 기준의 AI 수준 통제</th><th>고영향 AI</th></tr></thead><tbody><tr><td>A1 주문 집행 보조</td><td>주문, 고객 응대</td><td>국내 클라우드</td><td>48</td><td>35</td><td>3</td><td>1</td><td>최소 권한, 감사 기록</td><td>아님</td></tr><tr><td>A2 거래처 정산</td><td>이체 · 정산</td><td>사내 설치</td><td>27</td><td>16</td><td>0</td><td>0</td><td>없음</td><td>아님</td></tr><tr><td>A3 고객 상담</td><td>고객 응대</td><td>해외 API</td><td>38</td><td>26</td><td>0</td><td>1</td><td>없음</td><td>아님</td></tr><tr><td>A4 로보어드바이저 투자자문</td><td>투자 권유, 주문, 고객 응대</td><td>국내 클라우드</td><td>52</td><td>39</td><td>3</td><td>1</td><td>최소 권한, 감사 기록</td><td>아님</td></tr><tr><td>A5 신용공여 심사</td><td>신용공여, 고객 응대</td><td>사내 설치</td><td>37</td><td>26</td><td>3</td><td>0</td><td>사람 승인, 감사 기록</td><td>추정 해당</td></tr><tr><td>A6 리서치 · 보고서</td><td>내부 업무</td><td>해외 API</td><td>33</td><td>21</td><td>0</td><td>1</td><td>없음</td><td>아님</td></tr><tr><td>A7 전산 운영 자동화</td><td>코드 실행, 내부 업무</td><td>사내 설치</td><td>27</td><td>16</td><td>0</td><td>0</td><td>없음</td><td>아님</td></tr></tbody></table></div></figure><figure class="fig tblfig"><figcaption><b>표 2</b> 유형별 미차단 / 승인 의존. 칸은 &#x27;미차단 수 / 승인 의존 수&#x27;이다.</figcaption><div class="tblwrap"><table class="xt"><thead><tr><th>유형</th><th>통제 없음</th><th>명문 기준</th><th>확장 해석 기준</th><th>자율규범 포함 기준</th><th>모든 통제 AI 수준</th><th>해석 의존</th></tr></thead><tbody><tr><td>A1 주문 집행 보조</td><td>8 / 0</td><td>2 / 0</td><td>0 / 0</td><td>0 / 0</td><td>0 / 0</td><td>2</td></tr><tr><td>A2 거래처 정산</td><td>7 / 0</td><td>7 / 0</td><td>0 / 1</td><td>0 / 0</td><td>0 / 0</td><td>7</td></tr><tr><td>A3 고객 상담</td><td>6 / 0</td><td>6 / 0</td><td>0 / 0</td><td>0 / 0</td><td>0 / 0</td><td>6</td></tr><tr><td>A4 로보어드바이저 투자자문</td><td>8 / 0</td><td>3 / 0</td><td>0 / 0</td><td>0 / 0</td><td>0 / 0</td><td>3</td></tr><tr><td>A5 신용공여 심사</td><td>6 / 0</td><td>1 / 5</td><td>0 / 0</td><td>0 / 0</td><td>0 / 0</td><td>6</td></tr><tr><td>A6 리서치 · 보고서</td><td>5 / 0</td><td>5 / 0</td><td>0 / 0</td><td>0 / 0</td><td>0 / 0</td><td>5</td></tr><tr><td>A7 전산 운영 자동화</td><td>5 / 0</td><td>5 / 0</td><td>0 / 1</td><td>0 / 0</td><td>0 / 0</td><td>5</td></tr></tbody></table></div></figure>
+</div></section>
+<section class="sh" aria-labelledby="h-s"><h2 id="h-s">공격 유형별</h2><div>
+<figure class="fig tblfig"><figcaption><b>표 3</b> 공격 유형별 판정(유형 합). 칸은 &#x27;미차단 수 / 승인 의존 수&#x27;이다.</figcaption><div class="tblwrap"><table class="xt"><thead><tr><th>공격 유형</th><th>시나리오</th><th>명문 기준</th><th>확장 해석 기준</th><th>자율규범 포함 기준</th><th>해석 의존</th></tr></thead><tbody><tr><td>간접 프롬프트 주입</td><td>7</td><td>4 / 1</td><td>0 / 0</td><td>0 / 0</td><td>5</td></tr><tr><td>승인 절차 악용</td><td>5</td><td>3 / 0</td><td>0 / 0</td><td>0 / 0</td><td>3</td></tr><tr><td>내부자 권한 남용</td><td>4</td><td>1 / 1</td><td>0 / 0</td><td>0 / 0</td><td>2</td></tr><tr><td>자율 실행 일탈</td><td>7</td><td>6 / 1</td><td>0 / 0</td><td>0 / 0</td><td>7</td></tr><tr><td>에이전트 간 위임 전파</td><td>7</td><td>4 / 1</td><td>0 / 0</td><td>0 / 0</td><td>5</td></tr><tr><td>공급망 변조</td><td>4</td><td>4 / 0</td><td>0 / 2</td><td>0 / 0</td><td>4</td></tr><tr><td>자격증명 유출</td><td>7</td><td>5 / 1</td><td>0 / 0</td><td>0 / 0</td><td>6</td></tr><tr><td>고객 간 정보 노출</td><td>4</td><td>2 / 0</td><td>0 / 0</td><td>0 / 0</td><td>2</td></tr></tbody></table></div></figure>
+<h3 class="deph">해석 의존 시나리오</h3><p class="body">명문 기준과 확장 해석 기준 사이에서 판정이 바뀌는 시나리오를 공격 유형으로 묶었다. 시나리오별 식별자는 experiment/summary.md 에 있다.</p><ul class="dep"><li><b>A1 주문 집행 보조</b> 자율 실행 일탈, 공급망 변조</li><li><b>A2 거래처 정산</b> 간접 프롬프트 주입, 승인 절차 악용, 내부자 권한 남용, 자율 실행 일탈, 에이전트 간 위임 전파, 공급망 변조, 자격증명 유출</li><li><b>A3 고객 상담</b> 간접 프롬프트 주입, 승인 절차 악용, 자율 실행 일탈, 에이전트 간 위임 전파, 자격증명 유출, 고객 간 정보 노출</li><li><b>A4 로보어드바이저 투자자문</b> 자율 실행 일탈, 공급망 변조, 자격증명 유출</li><li><b>A5 신용공여 심사</b> 간접 프롬프트 주입, 내부자 권한 남용, 자율 실행 일탈, 에이전트 간 위임 전파, 자격증명 유출, 고객 간 정보 노출</li><li><b>A6 리서치 · 보고서</b> 간접 프롬프트 주입, 승인 절차 악용, 자율 실행 일탈, 에이전트 간 위임 전파, 자격증명 유출</li><li><b>A7 전산 운영 자동화</b> 간접 프롬프트 주입, 자율 실행 일탈, 에이전트 간 위임 전파, 공급망 변조, 자격증명 유출</li></ul>
+</div></section>
+<section class="sh" aria-labelledby="h-t"><h2 id="h-t">합계와 민감도</h2><div><figure class="fig tblfig"><figcaption><b>표 4</b> 규제 기준별 시나리오 판정(유형 합)</figcaption><div class="tblwrap"><table class="xt"><thead><tr><th>기준</th><th>자동 차단</th><th>승인 의존</th><th>미차단</th><th>공격면 없음</th><th>정상 처리</th><th>승인 대기</th><th>과잉 차단</th></tr></thead><tbody><tr><td>통제 없음</td><td>0</td><td>0</td><td>45</td><td>0</td><td>14</td><td>0</td><td>0</td></tr><tr><td>명문 기준</td><td>11</td><td>5</td><td>29</td><td>0</td><td>13</td><td>1</td><td>0</td></tr><tr><td>확장 해석 기준</td><td>43</td><td>2</td><td>0</td><td>0</td><td>7</td><td>7</td><td>0</td></tr><tr><td>자율규범 포함 기준</td><td>45</td><td>0</td><td>0</td><td>0</td><td>7</td><td>7</td><td>0</td></tr><tr><td>모든 통제 AI 수준</td><td>45</td><td>0</td><td>0</td><td>0</td><td>7</td><td>7</td><td>0</td></tr></tbody></table></div></figure><figure class="fig tblfig"><figcaption><b>표 5</b> 승인자 오판 민감도. 기대 미차단 = 미차단 + p × 승인 의존(유형 합)</figcaption><div class="tblwrap"><table class="xt"><thead><tr><th>기준</th><th>p = 0.0</th><th>p = 0.05</th><th>p = 0.1</th><th>p = 0.3</th></tr></thead><tbody><tr><td>통제 없음</td><td>45.0</td><td>45.0</td><td>45.0</td><td>45.0</td></tr><tr><td>명문 기준</td><td>29.0</td><td>29.25</td><td>29.5</td><td>30.5</td></tr><tr><td>확장 해석 기준</td><td>0.0</td><td>0.1</td><td>0.2</td><td>0.6</td></tr><tr><td>자율규범 포함 기준</td><td>0.0</td><td>0.0</td><td>0.0</td><td>0.0</td></tr><tr><td>모든 통제 AI 수준</td><td>0.0</td><td>0.0</td><td>0.0</td><td>0.0</td></tr></tbody></table></div></figure></div></section>
+<section class="sh" aria-labelledby="h-m"><h2 id="h-m">방법</h2><div>
+<p class="body">에이전트 유형은 저자가 정한 합성 유형이다(registry/experiment_agents.yaml). 도구 이름, 인자, 배포 형태, 하는 일, 다루는 정보를 고정하고, 통제 수준만 기준마다 바꾼다. 걸리는 조문은 증권 의무 라이브러리(61개, 기준일 2026-11-12)에서 적용 조건으로 골랐다.</p>
+<p class="body">명문 기준은 강제 조문을 문언대로 읽어, AI를 명시하거나 행위 자체를 규율하는 조문만 AI 수준을 요구한 것으로 본다. 확장 해석 기준은 사람·계정을 대상으로 쓴 강제 조문도 에이전트에 적용한다. 자율규범 포함 기준은 가이드라인과 평가기준까지 넣는다.</p>
+<p class="body">시나리오 판정은 정책 엔진 샌드박스 재실행이다. 사람 승인 단계에서 멈춘 공격은 승인자가 승인한다고 가정해 한 번 더 돌려, 뒤의 통제가 막으면 자동 차단, 실행되면 승인 의존으로 분류한다. 결과는 결정적이다.</p>
+</div></section>
+<section class="sh" aria-labelledby="h-l"><h2 id="h-l">한계</h2><div><ul class="lim">
+<li>조문 대응과 적용 조건, 조문이 에이전트에 미치는 방식의 구분은 변호사 검토 전이다.</li>
+<li>에이전트 유형과 도구 구성은 가정이다. 같은 업무라도 도구를 다르게 나누면 결과가 달라진다.</li>
+<li>시나리오는 정책 엔진의 판정을 본다. 모델이 실제로 숨은 지시를 따르는지는 LLM 레드팀으로 따로 잰다.</li>
+<li>통제 수준 2(AI 수준)는 런타임이 집행한다고 가정한다. 운영 효과성(실제로 그렇게 돌고 있는지)은 이 실험 밖이다.</li>
+</ul>
+<p class="note-s">재현: 도구 버전 6051e2a · 에이전트 정의 지문 af6ca89236e321e5 · 시나리오 지문 A1 7a3c3a4a40b69f04, A2 2ba15ebedbe4fcbb, A3 7089cbb638b0c4a9, A4 694c0abea8ce8454, A5 bbda2a7f69afd12a, A6 08ac09a09663a4da, A7 946e68db780a5b36. 원자료는 experiment/results.csv · results.json.</p>
+</div></section>
+</main>
+<footer class="site"><span>PivoxPolicy 실험 노트. 법률 자문이 아니다.</span><span class="links"><a href="./">첫 화면</a></span></footer>
+</div>
+</body>
+</html>

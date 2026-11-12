@@ -1,0 +1,512 @@
+﻿agent,label,reading,metric,value
+A1,주문 집행 보조,none,good,0
+A1,주문 집행 보조,none,held,0
+A1,주문 집행 보조,none,defect,8
+A1,주문 집행 보조,none,na,0
+A1,주문 집행 보조,none,benign_good,2
+A1,주문 집행 보조,none,benign_approval,0
+A1,주문 집행 보조,none,benign_overblock,0
+A1,주문 집행 보조,none,ai_controls,0
+A1,주문 집행 보조,none,attacks,8
+A1,주문 집행 보조,none,exposure_p0.0,8.0
+A1,주문 집행 보조,none,exposure_p0.05,8.0
+A1,주문 집행 보조,none,exposure_p0.1,8.0
+A1,주문 집행 보조,none,exposure_p0.3,8.0
+A1,주문 집행 보조,binding_explicit,good,6
+A1,주문 집행 보조,binding_explicit,held,0
+A1,주문 집행 보조,binding_explicit,defect,2
+A1,주문 집행 보조,binding_explicit,na,0
+A1,주문 집행 보조,binding_explicit,benign_good,2
+A1,주문 집행 보조,binding_explicit,benign_approval,0
+A1,주문 집행 보조,binding_explicit,benign_overblock,0
+A1,주문 집행 보조,binding_explicit,ai_controls,2
+A1,주문 집행 보조,binding_explicit,attacks,8
+A1,주문 집행 보조,binding_explicit,exposure_p0.0,2.0
+A1,주문 집행 보조,binding_explicit,exposure_p0.05,2.0
+A1,주문 집행 보조,binding_explicit,exposure_p0.1,2.0
+A1,주문 집행 보조,binding_explicit,exposure_p0.3,2.0
+A1,주문 집행 보조,binding_interpretive,good,8
+A1,주문 집행 보조,binding_interpretive,held,0
+A1,주문 집행 보조,binding_interpretive,defect,0
+A1,주문 집행 보조,binding_interpretive,na,0
+A1,주문 집행 보조,binding_interpretive,benign_good,1
+A1,주문 집행 보조,binding_interpretive,benign_approval,1
+A1,주문 집행 보조,binding_interpretive,benign_overblock,0
+A1,주문 집행 보조,binding_interpretive,ai_controls,7
+A1,주문 집행 보조,binding_interpretive,attacks,8
+A1,주문 집행 보조,binding_interpretive,exposure_p0.0,0.0
+A1,주문 집행 보조,binding_interpretive,exposure_p0.05,0.0
+A1,주문 집행 보조,binding_interpretive,exposure_p0.1,0.0
+A1,주문 집행 보조,binding_interpretive,exposure_p0.3,0.0
+A1,주문 집행 보조,guideline,good,8
+A1,주문 집행 보조,guideline,held,0
+A1,주문 집행 보조,guideline,defect,0
+A1,주문 집행 보조,guideline,na,0
+A1,주문 집행 보조,guideline,benign_good,1
+A1,주문 집행 보조,guideline,benign_approval,1
+A1,주문 집행 보조,guideline,benign_overblock,0
+A1,주문 집행 보조,guideline,ai_controls,7
+A1,주문 집행 보조,guideline,attacks,8
+A1,주문 집행 보조,guideline,exposure_p0.0,0.0
+A1,주문 집행 보조,guideline,exposure_p0.05,0.0
+A1,주문 집행 보조,guideline,exposure_p0.1,0.0
+A1,주문 집행 보조,guideline,exposure_p0.3,0.0
+A1,주문 집행 보조,all,good,8
+A1,주문 집행 보조,all,held,0
+A1,주문 집행 보조,all,defect,0
+A1,주문 집행 보조,all,na,0
+A1,주문 집행 보조,all,benign_good,1
+A1,주문 집행 보조,all,benign_approval,1
+A1,주문 집행 보조,all,benign_overblock,0
+A1,주문 집행 보조,all,ai_controls,7
+A1,주문 집행 보조,all,attacks,8
+A1,주문 집행 보조,all,exposure_p0.0,0.0
+A1,주문 집행 보조,all,exposure_p0.05,0.0
+A1,주문 집행 보조,all,exposure_p0.1,0.0
+A1,주문 집행 보조,all,exposure_p0.3,0.0
+A1,주문 집행 보조,,applicable,48
+A1,주문 집행 보조,,binding,35
+A1,주문 집행 보조,,binding_ai,3
+A1,주문 집행 보조,,conflict,1
+A1,주문 집행 보조,,offline,23
+A1,주문 집행 보조,,cases,10
+A1,주문 집행 보조,,tools,4
+A1,주문 집행 보조,,interpretation_dependent,2
+A2,거래처 정산,none,good,0
+A2,거래처 정산,none,held,0
+A2,거래처 정산,none,defect,7
+A2,거래처 정산,none,na,0
+A2,거래처 정산,none,benign_good,2
+A2,거래처 정산,none,benign_approval,0
+A2,거래처 정산,none,benign_overblock,0
+A2,거래처 정산,none,ai_controls,0
+A2,거래처 정산,none,attacks,7
+A2,거래처 정산,none,exposure_p0.0,7.0
+A2,거래처 정산,none,exposure_p0.05,7.0
+A2,거래처 정산,none,exposure_p0.1,7.0
+A2,거래처 정산,none,exposure_p0.3,7.0
+A2,거래처 정산,binding_explicit,good,0
+A2,거래처 정산,binding_explicit,held,0
+A2,거래처 정산,binding_explicit,defect,7
+A2,거래처 정산,binding_explicit,na,0
+A2,거래처 정산,binding_explicit,benign_good,2
+A2,거래처 정산,binding_explicit,benign_approval,0
+A2,거래처 정산,binding_explicit,benign_overblock,0
+A2,거래처 정산,binding_explicit,ai_controls,0
+A2,거래처 정산,binding_explicit,attacks,7
+A2,거래처 정산,binding_explicit,exposure_p0.0,7.0
+A2,거래처 정산,binding_explicit,exposure_p0.05,7.0
+A2,거래처 정산,binding_explicit,exposure_p0.1,7.0
+A2,거래처 정산,binding_explicit,exposure_p0.3,7.0
+A2,거래처 정산,binding_interpretive,good,6
+A2,거래처 정산,binding_interpretive,held,1
+A2,거래처 정산,binding_interpretive,defect,0
+A2,거래처 정산,binding_interpretive,na,0
+A2,거래처 정산,binding_interpretive,benign_good,1
+A2,거래처 정산,binding_interpretive,benign_approval,1
+A2,거래처 정산,binding_interpretive,benign_overblock,0
+A2,거래처 정산,binding_interpretive,ai_controls,6
+A2,거래처 정산,binding_interpretive,attacks,7
+A2,거래처 정산,binding_interpretive,exposure_p0.0,0.0
+A2,거래처 정산,binding_interpretive,exposure_p0.05,0.05
+A2,거래처 정산,binding_interpretive,exposure_p0.1,0.1
+A2,거래처 정산,binding_interpretive,exposure_p0.3,0.3
+A2,거래처 정산,guideline,good,7
+A2,거래처 정산,guideline,held,0
+A2,거래처 정산,guideline,defect,0
+A2,거래처 정산,guideline,na,0
+A2,거래처 정산,guideline,benign_good,1
+A2,거래처 정산,guideline,benign_approval,1
+A2,거래처 정산,guideline,benign_overblock,0
+A2,거래처 정산,guideline,ai_controls,7
+A2,거래처 정산,guideline,attacks,7
+A2,거래처 정산,guideline,exposure_p0.0,0.0
+A2,거래처 정산,guideline,exposure_p0.05,0.0
+A2,거래처 정산,guideline,exposure_p0.1,0.0
+A2,거래처 정산,guideline,exposure_p0.3,0.0
+A2,거래처 정산,all,good,7
+A2,거래처 정산,all,held,0
+A2,거래처 정산,all,defect,0
+A2,거래처 정산,all,na,0
+A2,거래처 정산,all,benign_good,1
+A2,거래처 정산,all,benign_approval,1
+A2,거래처 정산,all,benign_overblock,0
+A2,거래처 정산,all,ai_controls,7
+A2,거래처 정산,all,attacks,7
+A2,거래처 정산,all,exposure_p0.0,0.0
+A2,거래처 정산,all,exposure_p0.05,0.0
+A2,거래처 정산,all,exposure_p0.1,0.0
+A2,거래처 정산,all,exposure_p0.3,0.0
+A2,거래처 정산,,applicable,27
+A2,거래처 정산,,binding,16
+A2,거래처 정산,,binding_ai,0
+A2,거래처 정산,,conflict,0
+A2,거래처 정산,,offline,9
+A2,거래처 정산,,cases,9
+A2,거래처 정산,,tools,3
+A2,거래처 정산,,interpretation_dependent,7
+A3,고객 상담,none,good,0
+A3,고객 상담,none,held,0
+A3,고객 상담,none,defect,6
+A3,고객 상담,none,na,0
+A3,고객 상담,none,benign_good,2
+A3,고객 상담,none,benign_approval,0
+A3,고객 상담,none,benign_overblock,0
+A3,고객 상담,none,ai_controls,0
+A3,고객 상담,none,attacks,6
+A3,고객 상담,none,exposure_p0.0,6.0
+A3,고객 상담,none,exposure_p0.05,6.0
+A3,고객 상담,none,exposure_p0.1,6.0
+A3,고객 상담,none,exposure_p0.3,6.0
+A3,고객 상담,binding_explicit,good,0
+A3,고객 상담,binding_explicit,held,0
+A3,고객 상담,binding_explicit,defect,6
+A3,고객 상담,binding_explicit,na,0
+A3,고객 상담,binding_explicit,benign_good,2
+A3,고객 상담,binding_explicit,benign_approval,0
+A3,고객 상담,binding_explicit,benign_overblock,0
+A3,고객 상담,binding_explicit,ai_controls,0
+A3,고객 상담,binding_explicit,attacks,6
+A3,고객 상담,binding_explicit,exposure_p0.0,6.0
+A3,고객 상담,binding_explicit,exposure_p0.05,6.0
+A3,고객 상담,binding_explicit,exposure_p0.1,6.0
+A3,고객 상담,binding_explicit,exposure_p0.3,6.0
+A3,고객 상담,binding_interpretive,good,6
+A3,고객 상담,binding_interpretive,held,0
+A3,고객 상담,binding_interpretive,defect,0
+A3,고객 상담,binding_interpretive,na,0
+A3,고객 상담,binding_interpretive,benign_good,1
+A3,고객 상담,binding_interpretive,benign_approval,1
+A3,고객 상담,binding_interpretive,benign_overblock,0
+A3,고객 상담,binding_interpretive,ai_controls,7
+A3,고객 상담,binding_interpretive,attacks,6
+A3,고객 상담,binding_interpretive,exposure_p0.0,0.0
+A3,고객 상담,binding_interpretive,exposure_p0.05,0.0
+A3,고객 상담,binding_interpretive,exposure_p0.1,0.0
+A3,고객 상담,binding_interpretive,exposure_p0.3,0.0
+A3,고객 상담,guideline,good,6
+A3,고객 상담,guideline,held,0
+A3,고객 상담,guideline,defect,0
+A3,고객 상담,guideline,na,0
+A3,고객 상담,guideline,benign_good,1
+A3,고객 상담,guideline,benign_approval,1
+A3,고객 상담,guideline,benign_overblock,0
+A3,고객 상담,guideline,ai_controls,7
+A3,고객 상담,guideline,attacks,6
+A3,고객 상담,guideline,exposure_p0.0,0.0
+A3,고객 상담,guideline,exposure_p0.05,0.0
+A3,고객 상담,guideline,exposure_p0.1,0.0
+A3,고객 상담,guideline,exposure_p0.3,0.0
+A3,고객 상담,all,good,6
+A3,고객 상담,all,held,0
+A3,고객 상담,all,defect,0
+A3,고객 상담,all,na,0
+A3,고객 상담,all,benign_good,1
+A3,고객 상담,all,benign_approval,1
+A3,고객 상담,all,benign_overblock,0
+A3,고객 상담,all,ai_controls,7
+A3,고객 상담,all,attacks,6
+A3,고객 상담,all,exposure_p0.0,0.0
+A3,고객 상담,all,exposure_p0.05,0.0
+A3,고객 상담,all,exposure_p0.1,0.0
+A3,고객 상담,all,exposure_p0.3,0.0
+A3,고객 상담,,applicable,38
+A3,고객 상담,,binding,26
+A3,고객 상담,,binding_ai,0
+A3,고객 상담,,conflict,1
+A3,고객 상담,,offline,17
+A3,고객 상담,,cases,8
+A3,고객 상담,,tools,3
+A3,고객 상담,,interpretation_dependent,6
+A4,로보어드바이저 투자자문,none,good,0
+A4,로보어드바이저 투자자문,none,held,0
+A4,로보어드바이저 투자자문,none,defect,8
+A4,로보어드바이저 투자자문,none,na,0
+A4,로보어드바이저 투자자문,none,benign_good,2
+A4,로보어드바이저 투자자문,none,benign_approval,0
+A4,로보어드바이저 투자자문,none,benign_overblock,0
+A4,로보어드바이저 투자자문,none,ai_controls,0
+A4,로보어드바이저 투자자문,none,attacks,8
+A4,로보어드바이저 투자자문,none,exposure_p0.0,8.0
+A4,로보어드바이저 투자자문,none,exposure_p0.05,8.0
+A4,로보어드바이저 투자자문,none,exposure_p0.1,8.0
+A4,로보어드바이저 투자자문,none,exposure_p0.3,8.0
+A4,로보어드바이저 투자자문,binding_explicit,good,5
+A4,로보어드바이저 투자자문,binding_explicit,held,0
+A4,로보어드바이저 투자자문,binding_explicit,defect,3
+A4,로보어드바이저 투자자문,binding_explicit,na,0
+A4,로보어드바이저 투자자문,binding_explicit,benign_good,2
+A4,로보어드바이저 투자자문,binding_explicit,benign_approval,0
+A4,로보어드바이저 투자자문,binding_explicit,benign_overblock,0
+A4,로보어드바이저 투자자문,binding_explicit,ai_controls,2
+A4,로보어드바이저 투자자문,binding_explicit,attacks,8
+A4,로보어드바이저 투자자문,binding_explicit,exposure_p0.0,3.0
+A4,로보어드바이저 투자자문,binding_explicit,exposure_p0.05,3.0
+A4,로보어드바이저 투자자문,binding_explicit,exposure_p0.1,3.0
+A4,로보어드바이저 투자자문,binding_explicit,exposure_p0.3,3.0
+A4,로보어드바이저 투자자문,binding_interpretive,good,8
+A4,로보어드바이저 투자자문,binding_interpretive,held,0
+A4,로보어드바이저 투자자문,binding_interpretive,defect,0
+A4,로보어드바이저 투자자문,binding_interpretive,na,0
+A4,로보어드바이저 투자자문,binding_interpretive,benign_good,1
+A4,로보어드바이저 투자자문,binding_interpretive,benign_approval,1
+A4,로보어드바이저 투자자문,binding_interpretive,benign_overblock,0
+A4,로보어드바이저 투자자문,binding_interpretive,ai_controls,7
+A4,로보어드바이저 투자자문,binding_interpretive,attacks,8
+A4,로보어드바이저 투자자문,binding_interpretive,exposure_p0.0,0.0
+A4,로보어드바이저 투자자문,binding_interpretive,exposure_p0.05,0.0
+A4,로보어드바이저 투자자문,binding_interpretive,exposure_p0.1,0.0
+A4,로보어드바이저 투자자문,binding_interpretive,exposure_p0.3,0.0
+A4,로보어드바이저 투자자문,guideline,good,8
+A4,로보어드바이저 투자자문,guideline,held,0
+A4,로보어드바이저 투자자문,guideline,defect,0
+A4,로보어드바이저 투자자문,guideline,na,0
+A4,로보어드바이저 투자자문,guideline,benign_good,1
+A4,로보어드바이저 투자자문,guideline,benign_approval,1
+A4,로보어드바이저 투자자문,guideline,benign_overblock,0
+A4,로보어드바이저 투자자문,guideline,ai_controls,7
+A4,로보어드바이저 투자자문,guideline,attacks,8
+A4,로보어드바이저 투자자문,guideline,exposure_p0.0,0.0
+A4,로보어드바이저 투자자문,guideline,exposure_p0.05,0.0
+A4,로보어드바이저 투자자문,guideline,exposure_p0.1,0.0
+A4,로보어드바이저 투자자문,guideline,exposure_p0.3,0.0
+A4,로보어드바이저 투자자문,all,good,8
+A4,로보어드바이저 투자자문,all,held,0
+A4,로보어드바이저 투자자문,all,defect,0
+A4,로보어드바이저 투자자문,all,na,0
+A4,로보어드바이저 투자자문,all,benign_good,1
+A4,로보어드바이저 투자자문,all,benign_approval,1
+A4,로보어드바이저 투자자문,all,benign_overblock,0
+A4,로보어드바이저 투자자문,all,ai_controls,7
+A4,로보어드바이저 투자자문,all,attacks,8
+A4,로보어드바이저 투자자문,all,exposure_p0.0,0.0
+A4,로보어드바이저 투자자문,all,exposure_p0.05,0.0
+A4,로보어드바이저 투자자문,all,exposure_p0.1,0.0
+A4,로보어드바이저 투자자문,all,exposure_p0.3,0.0
+A4,로보어드바이저 투자자문,,applicable,52
+A4,로보어드바이저 투자자문,,binding,39
+A4,로보어드바이저 투자자문,,binding_ai,3
+A4,로보어드바이저 투자자문,,conflict,1
+A4,로보어드바이저 투자자문,,offline,27
+A4,로보어드바이저 투자자문,,cases,10
+A4,로보어드바이저 투자자문,,tools,4
+A4,로보어드바이저 투자자문,,interpretation_dependent,3
+A5,신용공여 심사,none,good,0
+A5,신용공여 심사,none,held,0
+A5,신용공여 심사,none,defect,6
+A5,신용공여 심사,none,na,0
+A5,신용공여 심사,none,benign_good,2
+A5,신용공여 심사,none,benign_approval,0
+A5,신용공여 심사,none,benign_overblock,0
+A5,신용공여 심사,none,ai_controls,0
+A5,신용공여 심사,none,attacks,6
+A5,신용공여 심사,none,exposure_p0.0,6.0
+A5,신용공여 심사,none,exposure_p0.05,6.0
+A5,신용공여 심사,none,exposure_p0.1,6.0
+A5,신용공여 심사,none,exposure_p0.3,6.0
+A5,신용공여 심사,binding_explicit,good,0
+A5,신용공여 심사,binding_explicit,held,5
+A5,신용공여 심사,binding_explicit,defect,1
+A5,신용공여 심사,binding_explicit,na,0
+A5,신용공여 심사,binding_explicit,benign_good,1
+A5,신용공여 심사,binding_explicit,benign_approval,1
+A5,신용공여 심사,binding_explicit,benign_overblock,0
+A5,신용공여 심사,binding_explicit,ai_controls,2
+A5,신용공여 심사,binding_explicit,attacks,6
+A5,신용공여 심사,binding_explicit,exposure_p0.0,1.0
+A5,신용공여 심사,binding_explicit,exposure_p0.05,1.25
+A5,신용공여 심사,binding_explicit,exposure_p0.1,1.5
+A5,신용공여 심사,binding_explicit,exposure_p0.3,2.5
+A5,신용공여 심사,binding_interpretive,good,6
+A5,신용공여 심사,binding_interpretive,held,0
+A5,신용공여 심사,binding_interpretive,defect,0
+A5,신용공여 심사,binding_interpretive,na,0
+A5,신용공여 심사,binding_interpretive,benign_good,1
+A5,신용공여 심사,binding_interpretive,benign_approval,1
+A5,신용공여 심사,binding_interpretive,benign_overblock,0
+A5,신용공여 심사,binding_interpretive,ai_controls,6
+A5,신용공여 심사,binding_interpretive,attacks,6
+A5,신용공여 심사,binding_interpretive,exposure_p0.0,0.0
+A5,신용공여 심사,binding_interpretive,exposure_p0.05,0.0
+A5,신용공여 심사,binding_interpretive,exposure_p0.1,0.0
+A5,신용공여 심사,binding_interpretive,exposure_p0.3,0.0
+A5,신용공여 심사,guideline,good,6
+A5,신용공여 심사,guideline,held,0
+A5,신용공여 심사,guideline,defect,0
+A5,신용공여 심사,guideline,na,0
+A5,신용공여 심사,guideline,benign_good,1
+A5,신용공여 심사,guideline,benign_approval,1
+A5,신용공여 심사,guideline,benign_overblock,0
+A5,신용공여 심사,guideline,ai_controls,7
+A5,신용공여 심사,guideline,attacks,6
+A5,신용공여 심사,guideline,exposure_p0.0,0.0
+A5,신용공여 심사,guideline,exposure_p0.05,0.0
+A5,신용공여 심사,guideline,exposure_p0.1,0.0
+A5,신용공여 심사,guideline,exposure_p0.3,0.0
+A5,신용공여 심사,all,good,6
+A5,신용공여 심사,all,held,0
+A5,신용공여 심사,all,defect,0
+A5,신용공여 심사,all,na,0
+A5,신용공여 심사,all,benign_good,1
+A5,신용공여 심사,all,benign_approval,1
+A5,신용공여 심사,all,benign_overblock,0
+A5,신용공여 심사,all,ai_controls,7
+A5,신용공여 심사,all,attacks,6
+A5,신용공여 심사,all,exposure_p0.0,0.0
+A5,신용공여 심사,all,exposure_p0.05,0.0
+A5,신용공여 심사,all,exposure_p0.1,0.0
+A5,신용공여 심사,all,exposure_p0.3,0.0
+A5,신용공여 심사,,applicable,37
+A5,신용공여 심사,,binding,26
+A5,신용공여 심사,,binding_ai,3
+A5,신용공여 심사,,conflict,0
+A5,신용공여 심사,,offline,14
+A5,신용공여 심사,,cases,8
+A5,신용공여 심사,,tools,2
+A5,신용공여 심사,,interpretation_dependent,6
+A6,리서치 · 보고서,none,good,0
+A6,리서치 · 보고서,none,held,0
+A6,리서치 · 보고서,none,defect,5
+A6,리서치 · 보고서,none,na,0
+A6,리서치 · 보고서,none,benign_good,2
+A6,리서치 · 보고서,none,benign_approval,0
+A6,리서치 · 보고서,none,benign_overblock,0
+A6,리서치 · 보고서,none,ai_controls,0
+A6,리서치 · 보고서,none,attacks,5
+A6,리서치 · 보고서,none,exposure_p0.0,5.0
+A6,리서치 · 보고서,none,exposure_p0.05,5.0
+A6,리서치 · 보고서,none,exposure_p0.1,5.0
+A6,리서치 · 보고서,none,exposure_p0.3,5.0
+A6,리서치 · 보고서,binding_explicit,good,0
+A6,리서치 · 보고서,binding_explicit,held,0
+A6,리서치 · 보고서,binding_explicit,defect,5
+A6,리서치 · 보고서,binding_explicit,na,0
+A6,리서치 · 보고서,binding_explicit,benign_good,2
+A6,리서치 · 보고서,binding_explicit,benign_approval,0
+A6,리서치 · 보고서,binding_explicit,benign_overblock,0
+A6,리서치 · 보고서,binding_explicit,ai_controls,0
+A6,리서치 · 보고서,binding_explicit,attacks,5
+A6,리서치 · 보고서,binding_explicit,exposure_p0.0,5.0
+A6,리서치 · 보고서,binding_explicit,exposure_p0.05,5.0
+A6,리서치 · 보고서,binding_explicit,exposure_p0.1,5.0
+A6,리서치 · 보고서,binding_explicit,exposure_p0.3,5.0
+A6,리서치 · 보고서,binding_interpretive,good,5
+A6,리서치 · 보고서,binding_interpretive,held,0
+A6,리서치 · 보고서,binding_interpretive,defect,0
+A6,리서치 · 보고서,binding_interpretive,na,0
+A6,리서치 · 보고서,binding_interpretive,benign_good,1
+A6,리서치 · 보고서,binding_interpretive,benign_approval,1
+A6,리서치 · 보고서,binding_interpretive,benign_overblock,0
+A6,리서치 · 보고서,binding_interpretive,ai_controls,7
+A6,리서치 · 보고서,binding_interpretive,attacks,5
+A6,리서치 · 보고서,binding_interpretive,exposure_p0.0,0.0
+A6,리서치 · 보고서,binding_interpretive,exposure_p0.05,0.0
+A6,리서치 · 보고서,binding_interpretive,exposure_p0.1,0.0
+A6,리서치 · 보고서,binding_interpretive,exposure_p0.3,0.0
+A6,리서치 · 보고서,guideline,good,5
+A6,리서치 · 보고서,guideline,held,0
+A6,리서치 · 보고서,guideline,defect,0
+A6,리서치 · 보고서,guideline,na,0
+A6,리서치 · 보고서,guideline,benign_good,1
+A6,리서치 · 보고서,guideline,benign_approval,1
+A6,리서치 · 보고서,guideline,benign_overblock,0
+A6,리서치 · 보고서,guideline,ai_controls,7
+A6,리서치 · 보고서,guideline,attacks,5
+A6,리서치 · 보고서,guideline,exposure_p0.0,0.0
+A6,리서치 · 보고서,guideline,exposure_p0.05,0.0
+A6,리서치 · 보고서,guideline,exposure_p0.1,0.0
+A6,리서치 · 보고서,guideline,exposure_p0.3,0.0
+A6,리서치 · 보고서,all,good,5
+A6,리서치 · 보고서,all,held,0
+A6,리서치 · 보고서,all,defect,0
+A6,리서치 · 보고서,all,na,0
+A6,리서치 · 보고서,all,benign_good,1
+A6,리서치 · 보고서,all,benign_approval,1
+A6,리서치 · 보고서,all,benign_overblock,0
+A6,리서치 · 보고서,all,ai_controls,7
+A6,리서치 · 보고서,all,attacks,5
+A6,리서치 · 보고서,all,exposure_p0.0,0.0
+A6,리서치 · 보고서,all,exposure_p0.05,0.0
+A6,리서치 · 보고서,all,exposure_p0.1,0.0
+A6,리서치 · 보고서,all,exposure_p0.3,0.0
+A6,리서치 · 보고서,,applicable,33
+A6,리서치 · 보고서,,binding,21
+A6,리서치 · 보고서,,binding_ai,0
+A6,리서치 · 보고서,,conflict,1
+A6,리서치 · 보고서,,offline,13
+A6,리서치 · 보고서,,cases,7
+A6,리서치 · 보고서,,tools,4
+A6,리서치 · 보고서,,interpretation_dependent,5
+A7,전산 운영 자동화,none,good,0
+A7,전산 운영 자동화,none,held,0
+A7,전산 운영 자동화,none,defect,5
+A7,전산 운영 자동화,none,na,0
+A7,전산 운영 자동화,none,benign_good,2
+A7,전산 운영 자동화,none,benign_approval,0
+A7,전산 운영 자동화,none,benign_overblock,0
+A7,전산 운영 자동화,none,ai_controls,0
+A7,전산 운영 자동화,none,attacks,5
+A7,전산 운영 자동화,none,exposure_p0.0,5.0
+A7,전산 운영 자동화,none,exposure_p0.05,5.0
+A7,전산 운영 자동화,none,exposure_p0.1,5.0
+A7,전산 운영 자동화,none,exposure_p0.3,5.0
+A7,전산 운영 자동화,binding_explicit,good,0
+A7,전산 운영 자동화,binding_explicit,held,0
+A7,전산 운영 자동화,binding_explicit,defect,5
+A7,전산 운영 자동화,binding_explicit,na,0
+A7,전산 운영 자동화,binding_explicit,benign_good,2
+A7,전산 운영 자동화,binding_explicit,benign_approval,0
+A7,전산 운영 자동화,binding_explicit,benign_overblock,0
+A7,전산 운영 자동화,binding_explicit,ai_controls,0
+A7,전산 운영 자동화,binding_explicit,attacks,5
+A7,전산 운영 자동화,binding_explicit,exposure_p0.0,5.0
+A7,전산 운영 자동화,binding_explicit,exposure_p0.05,5.0
+A7,전산 운영 자동화,binding_explicit,exposure_p0.1,5.0
+A7,전산 운영 자동화,binding_explicit,exposure_p0.3,5.0
+A7,전산 운영 자동화,binding_interpretive,good,4
+A7,전산 운영 자동화,binding_interpretive,held,1
+A7,전산 운영 자동화,binding_interpretive,defect,0
+A7,전산 운영 자동화,binding_interpretive,na,0
+A7,전산 운영 자동화,binding_interpretive,benign_good,1
+A7,전산 운영 자동화,binding_interpretive,benign_approval,1
+A7,전산 운영 자동화,binding_interpretive,benign_overblock,0
+A7,전산 운영 자동화,binding_interpretive,ai_controls,6
+A7,전산 운영 자동화,binding_interpretive,attacks,5
+A7,전산 운영 자동화,binding_interpretive,exposure_p0.0,0.0
+A7,전산 운영 자동화,binding_interpretive,exposure_p0.05,0.05
+A7,전산 운영 자동화,binding_interpretive,exposure_p0.1,0.1
+A7,전산 운영 자동화,binding_interpretive,exposure_p0.3,0.3
+A7,전산 운영 자동화,guideline,good,5
+A7,전산 운영 자동화,guideline,held,0
+A7,전산 운영 자동화,guideline,defect,0
+A7,전산 운영 자동화,guideline,na,0
+A7,전산 운영 자동화,guideline,benign_good,1
+A7,전산 운영 자동화,guideline,benign_approval,1
+A7,전산 운영 자동화,guideline,benign_overblock,0
+A7,전산 운영 자동화,guideline,ai_controls,7
+A7,전산 운영 자동화,guideline,attacks,5
+A7,전산 운영 자동화,guideline,exposure_p0.0,0.0
+A7,전산 운영 자동화,guideline,exposure_p0.05,0.0
+A7,전산 운영 자동화,guideline,exposure_p0.1,0.0
+A7,전산 운영 자동화,guideline,exposure_p0.3,0.0
+A7,전산 운영 자동화,all,good,5
+A7,전산 운영 자동화,all,held,0
+A7,전산 운영 자동화,all,defect,0
+A7,전산 운영 자동화,all,na,0
+A7,전산 운영 자동화,all,benign_good,1
+A7,전산 운영 자동화,all,benign_approval,1
+A7,전산 운영 자동화,all,benign_overblock,0
+A7,전산 운영 자동화,all,ai_controls,7
+A7,전산 운영 자동화,all,attacks,5
+A7,전산 운영 자동화,all,exposure_p0.0,0.0
+A7,전산 운영 자동화,all,exposure_p0.05,0.0
+A7,전산 운영 자동화,all,exposure_p0.1,0.0
+A7,전산 운영 자동화,all,exposure_p0.3,0.0
+A7,전산 운영 자동화,,applicable,27
+A7,전산 운영 자동화,,binding,16
+A7,전산 운영 자동화,,binding_ai,0
+A7,전산 운영 자동화,,conflict,0
+A7,전산 운영 자동화,,offline,9
+A7,전산 운영 자동화,,cases,7
+A7,전산 운영 자동화,,tools,4
+A7,전산 운영 자동화,,interpretation_dependent,5
