@@ -1,5 +1,8 @@
 /* 화면 넘김 (2026-11-12) — PivoxMap 의 표지 · 위 단계 줄 · 화면 넘김(components/Cover.tsx · Rail.tsx · Screen.tsx)을 정적 페이지에 옮긴 것.
-   <main data-pager> 안의 <section class="pg" data-title="…" id="…"> 를 한 화면씩 보여 준다. 첫 화면이 .pg-cover 면 표지다.
+   [data-pager] 안의 <section class="pg" data-title="…" id="…"> 를 한 화면씩 보여 준다. 첫 화면이 .pg-cover 면 표지다.
+   선택: data-pager-url="none" — 주소의 # 를 읽거나 쓰지 않는다(모의 테스트처럼 # 를 설정 저장에 쓰는 페이지).
+         data-pager-keys="none" — 키로 넘기지 않는다(← → 를 다른 일에 쓰는 페이지). 버튼 · 단계 줄 · 쓸기는 그대로.
+   페이지 코드가 숨은 화면 안의 요소로 scrollIntoView 하면 그 화면으로 먼저 넘어간다(다른 화면의 결과로 데려가는 버튼들).
    - 앞으로 가면 오른쪽에서 28px, 뒤로 가면 왼쪽에서 들어온다(380ms, cubic-bezier(.2,.75,.2,1)). 움직임 줄이기 설정이면 움직이지 않는다.
    - 표지: 누르거나 Enter · Space · → · ↓ · 휠을 내리면 다음. 다른 화면: ← → · PageUp/PageDown · 좌우로 쓸기 · 단계 줄 · 이전/다음 버튼.
    - 주소의 #id 가 지금 화면이다(공유 · 새로고침). 브라우저 뒤로 가기도 화면을 따른다.
@@ -7,7 +10,7 @@
    외부 라이브러리 없음. CSP script-src 'self'(배포) · sha256(오프라인 사본)로 돈다. */
 (function () {
   "use strict";
-  var main = document.querySelector("main[data-pager]");
+  var main = document.querySelector("[data-pager]");
   if (!main) return;
   var pages = Array.prototype.slice.call(main.children).filter(function (x) { return x.classList && x.classList.contains("pg"); });
   if (pages.length < 2) return;
@@ -17,11 +20,19 @@
   var rail = document.querySelector("[data-pager-rail]");
   var nav = document.querySelector("[data-pager-nav]");
   var hasCover = pages[0].classList.contains("pg-cover");
+  var useUrl = main.getAttribute("data-pager-url") !== "none";
+  var useKeys = main.getAttribute("data-pager-keys") !== "none";
   var cur = -1;
 
   function reduced() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
   function indexOfId(id) { for (var i = 0; i < pages.length; i++) if (pages[i].id === id) return i; return -1; }
-  function fromHash() { var i = indexOfId(decodeURIComponent((location.hash || "").slice(1))); return i < 0 ? 0 : i; }
+  function fromHash() {
+    if (!useUrl) return 0;
+    var i = -1;
+    try { i = indexOfId(decodeURIComponent((location.hash || "").slice(1))); } catch (e) { i = -1; }
+    return i < 0 ? 0 : i;
+  }
+  function hashIsPage() { try { return indexOfId(decodeURIComponent((location.hash || "").slice(1))) >= 0; } catch (e) { return false; } }
 
   // 단계 줄: 표지는 넣지 않는다(PivoxMap 처럼 표지는 단계 밖)
   var steps = pages.map(function (p, i) { return { i: i, title: p.getAttribute("data-title") || ("" + (i + 1)) }; }).filter(function (s) { return !(hasCover && s.i === 0); });
@@ -104,8 +115,8 @@
     cur = i;
     root.classList.toggle("pg-at-cover", hasCover && i === 0);
     paintRail(); paintNav();
-    if (!first) { window.scrollTo(0, 0); slideIn(pages[i], dir); }
-    if (opts.push) {
+    if (!first) { toScreen(pages[i]); slideIn(pages[i], dir); }
+    if (opts.push && useUrl) {
       try { history.pushState({ pg: i }, "", "#" + pages[i].id); } catch (e) { /* file:// 등 */ }
     }
     if (!first && !opts.noFocus) {
@@ -113,12 +124,21 @@
       if (h) { h.setAttribute("tabindex", "-1"); h.focus({ preventScroll: true }); }
     }
   }
+  // 넘긴 화면의 시작으로 — 화면이 첫 화면 높이 안에서 시작하면 맨 위로(머리 띠가 보이게), 더 아래에서 시작하면
+  // (폰의 모의 테스트처럼 설정 판이 위에 쌓인 경우) 그 화면의 시작으로 간다. 위에 붙는 단계 줄 높이만큼 띄운다.
+  function toScreen(el) {
+    var top = el.getBoundingClientRect().top + window.pageYOffset;
+    var bar = rail && !rail.hidden ? rail.getBoundingClientRect().height : 0;
+    if (top < window.innerHeight * 0.75) window.scrollTo(0, 0);
+    else window.scrollTo(0, Math.max(0, top - bar - 12));
+  }
   function go(i) { show(i, { push: true }); }
   function next() { if (cur < pages.length - 1) go(cur + 1); }
   function prev() { if (cur > (hasCover ? 1 : 0)) go(cur - 1); else if (hasCover && cur === 1) go(0); }
 
   // 키
   window.addEventListener("keydown", function (e) {
+    if (!useKeys) return;
     if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
     var t = e.target;
     if (t && t.closest && t.closest("input, textarea, select, [contenteditable]")) return;
@@ -147,8 +167,20 @@
     if (Date.now() - st < 700 && Math.abs(dx) > 70 && Math.abs(dx) > 1.6 * Math.abs(dy)) { if (dx < 0) next(); else prev(); }
   }, { passive: true });
   // 뒤로 가기 · 주소 바꾸기
-  window.addEventListener("popstate", function () { show(fromHash(), { noFocus: false }); });
-  window.addEventListener("hashchange", function () { show(fromHash()); });
+  if (useUrl) {
+    // 화면 id 가 아닌 # (다른 용도)는 무시한다 — 바꿀 때마다 첫 화면으로 튀지 않게
+    window.addEventListener("popstate", function () { if (!location.hash || hashIsPage()) show(fromHash(), { noFocus: false }); });
+    window.addEventListener("hashchange", function () { if (hashIsPage()) show(fromHash()); });
+  }
+  // 숨은 화면 안의 요소로 스크롤하려 하면 그 화면을 먼저 연다
+  var nativeSIV = Element.prototype.scrollIntoView;
+  if (nativeSIV) {
+    Element.prototype.scrollIntoView = function () {
+      var pg = this.closest && this.closest("[data-pager] > .pg");
+      if (pg && pg.hidden) { var i = pages.indexOf(pg); if (i >= 0) show(i, { push: true, noFocus: true }); }
+      return nativeSIV.apply(this, arguments);
+    };
+  }
   // 이전 · 다음 버튼 · 표지의 '시작하기'
   if (nav) {
     var pb = nav.querySelector("[data-pager-prev]"), nb = nav.querySelector("[data-pager-next]");

@@ -342,24 +342,24 @@ body{margin:0;background:#fff;color:var(--ink);font:14px/1.65 'Pretendard Variab
 main{max-width:1200px;margin:0 auto;padding:48px 40px 72px}
 table.rcm td:nth-child(-n+4),table.rcm td:nth-child(8){white-space:nowrap}
 table.rcm td:nth-child(7){white-space:nowrap}
-.kicker{margin:0;font-size:12.5px;color:var(--bronze);font-weight:600}
-h1{margin:6px 0 4px;font-size:26px;line-height:1.3}
-.meta{margin:0 0 20px;color:var(--dim);font-size:13px}
-.banner{margin:0 0 24px;padding:10px 14px;border-left:3px solid var(--bronze);background:var(--wash);font-size:13px;font-weight:600}
-h2{margin:36px 0 10px;padding-top:14px;border-top:1px solid var(--line);font-size:18px}
+.kicker{margin:0;font-size:14px;color:var(--bronze);font-weight:600}
+h1{margin:6px 0 4px;font-size:28px;line-height:1.3}
+.meta{margin:0 0 20px;color:var(--dim);font-size:14px}
+.banner{margin:0 0 24px;padding:10px 14px;border-left:3px solid var(--bronze);background:var(--wash);font-size:14px;font-weight:600}
+h2{margin:36px 0 10px;padding-top:14px;border-top:1px solid var(--line);font-size:19px}
 p{margin:8px 0;max-width:80ch;color:var(--soft)}
 ul{margin:8px 0;padding-left:20px;color:var(--soft)}
 li{margin:3px 0}
 dl{display:grid;grid-template-columns:150px minmax(0,1fr);gap:4px 14px;margin:8px 0}
 dt{color:var(--dim)}dd{margin:0;font-weight:600}
 .tw{overflow-x:auto;margin:8px 0}
-table{border-collapse:collapse;width:100%;font-size:12.5px}
+table{border-collapse:collapse;width:100%;font-size:14px}
 th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
 th{font-weight:600;color:var(--dim);border-bottom:1.5px solid var(--ink);white-space:nowrap}
 td:first-child{font-weight:600}
-details{margin:8px 0;font-size:13px;color:var(--soft)}
+details{margin:8px 0;font-size:14px;color:var(--soft)}
 summary{cursor:pointer;color:var(--ink)}
-footer{margin-top:40px;color:var(--dim);font-size:12px}
+footer{margin-top:40px;color:var(--dim);font-size:13.5px}
 @media print{main{padding:0;max-width:none}h2{break-after:avoid}tr{break-inside:avoid}.tw{overflow:visible}}
 """
 

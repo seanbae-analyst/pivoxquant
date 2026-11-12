@@ -31,6 +31,7 @@
   --pq-ease: cubic-bezier(0.2, 0.75, 0.2, 1);
 
   --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
+  --font-wordmark: "Playfair Display", Georgia, serif;   /* 표지 워드마크만 — PivoxMap globals.css 와 같다 */
   --font-code: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;   /* kbd · code 만 */
 
   --pq-radius-card: 14px;

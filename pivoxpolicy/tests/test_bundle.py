@@ -31,7 +31,7 @@ def test_offline_pages_are_self_contained(tmp_path):
     exp = (tmp_path / "offline" / "pivoxpolicy-experiment.html").read_text(encoding="utf-8")
     assert 'href="pivoxpolicy-sim.html"' in exp and "<script src=" not in exp and "script-src 'sha256-" in exp   # 화면 넘김 스크립트만 인라인, 해시로만 실행
     page = (tmp_path / "offline" / "pivoxpolicy-sim.html").read_text(encoding="utf-8")
-    assert not re.search(r"<script\s+src=", page) and page.count("<script>") == 3
+    assert not re.search(r"<script\s+src=", page) and page.count("<script>") == 4   # sim-data · sim-engine · sim-ui · pager
     csp = re.search(r'http-equiv="Content-Security-Policy" content="([^"]+)"', page).group(1)
     for code in re.findall(r"<script>(.*?)</script>", page, re.S):
         h = "'sha256-" + base64.b64encode(hashlib.sha256(code.encode("utf-8")).digest()).decode() + "'"

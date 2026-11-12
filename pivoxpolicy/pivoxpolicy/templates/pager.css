@@ -3,63 +3,63 @@
 [data-pager-rail],[data-pager-nav]{display:none}
 html.paged [data-pager-rail]:not([hidden]){display:flex}
 html.paged [data-pager-nav]:not([hidden]){display:flex}
-html.paged main[data-pager]>.pg[hidden]{display:none}
+html.paged [data-pager]>.pg[hidden]{display:none}
 
 /* 위 단계 줄 */
 .pg-railbar{position:sticky;top:0;z-index:20;align-items:center;justify-content:center;min-height:52px;margin:0 -24px;padding:0 24px;
   border-top:1px solid var(--pq-ivory-line);border-bottom:1px solid var(--pq-ivory-line);background:rgba(5,5,5,0.92);backdrop-filter:blur(8px)}
 .pg-rail{display:flex;align-items:center;list-style:none;margin:0;padding:0;min-width:0}
-.pg-rail>li{display:flex;align-items:center;font-size:14px;color:var(--pq-ivory-faint);white-space:nowrap}
+.pg-rail>li{display:flex;align-items:center;font-size:15px;color:var(--pq-ivory-faint);white-space:nowrap}
 .pg-rail>li+li::before{content:"";width:26px;height:1px;background:var(--pq-ivory-line-strong);margin:0 8px;flex:none}
 .pg-rail>li[data-status="done"]+li::before,.pg-rail>li[data-status="now"]::before{background:var(--pq-bronze-line)}
 .pg-rail-item{display:inline-flex;align-items:center;gap:8px;padding:5px 8px;border:0;border-radius:var(--pq-radius-ctl);background:transparent;
   font:inherit;color:inherit;cursor:pointer;transition:background-color 200ms,color 200ms}
 .pg-rail-item:hover{background:var(--pq-card-veil-strong);color:var(--pq-ivory)}
 .pg-rail-item:focus-visible{outline:1px solid var(--pq-bronze);outline-offset:1px}
-.pg-rail-no{display:inline-flex;align-items:center;justify-content:center;flex:none;width:22px;height:22px;border-radius:5px;font-size:12px;font-weight:700;
+.pg-rail-no{display:inline-flex;align-items:center;justify-content:center;flex:none;width:22px;height:22px;border-radius:5px;font-size:13.5px;font-weight:700;
   font-variant-numeric:tabular-nums;box-shadow:inset 0 0 0 1px var(--pq-ivory-line-strong);transition:background-color 300ms,box-shadow 300ms,color 300ms}
 .pg-rail>li[data-status="done"]{color:var(--pq-ivory-dim)}
 .pg-rail>li[data-status="done"] .pg-rail-no{background:var(--pq-bronze-wash);box-shadow:inset 0 0 0 1px var(--pq-bronze-line);color:var(--pq-bronze)}
 .pg-rail>li[data-status="now"]{color:var(--pq-ivory);font-weight:600}
 .pg-rail>li[data-status="now"] .pg-rail-no{background:var(--pq-bronze);color:var(--pq-ink);box-shadow:none}
-.pg-rail-mobile{display:none;margin:0;padding:8px 0;border:0;background:transparent;font:inherit;font-size:14px;font-weight:600;color:var(--pq-ivory);font-variant-numeric:tabular-nums;cursor:pointer;white-space:pre}
-main[data-pager] h1[tabindex="-1"]:focus,main[data-pager] h2[tabindex="-1"]:focus{outline:none}
-.pg-kicker{position:relative;margin:0 0 26px;font-size:13px;font-weight:600;color:var(--pq-ivory-dim)}
+.pg-rail-mobile{display:none;margin:0;padding:8px 0;border:0;background:transparent;font:inherit;font-size:15px;font-weight:600;color:var(--pq-ivory);font-variant-numeric:tabular-nums;cursor:pointer;white-space:pre}
+[data-pager] h1[tabindex="-1"]:focus,[data-pager] h2[tabindex="-1"]:focus{outline:none}
+.pg-kicker{position:relative;margin:0 0 26px;font-size:14px;font-weight:600;color:var(--pq-ivory-dim)}
 
 /* 이전 · 다음 */
 .pg-nav{position:sticky;bottom:0;z-index:20;align-items:center;justify-content:space-between;gap:12px;margin:40px -24px 0;padding:12px 24px;
   border-top:1px solid var(--pq-ivory-line);background:rgba(5,5,5,0.94);backdrop-filter:blur(8px)}
 .pg-btn{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border:1px solid var(--pq-ivory-line-strong);border-radius:var(--pq-radius-ctl);
-  background:transparent;font:inherit;font-size:15px;font-weight:600;color:var(--pq-ivory);cursor:pointer;transition:background-color 200ms,border-color 200ms,color 200ms}
+  background:transparent;font:inherit;font-size:16px;font-weight:600;color:var(--pq-ivory);cursor:pointer;transition:background-color 200ms,border-color 200ms,color 200ms}
 .pg-btn:hover:not(:disabled){background:var(--pq-card-veil-strong)}
 .pg-btn:focus-visible{outline:1px solid var(--pq-bronze);outline-offset:2px}
 .pg-btn:disabled{opacity:.35;cursor:default}
 .pg-btn.next{border-color:var(--pq-bronze);background:var(--pq-bronze);color:var(--pq-ink)}
 .pg-btn.next:hover:not(:disabled){background:var(--pq-bronze-light);border-color:var(--pq-bronze-light)}
-.pg-count{font-size:14px;color:var(--pq-ivory-dim);font-variant-numeric:tabular-nums}
+.pg-count{font-size:15px;color:var(--pq-ivory-dim);font-variant-numeric:tabular-nums}
 
 /* 표지 */
 .pg-cover{position:relative;text-align:center}
 html.paged .pg-cover{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100dvh - 90px);cursor:pointer;user-select:none}
 html.paged.pg-at-cover .topbar{border-bottom-color:transparent}
 .pg-cover .pg-spot{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 80% 80% at 50% 50%,rgba(245,240,232,0.03) 0%,rgba(245,240,232,0.012) 40%,transparent 75%)}
-.pg-wordmark{position:relative;margin:0;font-size:min(clamp(2.6rem,6.4vw,5.6rem),11vw);font-weight:600;line-height:1;letter-spacing:0.18em;margin-right:-0.18em;
+.pg-wordmark{position:relative;margin:0;font-family:var(--font-wordmark);font-size:min(clamp(3rem,7vw,6rem),10vw);font-weight:500;font-style:normal;line-height:1;letter-spacing:0.22em;margin-right:-0.22em;
   text-transform:uppercase;color:var(--pq-ivory);text-shadow:0 0 24px rgba(245,240,232,0.06);animation:pg-breath 4s ease-in-out infinite}
 .pg-wordmark span{color:var(--pq-bronze)}
 @keyframes pg-breath{0%,100%{transform:scale(1)}50%{transform:scale(1.006)}}
 .pg-q{position:relative;margin:34px auto 0;max-width:30ch;font-size:clamp(20px,2.4vw,28px);font-weight:700;line-height:1.4;letter-spacing:-0.02em;color:var(--pq-ivory)}
-.pg-sub{position:relative;margin:12px auto 0;max-width:46ch;font-size:16px;line-height:1.7;color:var(--pq-ivory-dim)}
-.pg-start{position:relative;display:inline-flex;align-items:center;gap:8px;margin-top:40px;font-size:15px;font-weight:600;color:var(--pq-bronze)}
+.pg-sub{position:relative;margin:12px auto 0;max-width:46ch;font-size:17px;line-height:1.7;color:var(--pq-ivory-dim)}
+.pg-start{position:relative;display:inline-flex;align-items:center;gap:8px;margin-top:40px;font-size:16px;font-weight:600;color:var(--pq-bronze)}
 .pg-start:hover{color:var(--pq-ivory)}
-.pg-hint{position:relative;margin:14px 0 0;font-size:13px;color:var(--pq-ivory-faint)}
-.pg-links{position:relative;display:flex;flex-wrap:wrap;justify-content:center;gap:4px 18px;margin:18px 0 0;font-size:14px}
+.pg-hint{position:relative;margin:14px 0 0;font-size:14px;color:var(--pq-ivory-faint)}
+.pg-links{position:relative;display:flex;flex-wrap:wrap;justify-content:center;gap:4px 18px;margin:18px 0 0;font-size:15px}
 .pg-links a{color:var(--pq-ivory-dim)}
 .pg-links a:hover{color:var(--pq-ivory)}
 html:not(.paged) .pg-start,html:not(.paged) .pg-hint{display:none}
 
 /* 넘김 화면의 머리: 왼쪽 칸 제목 대신 위에 크게 */
-html.paged main[data-pager]>.pg.sh{grid-template-columns:minmax(0,1fr);gap:18px;padding:34px 0 8px;border-top:0}
-html.paged main[data-pager]>.pg.sh>h2{font-size:clamp(24px,2.6vw,30px);font-weight:700;letter-spacing:-0.025em;color:var(--pq-ivory)}
+html.paged [data-pager]>.pg.sh{grid-template-columns:minmax(0,1fr);gap:18px;padding:34px 0 8px;border-top:0}
+html.paged [data-pager]>.pg.sh>h2{font-size:clamp(1.45rem,2.5vw,2rem);font-weight:650;letter-spacing:-0.025em;line-height:1.32;color:var(--pq-ivory)}
 
 @media (max-width:1180px){
   .pg-rail>li:not([data-status="now"]) .pg-rail-label{display:none}
@@ -74,8 +74,8 @@ html.paged main[data-pager]>.pg.sh>h2{font-size:clamp(24px,2.6vw,30px);font-weig
     background:rgba(5,5,5,0.98);border-bottom:1px solid var(--pq-ivory-line)}
   .pg-railbar[data-open="1"] .pg-rail>li+li::before{display:none}
   .pg-railbar[data-open="1"] .pg-rail .pg-rail-label{display:inline}
-  .pg-railbar[data-open="1"] .pg-rail-item{width:100%;min-height:44px;font-size:15px}
-  .pg-btn{padding:0 12px;font-size:14px}
+  .pg-railbar[data-open="1"] .pg-rail-item{width:100%;min-height:44px;font-size:16px}
+  .pg-btn{padding:0 12px;font-size:15px}
   .pg-btn .lab{display:none}
 }
 @media (max-width:560px){
@@ -83,4 +83,4 @@ html.paged main[data-pager]>.pg.sh>h2{font-size:clamp(24px,2.6vw,30px);font-weig
   .pg-nav{margin:32px -16px 0;padding:10px 16px}
 }
 @media (prefers-reduced-motion: reduce){.pg-wordmark{animation:none}}
-@media print{[data-pager-rail],[data-pager-nav]{display:none!important}html.paged main[data-pager]>.pg[hidden]{display:block!important}}
+@media print{[data-pager-rail],[data-pager-nav]{display:none!important}html.paged [data-pager]>.pg[hidden]{display:block!important}}

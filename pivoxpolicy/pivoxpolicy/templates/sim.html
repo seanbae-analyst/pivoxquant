@@ -13,6 +13,7 @@
 {{BASE_CSS}}
 {{FLOW_CSS}}
 {{SIM_CSS}}
+{{PAGER_CSS}}
 </style>
 </head>
 <body>
@@ -25,6 +26,7 @@
 <a href="dashboard.html">대시보드</a><a href="sim.html" aria-current="page">모의 테스트</a>
 </nav>
 </header>
+<nav class="pg-railbar" data-pager-rail aria-label="결과 화면"></nav>
 
 <main id="main">
 
@@ -83,18 +85,18 @@
 </aside>
 
 <!-- ── 오른쪽: 결과 ── -->
-<div class="results">
+<div class="results" data-pager data-pager-url="none" data-pager-keys="none">
 
 <div class="case-banner" id="case-banner" aria-live="polite"></div>
 
-<section id="posture" aria-labelledby="h-pos">
+<section class="pg" id="posture" data-title="지금 설정" aria-labelledby="h-pos">
 <div class="sec-h"><h2 id="h-pos">지금 설정은 어디쯤인가</h2><span id="pos-env"></span></div>
 <div class="cmpbar" id="cmpbar" aria-live="polite"></div>
 <div class="band" id="band"></div>
 <p class="legend" id="legend"></p>
 </section>
 
-<section id="scenario" aria-labelledby="h-scn">
+<section class="pg" id="scenario" data-title="공격 원형" aria-labelledby="h-scn">
 <div class="sec-h"><h2 id="h-scn">공격 원형 {{N_SCENARIOS}}개</h2><span>행을 고르면 아래에 공격 흐름이 나온다</span></div>
 <div class="tblwrap"><table class="ov" id="ov"></table></div>
 <div class="flow-h"><h3 class="h3" id="h-flow">공격 흐름: <span id="flow-name"></span></h3><span class="fine flow-key"><i class="k-on"></i>켜진 통제 <i class="k-off"></i>꺼진 통제. 통제에 마우스를 올리면 그 자리에 있는 이유가 나온다</span></div>
@@ -110,7 +112,7 @@
 <div class="tblwrap"><table class="heat" id="heat" aria-labelledby="h-heat"></table></div>
 </section>
 
-<section id="replay" aria-labelledby="h-rep">
+<section class="pg" id="replay" data-title="사건 다시 돌리기" aria-labelledby="h-rep">
 <div class="sec-h"><h2 id="h-rep">실제 사건 {{N_INCIDENTS}}건 다시 돌리기</h2><span class="seg" role="radiogroup" aria-label="판정 기준" id="basis"></span></div>
 <div class="cards four" id="rep-cards"></div>
 <p class="fine" id="rep-explain"></p>
@@ -121,19 +123,19 @@
 <details id="per-d"><summary>사건별 결과 ('추적'을 누르면 실패한 통제와 규제 근거가 열린다)</summary><div class="tblwrap"><table id="per"></table></div></details>
 </section>
 
-<section id="actions" aria-labelledby="h-act">
+<section class="pg" id="actions" data-title="개선 조치" aria-labelledby="h-act">
 <div class="sec-h"><h2 id="h-act">개선 조치</h2><span class="acts-tools"><button type="button" class="btn" id="acts-csv">CSV 내보내기</button><button type="button" class="btn" id="policy-md">정책 초안 (.md)</button><span class="fine" id="csv-msg" aria-live="polite"></span></span></div>
 <p class="fine" id="acts-note"></p>
 <div class="tblwrap"><table id="acts"></table></div>
 </section>
 
-<section id="owasp" aria-labelledby="h-asi">
+<section class="pg" id="owasp" data-title="OWASP" aria-labelledby="h-asi">
 <div class="sec-h"><h2 id="h-asi">OWASP Agentic Top 10</h2><span id="asi-sum"></span></div>
 <div class="tblwrap"><table id="asi"></table></div>
 <p class="fine" id="asi-note"></p>
 </section>
 
-<section id="updates" aria-labelledby="h-upd">
+<section class="pg" id="updates" data-title="규제가 바뀌면" aria-labelledby="h-upd">
 <div class="sec-h"><h2 id="h-upd">규제가 바뀌면</h2><span id="reg-meta"></span></div>
 <p class="fine">새 문서가 레지스트리에 들어와 판정을 마치면 프리셋과 규제 근거, 두 테스트를 다시 계산한다. 결과가 바뀐 때만 이력에 남기고, 결과가 달라진 데모 케이스에는 경고를 띄운다.</p>
 <div class="two">
@@ -145,7 +147,7 @@
 <div class="whatif" id="whatif" role="group" aria-labelledby="h-wi"></div>
 </section>
 
-<section id="diag" aria-labelledby="h-diag">
+<section class="pg" id="diag" data-title="자가 진단" aria-labelledby="h-diag">
 <div class="sec-h"><h2 id="h-diag">자가 진단</h2><span id="diag-sum"></span></div>
 <p class="fine diag-note">통제마다 사람·계정 층과 AI 층의 상태를 고르고 근거를 한 줄 적는다. 적은 내용은 이 브라우저 안에만 있고 어디로도 보내지 않으니, 남기려면 JSON으로 내보냈다가 다음에 불러온다. '설정에 반영'은 구현으로 표시한 것만 켠다. AI 층이 구현이면 AI까지, 사람·계정 층만 구현이면 사람·계정까지다.</p>
 <div class="diag-tools">
@@ -159,7 +161,7 @@
 <div class="tblwrap"><table id="diag-t"></table></div>
 </section>
 
-<section id="limits" aria-labelledby="h-lim">
+<section class="pg" id="limits" data-title="한계" aria-labelledby="h-lim">
 <div class="sec-h"><h2 id="h-lim">한계</h2></div>
 <ul class="fine lim">
 <li>사건 다시 돌리기는 예측이 아니라 반사실 연습이다. 그 사건에서 실패했다고 판정된 통제가 켜져 있었다면 어땠을지를 따질 뿐이다. 통제가 있어도 우회될 수 있고 다른 경로가 있었을 수도 있어서, 막힘을 하한과 상한으로 나눠 낸다.</li>
@@ -175,6 +177,11 @@
 </section>
 
 </div>
+</div>
+<div class="pg-nav" data-pager-nav>
+<button type="button" class="pg-btn prev" data-pager-prev><span aria-hidden="true">←</span><span class="lab">이전</span></button>
+<span class="pg-count" data-pager-count></span>
+<button type="button" class="pg-btn next" data-pager-next><span data-pager-next-label>다음</span><span aria-hidden="true">→</span></button>
 </div>
 
 </main>
@@ -194,5 +201,6 @@
 <script src="./sim-data.js"></script>
 <script src="./sim-engine.js"></script>
 <script src="./sim-ui.js"></script>
+<script src="./pager.js"></script>
 </body>
 </html>

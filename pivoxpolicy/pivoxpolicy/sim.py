@@ -616,6 +616,7 @@ def build(out_dir: Path = OUT_DIR, history_path: Path | None = HISTORY_PATH) -> 
     for name, text in (("sim-data.js", data_js),
                        ("sim-engine.js", (TEMPLATES / "sim-engine.js").read_text(encoding="utf-8")),
                        ("sim-ui.js", (TEMPLATES / "sim-ui.js").read_text(encoding="utf-8")),
+                       ("pager.js", (TEMPLATES / "pager.js").read_text(encoding="utf-8")),      # 화면 넘김(첫 화면 · 실험과 같은 파일)
                        ("simulation.md", render_report(p)),
                        ("pending-regulations.md", render_pending(_all_pending()))):
         (out_dir / name).write_text(text, encoding="utf-8")
@@ -625,6 +626,7 @@ def build(out_dir: Path = OUT_DIR, history_path: Path | None = HISTORY_PATH) -> 
                  "BASE_CSS": (TEMPLATES / "base.css").read_text(encoding="utf-8"),
                  "FLOW_CSS": (TEMPLATES / "flow.css").read_text(encoding="utf-8"),
                  "SIM_CSS": (TEMPLATES / "sim.css").read_text(encoding="utf-8"),
+                 "PAGER_CSS": (TEMPLATES / "pager.css").read_text(encoding="utf-8"),
                  "N_INCIDENTS": str(len(p["incidents"])), "N_SCENARIOS": str(len(p["scenarios"]))}.items():
         html = html.replace("{{" + k + "}}", v)
     (out_dir / "sim.html").write_text(html, encoding="utf-8")

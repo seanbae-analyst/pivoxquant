@@ -436,8 +436,8 @@ def page(R: dict[str, Any], F: dict[str, dict[str, Any]] | None = None) -> str:
 </ul></details>
 </div></section>"""
     css = """
-.fig figcaption{font-size:14.5px;max-width:72ch}
-.dkey{display:flex;flex-wrap:wrap;gap:8px 20px;margin:0 0 16px;font-size:14px;color:var(--pq-ivory-soft)}
+.fig figcaption{font-size:15.5px;max-width:72ch}
+.dkey{display:flex;flex-wrap:wrap;gap:8px 20px;margin:0 0 16px;font-size:15px;color:var(--pq-ivory-soft)}
 .dkey span{display:inline-flex;align-items:center;gap:8px}
 .sw{display:inline-block;width:14px;height:14px;border-radius:3px}
 .sw-empty{background:var(--pq-ivory-line-strong)}
@@ -447,57 +447,57 @@ def page(R: dict[str, Any], F: dict[str, dict[str, Any]] | None = None) -> str:
 .cmp{display:flex;flex-direction:column}
 .cmp-row{display:grid;grid-template-columns:12.5em minmax(0,1fr) 7.5em;align-items:center;gap:22px;padding:18px 0;border-bottom:1px solid var(--pq-ivory-line)}
 .cmp-l{display:flex;flex-direction:column;gap:2px}
-.cmp-l b{font-size:17px;color:var(--pq-ivory)}
-.cmp-l span{font-size:13.5px;line-height:1.45;color:var(--pq-ivory-dim)}
+.cmp-l b{font-size:18px;color:var(--pq-ivory)}
+.cmp-l span{font-size:14px;line-height:1.45;color:var(--pq-ivory-dim)}
 .cmp-row.is-key .cmp-l b{color:var(--pq-bronze)}
 .cmp-n{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 6px}
-.cmp-n b{font-size:38px;line-height:1;font-weight:700;letter-spacing:-0.02em;color:var(--pq-ivory)}
-.cmp-n span{font-size:14px;color:var(--pq-ivory-dim)}
-.cmp-n small{flex-basis:100%;margin-top:4px;font-size:13px;color:var(--pq-bronze)}
+.cmp-n b{font-size:41px;line-height:1;font-weight:700;letter-spacing:-0.02em;color:var(--pq-ivory)}
+.cmp-n span{font-size:15px;color:var(--pq-ivory-dim)}
+.cmp-n small{flex-basis:100%;margin-top:4px;font-size:14px;color:var(--pq-bronze)}
 .cmp-axis{display:grid;grid-template-columns:12.5em minmax(0,1fr) 7.5em;gap:22px;padding-top:6px}
-.cmp-axis .ax{display:flex;justify-content:space-between;font-size:13px;color:var(--pq-ivory-faint);font-variant-numeric:tabular-nums}
+.cmp-axis .ax{display:flex;justify-content:space-between;font-size:14px;color:var(--pq-ivory-faint);font-variant-numeric:tabular-nums}
 .tm-c{display:grid;grid-template-columns:minmax(0,1fr) 2em;align-items:center;gap:10px}
-.tm-c em{font-style:normal;font-size:15px;font-weight:700;color:var(--pq-ivory);font-variant-numeric:tabular-nums}
+.tm-c em{font-style:normal;font-size:16px;font-weight:700;color:var(--pq-ivory);font-variant-numeric:tabular-nums}
 .tm-c em.z{font-weight:500;color:var(--pq-ivory-faint)}
-.callout{margin:22px 0 0;padding-left:14px;border-left:3px solid var(--pq-bronze);font-size:17px;line-height:1.6;color:var(--pq-ivory-soft);max-width:none}
+.callout{margin:22px 0 0;padding-left:14px;border-left:3px solid var(--pq-bronze);font-size:18px;line-height:1.6;color:var(--pq-ivory-soft);max-width:none}
 .callout b{color:var(--pq-ivory)}
 .tm{display:flex;flex-direction:column}
 .tm-row{display:grid;grid-template-columns:14em repeat(3,minmax(0,1fr));align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--pq-ivory-line)}
 .tm-head{padding-top:0}
-.tm-head span{font-size:14px;font-weight:600;color:var(--pq-ivory-dim)}
-.tm-l{font-size:15px;color:var(--pq-ivory-soft)}
+.tm-head span{font-size:15px;font-weight:600;color:var(--pq-ivory-dim)}
+.tm-l{font-size:16px;color:var(--pq-ivory-soft)}
 .tm-l b{margin-right:4px;color:var(--pq-ivory)}
 .flowfig{margin:30px 0 10px}
 .flowfig figcaption{margin-bottom:4px}
 .cgs{display:flex;flex-direction:column;gap:8px}
 .cg{border:0}
 .cg>summary{justify-content:flex-start;flex-wrap:wrap;gap:4px 14px;padding:13px 16px;border:1px solid var(--pq-ivory-line-strong);border-radius:10px;font-weight:400}
-.cg>summary b{font-size:16px;color:var(--pq-ivory)}
-.cg>summary span{font-size:14px;color:var(--pq-ivory-dim)}
+.cg>summary b{font-size:17px;color:var(--pq-ivory)}
+.cg>summary span{font-size:15px;color:var(--pq-ivory-dim)}
 .cg>summary::after{margin-left:auto}
 .cg-body{padding:8px 4px 4px}
 .more{border:0;border-top:1px solid var(--pq-ivory-line)}
 .more:last-of-type{border-bottom:1px solid var(--pq-ivory-line)}
-.more>summary{font-size:15.5px}
+.more>summary{font-size:16.5px}
 .tblfig{margin:16px 0 0}
-.xt{font-size:14.5px}
+.xt{font-size:15.5px}
 .xt td:first-child{white-space:nowrap;font-weight:600}
 .xt th{white-space:nowrap}
-.deph{margin:44px 0 12px;font-size:18px}
-.dep{margin:14px 0 0;padding-left:18px;font-size:15px;line-height:1.7;color:var(--pq-ivory-soft)}
-.lim{margin:0;padding-left:18px;color:var(--pq-ivory-soft);font-size:15px;line-height:1.75}
-.summary p{margin:0 0 12px;font-size:15.5px}
-.summary p:first-child{font-size:16.5px}
+.deph{margin:44px 0 12px;font-size:19px}
+.dep{margin:14px 0 0;padding-left:18px;font-size:16px;line-height:1.7;color:var(--pq-ivory-soft)}
+.lim{margin:0;padding-left:18px;color:var(--pq-ivory-soft);font-size:16px;line-height:1.75}
+.summary p{margin:0 0 12px;font-size:16.5px}
+.summary p:first-child{font-size:17.5px}
 @media(max-width:760px){
   .cmp-row,.cmp-axis{grid-template-columns:minmax(0,1fr) 7.2em;gap:10px 14px}
   .cmp-row .bar{grid-column:1 / -1;grid-row:2}
   .cmp-axis>span:first-child,.cmp-axis>span:last-child{display:none}
   .cmp-axis .ax{grid-column:1 / -1}
-  .cmp-n b{font-size:32px}
+  .cmp-n b{font-size:35px}
   .tm-row{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 12px}
   .tm-l{grid-column:1 / -1}
   .tm-head span:first-child{display:none}
-  .tm-head span{font-size:13px}
+  .tm-head span{font-size:14px}
 }
 """ + flow.CSS
     return f"""<!doctype html>
@@ -510,6 +510,7 @@ def page(R: dict[str, Any], F: dict[str, dict[str, Any]] | None = None) -> str:
 <meta name="theme-color" content="#050505" />
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/playfair-display@5.3.0/latin-500.css" />
 <style>
 {_tpl("tokens.css")}
 {_tpl("base.css")}
