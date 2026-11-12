@@ -12,8 +12,9 @@ from . import incidents as incidents_mod
 from . import kappa as kappa_mod
 from . import matrix as matrix_mod
 from . import rubric as rubric_mod
+from . import sensitivity as sens_mod
 from .registry import OUT_DIR
-from .schema import Control, Document, JURISDICTIONS, is_adjudicated
+from .schema import Control, Document, JURISDICTIONS, coding_version, is_adjudicated
 
 
 def render_timeline(docs: dict[str, Document]) -> str:
@@ -149,6 +150,9 @@ def write_all(
                 w(f"matrix-{coder}-{layer}.csv", matrix_mod.render_csv(m, controls))
             w(f"gaps-{coder}.md", render_layer_gaps(ms["analog"], ms["agent"], controls, coder))
     for coder, coding in codings.items():
+        if coding_version(coding) == 2:
+            srcs = [coding] + [codings[s] for s in (coding.get("adjudicates") or []) if s in codings]
+            w(f"sensitivity-{coder}.md", sens_mod.render(sens_mod.flips(docs, controls, coding, srcs), controls, coder))
         if is_adjudicated(coding):
             w(f"adjudication-{coder}.md", render_adjudication(coder, coding))
     names = sorted(k for k, c in codings.items() if not is_adjudicated(c))  # 조정본은 독립 판단이 아니다 — κ 에서 뺀다

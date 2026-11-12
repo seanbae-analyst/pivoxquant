@@ -91,3 +91,21 @@ def test_registry_consensus_tamper_is_detected():
     lay = cells[cid]["analog"]
     lay["covered"] = not lay["covered"]
     assert schema.validate_adjudication(codings[k], codings)
+
+
+# ── 민감도 ──
+
+def test_sensitivity_finds_single_support_and_upward_flips():
+    from pivoxpolicy import sensitivity
+    c = coding({"inventory": {**cell(True, False), "note": "borderline: x"}, "vendors": cell(False, False)}, "s")
+    fl = sensitivity.flips(DOCS, CONTROLS, c)
+    down = [f for f in fl if f.before and f.control == "inventory" and f.layer == "analog"]
+    assert down and down[0].score_from == 2 and down[0].score_to == 0 and down[0].borderline
+    up = [f for f in fl if not f.before and f.control == "vendors" and f.layer == "agent"]
+    assert up and up[0].score_to == 2 and not up[0].borderline
+
+
+def test_borderline_marker_ignores_negation():
+    from pivoxpolicy.sensitivity import _BORDERLINE
+    assert _BORDERLINE.search("borderline: x") and _BORDERLINE.search("borderline for agent: y")
+    assert not _BORDERLINE.search("borderline 아님")

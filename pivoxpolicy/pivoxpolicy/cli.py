@@ -16,7 +16,7 @@ from . import report as report_mod
 from . import rubric as rubric_mod
 from . import site as site_mod
 from .registry import SNAPSHOT_DIR, load_codings, load_controls, load_documents, load_sources
-from .schema import SchemaError, independent_v2, primary_coder, validate_adjudication, validate_coding
+from .schema import SchemaError, coding_version, independent_v2, primary_coder, validate_adjudication, validate_coding
 
 
 def _load_all() -> tuple[Any, Any, Any]:
@@ -114,6 +114,22 @@ def cmd_kappa(args: argparse.Namespace) -> int:
         print(f"있는 코더: {', '.join(sorted(codings))}")
         return 2
     print(kappa_mod.render_compare(kappa_mod.compare(codings[a], codings[b], docs, controls)))
+    return 0
+
+
+def _note_sources(codings: dict[str, Any], coding: dict[str, Any]) -> list[dict[str, Any]]:
+    """borderline 표시를 찾을 코딩 — 조정본이면 원본 둘도."""
+    return [coding] + [codings[s] for s in (coding.get("adjudicates") or []) if s in codings]
+
+
+def cmd_sensitivity(args: argparse.Namespace) -> int:
+    from . import sensitivity as sens_mod
+    controls, docs, codings = _load_all()
+    coder, coding = _pick_coder(codings, args.coder)
+    if coding_version(coding) != 2:
+        print(f"{coder} 는 한 층(v1) 코딩 — 민감도는 두 층 코딩만")
+        return 2
+    print(sens_mod.render(sens_mod.flips(docs, controls, coding, _note_sources(codings, coding)), controls, coder))
     return 0
 
 
@@ -276,6 +292,10 @@ def build_parser() -> argparse.ArgumentParser:
     k.add_argument("--a")
     k.add_argument("--b")
     k.set_defaults(fn=cmd_kappa)
+
+    se = sub.add_parser("sensitivity", help="칸 하나를 뒤집으면 바뀌는 관할 점수 (◆ = borderline 판정)")
+    se.add_argument("--coder")
+    se.set_defaults(fn=cmd_sensitivity)
 
     f = sub.add_parser("fetch", help="문서 URL 스냅숏·변경 감지")
     f.add_argument("ids", nargs="*", help="특정 문서 id 만")

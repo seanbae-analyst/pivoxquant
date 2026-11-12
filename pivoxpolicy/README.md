@@ -43,6 +43,7 @@ python3 -m pivoxpolicy.cli matrix  # 통제 × 관할 — 두 층 나란히 (--l
 python3 -m pivoxpolicy.cli gaps    # AI·에이전트 층이 구속력 2 미만인 칸 (옆에 일반 층 점수)
 python3 -m pivoxpolicy.cli timeline
 python3 -m pivoxpolicy.cli kappa   # 코더 간 일치도 — 층마다 (인자 없으면 두 층 코더 둘, `kappa A B` 로 지정)
+python3 -m pivoxpolicy.cli sensitivity      # 칸 하나를 뒤집으면 바뀌는 관할 점수 (◆ = borderline 판정)
 python3 -m pivoxpolicy.cli incident-kappa   # 사건 × 통제 코딩 일치도
 python3 -m pivoxpolicy.cli fetch   # 문서 URL 스냅숏 → snapshots/manifest.json, 바뀐 문서 보고
 python3 -m pivoxpolicy.cli watch   # 발표 목록 페이지에서 새 글 찾기
@@ -99,7 +100,7 @@ snapshots/
   manifest.json          id 별 url·sha256·크기·받은 시각·HTTP 상태·에이전트 언급 수·목록 링크 (git 추적)
   content/               받은 본문 (git 추적 안 함)
 out/                     report 가 쓰는 매트릭스·연표·공백·κ (git 추적 — 논문에 붙일 표)
-tests/                   pytest 130개, 네트워크 없이 돈다
+tests/                   pytest 132개, 네트워크 없이 돈다
 ```
 
 ## 문서 레코드 규칙
@@ -149,6 +150,31 @@ true 칸의 인용문은 전부 코퍼스 원문에서 확인됐다(A 108칸 · 
   사람 코더(보강 후 코드북)와의 κ 를 보고할 땐 그 차이를 밝힌다.
 - 조정자도 같은 계열의 AI 다. 사람 코더가 들어오면 조정본이 아니라 ai_v2a·ai_v2b 와 각각 κ 를 내고, 조정 7칸을 다시 본다.
 
+## 민감도 · 경계 칸 검토 (2026-11-12, `sensitivity`)
+
+`python3 -m pivoxpolicy.cli sensitivity` — 문서 × 통제 × 층 칸을 하나씩 뒤집어 관할 점수가 바뀌는 경우를 센다(`out/sensitivity-*.md`).
+조정본 기준 **아래로 21**(그 칸 하나가 점수를 받침) · **위로 62**(그 칸 하나가 true 면 점수가 오름). ◆ = 그 칸 note 에 `borderline:`.
+
+논문에 그대로 쓸 사실:
+- **한국 일반 통제 '구속력 2' 는 대부분 전자금융감독규정 제13조 한 조에 기댄다** — 7통제 중 5개(인벤토리 · 고유 ID · 최소 권한 · 감사 기록 · 즉시 중단).
+  공급자는 위탁 규정 하나. 미국은 최소 권한 · 사람 승인 · 감사 기록이 NYDFS Part 500 하나에 기댄다.
+- 간극 12칸은 모두 '구속력 문서의 AI 층 = false' 라는 부정 판정에 기댄다(위로 표의 KR·US AI 층 행). 그 문서들은 AI 를 이름 붙이지 않으니
+  G3 로 false 가 분명하다 — 간극을 닫으려면 'AI 도 정보시스템이다' 류의 확장 해석이 필요하고 코드북은 그걸 막는다.
+- 국제(INTL) 점수는 거의 전부 FSB 최종 보고서 한 건에 기댄다(AI 층 7칸 모두).
+
+◆ 9칸 검토 — **판정은 하나도 바꾸지 않았다**:
+
+| 칸 | 결론 | 이유 |
+|---|---|---|
+| FSB × 인벤토리 (AI) | 유지 true | SP3 'use case and model inventories' 를 활용하라 — agent true_if 'AI 사용사례 목록' 그대로. 에이전트 고유 속성은 사례에만 있어 subject ai |
+| FSB × 감사 기록 (일반) | 유지 true | SP11 'monitoring and logging of anomalies and cyber incidents' — 로그 문언이 있다(모니터링만이 아님). AI 위협 대응의 일반 IT 강화라 G3 로 analog |
+| FSB × 감사 기록 (AI) · 금융위 가이드라인 × 인벤토리 (AI) · CISA BOD × 즉시 중단 (AI) · 금융위 가이드라인 × 고유 ID (AI) | 유지 | ◆ 는 같은 칸의 **다른 층** note 에서 왔다. 이 층의 근거는 분명하다(에이전트 행위 귀속 기록 · 점검항목 ⑭ 목록 관리 · AI 언급 없음 · 서비스 계정 키 보관은 신원 부여 아님) |
+| NYDFS Part 500 × 사람 승인 (일반) | 유지 true | 500.12(b) CISO 의 보완통제 서면 승인 — true_if 가 '보완통제' 를 이름 붙인다. **단, 미국 일반 층 사람 승인 2 는 이 한 줄에 기댄다** — 거래 결재가 아니라 예외 승인이다. 논문에 밝힌다 |
+| NYDFS Part 500 × 사람 승인 (AI) | 유지 false | Part 500 은 AI 를 이름 붙이지 않는다 (◆ 는 일반 층 note) |
+| FSB × 인벤토리 (일반) | 유지 false | 조정에서 판정한 칸 |
+
+◆ 는 칸 단위라 다른 층 note 의 표시도 잡힌다 — 위 9칸 중 5칸이 그렇다.
+
 ## 한 칸 코딩 결과 (v1 — 기록)
 
 
@@ -196,7 +222,7 @@ git push git@github.com:seanbae-analyst/pivoxpolicy.git pivoxpolicy-split:main
 ## 다음 할 일 (우선순위)
 
 1. **사람 코더 1명** — `registry/codings/TEMPLATE.yaml` + 코퍼스 21건(본문은 저장소에 없다 — `snapshots/corpus.json` 의 출처로 다시 받거나 보관한 zip) → `kappa`.
-2. ~~일반 층 불일치 6칸 조정~~ (2026-11-12, 위 '조정'). 남은 것: 두 팀이 **일치했지만** note 가 `borderline:` 인 칸 검토.
+2. ~~일반 층 불일치 6칸 조정 · 결론을 좌우하는 경계 칸 검토~~ (2026-11-12, 위 '조정' · '민감도').
 3. 사건 × 통제 코딩도 판정 규칙 정하기('원문이 실패를 적은 것만 참' vs 추론) — 지금 κ 0.42.
 4. 덱 정정 반영(`registry/inbox.md` 맨 위): FSB 고유 식별자 · CISA BOD 22-01 폐지 → 26-04.
 5. EU 확장(DORA), ISO 27001·42001 원문 확보 여부, 논문용 표.
