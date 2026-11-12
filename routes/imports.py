@@ -509,6 +509,12 @@ def _ingest(user_id: int, source: str, *, text=None, rows=None, upload=None,
             r.code, r.name,
             latin_name_is_symbol=_latin_name_is_symbol(r),
         )
+        if ticker is None and not display and isinstance(r.code, str) and r.code.strip():
+            # 2026-11-11: an unresolved code with no name ("0007C0") left both
+            # empty, so every such fill shared one dedupe key — the second was
+            # hidden as a duplicate the user could never see or approve.
+            # Show what was read; it also keeps the keys apart.
+            display = r.code.strip()[:100]
         if source == SOURCE_SCREENSHOT_IMAGE and ticker is None and r.name and r.currency != "USD":
             # OCR-garbled name ("하이닉스"): a clear unique master match is
             # offered, but as low confidence → the inbox asks for a check.
@@ -542,7 +548,7 @@ def _ingest(user_id: int, source: str, *, text=None, rows=None, upload=None,
     seen: set[str] = set()
     for row, no_time in zip(pending, untimed):
         _recompute(row, seen, index, untimed=no_time)
-        row.pre_trade_reflection_id = reflections.match(row.ticker, row.traded_at)
+        row.pre_trade_reflection_id = reflections.match(row.ticker, row.traded_at, row.action)
         db.session.add(row)
 
     batch.parsed_count = len(pending)
@@ -971,7 +977,7 @@ def patch_pending(pid: int):
     if row.source == SOURCE_SCREENSHOT_IMAGE and "ticker" in data:
         row.confidence = 1.0
     _recompute(row)
-    row.pre_trade_reflection_id = match_pre_trade(current_user.id, row.ticker, row.traded_at)
+    row.pre_trade_reflection_id = match_pre_trade(current_user.id, row.ticker, row.traded_at, row.action)
     try:
         db.session.commit()
     except Exception:

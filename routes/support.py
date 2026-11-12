@@ -164,7 +164,8 @@ def _send_user_email(user, *, subject: str, html_body: str, ctx: str) -> None:
 @support_bp.route("/inquiries", methods=["POST"])
 @api_auth
 def create_inquiry():
-    data = request.get_json(silent=True) or {}
+    data = request.get_json(silent=True)
+    data = data if isinstance(data, dict) else {}  # a scalar body 500'd (2026-11-11)
     category = data.get("category")
     subject = data.get("subject")
     body = data.get("body")

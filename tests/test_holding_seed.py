@@ -67,9 +67,13 @@ class TestRegistrationWritesSeed:
             ("AAPL", "BUY", 5.0, 180.0, HOLDING_SEED_SOURCE, "USD"),
         ]
         with app.app_context():
-            ts = TradeHistory.query.filter_by(user_id=auth_user["id"]).first().traded_at
-        # registration time, not the declared purchase date
-        assert abs((ts - _now()).total_seconds()) < 120
+            rows = (TradeHistory.query.filter_by(user_id=auth_user["id"])
+                    .order_by(TradeHistory.id).all())
+        # 2026-11-11: the declared purchase date — a seed stamped "now" sorted
+        # after backdated fills recorded later and broke FIFO lot order.
+        assert rows[0].traded_at == datetime(2024, 1, 2)
+        # no purchase_date → registration time
+        assert abs((rows[1].traded_at - _now()).total_seconds()) < 120
 
     def test_add_position_kr_currency(self, client, auth_user, app):
         with patch("routes.portfolio.cache_service.cache_ticker"):

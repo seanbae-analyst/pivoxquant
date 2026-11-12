@@ -42,7 +42,7 @@ from typing import Any
 from extensions import db
 from models import Position, PreTradeReflection, TradeHistory
 from services.observation_notes.service import MAX_TICKER_DAYS, MAX_TICKER_LIMIT, notes_for_ticker
-from services.pre_trade.friction_outcome import ticker_key
+from services.pre_trade.friction_outcome import _at_or_after, ticker_key
 from services.profile.fifo_util import is_holding_seed, is_registration_row
 from services.research_notes.service import research_list_for_ticker
 from services.ticker_normalizer import normalize_ticker
@@ -206,9 +206,12 @@ def stock_record(user_id: int, ticker: str, now: datetime | None = None) -> dict
         started = r.cooldown_started_at or r.created_at
         # A pause before buying that no buy of this name followed — the trade
         # that did not happen. Linked fills count; so does any later buy.
+        # A date-only buy is compared by KST day (friction_outcome's rule), so
+        # this count agrees with /api/behavior/friction-outcome (2026-11-11).
         bought_after = int(r.id) in linked or (
             side == "entry" and started is not None and any(
-                _side(t.action) == "buy" and t.traded_at >= started for t in fills
+                _side(t.action) == "buy" and t.traded_at is not None
+                and _at_or_after(t.traded_at, started) for t in fills
             )
         )
         if side == "entry" and not bought_after:

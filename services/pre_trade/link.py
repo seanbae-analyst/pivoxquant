@@ -163,7 +163,8 @@ def resolve_reflection_link(
         rid = int(raw_id)
     except (TypeError, ValueError):
         rid = 0
-    if rid <= 0 or isinstance(raw_id, bool):
+    # bool is an int subclass; a float like 1.5 was truncated to 1 (2026-11-11).
+    if rid <= 0 or isinstance(raw_id, (bool, float)):
         raise ReflectionLinkError(
             "REFLECTION_LINK_INVALID",
             en="reflection_id must be a positive integer.",

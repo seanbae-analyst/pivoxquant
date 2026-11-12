@@ -21,7 +21,7 @@ import json
 import logging
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import func
+from sqlalchemy import func, or_
 
 from extensions import db
 from models import ObservationNote
@@ -189,13 +189,14 @@ def notes_for_ticker(
     limit = _clamp_int(limit, default=DEFAULT_TICKER_LIMIT, maximum=MAX_TICKER_LIMIT)
     since = _utc_now() - timedelta(days=days)
 
-    q = _filter_json_element(
-        ObservationNote.query.filter(
-            ObservationNote.user_id == int(user_id),
-            ObservationNote.created_at >= since,
-        ),
-        ObservationNote.tickers_json,
-        normalized,
+    # 2026-11-11: every spelling of the stock (035760.KS / .KQ, BRK.B /
+    # BRK-B) — the per-stock timeline answered differently by spelling.
+    from services.pre_trade.friction_outcome import same_stock_variants
+    q = ObservationNote.query.filter(
+        ObservationNote.user_id == int(user_id),
+        ObservationNote.created_at >= since,
+        or_(*[_json_element_clause(ObservationNote.tickers_json, v)
+              for v in dict.fromkeys([normalized, *same_stock_variants(normalized)])]),
     )
     count = q.count()
     # Same ordering rule as list_notes — id desc is insert order.
@@ -297,6 +298,13 @@ def _load_owned(note_id: int, user_id: int) -> ObservationNote:
     if row is None:
         raise LookupError("observation note not found")
     return row
+
+
+def _json_element_clause(column, value: str):
+    """The clause :func:`_filter_json_element` applies (case-sensitive)."""
+    encoded = json.dumps(value, ensure_ascii=False)
+    escaped = encoded.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return column.like(f"%{escaped}%", escape="\\")
 
 
 def _filter_json_element(query, column, value: str, *, case_insensitive=False):

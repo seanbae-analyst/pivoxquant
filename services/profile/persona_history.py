@@ -250,16 +250,26 @@ def compute_drift(snapshots: list[dict]) -> dict:
     # (the same default the classifier uses).
     f0 = first.get("features") or {}
     f1 = last.get("features") or {}
+    # 2026-11-11: compare only axes BOTH snapshots measured. An unmeasured
+    # axis carries the 0.5 default, so a snapshot taken before any trade and
+    # one after 14 trades read as "이동 중 관찰" off defaults that were never
+    # measured. Snapshots without a mask (older rows) keep every axis.
+    m0 = first.get("present_mask")
+    m1 = last.get("present_mask")
+    if isinstance(m0, dict) and isinstance(m1, dict) and (m0 or m1):
+        keys = [k for k in FEATURE_KEYS if m0.get(k) and m1.get(k)]
+    else:
+        keys = list(FEATURE_KEYS)
     sq = 0.0
-    for k in FEATURE_KEYS:
+    for k in keys:
         a = float(f0.get(k, 0.5))
         b = float(f1.get(k, 0.5))
         sq += (b - a) ** 2
-    distance = math.sqrt(sq / max(1, len(FEATURE_KEYS)))
+    distance = math.sqrt(sq / max(1, len(keys))) if keys else 0.0
 
     # Dominant feature changes — biggest absolute deltas.
     deltas: list[dict] = []
-    for k in FEATURE_KEYS:
+    for k in keys:
         a = float(f0.get(k, 0.5))
         b = float(f1.get(k, 0.5))
         deltas.append({

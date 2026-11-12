@@ -86,7 +86,10 @@ def normalize_ticker(raw: str) -> str:
     """
     if not isinstance(raw, str):
         return ""
-    t = raw.strip().upper()
+    # 2026-11-11: control characters (a NUL above all) are never part of a
+    # symbol — psycopg2 refuses a NUL in a string parameter, so "AAPL\x00"
+    # from a path or body would 500 on Postgres.
+    t = "".join(ch for ch in raw if ch.isprintable()).strip().upper()
     if not t:
         return ""
 
