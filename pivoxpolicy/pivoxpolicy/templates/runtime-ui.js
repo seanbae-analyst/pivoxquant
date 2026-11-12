@@ -8,6 +8,8 @@
   var RT_KO = { blocked: "막힘", damage: "피해 발생", no_surface: "쓸 도구 없음", runtime_na: "런타임 밖" };
   var MODEL_KO = { blocked: "막힘", reduced: "피해 축소", damage: "피해 발생", no_surface: "공격면 없음" };
   var OUT_KO = { blocked: "막힘", passed: "통과", no_surface: "공격면 없음" };
+  var SCORE_KO = ["다루지 않음", "자율", "구속력", "구속력 + 에이전트 명시"];
+  var LV_KO = ["없음", "사람·계정", "AI까지"];
   var KIND_KO = { read: "조회", write: "쓰기", send: "외부 전송", exec: "코드 실행", pay: "송금·결제" };
   var AUD_KO = { decision: "판정", admin: "관리", auth: "인증", approval: "승인", kill_switch: "즉시 중단", redteam: "레드팀", cases: "공격 팀" };
   var OP_KO = { login: "로그인", register: "등록", update: "수정", status: "상태 변경", rotate_key: "키 회전", token: "토큰 발급", approve: "승인",
@@ -182,7 +184,7 @@
     if (!pre || !cur) return;
     cur.levels = {}; meta.controls.forEach(function (c) { cur.levels[c.id] = Number((pre.levels || {})[c.id] || 0); });
     renderControls();
-    say("d-saved", pre.label + " 수준을 부었다 — 저장을 누르면 반영된다.");
+    say("d-saved", pre.label + " 수준을 통제에 넣었다. 저장을 누르면 반영된다.");
   });
   function renderTools() {
     var t = clear($("d-tools"));
@@ -295,7 +297,10 @@
       var tr = el("tr", { cls: "k-" + c.kind }, [el("td", { cls: "cs" }, [el("b", { text: c.title }), el("span", { cls: "sub", text: c.kind === "attack" ? " 공격" : " 정상 업무" })])]);
       j.presets.forEach(function (p) {
         var cell = p.cells[c.id] || {}, v = cell.verdict || "na";
-        tr.appendChild(el("td", { cls: "mx v-" + v, title: cell.control ? stopText(cell, c.kind) : "" }, [el("span", { cls: "vd v-" + v, text: verdictShort(c.kind, v) })]));
+        var b = el("button", { type: "button", cls: "mx-btn", "aria-label": c.title + ", " + (p.preset === "current" ? "지금 설정" : p.label) + ", " + verdictLabel(c.kind, v) + ". 해부 열기",
+                               title: cell.control ? stopText(cell, c.kind) : "" }, [el("span", { cls: "vd v-" + v, text: verdictShort(c.kind, v) })]);
+        b.addEventListener("click", function () { renderCellDetail(c, p, cell, b); });
+        tr.appendChild(el("td", { cls: "mx v-" + v }, [b]));
       });
       tb.appendChild(tr);
     });
@@ -306,7 +311,63 @@
     });
     t.appendChild(tb);
     out.appendChild(el("div", { cls: "tblwrap" }, [t]));
-    out.appendChild(el("p", { cls: "fine", text: "공격이 통과하면 결함, 정상 업무가 막히면 업무 마찰이다. '승인' 은 사람 승인에서만 멈춘 공격이다 — 승인자가 요약에 속거나 지쳐서 승인하면 뚫린다(승인해도 뒤의 통제가 막으면 막음으로 센다). 샌드박스라 에이전트 상태는 바뀌지 않는다." }));
+    out.appendChild(el("div", { id: "mx-detail", cls: "mx-det", hidden: "hidden", "aria-live": "polite" }));
+    out.appendChild(el("p", { cls: "fine", text: "칸을 누르면 그 결과를 해부한다. 어디서 멈췄는지, 통제 하나를 올려 막을 수 있는지, 그 관할의 규제 근거가 무엇인지 보여 준다. 공격이 통과하면 결함, 정상 업무가 막히면 업무 마찰이다. '승인'은 사람 승인에서만 멈춘 공격이다. 승인자가 요약에 속거나 지쳐서 승인하면 뚫린다(승인해도 뒤의 통제가 막으면 막음으로 센다). 샌드박스라 에이전트 상태는 바뀌지 않는다." }));
+  }
+
+
+  // ── 칸 해부: 멈춘 곳 · 최소 처방(같은 엔진으로 반사실 재실행) · 그 관할의 규제 근거 문서 ──
+  function jurOf(presetId) { var j = String(presetId || "").split("-")[0]; return (meta.jurisdictions || {})[j] ? j : null; }
+  function basisBlock(cid, j, thr) {
+    var R = ((meta.regulation || {})[cid] || {})[j] || {}, an = R.analog || { score: 0 }, ag = R.agent || { score: 0 };
+    var box = el("div", { cls: "basis" });
+    var why = ag.score >= thr ? "이 관할은 AI 층까지 요구한다." :
+      ag.score > 0 ? "AI 층은 " + SCORE_KO[ag.score] + " 문서에만 있다. " + (thr >= 2 ? "강제 규제만 지키는 회사에는 비어 있다." : "그 문서까지 지켜야 채워진다.") :
+      an.score > 0 ? "사람·계정 층만 다루고 AI 층을 다루는 문서가 없다." : "이 통제를 다루는 문서가 없다.";
+    box.appendChild(el("p", { cls: "basis-h" }, [el("b", { text: ctlName[cid] }), ": 사람·계정 층은 " + SCORE_KO[an.score] + ", AI 층은 " + SCORE_KO[ag.score] + ". " + why]));
+    [["사람·계정", an], ["AI", ag]].forEach(function (pair) {
+      var x = pair[1];
+      if (!x.doc) return;
+      var link = x.url ? el("a", { href: x.url, target: "_blank", rel: "noopener noreferrer", text: x.title }) : el("span", { text: x.title });
+      box.appendChild(el("p", { cls: "basis-doc" }, [el("span", { cls: "k", text: pair[0] + " 근거" }), link]));
+      if (x.quote) box.appendChild(el("blockquote", { cls: "basis-q", text: x.quote }));
+    });
+    if (ag.agent_named) {
+      var n = ag.agent_named, l2 = n.url ? el("a", { href: n.url, target: "_blank", rel: "noopener noreferrer", text: n.title }) : el("span", { text: n.title });
+      box.appendChild(el("p", { cls: "basis-doc" }, [el("span", { cls: "k", text: "에이전트를 이름으로 다룬 자율 문서" }), l2]));
+    }
+    return box;
+  }
+  function renderCellDetail(c, p, cell, opener) {
+    var d = $("mx-detail"); clear(d); d.hidden = false;
+    var label = p.preset === "current" ? (levelsDirty() ? "지금 화면 (저장 안 함)" : "지금 설정") : p.label, v = cell.verdict || "na";
+    var close = btn("닫기", "sm", function () { d.hidden = true; clear(d); if (opener) opener.focus(); });
+    d.appendChild(el("div", { cls: "mx-det-h" }, [el("div", null, [el("span", { cls: "k", text: label }), el("h5", { text: c.title })]), close]));
+    if (c.story) d.appendChild(el("p", { cls: "story", text: c.story }));
+    d.appendChild(el("p", { cls: "verdict-line" }, [el("span", { cls: "vd v-" + v, text: verdictLabel(c.kind, v) }), "  " + (cell.control ? stopText(cell, c.kind) :
+      v === "defect" ? "모든 단계가 허용됐다. 막은 통제가 없다." : v === "na" ? "이 에이전트에는 이 공격에 쓸 도구가 없다." : "그대로 처리됐다.")]));
+    // 이 규제의 통제 7개 수준 — 멈춘 통제 · 처방 통제를 표시
+    var fixes = cell.fixes || [], chips = el("div", { cls: "lv-chips" });
+    meta.controls.forEach(function (k) {
+      var lv = Number((p.levels || {})[k.id] || 0), cls = "chip lv" + lv + (k.id === cell.control ? " stop" : "") + (fixes.indexOf(k.id) >= 0 ? " fix" : "");
+      chips.appendChild(el("span", { cls: cls, title: (k.help || {}).agent || "" }, [el("b", { text: k.name }), " " + LV_KO[lv]]));
+    });
+    d.appendChild(chips);
+    if (c.kind === "attack" && (v === "defect" || v === "held")) {
+      d.appendChild(el("h6", { text: "최소 처방" }));
+      d.appendChild(el("p", { text: fixes.length
+        ? "통제 하나만 AI까지로 올리면 기계가 막는다: " + fixes.map(function (x) { return ctlName[x]; }).join(", ") + ". 같은 정책 엔진으로 다시 돌려 확인한 결과다."
+        : "통제 하나를 올려서는 막히지 않는다. 둘 이상을 함께 올려야 한다(예: 탐지와 즉시 중단은 짝이 맞아야 멈춘다)." }));
+    }
+    var j = jurOf(p.preset), thr = /-2$/.test(p.preset) ? 2 : 1;
+    var focus = fixes.length ? fixes : (cell.control ? [cell.control] : []);
+    d.appendChild(el("h6", { text: "규제 근거: 이 관할에서 왜 이렇게 됐나" }));
+    if (!j) d.appendChild(el("p", { cls: "fine", text: "관할 프리셋이 아니라서(통제 없음 · 모두 AI까지 · 지금 설정) 근거 문서를 대지 않는다." }));
+    else if (!focus.length) d.appendChild(el("p", { cls: "fine", text: "멈춘 통제가 없다. 이 케이스는 그대로 처리됐다." }));
+    else focus.forEach(function (cid) { d.appendChild(basisBlock(cid, j, thr)); });
+    d.appendChild(el("p", { cls: "fine", text: "근거는 그 관할에서 이 통제를 가장 세게 다룬 문서 하나와 코딩 근거 인용이다. 법률 자문이 아니다." }));
+    d.scrollIntoView({ block: "nearest" });
+    close.focus();
   }
 
   // ── 승인 대기 ──

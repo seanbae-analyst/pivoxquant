@@ -72,3 +72,17 @@ def test_matrix_sandbox_does_not_mutate_agent():
     before = dict(a["levels"])
     cases.run_matrix(a, [{"id": "none", "label": "x", "levels": NONE}], approved=APPROVED, now=NOW)
     assert a["levels"] == before and a["status"] == "active"
+
+
+def test_minimal_fixes_are_verified_by_rerun():
+    """최소 처방 — 통제 하나를 AI까지로 올려 다시 돌렸을 때 막음이 되는 것만 처방으로 낸다."""
+    kr = dict(NONE, inventory=1, vendors=1, unique_id=1, least_privilege=1, human_approval=2, audit_trail=1, kill_switch=1)
+    m = cases.run_matrix(agent(ALL2), [{"id": "KR-2", "label": "한국 강제", "levels": kr}], approved=APPROVED, now=NOW)
+    cells = m["presets"][0]["cells"]
+    assert cells["other-customer"]["fixes"] == ["least_privilege"]
+    assert cells["tampered-module"]["fixes"] == ["vendors"]
+    assert cells["runaway-loop"]["verdict"] == "held" and cells["runaway-loop"]["fixes"] == []   # 탐지와 즉시 중단을 함께 올려야 한다
+    by = {c["id"]: c for c in cases.load_cases()}
+    for cid, cell in cells.items():                       # 처방마다 실제로 막음이 되는지 다시 확인
+        for c in cell["fixes"]:
+            assert cases.run_case(agent(dict(kr, **{c: 2})), by[cid], APPROVED, NOW)["verdict"] == "good", (cid, c)

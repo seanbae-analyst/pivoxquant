@@ -94,6 +94,19 @@ def run_cases(agent: dict[str, Any], cases: list[dict[str, Any]] | None = None,
     return {"agent_id": agent.get("id"), "results": rows, "summary": summary}
 
 
+def minimal_fixes(agent: dict[str, Any], case: dict[str, Any], approved: list[dict[str, Any]], now=None) -> list[str]:
+    """결함 · 사람 승인에 기댐인 공격에 대해 — 통제 하나만 AI까지로 올리면 막음이 되는 통제들(반사실 재실행).
+    '무엇을 고치면 되나' 를 규칙으로 적지 않고 같은 정책 엔진으로 다시 돌려 확인한다."""
+    out = []
+    for c in policy.CONTROL_ORDER:
+        if int((agent.get("levels") or {}).get(c, 0)) >= 2:
+            continue
+        lv = dict(agent.get("levels") or {}, **{c: 2})
+        if run_case(with_levels(agent, lv), case, approved, now)["verdict"] == "good":
+            out.append(c)
+    return out
+
+
 def with_levels(agent: dict[str, Any], levels: dict[str, int]) -> dict[str, Any]:
     """통제 수준만 바꾼 샌드박스 복사본 — 환경·도구·한도·위임은 그대로 둔다."""
     a = copy.deepcopy(agent)
@@ -108,13 +121,18 @@ def run_matrix(agent: dict[str, Any], presets: list[dict[str, Any]], cases: list
     cases = cases if cases is not None else load_cases()
     approved = approved if approved is not None else []
     cols = []
+    by_id = {c["id"]: c for c in cases}
     for pr in presets:
-        res = run_cases(with_levels(agent, pr.get("levels") or {}), cases, approved, now)
+        sand = with_levels(agent, pr.get("levels") or {})
+        res = run_cases(sand, cases, approved, now)
+        for r in res["results"]:
+            r["fixes"] = minimal_fixes(sand, by_id[r["id"]], approved, now) if r["kind"] == "attack" and r["verdict"] in ("defect", "held") else []
         cols.append({"preset": pr["id"], "label": pr.get("label", pr["id"]), "levels": pr.get("levels") or {},
                      "summary": res["summary"],
                      "cells": {r["id"]: {"outcome": r["outcome"], "verdict": r["verdict"], "control": r["control"],
                                          "stopped_at": r["stopped_at"], "detected": r["detected"],
-                                         "if_approved": ({k: r["if_approved"][k] for k in ("outcome", "control")} if r["if_approved"] else None)}
+                                         "if_approved": ({k: r["if_approved"][k] for k in ("outcome", "control")} if r["if_approved"] else None),
+                                         "fixes": r["fixes"]}
                                for r in res["results"]}})
     return {"agent_id": agent.get("id"),
             "cases": [{"id": c["id"], "kind": c.get("kind"), "title": c.get("title", c["id"]),

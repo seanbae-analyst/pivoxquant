@@ -61,7 +61,8 @@ def _meta_payload() -> dict[str, Any]:
     return {"controls": p["controls"], "profiles": p["agent_profiles"], "presets": [{k: x[k] for k in ("id", "label", "levels")} for x in p["presets"]],
             "profile_tools": PROFILE_TOOLS, "scenarios": [{"id": s["id"], "title": s["title"]} for s in p["scenarios"]],
             "cases": [{k: c.get(k) for k in ("id", "kind", "title", "story", "scenario")} for c in cs],
-            "matrix_default": ["none", "US-2", "EU-2", "KR-2", "all"], "kinds": ["read", "write", "send", "exec", "pay"]}
+            "matrix_default": ["none", "US-2", "EU-2", "KR-2", "all"], "kinds": ["read", "write", "send", "exec", "pay"],
+            "regulation": p["regulation"], "jurisdictions": p["jurisdictions"]}
 
 
 class App:

@@ -140,3 +140,30 @@ tr.v-defect td:first-child{box-shadow:inset 2px 0 0 var(--pq-ivory)}
 .v-held .vd,td.v-held .vd{color:var(--pq-ivory-soft);text-decoration:underline dotted var(--pq-ivory-mid);text-underline-offset:3px}
 .o.held{color:var(--pq-ivory-soft)}
 .rp-item input,.reg-pick input{accent-color:var(--pq-bronze)}
+
+/* 칸 해부 */
+.mx-btn{display:inline-flex;align-items:center;justify-content:center;min-width:52px;min-height:30px;padding:0 8px;font:inherit;background:none;border:0;border-radius:6px;cursor:pointer}
+.mx-btn:hover{background:var(--pq-bronze-wash)}
+.mx-btn:focus-visible{outline:2px solid var(--pq-bronze);outline-offset:1px}
+.mx-det{margin:16px 0 8px;padding:18px 22px;border-radius:var(--pq-radius-card);background:var(--pq-card-veil);box-shadow:inset 0 0 0 1px var(--pq-ivory-line)}
+.mx-det-h{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.mx-det-h .k{font-size:12.5px;color:var(--pq-bronze)}
+.mx-det h5{margin:4px 0 0;font-size:18px;font-weight:600}
+.mx-det h6{margin:18px 0 6px;font-size:13.5px;font-weight:600;color:var(--pq-ivory)}
+.mx-det .story{margin:10px 0 0;font-size:14px;color:var(--pq-ivory-soft);max-width:80ch}
+.verdict-line{margin:10px 0 0;font-size:14px;color:var(--pq-ivory-soft)}
+.lv-chips{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0 0}
+.chip{display:inline-flex;gap:4px;align-items:baseline;padding:4px 9px;font-size:12.5px;border-radius:6px;box-shadow:inset 0 0 0 1px var(--pq-ivory-line);color:var(--pq-ivory-dim)}
+.chip b{font-weight:600;color:var(--pq-ivory-soft)}
+.chip.lv2{color:var(--pq-bronze)}
+.chip.stop{box-shadow:inset 0 0 0 1px var(--pq-ivory-mid)}
+.chip.fix{box-shadow:inset 0 0 0 1.5px var(--pq-bronze)}
+.chip.fix::after{content:"처방";margin-left:4px;font-size:11px;color:var(--pq-bronze)}
+.basis{margin:10px 0 0;padding:10px 0 2px;border-top:1px solid var(--pq-ivory-line)}
+.basis-h{margin:0;font-size:13.5px;color:var(--pq-ivory-soft)}
+.basis-h b{color:var(--pq-ivory)}
+.basis-doc{margin:8px 0 0;font-size:13px;display:flex;gap:10px;align-items:baseline}
+.basis-doc .k{flex:none;min-width:150px;font-size:12px;color:var(--pq-ivory-dim)}
+.basis-doc a{color:var(--pq-ivory);text-decoration:underline;text-decoration-color:var(--pq-ivory-line-strong);text-underline-offset:3px}
+.basis-doc a:hover{color:var(--pq-bronze)}
+.basis-q{margin:6px 0 0 160px;padding:0 0 0 12px;border-left:2px solid var(--pq-bronze-line);font-size:12.5px;line-height:1.6;color:var(--pq-ivory-dim)}

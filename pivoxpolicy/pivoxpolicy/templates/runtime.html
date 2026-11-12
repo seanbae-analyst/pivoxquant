@@ -80,7 +80,7 @@
 <h4>통제 (런타임에서는 AI까지만 집행)</h4>
 <div id="d-controls" class="ctls"></div>
 <p class="apply-row"><span class="sub">규제 가이드라인 적용</span><select id="d-apply" aria-label="규제 프리셋"></select><button type="button" class="btn sm" id="d-apply-btn">이 수준으로</button></p>
-<p class="fine" id="d-apply-note">관할·강제력에 따른 내부통제 수준을 통제에 부어 넣는다. 적용 뒤 저장을 눌러야 반영된다.</p>
+<p class="fine" id="d-apply-note">관할과 강제력에 따라 정한 통제 수준을 위 통제에 넣는다. 저장을 눌러야 에이전트에 반영된다.</p>
 <h4>환경</h4>
 <div id="d-env" class="env"></div>
 <h4>한도</h4>
@@ -107,13 +107,13 @@
 <div id="rt-out"></div>
 
 <div id="attack" class="attack" hidden>
-<h4>공격 팀 — 이 에이전트에 모의 공격을 흘려보낸다</h4>
-<p class="fine">공격 케이스와 정상 업무를 지금 저장된 통제 그대로 샌드박스에서 돌린다. 공격이 통과하면 <b>결함</b>, 정상 업무가 막히면 <b>업무 마찰</b>로 표시한다. 에이전트 상태는 바뀌지 않는다.</p>
+<h4>공격 팀</h4>
+<p class="fine">공격 케이스 9개와 정상 업무 2개를 이 에이전트의 통제로 샌드박스에서 돌린다(저장하기 전이면 화면의 수준으로). 공격이 통과하면 <b>결함</b>, 사람 승인에서만 멈추면 <b>사람 승인에 기댐</b>, 정상 업무가 막히면 <b>업무 마찰</b>이다. 에이전트 상태는 바뀌지 않는다.</p>
 <p class="row"><button type="button" class="btn btn-primary" id="d-cases">공격 팀 투입</button><span class="fine" id="cases-hint"></span></p>
 <div id="cases-out"></div>
 
-<h4>규제별 비교 — 같은 케이스를 관할·강제력 프리셋마다</h4>
-<p class="fine">통제를 각 규제 수준으로 바꿔(샌드박스) 모든 케이스를 돌린다. 규제가 셀수록 결함이 줄고, 대신 정상 업무의 마찰이 는다 — 그 맞바꿈을 한 표로 본다.</p>
+<h4>규제별 비교</h4>
+<p class="fine">같은 케이스를 관할과 강제력마다 정한 통제 수준으로 바꿔(샌드박스) 돌린다. 규제가 셀수록 결함이 줄고 정상 업무의 마찰이 는다. 그 맞바꿈을 한 표로 본다.</p>
 <div id="reg-pick" class="reg-pick"></div>
 <p class="row"><button type="button" class="btn" id="d-matrix">규제별로 비교</button><span class="fine" id="matrix-hint"></span></p>
 <div id="matrix-out"></div>
