@@ -16,14 +16,13 @@
   가장 급한 줄: KEV 등재 + 자동화 가능 + 완전 장악 = 3일(노출 여부 무관). 배경 문단이 "their use of AI may further narrow the time defenders have to react between patch release and possible exploitation" 이라고 적는다 — 덱의 '공격 속도' 논지에 직접 쓸 수 있는 1차 근거.
   → 레지스트리: `us-cisa-bod-26-04` 등록, `us-cisa-bod-22-01` 은 superseded(매트릭스에서 빠짐). **논문·제출본은 26-04 를 인용하고 22-01 은 '전신' 으로만.** 여전히 연방 민간기관 대상이라 민간 금융사에는 적용되지 않는다는 한계는 같다.
 
-## 사건 레지스트리 — source_url 이 제목의 사건을 다 담지 않는다 (2026-11-12, 사건 코딩 v2 코더 보고 · 원문 파일로 확인 가능)
+## 사건 레지스트리 출처 정리 (2026-11-12 처리됨)
 
-- `hugging-face-openai-eval-agent-breach-2026-07` — 원문은 Hugging Face 공지뿐. 제목의 'OpenAI 평가 에이전트 샌드박스 탈출' 은 본문에 없고 독자 댓글에만 나온다. → OpenAI 쪽 1차 출처를 찾거나 제목을 줄인다.
-- `mcp-coding-agent-rce-disclosures-2025` — 원문은 Cursor CVE 한 건. 제목이 말하는 공개 여러 건 중 나머지는 출처가 없다. → 사건을 CVE 별로 나누거나 출처를 더한다.
-- `salesforce-agentforce-forcedleak-salesbleed-2025-09` — 원문은 ForcedLeak 만. SalesBleed 는 없다.
-- `kr-fsi-assessment-system-breach-2026-11` — 본문이 얇다(3,081자). 코더 한 팀은 '관련 기사' 제목을 근거로 썼다.
-- `crowdstrike-four-agentic-actors-2026-10` — 추출한 텍스트가 블로그 사이드바 위주다(본문 대부분 누락). `incident-corpus` 의 article/main 선택이 이 페이지에서 실패 → 본문 선택자를 고치거나 원문을 손으로 받는다. 조정본은 thin.
-- 원문이 얇아 두 팀 중 한 팀 이상이 판단을 못 한 사건: `grok-bankr-wallet-prompt-injection-2026-05`(뉴스 모음 목록뿐) · `echoleak-m365-copilot-2025-06`(CVE 레코드 한 줄) · `crowdstrike-four-agentic-actors-2026-10`(B팀 thin). → 1차 출처로 바꾸면 κ 표본이 45건으로 돌아간다.
+출처가 얇거나 제목과 어긋난 7건을 정리했다 — 바꾼 내용은 incidents.yaml 각 사건 notes 맨 앞에 날짜와 옛 출처를 남겼다.
+- 출처 교체 + 두 팀 재코딩: Grok/Bankr(OECD 목록 → Giskard 분석) · EchoLeak(CVE 레코드 → The Hacker News; Aim Labs·MSRC 는 이 환경 403) ·
+  HF/OpenAI(HF 공지 → CSA 연구 노트; OpenAI 공지 403) · 금보원(보안뉴스 147156 → 147183) · CrowdStrike(같은 URL, 문단 추출로 다시 받음).
+- 제목만 좁힘(재코딩 불필요 — 코더가 이미 출처에 있는 사례만 코딩했다): MCP 묶음 → Cursor CVE-2025-54135 · Salesforce → ForcedLeak.
+- **남은 것**: 1차 출처로 올리기 — EchoLeak(Aim Labs 글) · HF/OpenAI(OpenAI 공지)는 브라우저로 받아 손으로 넣어야 한다. SalesBleed · 다른 MCP RCE 5건은 출처를 찾으면 따로 사건으로.
 
 ## 덱(2026-11-01) 이후 — 논문 수치 갱신 필요
 

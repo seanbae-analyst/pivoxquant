@@ -39,6 +39,27 @@ def html_text(s: str) -> str:
     return html.unescape(re.sub(r"<[^>]+>", " ", body))
 
 
+# 블로그 사이드바·카드에 <article> 이 여럿 있어 article/main 선택이 본문을 놓치는 페이지 — <p> 문단만 모은다
+# (2026-11-12 실측: crowdstrike 블로그는 article 선택 시 사이드바만 남음 · giskard · CSA 는 문단 추출이 깨끗하다)
+PARAGRAPH_MODE = {
+    "crowdstrike-four-agentic-actors-2026-10",
+    "grok-bankr-wallet-prompt-injection-2026-05",
+    "hugging-face-openai-eval-agent-breach-2026-07",
+}
+
+
+def paragraph_text(s: str) -> str:
+    """HTML → <h1-3> · <p> · <li> 텍스트만 (60자 미만 문단은 버린다 — 메뉴·버튼)."""
+    s = _DROP.sub(" ", s)
+    out = []
+    for tag, inner in re.findall(r"(?is)<(h[1-3]|p|li)[^>]*>(.*?)</\1>", s):
+        t = html.unescape(re.sub(r"<[^>]+>", " ", inner))
+        t = re.sub(r"\s+", " ", t).strip()
+        if len(t) >= 60 or (tag.lower().startswith("h") and len(t) >= 8):
+            out.append(t)
+    return "\n\n".join(out)
+
+
 def pdf_text(b: bytes) -> str:
     if not shutil.which("pdftotext"):
         raise RuntimeError("pdftotext 가 없다 (poppler-utils)")
@@ -61,31 +82,40 @@ def normalize(t: str) -> str:
     return re.sub(r"\n\s*\n+", "\n\n", t).strip()
 
 
-def to_text(body: bytes, url: str, kev_needle: str | None = None) -> tuple[str, str]:
-    """(텍스트, 종류). 종류 = pdf · html · kev."""
+def to_text(body: bytes, url: str, kev_needle: str | None = None, paragraphs: bool = False) -> tuple[str, str]:
+    """(텍스트, 종류). 종류 = pdf · html · html-p(문단만) · kev."""
     if body[:5] == b"%PDF-":
         return normalize(pdf_text(body)), "pdf"
     if kev_needle and "known_exploited_vulnerabilities" in url:
         return kev_subset(body, kev_needle), "kev"
+    if paragraphs:
+        return normalize(paragraph_text(body.decode("utf-8", "replace"))), "html-p"
     return normalize(html_text(body.decode("utf-8", "replace"))), "html"
 
 
 def build(incidents: list[Any], out_dir: Path = CONTENT_DIR, manifest: Path = MANIFEST,
-          fetcher=None, now: datetime | None = None) -> dict[str, Any]:
-    """사건마다 source_url 을 받아 out_dir/<id>.txt 에 쓰고 manifest 를 돌려준다(파일에도 쓴다)."""
+          fetcher=None, now: datetime | None = None, only: set[str] | None = None) -> dict[str, Any]:
+    """사건마다 source_url 을 받아 out_dir/<id>.txt 에 쓰고 manifest 를 돌려준다(파일에도 쓴다).
+    only 를 주면 그 사건만 다시 받고 나머지 manifest 항목은 그대로 둔다(코더가 읽은 고정본을 바꾸지 않게)."""
     fetcher = fetcher or (lambda u: http_fetch(u, timeout=40, headers={"User-Agent": BROWSER_UA}))
     out_dir.mkdir(parents=True, exist_ok=True)
     now = now or datetime.now(timezone.utc)
     docs: dict[str, Any] = {}
+    if only is not None and manifest.exists():
+        docs = dict(json.loads(manifest.read_text(encoding="utf-8")).get("documents") or {})
     for inc in incidents:
+        if only is not None and inc.id not in only:
+            continue
         r = fetcher(inc.source_url)
         rec: dict[str, Any] = {"source": inc.source_url, "http_status": r.status}
         if r.status == 200 and r.body:
             needle = "langflow" if "langflow" in inc.id else None
-            text, kind = to_text(r.body, inc.source_url, needle)
+            text, kind = to_text(r.body, inc.source_url, needle, paragraphs=inc.id in PARAGRAPH_MODE)
             (out_dir / f"{inc.id}.txt").write_text(text, encoding="utf-8")
             rec.update(kind=kind, chars=len(text), sha256=hashlib.sha256(text.encode("utf-8")).hexdigest(),
                        thin=len(text) < 2500)
+        if only is not None:
+            rec["rebuilt"] = now.strftime("%Y-%m-%d")
         docs[inc.id] = rec
     data = {"built_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "note": "사건 코딩 고정 원문. sha256 은 추출한 본문 텍스트(UTF-8)의 해시. 본문은 snapshots/incident_content/ (git 추적 안 함). "

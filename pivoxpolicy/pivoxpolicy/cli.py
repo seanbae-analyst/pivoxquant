@@ -269,11 +269,11 @@ def cmd_incident_kappa(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_incident_corpus(_: argparse.Namespace) -> int:
+def cmd_incident_corpus(args: argparse.Namespace) -> int:
     from . import incident_corpus as ic
     controls = load_controls()
     incs = incidents_mod.load_incidents(control_ids={c.id for c in controls})
-    data = ic.build(incs)
+    data = ic.build(incs, only=set(args.ids) if args.ids else None)
     bad = {k: v for k, v in data["documents"].items() if v.get("http_status") != 200}
     thin = sorted(k for k, v in data["documents"].items() if v.get("thin"))
     print(f"사건 {len(data['documents'])} · 받지 못함 {len(bad)} · 얇음(2,500자 미만) {len(thin)} → {ic.MANIFEST}")
@@ -354,7 +354,9 @@ def build_parser() -> argparse.ArgumentParser:
     ik = sub.add_parser("incident-kappa", help="사건 × 통제 코딩 일치도 (1차 related_controls vs registry/incident_codings)")
     ik.add_argument("coder", nargs="?")
     ik.set_defaults(fn=cmd_incident_kappa)
-    sub.add_parser("incident-corpus", help="사건 source_url → 고정 원문(snapshots/incident_content/) + incident_corpus.json").set_defaults(fn=cmd_incident_corpus)
+    icp = sub.add_parser("incident-corpus", help="사건 source_url → 고정 원문(snapshots/incident_content/) + incident_corpus.json")
+    icp.add_argument("ids", nargs="*", help="이 사건만 다시 받기 (나머지 고정본은 그대로)")
+    icp.set_defaults(fn=cmd_incident_corpus)
     sub.add_parser("site", help="out/index.html 정적 대시보드 생성 (Pivox 디자인)").set_defaults(fn=cmd_site)
     return p
 

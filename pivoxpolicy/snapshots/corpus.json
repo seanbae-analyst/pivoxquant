@@ -233,6 +233,17 @@
    "chars": 179926,
    "bytes": 180805,
    "sha256": "7c9e340063a2e0fdaa44898d55f34679a197c8db4d0509601f8d9d594826f961"
+  },
+  "eu-dora-2022-2554": {
+   "batch": "EUINTL",
+   "title": "Regulation (EU) 2022/2554 (Digital Operational Resilience Act, DORA) — Chapter II Arts 5–16 · Chapter V Section I Arts 28–30",
+   "issuer": "European Union",
+   "date": "2025-01-17",
+   "source": "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32022R2554",
+   "scope": "범위 = 제2장 제5~16조(ICT 위험관리) + 제5장 제1절 제28~30조(ICT 제3자 위험). 다른 조(사고 보고·테스트·감독체계)는 범위 밖. 2026-11-12 추가.",
+   "chars": 57535,
+   "bytes": 57591,
+   "sha256": "594dc5f86b9c1e55b37493edf3515f975294515bcf52535260311543c3dc8647"
   }
  }
 }

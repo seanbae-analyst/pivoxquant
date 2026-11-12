@@ -1,6 +1,6 @@
 {
- "built_at": "2026-11-12T04:46:00Z",
- "note": "사건 코딩 고정 원문 — inc_v2a · inc_v2b 가 읽은 그 텍스트. sha256 은 추출한 본문 텍스트(UTF-8)의 해시. 본문은 snapshots/incident_content/ (git 추적 안 함, `incident-corpus` 로 다시 받으면 해시가 바뀔 수 있다 — 페이지가 바뀌면). thin = 2,500자 미만.",
+ "built_at": "2026-11-12T05:18:52Z",
+ "note": "사건 코딩 고정 원문. sha256 은 추출한 본문 텍스트(UTF-8)의 해시. 본문은 snapshots/incident_content/ (git 추적 안 함). thin = 2,500자 미만 — 코더가 basis: thin 으로 둘 수 있다.",
  "documents": {
   "aepd-first-ai-agent-breach-notification-2026-09": {
    "source": "https://www.aepd.es/prensa-y-comunicacion/blog/primera-notiviacion-brecha-datos-personales-causada-por-ataque-ejecutado-mediante-agente-ia",
@@ -93,10 +93,11 @@
   "crowdstrike-four-agentic-actors-2026-10": {
    "source": "https://www.crowdstrike.com/en-us/blog/crowdstrike-uncovers-new-agentic-ai-campaigns/",
    "http_status": 200,
-   "kind": "html",
-   "chars": 13878,
-   "sha256": "72e398fda37fa58bb55eef031be45ecc3fceaadddea6f521d294d860fdbea2bd",
-   "thin": false
+   "kind": "html-p",
+   "chars": 12078,
+   "sha256": "c58c3f77dded87b5f1fcbcd7848f51e70de4158d9eb66b69d7bc6c73ebbbd098",
+   "thin": false,
+   "rebuilt": "2026-11-12"
   },
   "cyberxero-claude-code-agents-ukraine-2026-10": {
    "source": "https://socradar.io/blog/cyberxero-ai-iab-ukraine-critical-infrastructure/",
@@ -123,12 +124,13 @@
    "thin": false
   },
   "echoleak-m365-copilot-2025-06": {
-   "source": "https://cveawg.mitre.org/api/cve/CVE-2025-32711",
+   "source": "https://thehackernews.com/2025/06/zero-click-ai-vulnerability-exposes.html",
    "http_status": 200,
    "kind": "html",
-   "chars": 2391,
-   "sha256": "8e8d90ff6e1fa382887879cf68fb934b07067db7092506a11401e32bc62e53b4",
-   "thin": true
+   "chars": 13825,
+   "sha256": "28e096c025404cb7181c09b93669d4955ddfd5c9407e2acba1e5fa67093b52ba",
+   "thin": false,
+   "rebuilt": "2026-11-12"
   },
   "gambit-ai-agents-600k-cards-2026-09": {
    "source": "https://www.techradar.com/pro/security/massive-chinese-hack-uses-ai-agents-to-steal-over-600-000-credit-cards-and-hit-hundreds-of-sites-with-malware",
@@ -147,12 +149,13 @@
    "thin": false
   },
   "grok-bankr-wallet-prompt-injection-2026-05": {
-   "source": "https://oecd.ai/en/incidents/2026-05-04-4a73",
+   "source": "https://www.giskard.ai/knowledge/how-grok-got-prompt-injected-an-x-user-drained-150-000-from-an-ai-wallet",
    "http_status": 200,
-   "kind": "html",
-   "chars": 2248,
-   "sha256": "8de0606c59e98f1334ff75f4fb83d8bcf30078ff59ef8d88abcad774766534ef",
-   "thin": true
+   "kind": "html-p",
+   "chars": 6969,
+   "sha256": "c70ac39154ceb4e1c2de5fc93880ec85bf1111ce3b7ce5d46562b45b68686af6",
+   "thin": false,
+   "rebuilt": "2026-11-12"
   },
   "gtig-ai-threat-tracker-2025-11": {
    "source": "https://cloud.google.com/blog/topics/threat-intelligence/threat-actor-usage-of-ai-tools",
@@ -179,12 +182,13 @@
    "thin": false
   },
   "hugging-face-openai-eval-agent-breach-2026-07": {
-   "source": "https://huggingface.co/blog/security-incident-july-2026",
+   "source": "https://labs.cloudsecurityalliance.org/research/csa-research-note-openai-model-sandbox-escape-huggingface-br/",
    "http_status": 200,
-   "kind": "html",
-   "chars": 255709,
-   "sha256": "10e5afeb11abb881122a1278eeb20c420e8a76a5506ab729cacc74212e45a990",
-   "thin": false
+   "kind": "html-p",
+   "chars": 18224,
+   "sha256": "be8d191638a9980479851dfc93bcaa3155aed18cbcc7820e3e4d96d36f5cc19a",
+   "thin": false,
+   "rebuilt": "2026-11-12"
   },
   "infostealers-target-ai-agent-tokens-2026-09": {
    "source": "https://www.gendigital.com/blog/insights/research/infostealers-your-ai-agent",
@@ -211,12 +215,13 @@
    "thin": false
   },
   "kr-fsi-assessment-system-breach-2026-11": {
-   "source": "https://www.boannews.com/news/articleView.html?idxno=147156",
+   "source": "https://www.boannews.com/media/view.asp?idx=147183",
    "http_status": 200,
    "kind": "html",
-   "chars": 3081,
-   "sha256": "2a0d26e554578a5394fab1e8c7998a41b55f7c2464d987d0e7165892444f6426",
-   "thin": false
+   "chars": 4276,
+   "sha256": "deefa8cd03280336036b57fc7d0cc7a1ca4f5379d86618e97503eaaf8a20cc35",
+   "thin": false,
+   "rebuilt": "2026-11-12"
   },
   "langflow-exploited-in-the-wild-kev-2025-05": {
    "source": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json",

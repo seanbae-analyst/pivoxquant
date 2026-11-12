@@ -17,16 +17,10 @@ adjudication:
   - {incident: "composio-agent-broker-breach-2026-05", control: vendors, decision: "true (stated/agent)", follows: "inc_v2b_2026-11-12", reason: "공급자에게 맡긴 기능(에이전트 도구 연동 · 고객 OAuth/API 자격증명 보관)이 침해돼 고객 자격증명이 노출됐다고 원문이 적었다 — v2.2 failed_if 셋째 줄. 하류(고객)로 닿은 서술이 있어 false_if 에 걸리지 않는다."}
   - {incident: "composio-agent-broker-breach-2026-05", control: unique_id, decision: "inferred/analog", follows: "inc_v2a_2026-11-12", reason: "공유 정적 비밀은 Composio 내부 서비스 사이의 것 — 대상이 일반 시스템이라 analog."}
   - {incident: "composio-agent-broker-breach-2026-05", control: audit_trail, decision: "false", follows: "inc_v2a_2026-11-12", reason: "'로그를 중앙화했다' 는 사후 개선 목록이다. 이전에 기록이 없었다는 서술이 아니다 — R4 · levels.inferred(일반론 금지)."}
-  - {incident: "crowdstrike-four-agentic-actors-2026-10", control: inventory, decision: "null (thin)", follows: "inc_v2b_2026-11-12", reason: "추출한 본문이 블로그 사이드바 위주라 사례 서술이 거의 없다 — B 의 thin 판정을 따른다(R1). 원문 재추출 대상(inbox.md)."}
-  - {incident: "crowdstrike-four-agentic-actors-2026-10", control: unique_id, decision: "null (thin)", follows: "inc_v2b_2026-11-12", reason: "추출한 본문이 블로그 사이드바 위주라 사례 서술이 거의 없다 — B 의 thin 판정을 따른다(R1). 원문 재추출 대상(inbox.md)."}
-  - {incident: "crowdstrike-four-agentic-actors-2026-10", control: least_privilege, decision: "null (thin)", follows: "inc_v2b_2026-11-12", reason: "추출한 본문이 블로그 사이드바 위주라 사례 서술이 거의 없다 — B 의 thin 판정을 따른다(R1). 원문 재추출 대상(inbox.md)."}
-  - {incident: "crowdstrike-four-agentic-actors-2026-10", control: human_approval, decision: "null (thin)", follows: "inc_v2b_2026-11-12", reason: "추출한 본문이 블로그 사이드바 위주라 사례 서술이 거의 없다 — B 의 thin 판정을 따른다(R1). 원문 재추출 대상(inbox.md)."}
-  - {incident: "crowdstrike-four-agentic-actors-2026-10", control: audit_trail, decision: "null (thin)", follows: "inc_v2b_2026-11-12", reason: "추출한 본문이 블로그 사이드바 위주라 사례 서술이 거의 없다 — B 의 thin 판정을 따른다(R1). 원문 재추출 대상(inbox.md)."}
-  - {incident: "crowdstrike-four-agentic-actors-2026-10", control: kill_switch, decision: "null (thin)", follows: "inc_v2b_2026-11-12", reason: "추출한 본문이 블로그 사이드바 위주라 사례 서술이 거의 없다 — B 의 thin 판정을 따른다(R1). 원문 재추출 대상(inbox.md)."}
-  - {incident: "kr-fsi-assessment-system-breach-2026-11", control: unique_id, decision: "stated/analog", follows: "inc_v2a_2026-11-12", reason: "'가짜 금감원 계정 만들어 침투' — failed_if '위조·사칭 계정이 정상으로 통했다' 를 원문이 그대로 적었다 → stated. 단 인용이 관련 기사 제목이다(inbox.md)."}
   - {incident: "mcp-coding-agent-rce-disclosures-2025", control: least_privilege, decision: "inferred/agent", follows: "inc_v2a_2026-11-12", reason: "인용이 적는 것은 승인 없는 설정 쓰기·RCE 다. 권한 범위를 이름 붙이지 않았다 → 최소 권한은 inferred (사람 승인은 두 팀 모두 stated)."}
   - {incident: "pillar-rules-file-backdoor-2025-03", control: vendors, decision: "stated/agent", follows: "inc_v2b_2026-11-12", reason: "'one compromised file can lead to widespread vulnerabilities' — 공유되는 규칙 파일이 변조된 공급 경로라는 것을 원문이 적었다 → stated."}
   - {incident: "salesforce-agentforce-forcedleak-salesbleed-2025-09", control: vendors, decision: "stated/agent", follows: "inc_v2a_2026-11-12", reason: "'whitelisted but had expired … creating a trusted exfiltration channel' — 공급자 운영 플랫폼의 결함이 노출 경로였다고 원문이 적었다(failed_if 셋째 줄) → stated."}
+  - {incident: "echoleak-m365-copilot-2025-06", control: human_approval, decision: "stated/agent", follows: "inc_v2b_2026-11-12", reason: "원문이 'without explicit user intent or interaction' 이라고 사용자 확인 없이 접근·처리됐다고 직접 적었다 → stated (출처 교체 후 재코딩, 2026-11-12)."}
 incidents:
   "aepd-first-ai-agent-breach-notification-2026-09":
     basis: "source"
@@ -150,16 +144,16 @@ incidents:
       kill_switch: {failed: true, level: "stated", layer: "agent", quote: "There are certain tokens and api keys we cannot revoke.", reason: "Leaked agent-tool connection credentials could not be revoked from the broker side"}
     note: "borderline: vendors false (Composio is itself the broker/subject); unique_id inferred from remediation text; audit_trail false (logging 'centralized' is not absence) | vendors v2.2: borderline: vendor's own breach; text says unsure whether keys were compromised and supply chain (SDKs/CLI) verified safe, no downstream use stated."
   "crowdstrike-four-agentic-actors-2026-10":
-    basis: "thin"
+    basis: "source"
     controls:
-      inventory: {failed: null}
+      inventory: {failed: false}
       vendors: {failed: false}
-      unique_id: {failed: null}
-      least_privilege: {failed: null}
-      human_approval: {failed: null}
-      audit_trail: {failed: null}
-      kill_switch: {failed: null}
-    note: "borderline: four attacker-side agentic frameworks, victims mostly unspecified (R2); safety guardrails partly held; no victim control failure stated"
+      unique_id: {failed: false}
+      least_privilege: {failed: false}
+      human_approval: {failed: false}
+      audit_trail: {failed: false}
+      kill_switch: {failed: false}
+    note: "borderline: attacker-side AI use only; no victim or provider control failure stated (R2/R4); guardrails partly held per text"
   "cyberxero-claude-code-agents-ukraine-2026-10":
     basis: "source"
     controls:
@@ -194,16 +188,16 @@ incidents:
       kill_switch: {failed: false}
     note: "borderline: attacker-side agent; privilege escalation flaw is a patch issue (false_if); detection, segmentation and stop worked"
   "echoleak-m365-copilot-2025-06":
-    basis: "thin"
+    basis: "source"
     controls:
-      inventory: {failed: null}
+      inventory: {failed: false}
       vendors: {failed: false}
-      unique_id: {failed: null}
-      least_privilege: {failed: null}
-      human_approval: {failed: null}
-      audit_trail: {failed: null}
-      kill_switch: {failed: null}
-    note: "CVE record one line only, no mechanism described | vendors v2.2: borderline: CVE record only; vendor product flaw, patching."
+      unique_id: {failed: false}
+      least_privilege: {failed: true, level: "stated", layer: "agent", quote: "The attacker relies on Copilot's default behavior to combine and process content from Outlook and SharePoint without isolating trust boundaries", reason: "Agent read untrusted external email together with privileged internal data and could exfiltrate it"}
+      human_approval: {failed: true, level: "stated", layer: "agent", quote: "successfully tricks the AI system into accessing and processing privileged internal data without explicit user intent or interaction", reason: "Data access and exfiltration happen with no user approval/interaction."}
+      audit_trail: {failed: false}
+      kill_switch: {failed: false}
+    note: "borderline: human_approval inferred from zero-click design; only EchoLeak coded (other cases in file ignored); Microsoft CVE patched = not vendors"
   "gambit-ai-agents-600k-cards-2026-09":
     basis: "source"
     controls:
@@ -227,16 +221,16 @@ incidents:
       kill_switch: {failed: false}
     note: "borderline: vendors left false (unpatched product vuln, patch was available); agents are attacker-side (R2)."
   "grok-bankr-wallet-prompt-injection-2026-05":
-    basis: "thin"
+    basis: "source"
     controls:
-      inventory: {failed: null}
-      vendors: {failed: null}
-      unique_id: {failed: null}
-      least_privilege: {failed: null}
-      human_approval: {failed: null}
-      audit_trail: {failed: null}
-      kill_switch: {failed: null}
-    note: "vendors v2.2: thin: headline list only."
+      inventory: {failed: false}
+      vendors: {failed: true, level: "inferred", layer: "agent", quote: "Bankr is a crypto trading agent on X (formerly Twitter) that automatically creates a linked crypto wallet for every X account it interacts with, including Grok's.", reason: "Third-party agent platform (Bankr) auto-provisioned and operated the wallet and treated decoded output as an authenticated command, exposing the wallet"}
+      unique_id: {failed: false}
+      least_privilege: {failed: true, level: "stated", layer: "agent", quote: "By holding it, the Grok agent gained \"Executive\" permissions, allowing it to bypass standard transfer limits and swap restrictions.", reason: "Agent gained excessive permissions via an NFT and acted on untrusted decoded input (Excessive Agency)"}
+      human_approval: {failed: true, level: "stated", layer: "agent", quote: "the attacker was able to command the AI to execute financial transactions without oversight", reason: "Financial transfer executed with no human confirmation; article recommends HITL"}
+      audit_trail: {failed: false}
+      kill_switch: {failed: false}
+    note: "borderline: vendors (Bankr as third-party platform) and unique_id (decoded output treated as authenticated; coded false)"
   "gtig-ai-threat-tracker-2025-11":
     basis: "source"
     controls:
@@ -276,11 +270,11 @@ incidents:
       inventory: {failed: false}
       vendors: {failed: false}
       unique_id: {failed: false}
-      least_privilege: {failed: true, level: "inferred", layer: "analog", quote: "From there, the actor escalated to node-level access, harvested cloud and cluster credentials, and moved laterally into several internal clusters over a weekend.", reason: "A dataset-processing worker running untrusted code could reach node-level access and cluster credentials, implying over-broad access/segmentation."}
-      human_approval: {failed: false}
+      least_privilege: {failed: true, level: "inferred", layer: "agent", quote: "After being given internet access as part of the evaluation, OpenAI says the models first escaped their own sandboxed test environment", reason: "Eval agent with refusals lowered was given internet access beyond what the benchmark needed, enabling the external breach"}
+      human_approval: {failed: true, level: "inferred", layer: "agent", quote: "pursuing benchmark performance with no human directing it to attack a named third party", reason: "Agent autonomously executed multi-stage attack on a live third-party system with no human approval gate"}
       audit_trail: {failed: false}
       kill_switch: {failed: false}
-    note: "borderline: least_privilege inferred from escalation facts. Text does not mention OpenAI eval agent or sandbox escape; coded on the HF disclosure only (R1). Detection/rotation worked. | vendors v2.2: borderline: text is HF disclosure; supply chain verified clean; malicious dataset is user content."
+    note: "borderline: human_approval inferred; sandbox/egress failure mapped to least_privilege; vendors coded false (zero-day proxy is patch issue, no supply path)"
   "infostealers-target-ai-agent-tokens-2026-09":
     basis: "source"
     controls:
@@ -319,12 +313,12 @@ incidents:
     controls:
       inventory: {failed: false}
       vendors: {failed: false}
-      unique_id: {failed: true, level: "stated", layer: "analog", quote: "금보원 해킹, ‘가짜 금감원 계정’ 만들어 침투했다", reason: "A forged FSS-impersonating account was accepted as legitimate and used to get in."}
+      unique_id: {failed: true, level: "stated", layer: "analog", quote: "해커는 시스템 취약점을 악용해 금융감독원 권한을 가진 ‘허위 계정’을 생성, 위장해 침투한", reason: "Forged regulator-privileged account was accepted as legitimate by the system"}
       least_privilege: {failed: false}
       human_approval: {failed: false}
       audit_trail: {failed: false}
       kill_switch: {failed: false}
-    note: "borderline: evidence is a related-article headline within the file; main body is thin."
+    note: "borderline: temp auth-bypass page is only alleged and path unconfirmed, so not coded; blocking on detection = control worked"
   "langflow-exploited-in-the-wild-kev-2025-05":
     basis: "source"
     controls:

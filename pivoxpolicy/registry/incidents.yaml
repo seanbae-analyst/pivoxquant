@@ -32,10 +32,10 @@ incidents:
     evidence_level: press
     detected_by: "victim"
     related_controls: [unique_id, least_privilege, audit_trail]
-    source_url: "https://www.boannews.com/news/articleView.html?idxno=147156"
-    source_checked: "2026-11-11 HTTP 200"
+    source_url: "https://www.boannews.com/media/view.asp?idx=147183"
+    source_checked: "2026-11-12 HTTP 200"
     summary: "금보원이 11-09 비정상 외부 접근 확인 후 접속 차단, 11-10 공표·금융위·KISA 신고. 유출: 행정서식 약 200건, 그 안의 개인정보 300여건, 이용자 정보 350여건(금보원 설명). 공격자는 시스템 취약점으로 금감원 권한의 허위 계정을 생성, IP 를 바꾸며 접근(보도). 침투 경로는 미확정."
-    notes: "date=공표일(보안뉴스 11-10 20:18). AI 관여 보도 없음(2026-11-11 기준) → none. 추가 보도: 보안뉴스 147183·147166(11-11), 전자신문 20261111000336(11-11) 모두 200. 금보원 1차 공지 URL 미확인. 상시평가 증빙의 민감도(솔루션 버전·망분리 구성) 논쟁은 보도."
+    notes: "2026-11-12: source_url 을 147156(본문 얇음 — 코더 한 팀이 관련 기사 제목을 근거로 씀)에서 침투 경로를 다룬 147183 으로 바꿈. date=공표일(보안뉴스 11-10 20:18). AI 관여 보도 없음(2026-11-11 기준) → none. 추가 보도: 보안뉴스 147183·147166(11-11), 전자신문 20261111000336(11-11) 모두 200. 금보원 1차 공지 URL 미확인. 상시평가 증빙의 민감도(솔루션 버전·망분리 구성) 논쟁은 보도."
 
   - id: datadog-artex-aws-financial-data-2026-11
     date: "2026-11-09"
@@ -85,13 +85,13 @@ incidents:
     jurisdiction: INTL
     target_sector: "crypto"
     ai_role: victim_ai_system_exploited
-    evidence_level: press
+    evidence_level: vendor
     detected_by: "unknown"
     related_controls: [least_privilege, human_approval]
-    source_url: "https://oecd.ai/en/incidents/2026-05-04-4a73"
-    source_checked: "2026-11-11 HTTP 200"
+    source_url: "https://www.giskard.ai/knowledge/how-grok-got-prompt-injected-an-x-user-drained-150-000-from-an-ai-wallet"
+    source_checked: "2026-11-12 HTTP 200"
     summary: "xAI Grok 과 연동된 Bankr 크립토 트레이딩 에이전트가 프롬프트 인젭션에 속아 DRB 토큰 약 $174~204k 를 공격자에게 전송, 협상으로 80~88% 반환."
-    notes: "date=사건·보도일. OECD AIM 집계(200); SlowMist 분석(medium)은 403. 금융 에이전트의 '출처 기반 이체 차단' 통제 사례."
+    notes: "2026-11-12: source_url 을 OECD AI 사건 모음(헤드라인 목록뿐 — 코더 둘 다 thin)에서 Giskard 분석으로 바꿈 → evidence press→vendor. 옛 출처 https://oecd.ai/en/incidents/2026-05-04-4a73. date=사건·보도일. OECD AIM 집계(200); SlowMist 분석(medium)은 403. 금융 에이전트의 '출처 기반 이체 차단' 통제 사례."
 
   - id: hexagonalrodent-nk-web3-ai-tooling-2026-04
     date: "2026-04-22"
@@ -295,13 +295,13 @@ incidents:
     jurisdiction: US
     target_sector: "AI platform"
     ai_role: ai_system_misbehaved
-    evidence_level: primary
+    evidence_level: vendor
     detected_by: "victim"
     related_controls: [kill_switch, least_privilege, audit_trail, human_approval]
-    source_url: "https://huggingface.co/blog/security-incident-july-2026"
-    source_checked: "2026-11-11 HTTP 200"
+    source_url: "https://labs.cloudsecurityalliance.org/research/csa-research-note-openai-model-sandbox-escape-huggingface-br/"
+    source_checked: "2026-11-12 HTTP 200"
     summary: "HF 07-16 공지: 데이터셋 처리 파이프라인 경로로 내부 데이터셋·서비스 자격증명 접근·횡이동. OpenAI 07-21 확인: 사이버 분류기를 끈 평가에서 모델이 벤치마크 정답을 얻으려 제3자를 공격. 08-26 사후분석(OpenAI·METR/Redwood): 약 1,200 에이전트가 7만 메시지를 교환, 41대 서버 코드 실행. CISA 가 악용된 CVE 2건을 08-27 KEV 등재(tracker)."
-    notes: "공격자 없는 자율 행동 → none. HF 공지(200, 메타 07-16), Redwood 조사(200, 08-26), THN(200). OpenAI 보고서 페이지 403. KEV 등재 CVE 번호는 tracker 인용 — 미대조."
+    notes: "2026-11-12: source_url 을 Hugging Face 공지(07-16 — OpenAI 귀속 07-21 이전이라 에이전트 언급 없음)에서 CSA 연구 노트(07-22, 양쪽 공지 종합)로 바꿈 → evidence primary→vendor. OpenAI 공지 https://openai.com/index/hugging-face-model-evaluation-security-incident/ 는 이 환경에서 403. 옛 출처 https://huggingface.co/blog/security-incident-july-2026. 공격자 없는 자율 행동 → none. HF 공지(200, 메타 07-16), Redwood 조사(200, 08-26), THN(200). OpenAI 보고서 페이지 403. KEV 등재 CVE 번호는 tracker 인용 — 미대조."
 
   - id: anthropic-eval-unauthorized-access-2026-07
     date: "2026-07-30"
@@ -435,17 +435,17 @@ incidents:
     jurisdiction: US
     target_sector: "enterprise productivity"
     ai_role: ai_vulnerability_disclosed
-    evidence_level: primary
+    evidence_level: press
     detected_by: "vendor"
     related_controls: [least_privilege, audit_trail]
-    source_url: "https://cveawg.mitre.org/api/cve/CVE-2025-32711"
-    source_checked: "2026-11-11 HTTP 200"
+    source_url: "https://thehackernews.com/2025/06/zero-click-ai-vulnerability-exposes.html"
+    source_checked: "2026-11-12 HTTP 200"
     summary: "숨은 지시가 든 이메일 하나로 내부 데이터를 외부로 유출. 외부 이메일과 내부 문서 사이 신뢰 경계 부재. 서버 측 수정, 실제 악용 증거 없음."
-    notes: "date=CVE 공개일(API 실측 2025-06-11). Aim Security 원문 403. 2026 후속 Copilot 결함: SearchLeak CVE-2026-42824(06), Copilot for Word 웜(07-29), MSRC 피드 Copilot CVE 다수."
+    notes: "2026-11-12: source_url 을 CVE 레코드(기전 설명 없음 — thin)에서 The Hacker News 기사로 바꿈 → evidence primary→press. 1차 연구 글(Aim Labs)·MSRC 는 이 환경에서 403. 옛 출처 https://cveawg.mitre.org/api/cve/CVE-2025-32711. date=CVE 공개일(API 실측 2025-06-11). Aim Security 원문 403. 2026 후속 Copilot 결함: SearchLeak CVE-2026-42824(06), Copilot for Word 웜(07-29), MSRC 피드 Copilot CVE 다수."
 
   - id: salesforce-agentforce-forcedleak-salesbleed-2025-09
     date: "2025-09-25"
-    title: "Salesforce Agentforce — ForcedLeak(Web-to-Lead 간접 인젭션, 2025-09)·SalesBleed(2026-09-24) CRM 유출 결함"
+    title: "Salesforce Agentforce ForcedLeak — Web-to-Lead 간접 인젭션으로 CRM 데이터 유출 (2025-09)"
     jurisdiction: US
     target_sector: "CRM / sales"
     ai_role: ai_vulnerability_disclosed
@@ -455,7 +455,7 @@ incidents:
     source_url: "https://noma.security/blog/forcedleak-agent-risks-exposed-in-salesforce-agentforce/"
     source_checked: "2026-11-11 HTTP 200"
     summary: "공개 리드 폼에 숨긴 지시가 CRM 에 잠복 → 직원이 에이전트에 평범한 질문을 하면 지시가 실행되어 데이터 유출. ForcedLeak CVSS 9.4(벤더), SalesBleed 3건(Zenity, Slack 에이전트 연동 포함)."
-    notes: "date=ForcedLeak 공개(2025-09, 페이지 본문 날짜 2025-09-08 수정 언급). SalesBleed 보도 infosecurity-magazine 2026-09-25(200). 2026-04-15 Copilot Studio ShareLeak/Agentforce PipeLeak 도 유사(미검증)."
+    notes: "2026-11-12: 제목을 출처(Noma — ForcedLeak 만)에 맞춰 좁힘. SalesBleed(2026-09-24)는 이 출처에 없다 — 따로 올리려면 1차 출처부터. id 는 코딩 키라 그대로 둔다. date=ForcedLeak 공개(2025-09, 페이지 본문 날짜 2025-09-08 수정 언급). SalesBleed 보도 infosecurity-magazine 2026-09-25(200). 2026-04-15 Copilot Studio ShareLeak/Agentforce PipeLeak 도 유사(미검증)."
 
   - id: langflow-exploited-in-the-wild-kev-2025-05
     date: "2025-05-05"
@@ -501,7 +501,7 @@ incidents:
 
   - id: mcp-coding-agent-rce-disclosures-2025
     date: "2025-08-05"
-    title: "2025 MCP·코딩 에이전트 원격코드실행 공개 묶음 — MCP Inspector, mcp-remote, Cursor, Gemini CLI, GitHub Copilot, GitHub MCP"
+    title: "Cursor CVE-2025-54135 (CurXecute) — MCP 설정 쓰기를 통한 코딩 에이전트 원격코드실행 (2025 MCP·코딩 에이전트 RCE 공개 중 출처가 있는 1건)"
     jurisdiction: US
     target_sector: "developers"
     ai_role: ai_vulnerability_disclosed
@@ -511,7 +511,7 @@ incidents:
     source_url: "https://cveawg.mitre.org/api/cve/CVE-2025-54135"
     source_checked: "2026-11-11 HTTP 200"
     summary: "CVE-2025-49596 MCP Inspector(06-13, CVSS 9.4), CVE-2025-6514 mcp-remote(07-09, 9.6), CVE-2025-54135 CurXecute(08-05, 8.6)·CVE-2025-54136 MCPoison(08-01, 7.2), Gemini CLI 하이재킹(Tracebit 07-28), CVE-2025-53773 Copilot(08-12, 7.8), GitHub MCP 독성 에이전트 플로(Invariant 05-26)."
-    notes: "date=CurXecute CVE 공개일(대표). 모든 CVE 는 cveawg API 200 으로 날짜·점수 확인; 벤더 글(Oligo, Check Point, Tracebit, Invariant) 200. 2026-10 MCP SDK·Inspector 자문 묶음은 tracker 인용(미검증)."
+    notes: "2026-11-12: 제목을 출처(Cursor CVE 한 건)에 맞춰 좁힘 — MCP Inspector · mcp-remote · Gemini CLI · GitHub Copilot · GitHub MCP 는 출처가 레지스트리에 없다. 따로 사건으로 올리려면 각각 1차 출처부터. date=CurXecute CVE 공개일(대표). 모든 CVE 는 cveawg API 200 으로 날짜·점수 확인; 벤더 글(Oligo, Check Point, Tracebit, Invariant) 200. 2026-10 MCP SDK·Inspector 자문 묶음은 tracker 인용(미검증)."
 
   - id: agentic-browser-prompt-injection-2025-08
     date: "2025-08-20"

@@ -1,22 +1,20 @@
 # 사건 × 통제 코딩 일치도 — 1차(finder) vs `inc_v2a_2026-11-12`
 
-공통 사건 43건 × 통제 7 = 셀 301. 관측 일치율 0.751 · κ 0.332 (fair)
+공통 사건 45건 × 통제 7 = 셀 315. 관측 일치율 0.756 · κ 0.352 (fair)
 
 '둘 다 참' 은 두 코더가 모두 이 통제의 실패를 본 사건 수 — 코더에 덜 기대는 보수적인 숫자다.
 
 | 통제 | 1차 참 | 2차 참 | 둘 다 참 | 일치율 | κ |
 |---|---|---|---|---|---|
-| inventory | 7 | 0 | 0 | 0.837 | 0.000 |
-| vendors | 10 | 15 | 8 | 0.791 | 0.501 |
-| unique_id | 9 | 4 | 2 | 0.791 | 0.205 |
-| least_privilege | 21 | 17 | 14 | 0.767 | 0.533 |
-| human_approval | 11 | 14 | 8 | 0.791 | 0.495 |
-| audit_trail | 19 | 2 | 1 | 0.558 | 0.012 |
-| kill_switch | 14 | 2 | 2 | 0.721 | 0.184 |
+| inventory | 7 | 0 | 0 | 0.844 | 0.000 |
+| vendors | 10 | 16 | 8 | 0.778 | 0.471 |
+| unique_id | 9 | 4 | 2 | 0.800 | 0.211 |
+| least_privilege | 23 | 19 | 16 | 0.778 | 0.557 |
+| human_approval | 12 | 17 | 10 | 0.800 | 0.548 |
+| audit_trail | 20 | 2 | 1 | 0.556 | 0.011 |
+| kill_switch | 14 | 2 | 2 | 0.733 | 0.187 |
 
-한쪽에만 있는 사건 — 1차만 2 · 2차만 0 (κ 에서 뺐다)
-
-## 불일치 75칸
+## 불일치 77칸
 
 - `aepd-first-ai-agent-breach-notification-2026-09` × audit_trail — 1차만 참
 - `agentic-browser-prompt-injection-2025-08` × unique_id — 2차만 참
@@ -45,14 +43,16 @@
 - `datadog-artex-aws-financial-data-2026-11` × kill_switch — 1차만 참
 - `divd-zammad-zero-days-agent-2026-09` × audit_trail — 1차만 참
 - `divd-zammad-zero-days-agent-2026-09` × kill_switch — 1차만 참
+- `echoleak-m365-copilot-2025-06` × human_approval — 2차만 참
+- `echoleak-m365-copilot-2025-06` × audit_trail — 1차만 참
 - `gambit-ai-agents-600k-cards-2026-09` × inventory — 1차만 참
 - `gambit-ai-agents-600k-cards-2026-09` × audit_trail — 1차만 참
 - `greynoise-papercut-agent-campaign-2026-09` × least_privilege — 2차만 참
 - `greynoise-papercut-agent-campaign-2026-09` × audit_trail — 1차만 참
 - `greynoise-papercut-agent-campaign-2026-09` × kill_switch — 1차만 참
+- `grok-bankr-wallet-prompt-injection-2026-05` × vendors — 2차만 참
 - `hexagonalrodent-nk-web3-ai-tooling-2026-04` × least_privilege — 1차만 참
 - `hexagonalrodent-nk-web3-ai-tooling-2026-04` × human_approval — 2차만 참
-- `hugging-face-openai-eval-agent-breach-2026-07` × human_approval — 1차만 참
 - `hugging-face-openai-eval-agent-breach-2026-07` × audit_trail — 1차만 참
 - `hugging-face-openai-eval-agent-breach-2026-07` × kill_switch — 1차만 참
 - `infostealers-target-ai-agent-tokens-2026-09` × unique_id — 1차만 참
