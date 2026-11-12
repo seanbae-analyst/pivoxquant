@@ -163,7 +163,7 @@ td time{white-space:nowrap}
 
 /* ── 상태 글자: live / stale / error 는 색 글자(+점)뿐. 바탕·테두리·알약 없음 ── */
 .st{font-size:13px;font-weight:600;white-space:nowrap}
-.st::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor;margin-right:6px;vertical-align:1px}
+.st::before{content:"";display:inline-block;width:6px;height:6px;border-radius:1px;background:currentColor;margin-right:6px;vertical-align:1px}
 .st-live{color:var(--pq-live)}
 .st-stale{color:var(--pq-stale)}
 .st-error{color:var(--pq-error)}
@@ -389,8 +389,8 @@ main{gap:0}
 .c::before{left:0;right:50%}
 .c::after{left:50%;right:0}
 .c.in-live::before,.c.out-live::after{border-top:3px solid var(--mt-live);margin-top:-1.5px}
-.c.in-cond::before,.c.out-cond::after{border-top:3px dashed var(--mt-cond);margin-top:-1.5px}
-.c.in-dead::before,.c.out-dead::after{border-top:2px dotted var(--mt-dead);margin-top:-1px}
+.c.in-cond::before,.c.out-cond::after{border-top:3px solid var(--mt-cond);margin-top:-1.5px}
+.c.in-dead::before,.c.out-dead::after{border-top:0}
 .c.end::after{display:none}
 .c.end .arrow{position:relative;z-index:1;width:0;height:0;margin-left:-8px;border-top:7px solid transparent;border-bottom:7px solid transparent;border-left:11px solid var(--mt-live)}
 .c.end.in-cond .arrow{border-left-color:var(--mt-cond)}
@@ -398,7 +398,7 @@ main{gap:0}
 .n{position:relative;z-index:1;display:block;box-sizing:border-box;border-radius:2px;background:var(--mt-bg)}
 .n.s-off{width:8px;height:24px;border:1.5px solid var(--mt-off)}
 .n.s-pass,.n.s-flag{width:8px;height:24px;background:var(--mt-gate)}
-.n.s-not_reached{width:6px;height:14px;border:1px solid var(--mt-dead)}
+.n.s-not_reached{width:8px;height:24px;border:1px solid var(--mt-dead);opacity:.55}
 .n.s-block{width:14px;height:38px;border-radius:3px;background:var(--mt-gate)}
 .n.s-approval{width:14px;height:38px;border-radius:3px;border:3px solid var(--mt-gate)}
 .nl{position:absolute;top:calc(50% + 23px);left:50%;transform:translateX(-50%);font-style:normal;font-size:12.5px;font-weight:600;white-space:nowrap;color:var(--pq-bronze)}
@@ -413,7 +413,7 @@ main{gap:0}
 .mt-key .n.s-block,.mt-key .n.s-approval{width:11px;height:22px}
 .mt-key .n.s-approval{border-width:2.5px}
 .ln{display:inline-block;width:28px;height:0;border-top:3px solid var(--mt-live)}
-.ln.cond{border-top-style:dashed;border-top-color:var(--mt-cond)}
+.ln.cond{border-top-color:var(--mt-cond)}
 .mt-gl{display:none;margin:0 0 8px;font-size:13px;line-height:1.7;color:var(--pq-ivory-dim)}
 .mt-gl.on{display:block}
 .fr-row{display:grid;grid-template-columns:15em repeat(var(--cols,1),minmax(0,1fr));align-items:center;gap:6px 22px;padding:6px 0;border-bottom:1px solid var(--pq-ivory-line)}
@@ -437,7 +437,7 @@ main{gap:0}
 .mt-row.mini .n.s-pass,.mt-row.mini .n.s-flag{width:6px;height:15px}
 .mt-row.mini .n.s-block,.mt-row.mini .n.s-approval{width:10px;height:24px;border-radius:2px}
 .mt-row.mini .n.s-approval{border-width:2.5px}
-.mt-row.mini .n.s-not_reached{width:4px;height:9px}
+.mt-row.mini .n.s-not_reached{width:6px;height:15px}
 .mt-row.mini .c.in-live::before,.mt-row.mini .c.out-live::after,.mt-row.mini .c.in-cond::before,.mt-row.mini .c.out-cond::after{border-top-width:2px;margin-top:-1px}
 .mt-row.mini .c.end .arrow{margin-left:-6px;border-top-width:5px;border-bottom-width:5px;border-left-width:8px}
 .mt-row.mini .mt-w{font-size:14px}
@@ -498,7 +498,7 @@ main{gap:0}
 <li>걸리는 조문은 증권 의무 라이브러리(61개, 기준일 2026-11-12)에서 적용 조건으로 골랐다. 변호사 검토 전이다.</li>
 <li>명문 기준은 AI를 명시하거나 행위 자체를 규율하는 강제 조문만, 확장 해석은 사람·계정 조문까지, 자율규범 포함은 가이드라인까지 AI 수준 요구로 본다.</li>
 <li>판정은 정책 엔진 샌드박스 재실행이다. 사람 승인에서 멈춘 공격은 승인된다고 가정해 다시 돌린다. 모델이 숨은 지시를 실제로 따르는지는 LLM 레드팀으로 따로 잰다.</li>
-<li>재현: 도구 버전 acacd6d · 에이전트 정의 지문 af6ca89236e321e5. 원자료 experiment/results.csv · results.json.</li>
+<li>재현: 도구 버전 9d0797d · 에이전트 정의 지문 af6ca89236e321e5. 원자료 experiment/results.csv · results.json.</li>
 </ul></details>
 </div></section>
 </main>
