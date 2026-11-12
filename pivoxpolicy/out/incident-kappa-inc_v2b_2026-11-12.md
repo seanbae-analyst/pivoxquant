@@ -1,13 +1,13 @@
 # 사건 × 통제 코딩 일치도 — 1차(finder) vs `inc_v2b_2026-11-12`
 
-공통 사건 42건 × 통제 7 = 셀 294. 관측 일치율 0.752 · κ 0.330 (fair)
+공통 사건 42건 × 통제 7 = 셀 294. 관측 일치율 0.755 · κ 0.351 (fair)
 
 '둘 다 참' 은 두 코더가 모두 이 통제의 실패를 본 사건 수 — 코더에 덜 기대는 보수적인 숫자다.
 
 | 통제 | 1차 참 | 2차 참 | 둘 다 참 | 일치율 | κ |
 |---|---|---|---|---|---|
 | inventory | 7 | 0 | 0 | 0.833 | 0.000 |
-| vendors | 10 | 10 | 6 | 0.810 | 0.475 |
+| vendors | 10 | 15 | 9 | 0.833 | 0.608 |
 | unique_id | 9 | 4 | 2 | 0.786 | 0.203 |
 | least_privilege | 21 | 17 | 14 | 0.762 | 0.524 |
 | human_approval | 11 | 13 | 8 | 0.810 | 0.535 |
@@ -16,12 +16,11 @@
 
 한쪽에만 있는 사건 — 1차만 3 · 2차만 0 (κ 에서 뺐다)
 
-## 불일치 73칸
+## 불일치 72칸
 
 - `aepd-first-ai-agent-breach-notification-2026-09` × audit_trail — 1차만 참
 - `agentic-browser-prompt-injection-2025-08` × unique_id — 2차만 참
 - `agentic-browser-prompt-injection-2025-08` × human_approval — 2차만 참
-- `amazon-q-extension-prompt-tamper-2025-07` × vendors — 1차만 참
 - `amazon-q-extension-prompt-tamper-2025-07` × least_privilege — 2차만 참
 - `anthropic-agentic-extortion-2025-08` × audit_trail — 1차만 참
 - `anthropic-eval-unauthorized-access-2026-07` × vendors — 2차만 참
@@ -32,9 +31,9 @@
 - `anthropic-threat-report-2026-09` × vendors — 2차만 참
 - `anthropic-threat-report-2026-09` × least_privilege — 2차만 참
 - `cairn-exposed-agent-panels-2026-10` × inventory — 1차만 참
+- `clinejection-cline-triage-agent-2026-02` × vendors — 2차만 참
 - `clinejection-cline-triage-agent-2026-02` × audit_trail — 1차만 참
 - `clinejection-cline-triage-agent-2026-02` × kill_switch — 1차만 참
-- `composio-agent-broker-breach-2026-05` × vendors — 1차만 참
 - `composio-agent-broker-breach-2026-05` × unique_id — 2차만 참
 - `composio-agent-broker-breach-2026-05` × audit_trail — 2차만 참
 - `datadog-artex-aws-financial-data-2026-11` × inventory — 1차만 참
@@ -63,7 +62,6 @@
 - `kr-fsi-assessment-system-breach-2026-11` × audit_trail — 1차만 참
 - `langflow-exploited-in-the-wild-kev-2025-05` × inventory — 1차만 참
 - `langflow-exploited-in-the-wild-kev-2025-05` × vendors — 1차만 참
-- `litellm-supply-chain-compromise-2026-10` × vendors — 1차만 참
 - `litellm-supply-chain-compromise-2026-10` × human_approval — 2차만 참
 - `llmjacking-autonomous-agent-2026-10` × inventory — 1차만 참
 - `llmjacking-autonomous-agent-2026-10` × unique_id — 1차만 참
@@ -76,6 +74,7 @@
 - `openclaw-exposed-agents-malicious-skills-2026-02` × inventory — 1차만 참
 - `openclaw-exposed-agents-malicious-skills-2026-02` × human_approval — 2차만 참
 - `pillar-rules-file-backdoor-2025-03` × audit_trail — 2차만 참
+- `salesforce-agentforce-forcedleak-salesbleed-2025-09` × vendors — 2차만 참
 - `salesloft-drift-oauth-theft-2025-08` × unique_id — 1차만 참
 - `salesloft-drift-oauth-theft-2025-08` × least_privilege — 1차만 참
 - `salesloft-drift-oauth-theft-2025-08` × kill_switch — 1차만 참

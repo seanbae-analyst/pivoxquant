@@ -22,6 +22,7 @@
 - `mcp-coding-agent-rce-disclosures-2025` — 원문은 Cursor CVE 한 건. 제목이 말하는 공개 여러 건 중 나머지는 출처가 없다. → 사건을 CVE 별로 나누거나 출처를 더한다.
 - `salesforce-agentforce-forcedleak-salesbleed-2025-09` — 원문은 ForcedLeak 만. SalesBleed 는 없다.
 - `kr-fsi-assessment-system-breach-2026-11` — 본문이 얇다(3,081자). 코더 한 팀은 '관련 기사' 제목을 근거로 썼다.
+- `crowdstrike-four-agentic-actors-2026-10` — 추출한 텍스트가 블로그 사이드바 위주다(본문 대부분 누락). `incident-corpus` 의 article/main 선택이 이 페이지에서 실패 → 본문 선택자를 고치거나 원문을 손으로 받는다. 조정본은 thin.
 - 원문이 얇아 두 팀 중 한 팀 이상이 판단을 못 한 사건: `grok-bankr-wallet-prompt-injection-2026-05`(뉴스 모음 목록뿐) · `echoleak-m365-copilot-2025-06`(CVE 레코드 한 줄) · `crowdstrike-four-agentic-actors-2026-10`(B팀 thin). → 1차 출처로 바꾸면 κ 표본이 45건으로 돌아간다.
 
 ## 덱(2026-11-01) 이후 — 논문 수치 갱신 필요
