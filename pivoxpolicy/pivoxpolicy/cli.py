@@ -41,7 +41,8 @@ def cmd_check(_: argparse.Namespace) -> int:
     inc_ids = {i.id for i in incidents_mod.load_incidents(control_ids={c.id for c in controls})}
     for coder, raw in agreement_mod.load_incident_codings().items():
         if agreement_mod.is_incident_v2(raw):
-            for p in agreement_mod.validate_incident_v2(raw, inc_ids):
+            corpus = SNAPSHOT_DIR / "incident_content"   # 받아 둔 원문이 있으면 인용도 대조
+            for p in agreement_mod.validate_incident_v2(raw, inc_ids, corpus if corpus.exists() else None):
                 print(f"✗ incident_codings/{coder}: {p}")
                 problems += 1
     n_url = sum(1 for d in docs.values() if d.url)

@@ -16,6 +16,14 @@
   가장 급한 줄: KEV 등재 + 자동화 가능 + 완전 장악 = 3일(노출 여부 무관). 배경 문단이 "their use of AI may further narrow the time defenders have to react between patch release and possible exploitation" 이라고 적는다 — 덱의 '공격 속도' 논지에 직접 쓸 수 있는 1차 근거.
   → 레지스트리: `us-cisa-bod-26-04` 등록, `us-cisa-bod-22-01` 은 superseded(매트릭스에서 빠짐). **논문·제출본은 26-04 를 인용하고 22-01 은 '전신' 으로만.** 여전히 연방 민간기관 대상이라 민간 금융사에는 적용되지 않는다는 한계는 같다.
 
+## 사건 레지스트리 — source_url 이 제목의 사건을 다 담지 않는다 (2026-11-12, 사건 코딩 v2 코더 보고 · 원문 파일로 확인 가능)
+
+- `hugging-face-openai-eval-agent-breach-2026-07` — 원문은 Hugging Face 공지뿐. 제목의 'OpenAI 평가 에이전트 샌드박스 탈출' 은 본문에 없고 독자 댓글에만 나온다. → OpenAI 쪽 1차 출처를 찾거나 제목을 줄인다.
+- `mcp-coding-agent-rce-disclosures-2025` — 원문은 Cursor CVE 한 건. 제목이 말하는 공개 여러 건 중 나머지는 출처가 없다. → 사건을 CVE 별로 나누거나 출처를 더한다.
+- `salesforce-agentforce-forcedleak-salesbleed-2025-09` — 원문은 ForcedLeak 만. SalesBleed 는 없다.
+- `kr-fsi-assessment-system-breach-2026-11` — 본문이 얇다(3,081자). 코더 한 팀은 '관련 기사' 제목을 근거로 썼다.
+- 원문이 얇아 두 팀 중 한 팀 이상이 판단을 못 한 사건: `grok-bankr-wallet-prompt-injection-2026-05`(뉴스 모음 목록뿐) · `echoleak-m365-copilot-2025-06`(CVE 레코드 한 줄) · `crowdstrike-four-agentic-actors-2026-10`(B팀 thin). → 1차 출처로 바꾸면 κ 표본이 45건으로 돌아간다.
+
 ## 덱(2026-11-01) 이후 — 논문 수치 갱신 필요
 
 | 날짜 | 무엇 | 어디서 | 다음 행동 |

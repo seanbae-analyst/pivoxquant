@@ -44,7 +44,8 @@ python3 -m pivoxpolicy.cli gaps    # AI·에이전트 층이 구속력 2 미만�
 python3 -m pivoxpolicy.cli timeline
 python3 -m pivoxpolicy.cli kappa   # 코더 간 일치도 — 층마다 (인자 없으면 두 층 코더 둘, `kappa A B` 로 지정)
 python3 -m pivoxpolicy.cli sensitivity      # 칸 하나를 뒤집으면 바뀌는 관할 점수 (◆ = borderline 판정)
-python3 -m pivoxpolicy.cli incident-kappa   # 사건 × 통제 코딩 일치도
+python3 -m pivoxpolicy.cli incident-kappa   # 사건 × 통제 코딩 일치도 (v2 코더 둘이 있으면 관점별 κ 도)
+python3 -m pivoxpolicy.cli incident-corpus  # 사건 source_url → 고정 원문 + snapshots/incident_corpus.json
 python3 -m pivoxpolicy.cli fetch   # 문서 URL 스냅숏 → snapshots/manifest.json, 바뀐 문서 보고
 python3 -m pivoxpolicy.cli watch   # 발표 목록 페이지에서 새 글 찾기
 python3 -m pivoxpolicy.cli intel   # RSS/Atom/JSON 피드에서 AI 에이전트 관련 새 항목 → snapshots/intel.jsonl
@@ -100,7 +101,7 @@ snapshots/
   manifest.json          id 별 url·sha256·크기·받은 시각·HTTP 상태·에이전트 언급 수·목록 링크 (git 추적)
   content/               받은 본문 (git 추적 안 함)
 out/                     report 가 쓰는 매트릭스·연표·공백·κ (git 추적 — 논문에 붙일 표)
-tests/                   pytest 132개, 네트워크 없이 돈다
+tests/                   pytest 140개, 네트워크 없이 돈다
 ```
 
 ## 문서 레코드 규칙
@@ -149,6 +150,30 @@ true 칸의 인용문은 전부 코퍼스 원문에서 확인됐다(A 108칸 · 
 - 판정에서 나온 코드북 보강 5줄을 `controls.yaml` 에 `# 2026-11-12 조정` 으로 달았다. ai_v2a·ai_v2b 는 보강 전 코드북으로 코딩했으니,
   사람 코더(보강 후 코드북)와의 κ 를 보고할 땐 그 차이를 밝힌다.
 - 조정자도 같은 계열의 AI 다. 사람 코더가 들어오면 조정본이 아니라 ai_v2a·ai_v2b 와 각각 κ 를 내고, 조정 7칸을 다시 본다.
+
+## 사건 코딩 v2 (2026-11-12) — `registry/incident_codebook.yaml`
+
+v1 의 κ 0.42 는 판정 규칙이 없어서였다(1차는 '로그로 못 찾았다 · 오래 갔다' 를 추론, 2차는 원문이 적은 것만 참). v2 는 칸마다 둘을 따로 적는다:
+`level` = stated(원문이 실패를 적음) / inferred(원문이 적은 사실에서 따라 나옴), `layer` = agent(AI·에이전트의 통제) / analog(사람·계정·일반 시스템).
+규칙의 핵심은 R2(공격자 쪽 통제는 묻지 않는다 — 공격자가 AI 를 쓴 사건은 피해 조직의 일반 통제만)와 R4(결과만으로는 어떤 통제도 실패로 보지 않는다).
+
+고정 코퍼스 45건(`snapshots/incident_corpus.json` — 출처·sha256, 본문은 git 밖)을 블라인드 두 팀(`inc_v2a` · `inc_v2b`, 배치 3개씩, Sonnet, 웹 안 씀)이 코딩했다.
+인용은 전부 원문에 그대로 있다(`check` 가 검사 — corpus_dir 를 줄 때).
+
+| 관점 | 칸 | κ |
+|---|---|---|
+| 적었거나 추론 — v1 과 같은 물음 | 294 (42건) | **0.944** (v1 0.417) |
+| 원문이 적은 것만 | 294 | **0.871** |
+| AI·에이전트 층 | 294 | 0.925 |
+| 일반 통제 층 | 294 | 0.868 |
+
+- 두 팀 모두 실패를 본 사건 수(적었거나 추론): 최소 권한 **17**(AI 층 13) · 공급자 **14** · 사람 승인 **13**(AI 층 10) · 고유 ID 4 · 감사 기록 **2** · 즉시 중단 **2** · 인벤토리 **0**.
+  1차의 '감사 기록 20 · 즉시 중단 14' 는 R4 에 걸리는 추론이었다 — 원문이 기록 부족·정지 실패를 적은 사건은 각각 2건뿐.
+- 원문이 얇아 3건은 κ 에서 빠졌다(`registry/inbox.md`). 원문이 제목의 사건을 다 담지 않는 사건도 4건 — 같은 곳.
+- 불일치 5칸(`out/incident-kappa-inc_v2a_2026-11-12-vs-inc_v2b_2026-11-12.md`) 중 3칸이 공급자 — '피해 조직이 돌린 제3자 소프트웨어에 CVE 가 있었다' 를 공급자 실패로 볼지.
+  코드북 failed_if 문언('제3자의 결함이 원인')대로면 참이지만, 그러면 패치 안 된 취약점 사건이 거의 다 공급자 실패가 된다. **조정은 아직 안 했다** — 규칙을 정해야 한다(다음 할 일 3).
+- 고유 ID 는 '적은 것만' κ 가 −0.02 — 두 팀이 같은 4건을 참으로 봤지만 stated/inferred 를 갈랐다. 수준 정의를 이 통제에 맞게 더 좁혀야 한다.
+- 같은 계열 AI 두 팀이다 — 재현성이지 정확성이 아니다.
 
 ## 민감도 · 경계 칸 검토 (2026-11-12, `sensitivity`)
 
@@ -223,6 +248,6 @@ git push git@github.com:seanbae-analyst/pivoxpolicy.git pivoxpolicy-split:main
 
 1. **사람 코더 1명** — `registry/codings/TEMPLATE.yaml` + 코퍼스 21건(본문은 저장소에 없다 — `snapshots/corpus.json` 의 출처로 다시 받거나 보관한 zip) → `kappa`.
 2. ~~일반 층 불일치 6칸 조정 · 결론을 좌우하는 경계 칸 검토~~ (2026-11-12, 위 '조정' · '민감도').
-3. 사건 × 통제 코딩도 판정 규칙 정하기('원문이 실패를 적은 것만 참' vs 추론) — 지금 κ 0.42.
+3. ~~사건 × 통제 판정 규칙~~ (2026-11-12 코드북 v2, κ 0.42 → 0.94). 남은 것: 공급자 규칙(제3자 소프트웨어의 CVE = 공급자 실패인가) 정하고 불일치 5칸 조정 · 고유 ID 의 stated/inferred 경계 · 얇은 출처 3건 교체.
 4. 덱 정정 반영(`registry/inbox.md` 맨 위): FSB 고유 식별자 · CISA BOD 22-01 폐지 → 26-04.
 5. EU 확장(DORA), ISO 27001·42001 원문 확보 여부, 논문용 표.
