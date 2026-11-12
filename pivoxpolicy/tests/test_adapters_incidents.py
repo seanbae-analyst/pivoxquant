@@ -1,6 +1,7 @@
 """커스텀 API 어댑터(2026-11-11 실측 응답 모양) · 사건 레지스트리 · 레벨 0 출처 규칙."""
 
 import json
+import re
 from datetime import datetime, timezone
 
 import pytest
