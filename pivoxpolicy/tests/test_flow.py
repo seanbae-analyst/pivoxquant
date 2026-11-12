@@ -1,8 +1,9 @@
-"""명령 흐름 — 그림이 정책 엔진의 단계별 판정(checks)을 그대로 옮기는지, 페이지 · 보고서에 들어가는지."""
+"""명령 흐름(노선도) — 그림이 정책 엔진의 관문별 판정(checks)을 그대로 옮기는지, 페이지 · 보고서에 들어가는지."""
 
 from __future__ import annotations
 
 import re
+from pathlib import Path
 
 import pytest
 
@@ -15,44 +16,48 @@ def F():
     return X.flows()
 
 
-def _lane_states(html: str) -> list[str]:
-    return re.findall(r'class="fl-g s-(\w+)"', html)
+def _states(html: str) -> list[str]:
+    return re.findall(r'data-state="(\w+)"', html)
 
 
-def test_lane_mirrors_engine_checks(F):
-    """마지막(결정) 단계의 일곱 칸 상태 = 정책 엔진 checks 의 결과. 그림이 판정을 다시 꾸미지 않는다."""
+def _all_results(F):
+    for f in F.values():
+        for case, rs in f["cases"]:
+            for r in rs.values():
+                yield case, r
+
+
+def test_nodes_mirror_engine_checks(F):
+    """노선의 관문 일곱 개 = 결정 단계의 checks. 승인 의존이면 승인 관문 뒤는 '승인 뒤 재판정' 의 checks."""
     n = 0
-    for f in F.values():
-        for case, rs in f["cases"]:
-            for r in rs.values():
-                # 승인 의존이면 레인의 마지막 펼친 단계는 '승인 뒤' 재판정이다
-                src = r["if_approved"]["steps"] if r["verdict"] == "held" and r.get("if_approved") else r["steps"]
-                steps = flow._last_per_step(src)
-                if not steps or steps[-1].get("decision") == "no_tool":
-                    continue
-                want = [c[2] for c in flow._norm(steps[-1]["checks"])]
-                html = flow.lane(r, case, "기준")
-                full = html[html.rindex('<div class="fl-full">'):]
-                assert _lane_states(full)[:7] == want
-                n += 1
-    assert n > 50
+    for case, r in _all_results(F):
+        rt = flow.route(r)
+        if rt is None:
+            continue
+        last = flow._last_per_step(r["steps"])[-1]
+        want = [c[2] for c in flow._norm(last["checks"])]
+        ia = r.get("if_approved")
+        if last["decision"] == "require_approval" and ia and ia.get("steps"):
+            after = [c[2] for c in flow._norm(flow._last_per_step(ia["steps"])[-1]["checks"])]
+            want = want[:rt["at"]] + after[rt["at"]:]
+        assert _states(flow.track(r, "기준")) == want
+        n += 1
+    assert n > 100
 
 
-def test_verdicts_and_blocks_agree(F):
-    """미차단이면 결정 단계에 차단 칸이 없고, 자동 차단(승인 단계를 거치지 않은)이면 차단 칸이 정확히 하나다."""
-    for f in F.values():
-        for case, rs in f["cases"]:
-            for r in rs.values():
-                if r["kind"] != "attack" or r["outcome"] == "no_surface":
-                    continue
-                last = flow._last_per_step(r["steps"])[-1]
-                states = [c[2] for c in flow._norm(last["checks"])]
-                if r["verdict"] == "defect":
-                    assert "block" not in states and "approval" not in states
-                if r["verdict"] == "good" and not r.get("if_approved"):
-                    assert states.count("block") == 1
-                if r["verdict"] == "held":
-                    assert states.count("approval") == 1 and r["if_approved"]["outcome"] == "passed"
+def test_route_matches_verdict(F):
+    """미차단 → 끝까지 실선(실행됨), 승인 의존 → 승인 관문 + 점선(승인되면 실행), 자동 차단 → 끊긴 선(차단)."""
+    for case, r in _all_results(F):
+        if r["kind"] != "attack" or r["outcome"] == "no_surface":
+            continue
+        rt = flow.route(r)
+        word = flow.end_word(r, rt)[0]
+        if r["verdict"] == "defect":
+            assert rt["end"] == "exec" and set(rt["segs"]) == {"live"} and word == "실행됨"
+        elif r["verdict"] == "held":
+            assert rt["end"] == "cond_exec" and rt["nodes"][rt["at"] - 1] == "approval" and "cond" in rt["segs"] and word == "승인되면 실행"
+        elif r["verdict"] == "good":
+            assert rt["end"] in ("block", "cond_block") and rt["alive_end"] == "dead" and word == "차단"
 
 
 def test_flow_escapes_and_has_no_script():
@@ -60,23 +65,22 @@ def test_flow_escapes_and_has_no_script():
             "steps": [{"say": "<i>", "tool": "read", "args": {"q": "<img src=x>"}}]}
     res = {"kind": "attack", "verdict": "defect", "control": None, "outcome": "passed", "if_approved": None,
            "steps": [{"step": 1, "repeat": 1, "note": "<i>", "tool": "t<x>", "decision": "allow", "checks": [], "control": None}]}
-    out = flow.compare(case, [("기준", "", res)])
-    assert "<script" not in out and "<img" not in out and "&lt;img" in out
+    out = flow.figure(case, [("<기준>", res)])
+    assert "<script" not in out and "<img" not in out and "&lt;img" in out and "&lt;기준&gt;" in out
 
 
-def test_experiment_page_has_flows(F):
+def test_experiment_page(F):
     R = X.run()
     page = X.page(R, F)
-    assert "명령 흐름" in page and page.count('class="fc-case"') == sum(len(f["cases"]) for f in F.values())
-    assert "그림 2" in page and "그림 3" in page and "<svg" not in page and "<script" not in page
-    # 대표 흐름은 해석 의존(명문 기준에서 미차단 · 승인 의존 → 확장 해석 기준에서 자동 차단)
-    for aid, c, rs in X._featured(F):
+    assert "명령 흐름" in page and "<svg" not in page and "<script" not in page
+    assert page.count('<div class="fr-row">') == sum(len(f["cases"]) for f in F.values())       # 시나리오마다 한 줄
+    assert page.count('class="d v-') >= 3 * R["aggregate"]["binding_explicit"]["attacks"]        # 그림 1: 기준 셋 × 점 45
+    for aid, c, rs in X._featured(F):                                                            # 대표 흐름은 해석 의존
         assert rs["binding_explicit"]["verdict"] in ("defect", "held") and rs["binding_interpretive"]["verdict"] == "good"
+    assert len(X._featured(F)) == 2 and "그림 2" in page and "그림 3" in page and "그림 4" in page
 
 
 def test_diagnosis_report_has_flows():
-    from pathlib import Path
-
     from pivoxpolicy import diagnosis, intake
     from pivoxpolicy import obligations as obl
     src = (Path(__file__).resolve().parents[1] / "examples" / "agent_spec_order.yaml").read_text(encoding="utf-8")
@@ -85,6 +89,5 @@ def test_diagnosis_report_has_flows():
     D = diagnosis.diagnose(agent, b["components"], lib=obl.load_library())
     open_ = [r for r in D["attack"]["results"] if r["kind"] == "attack" and r["verdict"] in ("defect", "held")]
     h = diagnosis.to_html(D)
-    assert h.count('class="fl"') == len(open_) > 0 and "<script" not in h
-    md = diagnosis.to_markdown(D)
-    assert "명령 흐름이다" in md
+    assert h.count('<div class="fr-row">') == len(open_) > 0 and "<script" not in h
+    assert "명령 흐름이다" in diagnosis.to_markdown(D)

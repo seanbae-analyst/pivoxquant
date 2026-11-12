@@ -258,8 +258,8 @@ def sections(D: dict[str, Any]) -> list[tuple]:
     S.append(("table", ["시나리오", "종류", "판정", "멈춘 곳", "단일 보완 통제", "조문과의 관계"], rows))
     open_ = [r for r in res["results"] if r["kind"] == "attack" and r["verdict"] in ("defect", "held")]
     if open_ and D.get("case_defs"):
-        S.append(("p", f"아래는 미차단 · 승인 의존인 공격 {len(open_)}개의 명령 흐름이다. 단계마다 지시 출처와 도구 호출, 런타임 판정 일곱 단계의 실제 결과를 보인다. "
-                       "검사 안 함은 그 통제가 AI 수준이 아니어서 런타임이 보지 않은 단계다."))
+        S.append(("p", f"아래는 미차단 · 승인 의존인 공격 {len(open_)}개의 명령 흐름이다. 명령이 런타임의 관문 일곱 개를 지나는 길이고, "
+                       "빈 관문(○)은 그 통제가 AI 수준이 아니어서 런타임이 보지 않은 곳이다."))
         S.append(("flows", [(D["case_defs"][r["id"]], r) for r in open_ if r["id"] in D["case_defs"]]))
     # 조문별 충족
     S.append(("h2", "6. 조문별 충족"))
@@ -391,8 +391,12 @@ def to_html(D: dict[str, Any]) -> str:
         elif k == "flows":
             lv = D["agent"].get("levels") or {}
             on = [c["name"] for c in D["controls"] if int(lv.get(c["id"], 0)) >= 2]
-            sub = "AI 수준 통제: " + (", ".join(on) if on else "없음")
-            body.append("".join(flow.compare(c, [("지금 통제", sub, r)]) for c, r in blk[1]))
+            items = [(*((r["title"].split(": ", 1)) if ": " in r["title"] else (r["title"], "")), [r]) for c, r in blk[1]]
+            steps = "".join(f"<li><b>{e(r['title'])}</b><ul>" + "".join(f"<li>{e(x)}</li>" for x in flow.steps_text(r, c)) + "</ul></li>"
+                            for c, r in blk[1])
+            body.append(f'<p>지금 AI 수준인 통제: {e(", ".join(on) if on else "없음")}</p>' + flow.legend() + flow.gate_list(always=True)
+                        + flow.rows(["지금 통제"], items)
+                        + f'<details class="mt-det"><summary>단계별 판정 보기</summary><ul>{steps}</ul></details>')
     body.append('<footer>PivoxPolicy 진단 보고서. 법률 자문이 아니다. 조문 인용은 국가법령정보센터 현행 원문 등에서 대조했고 출처는 조문별 충족 표의 인용 열을 본다.</footer>')
     return ('<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
             f'<title>진단 보고서: {e(a["name"])}</title><meta name="robots" content="noindex">'
