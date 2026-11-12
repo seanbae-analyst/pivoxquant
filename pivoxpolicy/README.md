@@ -81,8 +81,25 @@ python3 -m pytest -q
 - **② 실제 사건 45건 다시 돌리기**: 사건 조정본이 '실패' 로 판정한 통제가 켜져 있었다면? 막힘을 **하한~상한**으로(하한 = 실패 통제 모두 켜짐,
   상한 = 사전·사용 중 통제 하나라도), 실패 판정이 없는 20건은 **판단 근거 없음** 으로 따로 센다. '다음에 켤 통제' · 프리셋 비교 표.
 
+**다양한 케이스 (2026-11-12)**
+- 공격 원형 **11개** — 실제 사건에서 추린 5개 + OWASP Agentic Top 10 에서 온 6개(도구·MCP 설명 오염 ASI02 · 기억 오염 ASI06 · 에이전트 간 위임 연쇄 ASI07·08 ·
+  사람 승인 노리기 ASI09 · 내부자 악용 ASI03 · 고객 간 정보 노출). 뒤의 6개는 레지스트리에 주된 사건이 없어 '사건 없음' 으로 표시한다.
+- 에이전트 종류 **8개**(상담 · 트레이딩·결제 · 코딩 · 내부 문서 · 리서치·RAG · 멀티 에이전트 자동화 · SOC · 대출 심사), 환경 5개(도구 권한 · 외부 입력 · 외부 구성요소 · 장기 메모리 · 멀티 에이전트).
+- **데모 케이스 23개** `registry/sim_cases.yaml` — 가상 회사(시중은행 A · 증권사 B · 핀테크 C …), 대부분 '한 가지만 다른' 짝으로 무엇이 결과를 바꾸는지 보인다.
+  발표 중 ← → 키로 넘기고, `#k=<케이스 id>` 링크로 바로 연다. 네 결과(막힘 · 피해 축소 · 피해 발생 · 공격면 없음)와 11개 원형이 모두 케이스에 나온다.
+
+**규제가 바뀌면 (2026-11-12)**
+1. **감지** — `cli pending`: 자동 수집 피드(`snapshots/intel.jsonl`)에서 규제·가이드라인·표준이고 AI·에이전트와 닿는데 레지스트리에 없는 것을 점수순으로 →
+   `out/pending-regulations.md` · 모의 테스트 ③. 올리지 않기로 한 것은 `registry/pending_dismissed.yaml`(이유와 함께).
+2. **반영** — 사람이 문서로 올리고 두 팀 블라인드 코딩 → 조정 → `cli site`. 프리셋 · 규제 근거 · 두 테스트가 레지스트리에서 다시 계산된다.
+3. **이력** — 결과 지문(문서 목록 · 프리셋별 다시 돌리기 · 프리셋 × 원형)이 바뀌면 `snapshots/sim_history.jsonl` 에 한 줄. 첫 줄은 DORA 추가 전 상태를 커밋 d87fb4e 로 소급 계산한 것.
+4. **데모 경고** — 케이스의 계산 결과가 `expect` 와 달라지면 페이지 배너에 경고가 뜨고 `tests/test_sim.py` 가 실패한다 → story·lesson·expect 를 고친다.
+- 별도 저장소로 옮기면 `.github/workflows/intel.yml` 이 2시간마다 1·3 을 돌리고 커밋·이슈를 낸다. 지금(pivoxquant 안)은 일부러 돌지 않는다 —
+  main 에 2시간마다 봇 커밋이 생기면 pivoxquant 운영 백엔드·프론트가 그때마다 재배포되기 때문이다.
+
 ```bash
-python3 -m pivoxpolicy.cli sim     # out/sim.html · sim-*.js · simulation.md (site 도 같이 낸다)
+python3 -m pivoxpolicy.cli sim       # out/sim.html · sim-*.js · simulation.md · pending-regulations.md + 이력 (site 도 같이 낸다)
+python3 -m pivoxpolicy.cli pending   # 반영 대기 후보만
 ```
 
 `out/simulation.md` 가 프리셋별 표다 — 예: 한국 강제 규제만 = 막힘 5~21건 · 미국 강제 규제만 = 3~7건 · EU 강제 규제만 = 4~19건(판단 가능 25건 중).

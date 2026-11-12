@@ -39,6 +39,12 @@
 <!-- ── 왼쪽: 환경 설정 (화면에 붙어 있다) ── -->
 <aside class="panel" aria-label="환경 설정">
 
+<div class="grp cases-grp">
+<label class="lab" for="case">데모 케이스 <span class="dim" id="case-count"></span></label>
+<div class="case-row"><select id="case"></select><button type="button" class="btn sq" id="prev" aria-label="이전 케이스">←</button><button type="button" class="btn sq" id="next-case" aria-label="다음 케이스">→</button></div>
+<p class="hint">고르면 아래 설정이 모두 그 케이스로 바뀐다. 발표 중에는 ← → 키로 넘긴다.</p>
+</div>
+
 <div class="grp">
 <label class="lab" for="preset">규제 프리셋</label>
 <select id="preset"></select>
@@ -57,6 +63,8 @@
 <span class="sub">도구 권한</span><div class="seg" role="radiogroup" aria-label="도구 권한" id="tools"></div>
 <span class="sub">외부 입력</span><div class="seg" role="radiogroup" aria-label="외부 입력(웹·메일·문서·고객 메시지)을 읽는가" id="untrusted"></div>
 <span class="sub">외부 구성요소</span><div class="seg" role="radiogroup" aria-label="외부 패키지·확장·스킬을 들여오는가" id="components"></div>
+<span class="sub">장기 메모리</span><div class="seg" role="radiogroup" aria-label="대화·문서를 장기 메모리·검색 저장소에 쌓는가" id="memory"></div>
+<span class="sub">멀티 에이전트</span><div class="seg" role="radiogroup" aria-label="다른 에이전트와 일을 주고받는가" id="multi"></div>
 </div>
 </div>
 
@@ -70,6 +78,8 @@
 
 <!-- ── 오른쪽: 결과 ── -->
 <div class="results">
+
+<div class="case-banner" id="case-banner" aria-live="polite"></div>
 
 <section id="scenario" aria-labelledby="h-scn">
 <div class="sec-h"><h2 id="h-scn">① 공격 원형 {{N_SCENARIOS}}개 — 지금 설정에서</h2><span>행을 고르고 '단계별로 보기'</span></div>
@@ -93,12 +103,22 @@
 <details><summary>사건별 결과</summary><div class="tblwrap"><table id="per"></table></div></details>
 </section>
 
+<section id="updates" aria-labelledby="h-upd">
+<div class="sec-h"><h2 id="h-upd">③ 규제가 바뀌면</h2><span id="reg-meta"></span></div>
+<p class="fine">규제 문서가 레지스트리에 들어오고 코딩되면 프리셋 · 규제 근거 · 두 테스트가 다시 계산된다. 결과가 바뀐 때마다 이력이 남고, 결과가 달라진 데모 케이스에는 경고가 뜬다.</p>
+<div class="two">
+<div><h3 class="h3">업데이트 이력</h3><ol class="hist" id="hist"></ol></div>
+<div><h3 class="h3">반영 대기 — 자동 수집에서 찾은 새 규제·가이드라인 후보 <span class="dim" id="pend-n"></span></h3><ul class="rows" id="pend"></ul>
+<p class="fine">사람이 문서로 올릴지 정한다 → 두 팀 블라인드 코딩 → 조정 → 다시 빌드. 전체 목록 <a href="./pending-regulations.md">pending-regulations.md</a>.</p></div>
+</div>
+</section>
+
 <section id="limits" aria-labelledby="h-lim">
 <div class="sec-h"><h2 id="h-lim">이 테스트가 말할 수 없는 것</h2></div>
 <ul class="fine lim">
 <li><b>예측이 아니라 반사실 연습이다.</b> ②는 "그 사건에서 실패했다고 판정된 통제가 켜져 있었다면" 을 가정한다. 통제가 있어도 뚫릴 수 있고, 다른 경로가 있었을 수 있다 — 그래서 막힘을 하한~상한으로 낸다.</li>
 <li><b>판단 근거 없음</b> 은 공개 자료가 피해 쪽 통제를 적지 않은 사건이다(대부분 공격자가 AI 를 쓴 사건). 막혔다는 뜻도, 못 막았다는 뜻도 아니다.</li>
-<li>사건 판정은 서로 보지 않은 AI 코더 두 팀(κ 0.96)과 조정을 거쳤다. ①의 공격 원형·단계·통제 배치와 통제의 실무 뜻은 저자 설계로, 블라인드 코딩을 거치지 않았다.</li>
+<li>사건 판정은 서로 보지 않은 AI 코더 두 팀(κ 0.96)과 조정을 거쳤다. ①의 공격 원형·단계·통제 배치, 통제의 실무 뜻, 데모 케이스(가상 회사)는 저자 설계로, 블라인드 코딩을 거치지 않았다. 원형 6개는 실제 사건이 아니라 OWASP Agentic Top 10 같은 위협 목록에서 왔다('사건 없음' 표시).</li>
 <li>규제 프리셋은 문서가 요구하는 통제를 이 에이전트에 모두 적용했다고 가정한다. 적용 대상(예: AI 기본법의 사람 관리·감독은 고영향 AI 만)은 따지지 않는다.</li>
 <li>이 페이지는 아무것도 저장하거나 보내지 않는다. 설정은 주소창의 # 뒤에만 있다.</li>
 </ul>

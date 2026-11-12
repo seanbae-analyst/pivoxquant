@@ -26,10 +26,13 @@ import yaml
 from .registry import OUT_DIR, REGISTRY_DIR
 
 SCENARIOS_PATH = REGISTRY_DIR / "sim_scenarios.yaml"
+CASES_PATH = REGISTRY_DIR / "sim_cases.yaml"
+DISMISSED_PATH = REGISTRY_DIR / "pending_dismissed.yaml"
+HISTORY_PATH = Path(__file__).resolve().parents[1] / "snapshots" / "sim_history.jsonl"
 TEMPLATES = Path(__file__).resolve().parent / "templates"
 EFFECTS = ("prevent", "limit", "detect", "contain")
 LAYERS = ("analog", "agent")
-REQUIREMENTS = ("untrusted_input", "open_components")
+REQUIREMENTS = ("untrusted_input", "open_components", "memory", "multi_agent")
 TOOLS = ("read", "write", "pay")
 LEVEL_KO = {0: "없음", 1: "사람·계정만", 2: "AI 까지"}
 
@@ -63,6 +66,8 @@ def validate_scenarios(data: dict[str, Any], control_ids: set[str], incident_ids
             problems.append(f"{sid}: impact 는 fixed 또는 by_tools(read·write·pay 모두)")
         if not s.get("stages"):
             problems.append(f"{sid}: stages 없음")
+        if not s.get("basis"):
+            problems.append(f"{sid}: basis(근거 — 위협 목록 또는 '실제 사건') 필요")
         for k, st in enumerate(s.get("stages") or [], 1):
             for c in st.get("checks") or []:
                 where = f"{sid}.{k}.{c.get('control')}"
@@ -238,6 +243,177 @@ def regulation_basis(docs, controls, coding) -> dict[str, dict[str, Any]]:
     return out
 
 
+# ── 데모 케이스 ───────────────────────────────────────────────────────
+
+OUTCOMES = ("no_surface", "blocked", "reduced", "damage")
+ENV_KEYS = ("tools",) + REQUIREMENTS
+
+
+def load_cases(path: Path = CASES_PATH) -> list[dict[str, Any]]:
+    if not path.exists():
+        return []
+    return (yaml.safe_load(path.read_text(encoding="utf-8")) or {}).get("cases") or []
+
+
+def case_setup(case: dict[str, Any], presets_by_id: dict[str, Any], profiles_by_id: dict[str, Any]) -> tuple[dict[str, int], dict[str, Any]]:
+    """케이스 → (통제 수준, 에이전트 환경). 프리셋 위에 levels 를, 에이전트 종류 위에 env 를 덮는다."""
+    levels = dict(presets_by_id[case["preset"]]["levels"])
+    levels.update({k: int(v) for k, v in (case.get("levels") or {}).items()})
+    prof = profiles_by_id[case["profile"]]
+    env = {k: prof.get(k) for k in ENV_KEYS}
+    env.update(case.get("env") or {})
+    return levels, env
+
+
+def validate_cases(cases, scenarios_by_id, presets_by_id, profiles_by_id, control_ids) -> list[str]:
+    problems, seen = [], set()
+    for c in cases:
+        cid = c.get("id", "?")
+        if cid in seen:
+            problems.append(f"{cid}: id 중복")
+        seen.add(cid)
+        for k in ("title", "org", "story", "lesson"):
+            if not c.get(k):
+                problems.append(f"{cid}: {k} 필요")
+        if c.get("preset") not in presets_by_id:
+            problems.append(f"{cid}: 모르는 preset {c.get('preset')}")
+        if c.get("profile") not in profiles_by_id:
+            problems.append(f"{cid}: 모르는 profile {c.get('profile')}")
+        if c.get("scenario") not in scenarios_by_id:
+            problems.append(f"{cid}: 모르는 scenario {c.get('scenario')}")
+        if c.get("expect") not in OUTCOMES:
+            problems.append(f"{cid}: expect 는 {OUTCOMES}")
+        for k, v in (c.get("levels") or {}).items():
+            if k not in control_ids or v not in (0, 1, 2):
+                problems.append(f"{cid}: levels {k}={v}")
+        for k in (c.get("env") or {}):
+            if k not in ENV_KEYS:
+                problems.append(f"{cid}: env {k}")
+    return problems
+
+
+def case_results(p: dict[str, Any]) -> list[dict[str, Any]]:
+    """케이스마다 지금 데이터로 돌린 결과와 기대(expect) — 규제 데이터가 바뀌어 달라지면 ok=False."""
+    pres = {x["id"]: x for x in p["presets"]}
+    profs = {x["id"]: x for x in p["agent_profiles"]}
+    scns = {x["id"]: x for x in p["scenarios"]}
+    out = []
+    for c in p.get("cases") or []:
+        levels, env = case_setup(c, pres, profs)
+        r = run_scenario(scns[c["scenario"]], env, levels)
+        out.append({"id": c["id"], "outcome": r["outcome"], "stage": r["stage"], "expect": c["expect"], "ok": r["outcome"] == c["expect"]})
+    return out
+
+
+# ── 규제 업데이트 이력 ────────────────────────────────────────────────
+
+WORST_ENV = {"tools": "pay", "untrusted_input": True, "open_components": True, "memory": True, "multi_agent": True}
+
+
+def history_entry(p: dict[str, Any], doc_ids: list[str]) -> dict[str, Any]:
+    """지금 레지스트리로 낸 결과의 지문 — 문서 목록 · 프리셋별 다시 돌리기 · 프리셋 × 원형 결과(가장 노출된 환경)."""
+    stage_of = {c["id"]: c["stage"] for c in p["controls"]}
+    fails = {i["id"]: i["fails"] for i in p["incidents"]}
+    presets_out, scen_out = {}, {}
+    for pr in p["presets"]:
+        r = replay(fails, pr["levels"], stage_of)
+        presets_out[pr["id"]] = [r["blocked_lo"], r["blocked_hi"], r["unknown"]]
+        scen_out[pr["id"]] = {s["id"]: run_scenario(s, WORST_ENV, pr["levels"])["outcome"] for s in p["scenarios"]}
+    return {"docs": sorted(doc_ids), "presets": presets_out, "scenarios": scen_out}
+
+
+def load_history(path: Path = HISTORY_PATH) -> list[dict[str, Any]]:
+    if not path.exists():
+        return []
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
+def update_history(entry: dict[str, Any], path: Path = HISTORY_PATH, at: str | None = None, label: str | None = None) -> bool:
+    """마지막 기록과 지문이 다르면 한 줄 덧붙인다(규제 문서가 들어오거나 코딩이 바뀌었을 때). 덧붙였으면 True.
+    원형·케이스 정의만 바뀐 경우는 이력이 아니다 — 비교는 문서 목록과 프리셋 결과로만 한다(원형 결과는 같은 원형끼리만)."""
+    from datetime import datetime, timezone
+    hist = load_history(path)
+    if hist:
+        last = hist[-1]
+        same_scn = all(last.get("scenarios", {}).get(pid, {}).get(sid, o) == o
+                       for pid, row in entry["scenarios"].items() for sid, o in row.items())
+        if last.get("docs") == entry["docs"] and last.get("presets") == entry["presets"] and same_scn:
+            return False
+        added = sorted(set(entry["docs"]) - set(last.get("docs") or []))
+        removed = sorted(set(last.get("docs") or []) - set(entry["docs"]))
+        auto = " · ".join([f"문서 추가 {', '.join(added)}"] * bool(added) + [f"문서 제외 {', '.join(removed)}"] * bool(removed)) or "코딩·판정 변경"
+    else:
+        auto = "첫 기록"
+    rec = {"at": at or datetime.now(timezone.utc).strftime("%Y-%m-%d"), "label": label or auto, **entry}
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(rec, ensure_ascii=False, separators=(",", ":")) + "\n")
+    return True
+
+
+# ── 반영 대기 새 규제 (자동 수집 피드에서) ─────────────────────────────
+
+_AGENT = ("agent", "agentic", "에이전트")
+_AI = ("ai act", "인공지능", "artificial intelligence", "생성형", "genai", "llm", " ai ")
+_FIN = ("금융", "financial", "finance", "bank", "은행", "증권", "보험", "핀테크", "fintech", "payment", "결제")
+_CTRL = ("보안", "security", "identity", "인증", "권한", "통제", "risk", "위험", "cyber", "사이버", "governance", "거버넌스", "안전", "safety")
+_LAW = ("ai act", "인공지능 기본법", "ai 기본법", "가이드라인", "guideline", "guidance", "안내서", "기준", "standard", "framework", "규정", "regulation")
+
+
+def _norm_url(u: str) -> str:
+    """비교용 URL — 스킴·www·끝 / · 쿼리(utm_ 추적값 등)·# 을 버린다."""
+    u = (u or "").strip().lower().split("#", 1)[0].split("?", 1)[0]
+    return u.rstrip("/").replace("http://", "https://").replace("://www.", "://")
+
+
+def pending_regulations(items, docs, dismissed: set[str] | None = None, min_score: int = 5) -> list[dict[str, Any]]:
+    """피드 항목 중 '규제·가이드라인·표준' 이고 AI 에이전트·금융·통제와 닿는데 아직 레지스트리에 없는 것 — 점수순.
+    점수: 에이전트 +3 · 금융 +2 · 보안·통제 +2 · 규범 말(가이드라인·기준·AI Act) +1 · 발행 주체(1차) +1."""
+    known = {_norm_url(d.url) for d in docs.values() if getattr(d, "url", None)}
+    dismissed = {_norm_url(u) for u in (dismissed or set())}
+    out, seen = [], set()
+    for it in items:
+        if it.topic not in ("regulation", "guideline", "standard"):
+            continue
+        link = _norm_url(it.link)
+        if not link or link in known or link in dismissed or link in seen:
+            continue
+        hay = (" ".join(it.matched or []) + " " + it.title + " " + (it.summary or "")).lower()
+        if not any(w in hay for w in _AGENT + _AI):     # AI·에이전트와 닿지 않으면 후보가 아니다(양자 내성 암호 안내 같은 것)
+            continue
+        why, score = [], 0
+        for words, pts, lab in ((_AGENT, 3, "에이전트"), (_FIN, 2, "금융"), (_CTRL, 2, "보안·통제"), (_LAW, 1, "규범")):
+            if any(w in hay for w in words):
+                score += pts
+                why.append(lab)
+        if it.kind == "primary":
+            score += 1
+            why.append("1차 출처")
+        if score >= min_score:
+            seen.add(link)
+            out.append({"title": it.title, "link": it.link, "issuer": it.issuer, "jurisdiction": it.jurisdiction,
+                        "published": (it.published or it.first_seen or "")[:10], "score": score, "why": why})
+    out.sort(key=lambda x: x["published"], reverse=True)       # 같은 점수 안에서는 최신 먼저 (sort 는 안정적)
+    return sorted(out, key=lambda x: -x["score"])
+
+
+def load_dismissed(path: Path = DISMISSED_PATH) -> set[str]:
+    if not path.exists():
+        return set()
+    return {d.get("link", "") for d in (yaml.safe_load(path.read_text(encoding="utf-8")) or {}).get("dismissed") or []}
+
+
+def render_pending(rows: list[dict[str, Any]]) -> str:
+    lines = ["# 반영 대기 — 자동 수집 피드에서 찾은 새 규제·가이드라인 후보", "",
+             f"후보 **{len(rows)}**건 (점수 5 이상). 레지스트리 문서로 올릴지 사람이 정한다 — 올리면 두 팀 블라인드 코딩 → 조정 → `site` 로",
+             "매트릭스 · 모의 테스트 프리셋 · 규제 근거가 다시 계산되고, 결과가 바뀌면 `snapshots/sim_history.jsonl` 에 남는다.",
+             "올리지 않기로 한 것은 `registry/pending_dismissed.yaml` 에 링크를 적으면 다시 안 보인다.", "",
+             "| 점수 | 날짜 | 관할 | 발행 | 제목 | 왜 |", "|---|---|---|---|---|---|"]
+    for r in rows:
+        lines.append(f"| {r['score']} | {r['published']} | {r['jurisdiction']} | {r['issuer']} | [{r['title']}]({r['link']}) | {' · '.join(r['why'])} |")
+    return "\n".join(lines) + "\n"
+
+
 # ── 페이지 데이터 · 빌드 ──────────────────────────────────────────────
 
 def payload() -> dict[str, Any]:
@@ -261,13 +437,29 @@ def payload() -> dict[str, Any]:
     fails = incident_failures(raws[adj])
     doc_coding = codings[primary_coder(codings)]
     helps = data.get("control_help") or {}
+    pres = presets(docs, controls, doc_coding)
+    cases = load_cases()
+    cprobs = validate_cases(cases, {s["id"]: s for s in data["scenarios"]}, {x["id"]: x for x in pres},
+                            {x["id"]: x for x in data.get("agent_profiles") or []}, {c.id for c in controls})
+    if cprobs:
+        raise SimError("; ".join(cprobs[:5]))
+    from .intel import load_items
+    try:
+        pend = pending_regulations(load_items(), docs, load_dismissed())
+    except FileNotFoundError:
+        pend = []
+    binding_docs = [d for d in docs.values() if d.binding >= 1 and d.status != "superseded"]
     return {
+        "cases": cases,
+        "pending": {"count": len(pend), "top": pend[:8]},
+        "registry": {"docs": len(binding_docs), "latest": max((str(d.date) for d in binding_docs if d.date), default=""),
+                     "doc_ids": sorted(d.id for d in binding_docs)},
         "controls": [{"id": c.id, "num": c.num, "name": c.name_ko, "stage": c.stage, "help": helps.get(c.id, {})} for c in controls],
         "regulation": regulation_basis(docs, controls, doc_coding),
         "jurisdictions": JUR_KO,
         "scenarios": data["scenarios"],
         "agent_profiles": data.get("agent_profiles") or [],
-        "presets": presets(docs, controls, doc_coding),
+        "presets": pres,
         "incidents": [{"id": i.id, "title": i.title, "date": i.date, "url": i.source_url, "role": i.ai_role,
                        "evidence": i.evidence_level, "scenario": scen_of.get(i.id), "fails": fails.get(i.id, [])}
                       for i in sorted(incs, key=lambda x: x.date, reverse=True)],
@@ -293,8 +485,8 @@ def render_report(p: dict[str, Any]) -> str:
         lines.append(f"| {pr['label']} | **{r['blocked_lo']}~{r['blocked_hi']}** | {r['reduced']} | {r['unchanged']} | {r['unknown']} | "
                      f"{rs['blocked_lo']}~{rs['blocked_hi']} | {' · '.join(nxt) or '—'} |")
     out_ko = {"no_surface": "공격면 없음", "blocked": "막힘", "reduced": "피해 축소", "damage": "피해 발생"}
-    env = {"tools": "pay", "untrusted_input": True, "open_components": True}
-    lines += ["", "## 시나리오 원형 — 가장 노출된 환경(송금 도구 · 외부 입력 읽음 · 외부 구성요소 들임)", "",
+    env = {"tools": "pay", "untrusted_input": True, "open_components": True, "memory": True, "multi_agent": True}
+    lines += ["", "## 시나리오 원형 — 가장 노출된 환경(송금 도구 · 외부 입력 · 외부 구성요소 · 장기 메모리 · 멀티 에이전트 모두 켬)", "",
               "| 프리셋 | " + " | ".join(s["title"].split(" →")[0] for s in p["scenarios"]) + " |",
               "|---|" + "---|" * len(p["scenarios"])]
     for pr in p["presets"]:
@@ -307,16 +499,33 @@ def render_report(p: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def build(out_dir: Path = OUT_DIR) -> list[Path]:
-    """out/sim.html · sim-engine.js · sim-ui.js · sim-data.js · simulation.md"""
+def _all_pending() -> list[dict[str, Any]]:
+    from .intel import load_items
+    from .registry import load_documents
+    try:
+        return pending_regulations(load_items(), load_documents(), load_dismissed())
+    except FileNotFoundError:
+        return []
+
+
+def build(out_dir: Path = OUT_DIR, history_path: Path | None = HISTORY_PATH) -> list[Path]:
+    """out/sim.html · sim-engine.js · sim-ui.js · sim-data.js · simulation.md · pending-regulations.md.
+    history_path 가 있으면 결과 지문이 바뀌었을 때 이력에 한 줄 덧붙이고, 이력 전체를 페이지에 싣는다."""
     p = payload()
+    if history_path is not None:
+        update_history(history_entry(p, p["registry"]["doc_ids"]), history_path)
+        p["history"] = load_history(history_path)
+    else:
+        p["history"] = []
+    p["case_results"] = case_results(p)
     out_dir.mkdir(parents=True, exist_ok=True)
     written = []
     data_js = "window.PIVOX_SIM = " + json.dumps(p, ensure_ascii=False, separators=(",", ":")) + ";\n"
     for name, text in (("sim-data.js", data_js),
                        ("sim-engine.js", (TEMPLATES / "sim-engine.js").read_text(encoding="utf-8")),
                        ("sim-ui.js", (TEMPLATES / "sim-ui.js").read_text(encoding="utf-8")),
-                       ("simulation.md", render_report(p))):
+                       ("simulation.md", render_report(p)),
+                       ("pending-regulations.md", render_pending(_all_pending()))):
         (out_dir / name).write_text(text, encoding="utf-8")
         written.append(out_dir / name)
     html = (TEMPLATES / "sim.html").read_text(encoding="utf-8")

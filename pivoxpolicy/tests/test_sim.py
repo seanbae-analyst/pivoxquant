@@ -72,7 +72,7 @@ def test_registry_scenarios_cover_every_incident_once():
     bad = {"scenarios": [{"id": "x", "impact": {"fixed": "f"}, "stages": [{"checks": [{"control": "nope", "layer": "ai", "effect": "zap"}]}],
                           "incidents": ["ghost"]}]}
     probs = " ".join(sim.validate_scenarios(bad, set(CIDS), {"real"}))
-    for frag in ("모르는 통제", "layer", "effect", "why", "모르는 사건 ghost", "원형이 없는 사건 1건"):
+    for frag in ("모르는 통제", "layer", "effect", "why", "모르는 사건 ghost", "원형이 없는 사건 1건", "basis"):
         assert frag in probs, frag
 
 
@@ -85,8 +85,9 @@ def test_presets_follow_the_matrix():
 
 
 def test_build_writes_page(tmp_path):
-    names = {q.name for q in sim.build(out_dir=tmp_path)}
-    assert {"sim.html", "sim-engine.js", "sim-ui.js", "sim-data.js", "simulation.md"} <= names
+    names = {q.name for q in sim.build(out_dir=tmp_path, history_path=tmp_path / "h.jsonl")}   # 진짜 이력 파일은 건드리지 않는다
+    assert {"sim.html", "sim-engine.js", "sim-ui.js", "sim-data.js", "simulation.md", "pending-regulations.md"} <= names
+    assert len(sim.load_history(tmp_path / "h.jsonl")) == 1
     html = (tmp_path / "sim.html").read_text(encoding="utf-8")
     assert "{{" not in html and "<script>" not in html     # CSP script-src 'self' — 인라인 스크립트 없음
     assert (tmp_path / "sim-data.js").read_text(encoding="utf-8").startswith("window.PIVOX_SIM = ")
@@ -100,7 +101,8 @@ def test_js_engine_matches_python(tmp_path):
     cases = []
     for _ in range(60):
         levels = {c: rnd.choice([0, 1, 2]) for c in CIDS}
-        env = {"tools": rnd.choice(["read", "write", "pay"]), "untrusted_input": rnd.random() < 0.7, "open_components": rnd.random() < 0.5}
+        env = {"tools": rnd.choice(["read", "write", "pay"]), "untrusted_input": rnd.random() < 0.7, "open_components": rnd.random() < 0.5,
+               "memory": rnd.random() < 0.5, "multi_agent": rnd.random() < 0.5}
         cases.append({"levels": levels, "env": env, "stated": rnd.random() < 0.5})
     (tmp_path / "in.json").write_text(json.dumps({"scenarios": p["scenarios"], "fails": fails, "stage": STAGE_OF, "cases": cases}), encoding="utf-8")
     script = (
@@ -126,3 +128,65 @@ def test_regulation_basis_names_the_clause():
     assert eu["analog"]["score"] == 0 and "doc" not in eu["analog"]          # 다루지 않으면 문서를 싣지 않는다
     assert all(len(r[j][layer].get("quote", "")) <= 202 for r in p["regulation"].values() for j in r for layer in r[j])
     assert all(c["help"].get("analog") and c["help"].get("agent") for c in p["controls"])
+
+
+
+# ── 데모 케이스 · 이력 · 반영 대기 ──
+
+def test_demo_cases_still_match_their_story():
+    """규제 레지스트리가 바뀌어 케이스 결과가 달라지면 여기서 실패한다 — sim_cases.yaml 의 story·lesson·expect 를 새 결과에 맞게 고칠 것."""
+    p = sim.payload()
+    assert len(p["cases"]) >= 20
+    bad = [r for r in sim.case_results(p) if not r["ok"]]
+    assert not bad, bad
+    outcomes = {r["outcome"] for r in sim.case_results(p)}
+    assert outcomes == {"blocked", "reduced", "damage", "no_surface"}       # 네 결과가 모두 나오게 짰다
+    used = {c["scenario"] for c in p["cases"]}
+    assert used == {s["id"] for s in p["scenarios"]}                         # 원형마다 케이스가 하나 이상
+
+
+def test_case_validation_catches_typos():
+    p = sim.payload()
+    pres = {x["id"]: x for x in p["presets"]}
+    profs = {x["id"]: x for x in p["agent_profiles"]}
+    scns = {x["id"]: x for x in p["scenarios"]}
+    bad = [{"id": "x", "title": "t", "org": "o", "story": "s", "lesson": "l", "preset": "KR-9", "profile": "nope",
+            "scenario": "zz", "expect": "maybe", "levels": {"ghost": 2}, "env": {"wifi": True}}]
+    probs = " ".join(sim.validate_cases(bad, scns, pres, profs, set(CIDS)))
+    for frag in ("preset", "profile", "scenario", "expect", "levels ghost", "env wifi"):
+        assert frag in probs, frag
+
+
+def test_history_appends_only_on_change(tmp_path):
+    h = tmp_path / "h.jsonl"
+    e1 = {"docs": ["a"], "presets": {"KR-2": [1, 2, 3]}, "scenarios": {"KR-2": {"s": "damage"}}}
+    assert sim.update_history(e1, h, at="2026-11-01") and not sim.update_history(e1, h, at="2026-11-02")
+    e2 = {"docs": ["a", "b"], "presets": {"KR-2": [2, 3, 3]}, "scenarios": {"KR-2": {"s": "blocked", "new": "damage"}}}
+    assert sim.update_history(e2, h, at="2026-11-03")
+    hist = sim.load_history(h)
+    assert [x["at"] for x in hist] == ["2026-11-01", "2026-11-03"] and hist[1]["label"] == "문서 추가 b"
+    e3 = dict(e2, scenarios={"KR-2": {"s": "blocked", "new": "damage", "newer": "reduced"}})   # 원형만 늘었다 — 이력 아님
+    assert not sim.update_history(e3, h)
+
+
+def test_registry_history_starts_before_dora():
+    hist = sim.load_history()
+    assert hist and "eu-dora-2022-2554" not in hist[0]["docs"] and "eu-dora-2022-2554" in hist[-1]["docs"]
+
+
+def test_pending_scores_filters_and_dismisses():
+    from types import SimpleNamespace as N
+
+    def item(title, link, topic="guideline", kind="primary", summary=""):
+        return N(title=title, link=link, topic=topic, kind=kind, summary=summary, matched=[], issuer="i",
+                 jurisdiction="KR", published="2026-11-10T00:00:00Z", first_seen="")
+    docs = {"d": N(url="https://www.example.go.kr/known")}
+    items = [item("금융권 AI 에이전트 보안 가이드라인", "https://a.example/1?utm_source=rss"),
+             item("양자 내성 암호 금융 보안 안내", "https://a.example/2"),                      # AI 아님
+             item("AI 에이전트 보안 가이드", "http://example.go.kr/known/"),                  # 이미 레지스트리
+             item("AI 에이전트 보안 가이드라인", "https://a.example/3", topic="incident"),       # 규범 아님
+             item("금융권 AI 에이전트 보안 가이드라인", "https://a.example/1")]                 # 중복
+    rows = sim.pending_regulations(items, docs)
+    assert [r["link"] for r in rows] == ["https://a.example/1?utm_source=rss"]
+    assert rows[0]["score"] == 9 and rows[0]["why"] == ["에이전트", "금융", "보안·통제", "규범", "1차 출처"]
+    assert sim.pending_regulations(items, docs, dismissed={"https://a.example/1"}) == []

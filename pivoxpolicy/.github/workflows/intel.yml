@@ -7,8 +7,10 @@
 #   1. intel  — registry/feeds.yaml 의 RSS/Atom/JSON 피드에서 AI 에이전트 관련 새 항목 → snapshots/intel.jsonl
 #   2. watch  — registry/sources.yaml 의 발표 목록 페이지에서 새 글
 #   3. fetch  — registry/documents 의 URL 스냅숏(해시 변경 = 문서 개정)
-#   4. report / site — out/ 갱신
-#   5. 바뀐 것이 있으면 커밋. 1차(primary) 새 항목이 있으면 이슈 하나를 열어 알린다.
+#   4. pending — 아직 레지스트리에 없는 새 규제·가이드라인 후보 → out/pending-regulations.md
+#   5. report / site — out/ 갱신. site 는 모의 테스트(out/sim.html)도 다시 계산하고, 결과가 바뀌면 snapshots/sim_history.jsonl 에 한 줄 남긴다
+#   6. 바뀐 것이 있으면 커밋. 1차(primary) 새 항목이 있으면 이슈, 반영 대기 후보가 바뀌면 이슈.
+#   규제 문서를 레지스트리에 올리고 코딩하는 일은 사람이 한다 — 이 크론은 찾고 다시 계산할 뿐이다.
 #
 # 비용: 외부 사이트 요청 ~60건/회. 봇 차단(403/202)은 실패로 기록되고 다음 회차에 다시 시도한다.
 name: intel
@@ -50,20 +52,25 @@ jobs:
         run: |
           python3 -m pivoxpolicy.cli watch | tee watch.out
           python3 -m pivoxpolicy.cli fetch | tee fetch.out
-      - name: report + site
+      - name: pending
+        shell: bash
+        run: python3 -m pivoxpolicy.cli pending > /dev/null
+      - name: report + site (+ 모의 테스트 · 이력)
         run: |
           python3 -m pivoxpolicy.cli report
           python3 -m pivoxpolicy.cli site
       - name: commit if changed
+        id: commit
         env:
           ALL_NEW: ${{ steps.intel.outputs.all_new }}
         run: |
           git config user.name "pivoxpolicy-bot"
           git config user.email "pivoxpolicy-bot@users.noreply.github.com"
-          git add snapshots/manifest.json snapshots/intel.jsonl out/
+          git add snapshots/manifest.json snapshots/intel.jsonl snapshots/sim_history.jsonl out/
           if git diff --cached --quiet; then echo "변경 없음"; exit 0; fi
           git commit -m "intel: $(date -u +%Y-%m-%dT%H:%MZ) 수집 — ${ALL_NEW:-0} 새 항목"
           git push
+          echo "committed=1" >> "$GITHUB_OUTPUT"
       - name: open issue when primary sources have news
         if: steps.intel.outputs.primary_new != '0'
         env:
@@ -73,3 +80,11 @@ jobs:
           body=$(awk '/^## 1차/{p=1} /^## 2차/{p=0} p' intel.out)
           [ -z "$body" ] && exit 0
           gh issue create --title "intel $(date -u '+%Y-%m-%d %H:%M')Z — 1차 소스 새 항목" --body "$body" --label intel || true
+      - name: open issue when pending regulation candidates changed
+        if: steps.commit.outputs.committed == '1'   # 이번 회차에 커밋했을 때만 — 아니면 HEAD~1..HEAD 가 지난 회차 변경이다
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git diff --quiet HEAD~1 HEAD -- out/pending-regulations.md 2>/dev/null && exit 0
+          body=$(head -c 60000 out/pending-regulations.md)
+          gh issue create --title "반영 대기 $(date -u '+%Y-%m-%d') — 새 규제·가이드라인 후보" --body "$body" --label intel || true

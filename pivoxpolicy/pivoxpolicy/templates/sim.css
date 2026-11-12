@@ -63,6 +63,25 @@ select:hover{border-color:rgba(245,240,232,0.26)}
 .seg input:focus-visible+span{outline:2px solid var(--pq-ivory);outline-offset:-3px}
 .sec-h .seg{font-size:13px}
 
+/* 데모 케이스 고르기 · 배너 */
+.cases-grp{padding-bottom:18px}
+.case-row{display:grid;grid-template-columns:minmax(0,1fr) 40px 40px;gap:6px}
+.btn.sq{height:40px;width:40px;padding:0;font-size:15px}
+.case-banner:empty{display:none}
+.case-banner{padding:18px 22px;border-radius:var(--pq-radius-card);background:var(--pq-bronze-wash);box-shadow:inset 0 0 0 1px var(--pq-bronze-line)}
+.case-banner .k{font-size:13px;color:var(--pq-bronze)}
+.case-banner .t{margin-top:4px;font-size:19px;font-weight:700;letter-spacing:-0.02em}
+.case-banner .s{margin-top:6px;font-size:14.5px;color:var(--pq-ivory-soft);max-width:110ch}
+.case-banner .grid{display:grid;grid-template-columns:150px minmax(0,1fr);gap:6px 16px;margin-top:12px;font-size:14px}
+.case-banner .grid dt{color:var(--pq-ivory-dim)}
+.case-banner .grid dd{margin:0;color:var(--pq-ivory)}
+.case-banner .r{font-weight:700}
+.case-banner .r.blocked{color:var(--pq-bronze)}
+.case-banner .r.reduced{color:var(--pq-bronze-light)}
+.case-banner .warn{margin-top:10px;font-size:13px;color:var(--pq-stale)}
+.case-banner.off{opacity:0.55}
+.case-banner .again{margin-left:8px;height:28px;font-size:12.5px;padding:0 10px}
+
 /* ── ① 원형 한눈에 ── */
 .ov td,.ov th{vertical-align:middle}
 .ov tbody tr{cursor:pointer}
@@ -126,6 +145,18 @@ select:hover{border-color:rgba(245,240,232,0.26)}
 .lim li{margin:6px 0}
 .lim b{color:var(--pq-ivory)}
 
+/* ── ③ 규제가 바뀌면 ── */
+.hist{list-style:none;margin:0;padding:0;border-top:1px solid var(--pq-ivory-line-strong)}
+.hist>li{margin:0;padding:12px 0;border-bottom:1px solid var(--pq-ivory-line)}
+.hist .h{display:flex;gap:12px;align-items:baseline}
+.hist time{font-size:13px;color:var(--pq-ivory-dim);white-space:nowrap}
+.hist .l{font-weight:600}
+.hist ul{margin:6px 0 0;padding-left:18px;font-size:13.5px;color:var(--pq-ivory-soft)}
+.hist ul li{margin:2px 0}
+.hist b{color:var(--pq-bronze);font-weight:600}
+#pend>li{grid-template-columns:86px minmax(0,1fr)}
+#pend .t{font-weight:500;font-size:14px}
+
 /* ── 인쇄 · PDF: 밝은 바탕, 설정은 고른 값만, 단계 펼침 ── */
 @media print{
   @page{size:A4 landscape;margin:12mm}
@@ -134,7 +165,7 @@ select:hover{border-color:rgba(245,240,232,0.26)}
     --pq-bronze:#7a5a2e;--pq-bronze-light:#8a6a3e;--pq-bronze-wash:#f6efe4;--pq-bronze-line:#d9c7ab}
   body{min-width:0;background:#fff;color:#111}
   .wrap.wide{max-width:none;padding:0}
-  .topbar .nav,.skip,.actions,.run,footer.site .links,#scn-cases,details:not([open]){display:none!important}
+  .topbar .nav,.skip,.actions,.run,footer.site .links,#scn-cases,details:not([open]),.cases-grp,#updates{display:none!important}
   .sim{grid-template-columns:300px minmax(0,1fr);gap:24px}
   .panel{position:static;max-height:none;overflow:visible}
   .seg label:not(:has(input:checked)){display:none}

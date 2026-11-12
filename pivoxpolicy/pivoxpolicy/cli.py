@@ -284,6 +284,15 @@ def cmd_incident_corpus(args: argparse.Namespace) -> int:
     return 1 if bad else 0
 
 
+def cmd_pending(_: argparse.Namespace) -> int:
+    from . import sim as sim_mod
+    rows = sim_mod._all_pending()
+    text = sim_mod.render_pending(rows)
+    (sim_mod.OUT_DIR / "pending-regulations.md").write_text(text, encoding="utf-8")
+    print(text)
+    return 0
+
+
 def cmd_sim(_: argparse.Namespace) -> int:
     from . import sim as sim_mod
     for p in sim_mod.build():
@@ -367,6 +376,7 @@ def build_parser() -> argparse.ArgumentParser:
     icp = sub.add_parser("incident-corpus", help="사건 source_url → 고정 원문(snapshots/incident_content/) + incident_corpus.json")
     icp.add_argument("ids", nargs="*", help="이 사건만 다시 받기 (나머지 고정본은 그대로)")
     icp.set_defaults(fn=cmd_incident_corpus)
+    sub.add_parser("pending", help="자동 수집 피드에서 아직 레지스트리에 없는 새 규제·가이드라인 후보 → out/pending-regulations.md").set_defaults(fn=cmd_pending)
     sub.add_parser("sim", help="out/sim.html 모의 테스트 페이지 + out/simulation.md 프리셋 표").set_defaults(fn=cmd_sim)
     sub.add_parser("site", help="out/index.html 정적 대시보드 생성 (Pivox 디자인)").set_defaults(fn=cmd_site)
     return p

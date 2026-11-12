@@ -11,12 +11,16 @@
 #   contain  — 멈추고 회수한다. 알아챈 뒤라야 제때다(detect 없이 켜져 있으면 '늦게')
 # requires: 이 원형이 성립하려면 에이전트 환경이 갖춰야 하는 조건 — 없으면 '공격면 없음'
 #   untrusted_input: 에이전트가 외부 입력(웹·메일·이슈·문서·고객 메시지)을 읽는다
-#   open_components: 외부 패키지·확장·플러그인·스킬을 들여온다
+#   open_components: 외부 패키지·확장·플러그인·스킬·도구(MCP 서버)를 들여온다
+#   memory: 대화·문서를 장기 메모리·검색 저장소(RAG)에 쌓아 나중에 다시 쓴다
+#   multi_agent: 다른 에이전트에게 일을 맡기거나 받는다
+# basis: 원형의 근거 — 실제 사건(incidents)이 없으면 위협 목록(OWASP Agentic Top 10 등)을 적는다. 사건 0건 원형은 페이지에 '사건 없음' 으로 보인다
 # impact: 피해가 났을 때의 결과 — tools(에이전트 도구 권한)에 따라 다르면 by_tools, 아니면 fixed
 codebook_note: "저자 설계 — 블라인드 코딩 아님"
 
 scenarios:
   - id: prompt_injection
+    basis: ["OWASP ASI01 Agent Goal Hijack"]
     title: 간접 프롬프트 인젝션 → 에이전트가 위험한 행동
     summary: 에이전트가 읽는 웹페이지·메일·이슈·문서에 숨은 지시가 섞여 들어와, 에이전트가 그것을 명령으로 따른다.
     requires: [untrusted_input]
@@ -45,6 +49,7 @@ scenarios:
                 agentsmd-downloads-folder-hijack-2026-10, zenity-agentcorruption-bedrock-agentcore-2026-10, clinejection-cline-triage-agent-2026-02]
 
   - id: supply_chain
+    basis: ["OWASP ASI04 Agentic Supply Chain"]
     title: 공급망 변조 → 악성 패키지·확장·스킬이 에이전트 안에서 돈다
     summary: 에이전트나 개발 도구가 들여오는 외부 구성요소가 변조돼, 그 안의 코드가 에이전트 권한으로 실행된다.
     requires: [open_components]
@@ -74,6 +79,7 @@ scenarios:
                 pillar-rules-file-backdoor-2025-03, nx-s1ngularity-ai-cli-abuse-2025-08, hexagonalrodent-nk-web3-ai-tooling-2026-04]
 
   - id: rogue_agent
+    basis: ["OWASP ASI10 Rogue Agents"]
     title: 자율 에이전트 일탈 → 과제를 위해 범위 밖으로 나간다
     summary: 공격자 없이, 목표를 이루려는 에이전트가 허락받지 않은 수단(샌드박스 탈출·남의 자원 사용)을 쓴다.
     requires: []
@@ -96,6 +102,7 @@ scenarios:
     incidents: [openai-funded-test-wallet-2026-10, hugging-face-openai-eval-agent-breach-2026-07, anthropic-eval-unauthorized-access-2026-07]
 
   - id: ai_attacker
+    basis: ["실제 사건 — 공격자 쪽 AI"]
     title: 공격자가 AI 에이전트로 침투 → 피해자는 일반 시스템
     summary: 공격자가 AI 에이전트로 정찰·침투·확산을 자동화한다. 피해 조직 쪽에는 AI 가 없을 수도 있다 — AI 적용 통제는 여기서 쓸모가 없다.
     requires: []
@@ -128,6 +135,7 @@ scenarios:
                 kr-fsi-assessment-system-breach-2026-11]
 
   - id: ai_credentials
+    basis: ["OWASP ASI03 Identity and Privilege Abuse"]
     title: AI 연동·자격증명 탈취 → 업체 침해·토큰·노출된 AI 인프라
     summary: 에이전트 연동 업체가 뚫리거나, AI 서비스 토큰이 털리거나, 노출된 AI 엔드포인트·패널이 넘어간다. 내 쪽에서 막을 수 없는 경우가 많다 — 피해를 줄이는 싸움이다.
     requires: []
@@ -156,6 +164,160 @@ scenarios:
                 mythos-preview-unauthorized-access-2026-04, langflow-exploited-in-the-wild-kev-2025-05, llmjacking-autonomous-agent-2026-10,
                 cairn-exposed-agent-panels-2026-10]
 
+  # ── 실제 사건 없이 위협 목록에서 가져온 원형 (2026-11-12) — 레지스트리 45건 중 이 경로가 주된 사건이 없다 ──
+  - id: tool_poisoning
+    basis: ["OWASP ASI02 Tool Misuse and Exploitation", "OWASP ASI04 Agentic Supply Chain"]
+    title: 도구·MCP 서버 설명 오염 → 에이전트가 숨은 지시대로 다른 도구를 쓴다
+    summary: 연결한 도구·MCP 서버의 설명문에 숨은 지시가 있다. 사람은 설명을 잘 안 읽고, 에이전트는 그대로 따른다.
+    requires: [open_components]
+    impact:
+      by_tools: {read: 다른 도구의 데이터·비밀이 밖으로 새어 나감, write: 다른 도구로 파일·설정 변경, pay: 다른 도구로 송금 지시}
+    stages:
+      - title: 연결한 도구의 설명에 숨은 지시가 있다
+        desc: 도구 설명·스키마가 바뀌어도 사람에게는 알림이 없다.
+        checks:
+          - {control: vendors, layer: agent, effect: prevent, why: 승인된 도구·MCP 서버만 연결하고, 설명이 바뀌면 다시 검토한다}
+          - {control: inventory, layer: agent, effect: detect, why: 연결된 도구 목록과 버전이 있어 바뀐 설명이 보인다}
+      - title: 에이전트가 숨은 지시대로 다른 도구를 부른다
+        desc: 오염된 도구가 다른 도구의 데이터·권한을 빌린다.
+        checks:
+          - {control: least_privilege, layer: agent, effect: prevent, why: 도구마다 허용된 동작과 데이터 범위가 따로 묶여 있다}
+          - {control: unique_id, layer: agent, effect: limit, why: 도구별 자격증명이 달라 한 도구가 다른 도구의 토큰을 못 쓴다}
+      - title: 고위험 행위를 실행하기 직전
+        desc: 외부 전송·송금·설정 변경.
+        checks:
+          - {control: human_approval, layer: agent, effect: prevent, why: 고위험 행위는 사람이 승인해야 실행된다}
+      - title: 사후
+        desc: 어느 도구 때문이었나.
+        checks:
+          - {control: audit_trail, layer: agent, effect: detect, why: 어느 도구 설명이 어떤 호출을 불렀는지 남는다}
+          - {control: kill_switch, layer: agent, effect: contain, why: 문제 도구 연결을 즉시 끊는다}
+    incidents: []
+
+  - id: memory_poisoning
+    basis: ["OWASP ASI06 Memory and Context Poisoning"]
+    title: 기억 오염 → 쌓아 둔 메모리·검색 자료가 나중에 지시처럼 쓰인다
+    summary: 외부 입력이 장기 메모리·검색 저장소(RAG)에 쌓였다가, 며칠 뒤 다른 작업·다른 사용자에게서 지시로 작동한다.
+    requires: [untrusted_input, memory]
+    impact:
+      by_tools: {read: 다른 사용자에게 틀리거나 새어 나간 정보 제공, write: 나중 작업에서 설정 변경·악성 실행, pay: 나중 작업에서 잘못된 송금}
+    stages:
+      - title: 오염된 내용이 기억에 쌓인다
+        desc: 메일·문서·대화 속 지시가 사실처럼 저장된다.
+        checks:
+          - {control: least_privilege, layer: agent, effect: prevent, why: 외부 입력은 출처 표시와 함께 따로 저장돼 지시로 쓰이지 않는다}
+          - {control: audit_trail, layer: agent, effect: detect, why: 기억에 무엇이 어디서 들어왔는지 기록이 남는다}
+      - title: 며칠 뒤 다른 작업에서 그 기억이 쓰인다
+        desc: 오염 시점과 피해 시점이 떨어져 원인을 찾기 어렵다.
+        checks:
+          - {control: unique_id, layer: agent, effect: limit, why: 사용자·에이전트별로 기억이 나뉘어 다른 사용자 작업에 섞이지 않는다}
+      - title: 고위험 행위를 실행하기 직전
+        desc: 기억을 근거로 한 행위.
+        checks:
+          - {control: human_approval, layer: agent, effect: prevent, why: 고위험 행위는 사람이 승인해야 실행된다}
+      - title: 사후
+        desc: 오염된 기억을 찾아 지운다.
+        checks:
+          - {control: kill_switch, layer: agent, effect: contain, why: 오염된 기억을 지우고 에이전트를 멈춘다}
+    incidents: []
+
+  - id: multi_agent_cascade
+    basis: ["OWASP ASI07 Insecure Inter-Agent Communication", "OWASP ASI08 Cascading Failures"]
+    title: 에이전트 간 위임 연쇄 → 하나가 속으면 줄줄이 따라간다
+    summary: 외부와 닿는 에이전트 하나가 속아, 동료 에이전트에게 일을 넘긴다. 받는 쪽은 동료의 요청이라 믿는다.
+    requires: [multi_agent]
+    impact:
+      by_tools: {read: 여러 시스템의 정보가 한꺼번에 새어 나감, write: 여러 시스템 설정이 연쇄로 바뀜, pay: 연쇄 위임으로 송금}
+    stages:
+      - title: 외부와 닿는 에이전트 하나가 속는다
+        desc: 프롬프트 인젝션·오염된 도구 등 어떤 경로든.
+        checks: []
+      - title: 그 에이전트가 다른 에이전트에게 일을 넘긴다
+        desc: 에이전트 사이 메시지에는 보통 인증이 없다.
+        checks:
+          - {control: unique_id, layer: agent, effect: prevent, why: 에이전트마다 신원이 있어 요청을 누가 보냈는지 확인하고, 허락된 위임만 받는다}
+          - {control: least_privilege, layer: agent, effect: limit, why: 받는 에이전트가 할 수 있는 일이 좁다}
+      - title: 연쇄 끝에서 고위험 행위
+        desc: 처음 속은 에이전트에게는 없던 권한이 쓰인다.
+        checks:
+          - {control: human_approval, layer: agent, effect: prevent, why: 고위험 행위는 사람이 승인해야 실행된다}
+      - title: 퍼지는 중
+        desc: 여러 에이전트가 동시에 움직인다.
+        checks:
+          - {control: audit_trail, layer: agent, effect: detect, why: 에이전트 사이 메시지·위임이 기록된다}
+          - {control: kill_switch, layer: agent, effect: contain, why: 연결된 에이전트를 한 번에 멈춘다}
+    incidents: []
+
+  - id: approval_exploitation
+    basis: ["OWASP ASI09 Human-Agent Trust Exploitation"]
+    title: 사람 승인 노리기 → 승인 피로·꾸민 요약으로 승인을 받아 낸다
+    summary: 사람 승인이 있어도, 하루 수십 건 승인 요청 속에 무해해 보이게 꾸민 위험 행위가 섞인다.
+    requires: [untrusted_input]
+    impact:
+      by_tools: {read: 승인된 '조회' 로 대량 유출, write: 승인된 '정상 작업' 으로 악성 변경, pay: 승인된 송금}
+    stages:
+      - title: 공격자 지시가 에이전트 작업에 섞인다
+        desc: 외부 입력에 숨은 지시.
+        checks: []
+      - title: 에이전트가 위험한 행위를 무해하게 요약해 승인을 요청한다
+        desc: 받는 사람·금액·대상이 요약에서 흐려진다.
+        checks:
+          - {control: least_privilege, layer: agent, effect: prevent, why: 금액·대상·횟수 한도가 도구에 박혀 있어 승인과 무관하게 넘을 수 없다}
+          - {control: human_approval, layer: agent, effect: limit, why: 승인 화면이 실제 행위를 그대로 보여 주면 일부는 걸러진다 — 피로·꾸민 요약이면 통과}
+      - title: 승인된 행위가 실행된다
+        desc: 기록상으로는 '사람이 승인한' 정상 거래다.
+        checks:
+          - {control: audit_trail, layer: agent, effect: detect, why: 승인 요청 문구와 실제 실행 내용이 함께 남아 차이가 보인다}
+          - {control: kill_switch, layer: agent, effect: contain, why: 이상 승인 뒤 에이전트를 멈추고 권한을 회수한다}
+    incidents: []
+
+  - id: insider_misuse
+    basis: ["OWASP ASI03 Identity and Privilege Abuse"]
+    title: 내부자 악용 → 직원이 에이전트로 권한 밖 대량 조회
+    summary: 에이전트는 시스템 권한으로 움직여 그 직원의 권한보다 넓다. 직원이 에이전트를 시켜 자기 권한 밖 데이터를 모은다.
+    requires: []
+    impact:
+      fixed: 고객 정보 대량 반출
+    stages:
+      - title: 직원이 에이전트에게 업무 밖 대량 조회를 시킨다
+        desc: 에이전트 서비스 계정은 넓은 조회 권한을 가진다.
+        checks:
+          - {control: least_privilege, layer: agent, effect: prevent, why: 에이전트는 시킨 직원의 권한 범위 안에서만 조회한다}
+          - {control: unique_id, layer: agent, effect: limit, why: 누가 시켰는지 에이전트 행위에 붙어 익명 대량 조회가 안 된다}
+      - title: 모은 결과를 밖으로 옮긴다
+        desc: 파일 내려받기·메일·외부 저장소.
+        checks:
+          - {control: human_approval, layer: analog, effect: prevent, why: 대량 반출·외부 전송은 책임자 결재를 거친다}
+      - title: 사후
+        desc: 누가, 언제, 무엇을.
+        checks:
+          - {control: audit_trail, layer: agent, effect: detect, why: 에이전트 조회 기록이 요청한 직원과 함께 남는다}
+          - {control: kill_switch, layer: analog, effect: contain, why: 해당 직원 계정을 즉시 정지한다}
+    incidents: []
+
+  - id: cross_customer_leak
+    basis: ["OWASP ASI03 Identity and Privilege Abuse", "OWASP LLM02:2025 Sensitive Information Disclosure"]
+    title: 고객 간 정보 노출 → 상담 에이전트가 다른 고객 정보를 말해 준다
+    summary: 고객(또는 사칭자)이 대화로 다른 고객 정보를 유도하고, 상담 에이전트가 넓은 조회 권한으로 가져와 답한다.
+    requires: [untrusted_input]
+    impact:
+      fixed: 다른 고객의 개인정보 노출
+    stages:
+      - title: 대화로 다른 고객 정보를 유도한다
+        desc: "'가족 계좌인데요', '지난번 상담 내용 다시 보여 주세요'."
+        checks: []
+      - title: 에이전트가 조회 도구로 다른 고객 데이터를 가져온다
+        desc: 공용 서비스 계정은 모든 고객을 조회할 수 있다.
+        checks:
+          - {control: least_privilege, layer: agent, effect: prevent, why: 조회 범위가 인증된 그 고객으로 묶여 있다}
+          - {control: unique_id, layer: agent, effect: limit, why: 상담 세션마다 에이전트 신원·권한이 따로라 공용 계정이 아니다}
+      - title: 응답에 담아 보낸다
+        desc: 개인정보가 대화창에 나간다.
+        checks:
+          - {control: audit_trail, layer: agent, effect: detect, why: 응답에 담긴 개인정보가 기록·모니터링된다}
+          - {control: kill_switch, layer: agent, effect: contain, why: 문제 응답 패턴을 즉시 막는다}
+    incidents: []
+
 # 통제 수준의 실무 뜻 — 설정 패널에서 통제 이름을 누르면 보인다(저자 작성, controls.yaml 의 판정 기준을 실무 문장으로 줄인 것)
 control_help:
   inventory: {analog: "자산·계정·시스템 목록과 책임자를 유지한다", agent: "에이전트·모델·API 키·연결 도구(MCP 서버 등)까지 목록에 올리고 책임자를 정한다"}
@@ -168,7 +330,11 @@ control_help:
 
 # 에이전트 종류 — 고르면 환경 세 가지가 이 값으로 바뀐다(그 뒤 손으로 바꿀 수 있다)
 agent_profiles:
-  - {id: support, label: 고객 상담 에이전트, tools: read, untrusted_input: true, open_components: false}
-  - {id: trading, label: 트레이딩·결제 에이전트, tools: pay, untrusted_input: true, open_components: false}
-  - {id: coding, label: 사내 코딩 에이전트, tools: write, untrusted_input: true, open_components: true}
-  - {id: internal, label: 내부 문서 요약 에이전트, tools: read, untrusted_input: false, open_components: false}
+  - {id: support, label: 고객 상담 에이전트, tools: read, untrusted_input: true, open_components: false, memory: true, multi_agent: false}
+  - {id: trading, label: 트레이딩·결제 에이전트, tools: pay, untrusted_input: true, open_components: false, memory: false, multi_agent: false}
+  - {id: coding, label: 사내 코딩 에이전트, tools: write, untrusted_input: true, open_components: true, memory: false, multi_agent: false}
+  - {id: internal, label: 내부 문서 요약 에이전트, tools: read, untrusted_input: false, open_components: false, memory: false, multi_agent: false}
+  - {id: research, label: 리서치·RAG 에이전트, tools: read, untrusted_input: true, open_components: false, memory: true, multi_agent: false}
+  - {id: workflow, label: 멀티 에이전트 업무 자동화, tools: write, untrusted_input: true, open_components: true, memory: true, multi_agent: true}
+  - {id: soc, label: 보안 운영(SOC) 에이전트, tools: write, untrusted_input: true, open_components: true, memory: false, multi_agent: false}
+  - {id: loan, label: 대출 심사 보조 에이전트, tools: read, untrusted_input: true, open_components: false, memory: false, multi_agent: false}
