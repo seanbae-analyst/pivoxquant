@@ -230,11 +230,22 @@
     $("attack").hidden = false; $("oblig").hidden = false;
     clear($("cases-out")); clear($("matrix-out")); clear($("ob-out")); say("cases-hint", ""); say("matrix-hint", ""); say("ob-msg", "");
     renderObForm();
+    renderReportLinks();
     ["d-save", "d-redteam", "d-cases", "d-matrix", "d-apply-btn", "ob-run", "ob-save"].forEach(function (id) { $(id).disabled = dead; });
   }
   function levelsDirty() {
     var saved = (agents.filter(function (x) { return cur && x.id === cur.id; })[0] || {}).levels || {};
     return meta.controls.some(function (c) { return Number(saved[c.id] || 0) !== Number((cur.levels || {})[c.id] || 0); });
+  }
+  function renderReportLinks() {
+    var box = clear($("rep-links")), base = "/admin/api/agents/" + cur.id + "/report.";
+    if (!cur.compliance) { box.appendChild(el("span", { cls: "fine", text: "적용 조문 프로필을 저장하면 보고서를 만들 수 있다." })); return; }
+    [["html", "보고서 열기", "btn btn-primary sm"], ["md", "Markdown", "btn sm"], ["rcm.csv", "RCM CSV", "btn sm"], ["obligations.csv", "조문 CSV", "btn sm"]].forEach(function (x) {
+      var at = { href: base + x[0], cls: x[2], text: x[1] };
+      if (x[0] === "html") { at.target = "_blank"; at.rel = "noopener"; }
+      box.appendChild(el("a", at));
+    });
+    if (levelsDirty()) box.appendChild(el("span", { cls: "fine", text: "저장하지 않은 통제 변경은 보고서에 들어가지 않는다." }));
   }
   function renderControls() {
     var cbox = clear($("d-controls"));

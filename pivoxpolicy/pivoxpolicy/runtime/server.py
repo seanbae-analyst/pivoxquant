@@ -101,6 +101,7 @@ class App:
             ("POST", re.compile(r"^/admin/api/agents/(agt_[a-z0-9]+)/obligations$"), self.a(self.obligations)),
             ("POST", re.compile(r"^/admin/api/intake/preview$"), self.a(self.intake_preview)),
             ("GET", re.compile(r"^/admin/api/intake/example$"), self.a(self.intake_example)),
+            ("GET", re.compile(r"^/admin/api/agents/(agt_[a-z0-9]+)/report\.(html|md|rcm\.csv|obligations\.csv)$"), self.a(self.report)),
             ("POST", re.compile(r"^/admin/api/intake/register$"), self.a(self.intake_register)),
             ("GET", re.compile(r"^/admin/api/approvals$"), self.a(self.approvals)),
             ("POST", re.compile(r"^/admin/api/approvals/(apr_[0-9a-f]{16})$"), self.a(self.approve)),
@@ -138,6 +139,15 @@ class App:
         start_response(f"{status} {_REASON.get(status, 'Status')}", [("Content-Type", "application/json; charset=utf-8"),
                        ("Content-Length", str(len(body))), *BASE_HEADERS, *(extra or [])])
         return [body]
+
+    def raw(self, sr, text: str, ctype: str, filename: str | None = None):
+        from urllib.parse import quote
+        b = text.encode("utf-8")
+        hdr = [("Content-Type", ctype), ("Content-Length", str(len(b))), *BASE_HEADERS]
+        if filename:
+            hdr.append(("Content-Disposition", f"attachment; filename*=UTF-8''{quote(filename)}"))
+        sr("200 OK", hdr)
+        return [b]
 
     def body(self, environ) -> Any:
         ctype = (environ.get("CONTENT_TYPE") or "").split(";")[0].strip().lower()
@@ -389,6 +399,24 @@ class App:
         src, ov = self._spec_body(environ)
         agent, secret, r = self.rt.import_spec(src, ov)
         return self.json(sr, {"agent": self._with_keys(agent), "api_key": secret, "warnings": r["warnings"], "cases": len(r["cases"])}, 201)
+
+    def report(self, environ, sr, aid, fmt):
+        """진단 보고서 — html(브라우저로 열기 · 인쇄) · md · rcm.csv · obligations.csv. 샌드박스로 돌려 에이전트 상태는 바뀌지 않는다."""
+        from .. import diagnosis
+        a = self.rt.agent(aid)
+        try:
+            D = diagnosis.diagnose(a, self.rt.store.components(), lib=self.rt.lib, audit=self.rt.store.verify_audit())
+        except diagnosis.ReportError as e:
+            raise HttpError(409, str(e)) from None
+        self.rt.store.audit("admin", aid, {"op": "report", "format": fmt})
+        stem = f"진단보고서_{a['name']}_{D['generated_at'][:10]}"
+        if fmt == "html":
+            return self.raw(sr, diagnosis.to_html(D), "text/html; charset=utf-8")
+        if fmt == "md":
+            return self.raw(sr, diagnosis.to_markdown(D), "text/markdown; charset=utf-8", stem + ".md")
+        if fmt == "rcm.csv":
+            return self.raw(sr, diagnosis.rcm_csv(D), "text/csv; charset=utf-8", stem + "_RCM.csv")
+        return self.raw(sr, diagnosis.obligations_csv(D), "text/csv; charset=utf-8", stem + "_조문.csv")
 
     def approvals(self, environ, sr):
         qs = environ.get("QUERY_STRING", "")

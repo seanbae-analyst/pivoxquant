@@ -198,3 +198,20 @@ def test_intake_preview_and_register(srv):
     assert any(c["name"] == "broker-gw" and c["sha256"] for c in comps["components"])
     st, cs, _ = call(base, "POST", f"/admin/api/agents/{a['id']}/cases", {}, headers=h)
     assert st == 200 and all(x["id"].startswith("gen-") for x in cs["results"])
+
+
+def test_report_endpoints(srv):
+    from pathlib import Path
+    base, _ = srv
+    h = login(base)
+    spec = (Path(__file__).resolve().parents[1] / "examples" / "agent_spec_order.yaml").read_text(encoding="utf-8")
+    st, r, _ = call(base, "POST", "/admin/api/intake/register", {"spec_text": spec}, headers=h)
+    aid = r["agent"]["id"]
+    st, body, hd = call(base, "GET", f"/admin/api/agents/{aid}/report.html", headers={"Cookie": h["Cookie"]}, raw=True)
+    assert st == 200 and hd["Content-Type"].startswith("text/html") and "통제 매트릭스".encode() in body and b"<script" not in body
+    assert "default-src 'none'" in hd["Content-Security-Policy"]
+    st, body, hd = call(base, "GET", f"/admin/api/agents/{aid}/report.rcm.csv", headers={"Cookie": h["Cookie"]}, raw=True)
+    assert st == 200 and "attachment" in hd["Content-Disposition"] and body.startswith("﻿".encode())
+    assert call(base, "GET", f"/admin/api/agents/{aid}/report.html")[0] == 401                  # 로그인 없이 못 본다
+    st, r2, _ = call(base, "POST", "/admin/api/agents", {"name": "x", "owner": "y", "env": {"tools": "read"}}, headers=h)
+    assert call(base, "GET", f"/admin/api/agents/{r2['agent']['id']}/report.md", headers={"Cookie": h["Cookie"]})[0] == 409   # 프로필 없음

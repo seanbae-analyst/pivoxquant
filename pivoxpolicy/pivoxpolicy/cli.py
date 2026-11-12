@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 from typing import Any
 
 from . import assess as assess_mod
@@ -327,6 +328,32 @@ def cmd_bundle(_: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_diagnose(a: argparse.Namespace) -> int:
+    """에이전트 명세서 → 진단 보고서 한 벌. 서버 없이(샌드박스) 돈다."""
+    from . import diagnosis, intake
+    try:
+        r = intake.build(Path(a.spec).read_text(encoding="utf-8"))
+    except (OSError, intake.IntakeError) as e:
+        print(f"명세를 읽지 못했다: {e}", file=sys.stderr)
+        return 2
+    agent = {"id": "agt_diagnose", "status": "active", "expires_at": None, **r["agent"], "compliance": r["compliance"], "cases": r["cases"],
+             "intake": {"tools": r["tools"], "warnings": r["warnings"], "skipped": r["skipped"]}}
+    D = diagnosis.diagnose(agent, r["components"], company=a.company)
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    files = {"report.html": diagnosis.to_html(D), "report.md": diagnosis.to_markdown(D), "rcm.csv": diagnosis.rcm_csv(D),
+             "obligations.csv": diagnosis.obligations_csv(D)}
+    for name, text in files.items():
+        (out / name).write_text(text, encoding="utf-8")
+    s, rs = D["assessment"]["summary"], D["attack"]["summary"]
+    print(f"{agent['name']}: 걸리는 조문 {s['applicable']}(강제 {s['binding']}) · 설계 충돌 {s['conflict']} · 미충족 {s['unmet']} · "
+          f"공격 결함 {rs['defect']} · 승인 기댐 {rs['held']}")
+    for w in r["warnings"]:
+        print(f"  확인: {w}")
+    print(f"→ {out}/ ({', '.join(files)})")
+    return 0
+
+
 def cmd_report(_: argparse.Namespace) -> int:
     controls, docs, codings = _load_all()
     for p in report_mod.write_all(docs, controls, codings):
@@ -387,6 +414,11 @@ def build_parser() -> argparse.ArgumentParser:
     ak.add_argument("b")
     ak.set_defaults(fn=cmd_assess_kappa)
     sub.add_parser("report", help="out/ 에 매트릭스·연표·공백·kappa 전부 쓰기").set_defaults(fn=cmd_report)
+    dg = sub.add_parser("diagnose", help="에이전트 명세서(도구 정의) → 진단 보고서(HTML · Markdown · RCM CSV · 조문 CSV). 서버 없이")
+    dg.add_argument("spec", help="명세 YAML · JSON (예: examples/agent_spec_order.yaml)")
+    dg.add_argument("--out", default="out/diagnosis", help="보고서를 쓸 폴더")
+    dg.add_argument("--company", help="보고서 머리말에 넣을 회사 이름")
+    dg.set_defaults(fn=cmd_diagnose)
     sub.add_parser("incidents", help="AI 에이전트 보안 사건 × 통제 교차표").set_defaults(fn=cmd_incidents)
     ik = sub.add_parser("incident-kappa", help="사건 × 통제 코딩 일치도 (1차 related_controls vs registry/incident_codings)")
     ik.add_argument("coder", nargs="?")
