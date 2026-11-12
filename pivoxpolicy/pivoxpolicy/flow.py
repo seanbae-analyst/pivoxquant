@@ -1,6 +1,7 @@
 """명령 흐름 — 명령(도구 호출) 하나가 런타임의 관문 일곱 개를 지나가는 길을 노선도처럼 그린다.
 
-  ○ 검사 안 함(그 통제가 AI 수준이 아니다)   ● 검사하고 통과   ■ 차단   ◎ 승인 대기
+  관문은 세로 막대다: 빈 막대 = 검사 안 함(그 통제가 AI 수준이 아니다) · 채운 막대 = 검사하고 통과
+                      굵은 채운 막대 = 차단 · 굵은 빈 막대 = 승인 대기
   ━ 명령이 지나간 길   ┄ 승인되면 지나갈 길   · 도달하지 않은 길
 
 정책 엔진(policy.decide)이 남긴 checks 를 그대로 옮긴다. 그림을 위해 판정을 다시 계산하지 않는다.
@@ -252,14 +253,13 @@ CSS = """
 .c.end .arrow{position:relative;z-index:1;width:0;height:0;margin-left:-8px;border-top:7px solid transparent;border-bottom:7px solid transparent;border-left:11px solid var(--mt-live)}
 .c.end.in-cond .arrow{border-left-color:var(--mt-cond)}
 .c.end.in-dead .arrow{display:none}
-.n{position:relative;z-index:1;display:block;box-sizing:border-box;border-radius:50%;background:var(--mt-bg)}
-.n.s-off{width:15px;height:15px;border:2px solid var(--mt-off)}
-.n.s-pass,.n.s-flag{width:16px;height:16px;background:var(--mt-gate)}
-.n.s-not_reached{width:10px;height:10px;border:1.5px solid var(--mt-dead)}
-.n.s-block{width:26px;height:26px;border-radius:6px;background:var(--mt-gate)}
-.n.s-block::after{content:"";position:absolute;left:6px;right:6px;top:50%;height:3px;margin-top:-1.5px;background:var(--mt-bg);border-radius:2px}
-.n.s-approval{width:26px;height:26px;border:4px solid var(--mt-gate)}
-.nl{position:absolute;top:calc(50% + 16px);left:50%;transform:translateX(-50%);font-style:normal;font-size:12.5px;font-weight:600;white-space:nowrap;color:var(--pq-bronze)}
+.n{position:relative;z-index:1;display:block;box-sizing:border-box;border-radius:2px;background:var(--mt-bg)}
+.n.s-off{width:8px;height:24px;border:1.5px solid var(--mt-off)}
+.n.s-pass,.n.s-flag{width:8px;height:24px;background:var(--mt-gate)}
+.n.s-not_reached{width:6px;height:14px;border:1px solid var(--mt-dead)}
+.n.s-block{width:14px;height:38px;border-radius:3px;background:var(--mt-gate)}
+.n.s-approval{width:14px;height:38px;border-radius:3px;border:3px solid var(--mt-gate)}
+.nl{position:absolute;top:calc(50% + 23px);left:50%;transform:translateX(-50%);font-style:normal;font-size:12.5px;font-weight:600;white-space:nowrap;color:var(--pq-bronze)}
 .mt-w{font-size:16px;font-weight:700;white-space:nowrap}
 .w-exec{color:var(--pq-ivory)}
 .w-block,.w-wait{color:var(--pq-bronze)}
@@ -267,9 +267,9 @@ CSS = """
 .w-na{color:var(--pq-ivory-faint);font-weight:500}
 .mt-key{display:flex;flex-wrap:wrap;align-items:center;gap:8px 22px;margin:0 0 6px;font-size:14px;color:var(--pq-ivory-soft)}
 .mt-key span{display:inline-flex;align-items:center;gap:8px}
-.mt-key .n.s-block,.mt-key .n.s-approval{width:20px;height:20px}
-.mt-key .n.s-block::after{left:5px;right:5px}
-.mt-key .n.s-approval{border-width:3px}
+.mt-key .n.s-off,.mt-key .n.s-pass{height:18px}
+.mt-key .n.s-block,.mt-key .n.s-approval{width:11px;height:22px}
+.mt-key .n.s-approval{border-width:2.5px}
 .ln{display:inline-block;width:28px;height:0;border-top:3px solid var(--mt-live)}
 .ln.cond{border-top-style:dashed;border-top-color:var(--mt-cond)}
 .mt-gl{display:none;margin:0 0 8px;font-size:13px;line-height:1.7;color:var(--pq-ivory-dim)}
@@ -288,15 +288,14 @@ CSS = """
 .mt-det ul{margin:4px 0 0;padding-left:18px;font-size:14px;line-height:1.7;color:var(--pq-ivory-soft)}
 .mt-det li>b{color:var(--pq-ivory)}
 .mt-row.mini{grid-template-columns:minmax(0,1fr) 7.5em;gap:0 10px}
-.mt-row.mini .mt-track{height:30px;grid-template-columns:repeat(7,minmax(0,1fr)) 18px}
+.mt-row.mini .mt-track{height:34px;grid-template-columns:repeat(7,minmax(0,1fr)) 18px}
 .mt-head.mini .mt-track{height:auto}
 .mt-head.mini .gn{font-size:12.5px}
-.mt-row.mini .n.s-off{width:10px;height:10px;border-width:1.5px}
-.mt-row.mini .n.s-pass,.mt-row.mini .n.s-flag{width:11px;height:11px}
-.mt-row.mini .n.s-block,.mt-row.mini .n.s-approval{width:17px;height:17px;border-radius:4px}
-.mt-row.mini .n.s-approval{border-radius:50%;border-width:3px}
-.mt-row.mini .n.s-block::after{left:4px;right:4px;height:2px;margin-top:-1px}
-.mt-row.mini .n.s-not_reached{width:7px;height:7px}
+.mt-row.mini .n.s-off{width:6px;height:15px;border-width:1.2px}
+.mt-row.mini .n.s-pass,.mt-row.mini .n.s-flag{width:6px;height:15px}
+.mt-row.mini .n.s-block,.mt-row.mini .n.s-approval{width:10px;height:24px;border-radius:2px}
+.mt-row.mini .n.s-approval{border-width:2.5px}
+.mt-row.mini .n.s-not_reached{width:4px;height:9px}
 .mt-row.mini .c.in-live::before,.mt-row.mini .c.out-live::after,.mt-row.mini .c.in-cond::before,.mt-row.mini .c.out-cond::after{border-top-width:2px;margin-top:-1px}
 .mt-row.mini .c.end .arrow{margin-left:-6px;border-top-width:5px;border-bottom-width:5px;border-left-width:8px}
 .mt-row.mini .mt-w{font-size:14px}

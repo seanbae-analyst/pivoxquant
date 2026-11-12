@@ -259,7 +259,7 @@ def sections(D: dict[str, Any]) -> list[tuple]:
     open_ = [r for r in res["results"] if r["kind"] == "attack" and r["verdict"] in ("defect", "held")]
     if open_ and D.get("case_defs"):
         S.append(("p", f"아래는 미차단 · 승인 의존인 공격 {len(open_)}개의 명령 흐름이다. 명령이 런타임의 관문 일곱 개를 지나는 길이고, "
-                       "빈 관문(○)은 그 통제가 AI 수준이 아니어서 런타임이 보지 않은 곳이다."))
+                       "빈 관문은 그 통제가 AI 수준이 아니어서 런타임이 보지 않은 곳이다."))
         S.append(("flows", [(D["case_defs"][r["id"]], r) for r in open_ if r["id"] in D["case_defs"]]))
     # 조문별 충족
     S.append(("h2", "6. 조문별 충족"))

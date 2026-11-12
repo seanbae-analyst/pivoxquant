@@ -178,39 +178,43 @@ READING_HOW = {"binding_explicit": "강제 조문을 문언대로 읽는다", "b
                "guideline": "가이드라인 · 평가기준까지 넣는다"}
 
 
-def dots(m: dict[str, int], cls: str = "dg") -> str:
-    """점 묶음 — 판정별 개수만큼, 미차단부터."""
-    title = ", ".join(f"{LBL[k]} {m.get(k, 0)}" for k in DOT_ORDER if m.get(k))
-    return (f'<span class="{cls}" role="img" aria-label="{html.escape(title)}" title="{html.escape(title)}">'
-            + "".join(f'<i class="d v-{k}"></i>' * m.get(k, 0) for k in DOT_ORDER) + "</span>")
+def bar(m: dict[str, int], total: int, cls: str = "bar") -> str:
+    """막대 하나 = 공격 시나리오 전체. 왼쪽부터 미차단(아이보리) · 승인 의존(브론즈), 빈 칸 = 자동 차단."""
+    title = ", ".join(f"{LBL[k]} {m.get(k, 0)}" for k in DOT_ORDER if m.get(k)) + f" (전체 {total})"
+    segs = "".join(f'<span class="v-{k}" style="width:{100 * m[k] / total:.3f}%"></span>' for k in ("defect", "held") if total and m.get(k))
+    return f'<span class="{cls}" role="img" aria-label="{html.escape(title)}" title="{html.escape(title)}">{segs}</span>'
 
 
-def dot_key() -> str:
-    return '<p class="dkey">' + "".join(f'<span><i class="d v-{k}"></i>{LBL[k]}</span>' for k in ("defect", "held", "good")) + "</p>"
+def bar_key() -> str:
+    return ('<p class="dkey"><span><i class="sw v-defect"></i>미차단</span><span><i class="sw v-held"></i>승인 의존</span>'
+            '<span><i class="sw sw-empty"></i>자동 차단</span></p>')
 
 
-def figure_hero(R: dict[str, Any]) -> str:
-    """그림 1: 기준 셋을 나란히 — 큰 수(미차단) + 점 45개."""
+def figure_compare(R: dict[str, Any]) -> str:
+    """그림 1: 기준 셋 — 이름 · 막대 · 큰 수(미차단)."""
     ag = R["aggregate"]
     total = ag["binding_explicit"]["attacks"]
-    out = ['<div class="hero">']
+    out = ['<div class="cmp">']
     for rd in KEY_READINGS:
         a = ag[rd]
-        out.append(f'<div class="hp{" is-key" if rd == "binding_explicit" else ""}"><p class="hp-h">{html.escape(READING_SHORT[rd])}</p>'
-                   f'<p class="hp-how">{html.escape(READING_HOW[rd])}</p>'
-                   f'<p class="hp-n"><b>{a["defect"]}</b><span>미차단 / {total}</span></p>{dots(a, "dg dg-l")}'
-                   f'<p class="hp-sub">승인 의존 {a["held"]} · 자동 차단 {a["good"]}</p></div>')
-    out.append("</div>")
+        held = f"<small>승인 의존 {a['held']}</small>" if a["held"] else ""
+        out.append(f'<div class="cmp-row{" is-key" if rd == "binding_explicit" else ""}">'
+                   f'<div class="cmp-l"><b>{html.escape(READING_SHORT[rd])}</b><span>{html.escape(READING_HOW[rd])}</span></div>'
+                   f'{bar(a, total)}<div class="cmp-n"><b>{a["defect"]}</b><span>미차단</span>{held}</div></div>')
+    out.append(f'<div class="cmp-axis"><span></span><span class="ax"><span>0</span><span>{total}</span></span><span></span></div></div>')
     return "".join(out)
 
 
 def figure_types(R: dict[str, Any]) -> str:
-    """그림: 유형 × 기준 점 행렬."""
+    """그림: 유형 × 기준 — 칸마다 얇은 막대 + 미차단 수."""
     head = '<div class="tm-row tm-head"><span></span>' + "".join(f"<span>{html.escape(READING_SHORT[r])}</span>" for r in KEY_READINGS) + "</div>"
     rows = []
     for x in R["agents"]:
-        rows.append(f'<div class="tm-row"><span class="tm-l"><b>{html.escape(x["id"])}</b> {html.escape(x["label"])}</span>'
-                    + "".join(f'<span class="tm-c">{dots(x["readings"][rd], "dg dg-s")}</span>' for rd in KEY_READINGS) + "</div>")
+        cells = []
+        for rd in KEY_READINGS:
+            m = x["readings"][rd]
+            cells.append(f'<span class="tm-c">{bar(m, m["attacks"], "bar bar-s")}<em class="{"" if m["defect"] else "z"}">{m["defect"]}</em></span>')
+        rows.append(f'<div class="tm-row"><span class="tm-l"><b>{html.escape(x["id"])}</b> {html.escape(x["label"])}</span>{"".join(cells)}</div>')
     return '<div class="tm">' + head + "".join(rows) + "</div>"
 
 
@@ -398,18 +402,18 @@ def page(R: dict[str, Any], F: dict[str, dict[str, Any]] | None = None) -> str:
 <p class="deck">증권사 AI 에이전트 {len(R['agents'])}개 유형에 공격 시나리오 {total}개를 같은 런타임으로 돌렸다. 바꾼 것은 규제를 읽는 방식 하나다.</p>
 </header>
 <section class="sh lead" aria-labelledby="h-r"><h2 id="h-r">결과</h2><div>
-<figure class="fig"><figcaption><b>그림 1</b> 점 하나가 공격 시나리오 하나다. 밝을수록 막지 못한 것이다.</figcaption>{dot_key()}{figure_hero(R)}</figure>
+<figure class="fig"><figcaption><b>그림 1</b> 막대 하나가 공격 시나리오 {total}개 전체다. 밝은 부분이 막지 못한 것이다.</figcaption>{bar_key()}{figure_compare(R)}</figure>
 <p class="callout"><b>{dep}개</b>({round(100 * dep / total) if total else 0}%)는 규제를 어떻게 읽느냐에 따라 판정이 바뀐다.</p>
 </div></section>
 <section class="sh" aria-labelledby="h-f"><h2 id="h-f">명령 흐름</h2><div>
-<p class="body">명령 하나는 런타임의 관문 일곱 개를 차례로 지난다. 명문 기준에서는 관문 대부분이 비어 있어(○) 명령이 그대로 지나간다.</p>
+<p class="body">명령 하나는 런타임의 관문 일곱 개를 차례로 지난다. 명문 기준에서는 관문 대부분이 비어 있어 명령이 그대로 지나간다.</p>
 {flow.legend()}{flow.gate_list()}
 {flow_figs}
 <h3 class="deph">시나리오 전체</h3>
 {flow_catalog(F)}
 </div></section>
 <section class="sh" aria-labelledby="h-a"><h2 id="h-a">유형별</h2><div>
-<figure class="fig"><figcaption><b>그림 {nxt}</b> 유형마다 점 하나가 공격 시나리오 하나다.</figcaption>{dot_key()}{figure_types(R)}</figure>
+<figure class="fig"><figcaption><b>그림 {nxt}</b> 유형별 판정. 숫자는 미차단 수다.</figcaption>{bar_key()}{figure_types(R)}</figure>
 <p class="callout">명문 기준이 AI 수준 통제를 하나도 요구하지 않는 유형: <b>{e(', '.join(none_ai) or '없음')}</b></p>
 </div></section>
 <section class="sh" aria-labelledby="h-d"><h2 id="h-d">자세히</h2><div>
@@ -429,20 +433,26 @@ def page(R: dict[str, Any], F: dict[str, dict[str, Any]] | None = None) -> str:
 .fig figcaption{font-size:14.5px;max-width:72ch}
 .dkey{display:flex;flex-wrap:wrap;gap:8px 20px;margin:0 0 16px;font-size:14px;color:var(--pq-ivory-soft)}
 .dkey span{display:inline-flex;align-items:center;gap:8px}
-.d{display:inline-block;width:14px;height:14px;border-radius:50%}
-.dkey .d{width:13px;height:13px}
-.dg{display:grid;grid-template-columns:repeat(9,14px);gap:6px}
-.dg-s{grid-template-columns:repeat(8,12px);gap:5px}
-.dg-s .d{width:12px;height:12px}
-.hero{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
-.hp{padding:18px 20px 20px;border:1px solid var(--pq-ivory-line-strong);border-radius:12px}
-.hp.is-key{border-color:var(--pq-bronze)}
-.hp-h{margin:0;font-size:17px;font-weight:700;color:var(--pq-ivory)}
-.hp-how{margin:2px 0 0;font-size:13.5px;line-height:1.5;color:var(--pq-ivory-dim)}
-.hp-n{display:flex;align-items:baseline;gap:8px;margin:14px 0 12px}
-.hp-n b{font-size:46px;line-height:1;font-weight:700;letter-spacing:-0.02em;color:var(--pq-ivory)}
-.hp-n span{font-size:15px;color:var(--pq-ivory-dim)}
-.hp-sub{margin:12px 0 0;font-size:14px;color:var(--pq-ivory-dim)}
+.sw{display:inline-block;width:14px;height:14px;border-radius:3px}
+.sw-empty{background:var(--pq-ivory-line-strong)}
+.bar{display:flex;gap:2px;height:16px;border-radius:4px;background:var(--pq-ivory-line-strong);overflow:hidden}
+.bar span{height:100%}
+.bar-s{height:10px;border-radius:3px}
+.cmp{display:flex;flex-direction:column}
+.cmp-row{display:grid;grid-template-columns:12.5em minmax(0,1fr) 7.5em;align-items:center;gap:22px;padding:18px 0;border-bottom:1px solid var(--pq-ivory-line)}
+.cmp-l{display:flex;flex-direction:column;gap:2px}
+.cmp-l b{font-size:17px;color:var(--pq-ivory)}
+.cmp-l span{font-size:13.5px;line-height:1.45;color:var(--pq-ivory-dim)}
+.cmp-row.is-key .cmp-l b{color:var(--pq-bronze)}
+.cmp-n{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 6px}
+.cmp-n b{font-size:38px;line-height:1;font-weight:700;letter-spacing:-0.02em;color:var(--pq-ivory)}
+.cmp-n span{font-size:14px;color:var(--pq-ivory-dim)}
+.cmp-n small{flex-basis:100%;margin-top:4px;font-size:13px;color:var(--pq-bronze)}
+.cmp-axis{display:grid;grid-template-columns:12.5em minmax(0,1fr) 7.5em;gap:22px;padding-top:6px}
+.cmp-axis .ax{display:flex;justify-content:space-between;font-size:13px;color:var(--pq-ivory-faint);font-variant-numeric:tabular-nums}
+.tm-c{display:grid;grid-template-columns:minmax(0,1fr) 2em;align-items:center;gap:10px}
+.tm-c em{font-style:normal;font-size:15px;font-weight:700;color:var(--pq-ivory);font-variant-numeric:tabular-nums}
+.tm-c em.z{font-weight:500;color:var(--pq-ivory-faint)}
 .callout{margin:22px 0 0;padding-left:14px;border-left:3px solid var(--pq-bronze);font-size:17px;line-height:1.6;color:var(--pq-ivory-soft);max-width:none}
 .callout b{color:var(--pq-ivory)}
 .tm{display:flex;flex-direction:column}
@@ -472,15 +482,16 @@ def page(R: dict[str, Any], F: dict[str, dict[str, Any]] | None = None) -> str:
 .lim{margin:0;padding-left:18px;color:var(--pq-ivory-soft);font-size:15px;line-height:1.75}
 .summary p{margin:0 0 12px;font-size:15.5px}
 .summary p:first-child{font-size:16.5px}
-@media(max-width:980px){.hero{grid-template-columns:minmax(0,1fr)}.dg{grid-template-columns:repeat(15,14px)}}
 @media(max-width:760px){
-  .dg{grid-template-columns:repeat(9,14px)}
-  .hp-n b{font-size:40px}
-  .tm-row{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 10px}
+  .cmp-row,.cmp-axis{grid-template-columns:minmax(0,1fr) 7.2em;gap:10px 14px}
+  .cmp-row .bar{grid-column:1 / -1;grid-row:2}
+  .cmp-axis>span:first-child,.cmp-axis>span:last-child{display:none}
+  .cmp-axis .ax{grid-column:1 / -1}
+  .cmp-n b{font-size:32px}
+  .tm-row{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 12px}
   .tm-l{grid-column:1 / -1}
   .tm-head span:first-child{display:none}
   .tm-head span{font-size:13px}
-  .dg-s{grid-template-columns:repeat(4,12px)}
 }
 """ + flow.CSS
     return f"""<!doctype html>
