@@ -202,6 +202,72 @@ footer.site .links{display:flex;flex-wrap:wrap;gap:4px 16px}
 /* ── 움직임 ── */
 @media(prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
+/* flow.css — 흐름도(진입 → 단계 → 결과). 모의 테스트(sim.html)와 랜딩(index.html)이 같이 쓴다.
+   칸 = .fn, 화살표 = 앞 칸과의 사이(::before 선 + ::after 화살촉). 지나간 길은 실선, 오지 않은 길은 점선. */
+/* ── 공격 흐름: 진입 → 단계(통제 관문) → 결과. 화살표는 공격이 지나간 길, 점선은 오지 않은 길 ── */
+.flow-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-top:24px}
+.flow-h .h3{margin:0 0 10px}
+.flow-h #flow-name{color:var(--pq-bronze)}
+.flow-key{display:inline-flex;align-items:center;gap:6px}
+.flow-key i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-left:6px}
+.flow-key i.k-on{background:var(--pq-bronze)}
+.flow-key i.k-off{box-shadow:inset 0 0 0 1px var(--pq-ivory-dim)}
+.flow-wrap{display:grid;gap:18px}
+.flow-top{display:flex;align-items:baseline;gap:12px;margin-bottom:8px}
+.flow-l{font-size:13px;font-weight:700;color:var(--pq-bronze)}
+.entry{font-size:12.5px;color:var(--pq-ivory-dim)}
+.flow-none{padding:14px 16px;border-radius:var(--pq-radius-ctl);box-shadow:inset 0 0 0 1px var(--pq-ivory-line);font-size:13.5px;color:var(--pq-ivory-mid)}
+.flow-none b{color:var(--pq-ivory)}
+.flow{display:grid;gap:0 30px;list-style:none;margin:0;padding:0;align-items:stretch}
+.fn{position:relative;min-width:0;margin:0;padding:12px 12px 10px;border-radius:var(--pq-radius-ctl);background:var(--pq-card-veil);
+  box-shadow:inset 0 0 0 1px var(--pq-ivory-line-strong)}
+.fn+.fn::before{content:"";position:absolute;left:-27px;top:24px;width:20px;border-top:2px solid var(--pq-ivory-mid)}
+.fn+.fn::after{content:"";position:absolute;left:-9px;top:19px;border:6px solid transparent;border-left-color:var(--pq-ivory-mid)}
+.fn.after::before,.fn.end.blocked::before{border-top:2px dashed var(--pq-ivory-line-strong)}
+.fn.after::after,.fn.end.blocked::after{border-left-color:var(--pq-ivory-line-strong)}
+.fh{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:24px}
+.fn .no{display:inline-flex;align-items:center;justify-content:center;flex:none;width:24px;height:24px;border-radius:50%;
+  border:1px solid var(--pq-ivory-line-strong);font-size:12px;font-weight:600;color:var(--pq-ivory);font-variant-numeric:tabular-nums}
+.fn .tag{font-size:12px;font-weight:600;color:var(--pq-ivory-dim);text-align:right}
+.fn .ft{margin-top:8px;font-size:13.5px;font-weight:600;line-height:1.4;color:var(--pq-ivory)}
+.gates{list-style:none;margin:10px 0 0;padding:8px 0 0;border-top:1px solid var(--pq-ivory-line);display:grid;gap:4px}
+.gates li{display:grid;grid-template-columns:10px minmax(0,1fr) auto;align-items:baseline;gap:6px;margin:0;font-size:12px;color:var(--pq-ivory-dim);cursor:help}
+.gates li i{display:block;width:9px;height:9px;border-radius:2px;box-shadow:inset 0 0 0 1px var(--pq-ivory-dim);align-self:center}
+.gates li.on{color:var(--pq-ivory)}
+.gates li.on i{background:var(--pq-bronze);box-shadow:none}
+.gates li.on .e{color:var(--pq-bronze-light);font-weight:600}
+.gates li.on.prevent .e{color:var(--pq-bronze)}
+.gates li.none{display:block;cursor:default}
+.fn.stop{background:var(--pq-bronze-wash);box-shadow:inset 0 0 0 2px var(--pq-bronze)}
+.fn.stop .no{background:var(--pq-bronze);border-color:var(--pq-bronze);color:var(--pq-ink)}
+.fn.stop .tag{color:var(--pq-bronze)}
+.fn.touch .tag{color:var(--pq-bronze-light)}
+.fn.pass .tag{color:var(--pq-ivory-mid)}
+.fn.after{opacity:0.4;background:transparent;box-shadow:inset 0 0 0 1px var(--pq-ivory-line)}
+.fn.end .ft{font-size:16px;font-weight:700}
+.fn.end .fi{margin-top:6px;font-size:12.5px;line-height:1.5;color:var(--pq-ivory-soft)}
+.fn.end.blocked{box-shadow:inset 0 0 0 1px var(--pq-bronze-line)}
+.fn.end.blocked .ft{color:var(--pq-bronze)}
+.fn.end.blocked .fi{color:var(--pq-ivory-dim)}
+.fn.end.reduced .ft{color:var(--pq-bronze-light)}
+.fn.end.damage{box-shadow:inset 0 0 0 2px rgba(245,240,232,0.55)}
+.fn.chg .fh::after{content:"바뀜";margin-left:6px;font-size:11px;font-weight:600;color:var(--pq-ivory)}
+.fn.chg{outline:1px dashed var(--pq-ivory-mid);outline-offset:3px}
+@media(prefers-reduced-motion:no-preference){
+  .fn{transition:opacity 320ms var(--pq-ease),transform 320ms var(--pq-ease)}
+  .fn.pending{opacity:0;transform:translateX(-8px)}
+}
+
+/* 좁은 화면(랜딩만 해당 — 모의 테스트는 데스크톱 전용): 칸을 세로로 쌓고 화살표를 아래로 */
+@media(max-width:860px){
+  .flow{grid-template-columns:minmax(0,1fr)!important;gap:22px 0}
+  .fn+.fn::before{left:22px;top:-20px;width:0;height:12px;border-top:0;border-left:2px solid var(--pq-ivory-mid)}
+  .fn+.fn::after{left:17px;top:-10px;border:6px solid transparent;border-top-color:var(--pq-ivory-mid);border-left-color:transparent}
+  .fn.after::before,.fn.end.blocked::before{border-top:0;border-left:2px dashed var(--pq-ivory-line-strong)}
+  .fn.after::after,.fn.end.blocked::after{border-left-color:transparent;border-top-color:var(--pq-ivory-line-strong)}
+  .flow-h,.flow-top{flex-wrap:wrap}
+}
+
 /* sim.css — 모의 테스트 페이지. 데스크톱(1280px 이상) 기준으로 짠다 — 폰 배치는 하지 않는다.
    한눈에(KPI 3개) · 원형 표 · 원형 × 프리셋 히트맵 + 서랍 · 사건 다시 돌리기 · 개선 조치 · OWASP 커버리지 · 변경안 비교.
    토큰·뼈대는 tokens.css · base.css. 박스·알약·글로우·그라디언트·italic 없음, 빨강·초록 없음
@@ -303,60 +369,7 @@ select:hover{border-color:rgba(245,240,232,0.26)}
 .ov .w{font-size:13px;color:var(--pq-ivory-soft)}
 .run{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;margin:16px 0 4px;max-width:none}
 
-/* ── 공격 흐름: 진입 → 단계(통제 관문) → 결과. 화살표는 공격이 지나간 길, 점선은 오지 않은 길 ── */
-.flow-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-top:24px}
-.flow-h .h3{margin:0 0 10px}
-.flow-h #flow-name{color:var(--pq-bronze)}
-.flow-key{display:inline-flex;align-items:center;gap:6px}
-.flow-key i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-left:6px}
-.flow-key i.k-on{background:var(--pq-bronze)}
-.flow-key i.k-off{box-shadow:inset 0 0 0 1px var(--pq-ivory-dim)}
-.flow-wrap{display:grid;gap:18px}
-.flow-top{display:flex;align-items:baseline;gap:12px;margin-bottom:8px}
-.flow-l{font-size:13px;font-weight:700;color:var(--pq-bronze)}
-.entry{font-size:12.5px;color:var(--pq-ivory-dim)}
-.flow-none{padding:14px 16px;border-radius:var(--pq-radius-ctl);box-shadow:inset 0 0 0 1px var(--pq-ivory-line);font-size:13.5px;color:var(--pq-ivory-mid)}
-.flow-none b{color:var(--pq-ivory)}
-.flow{display:grid;gap:0 30px;list-style:none;margin:0;padding:0;align-items:stretch}
-.fn{position:relative;min-width:0;margin:0;padding:12px 12px 10px;border-radius:var(--pq-radius-ctl);background:var(--pq-card-veil);
-  box-shadow:inset 0 0 0 1px var(--pq-ivory-line-strong)}
-.fn+.fn::before{content:"";position:absolute;left:-27px;top:24px;width:20px;border-top:2px solid var(--pq-ivory-mid)}
-.fn+.fn::after{content:"";position:absolute;left:-9px;top:19px;border:6px solid transparent;border-left-color:var(--pq-ivory-mid)}
-.fn.after::before,.fn.end.blocked::before{border-top:2px dashed var(--pq-ivory-line-strong)}
-.fn.after::after,.fn.end.blocked::after{border-left-color:var(--pq-ivory-line-strong)}
-.fh{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:24px}
-.fn .no{display:inline-flex;align-items:center;justify-content:center;flex:none;width:24px;height:24px;border-radius:50%;
-  border:1px solid var(--pq-ivory-line-strong);font-size:12px;font-weight:600;color:var(--pq-ivory);font-variant-numeric:tabular-nums}
-.fn .tag{font-size:12px;font-weight:600;color:var(--pq-ivory-dim);text-align:right}
-.fn .ft{margin-top:8px;font-size:13.5px;font-weight:600;line-height:1.4;color:var(--pq-ivory)}
-.gates{list-style:none;margin:10px 0 0;padding:8px 0 0;border-top:1px solid var(--pq-ivory-line);display:grid;gap:4px}
-.gates li{display:grid;grid-template-columns:10px minmax(0,1fr) auto;align-items:baseline;gap:6px;margin:0;font-size:12px;color:var(--pq-ivory-dim);cursor:help}
-.gates li i{display:block;width:9px;height:9px;border-radius:2px;box-shadow:inset 0 0 0 1px var(--pq-ivory-dim);align-self:center}
-.gates li.on{color:var(--pq-ivory)}
-.gates li.on i{background:var(--pq-bronze);box-shadow:none}
-.gates li.on .e{color:var(--pq-bronze-light);font-weight:600}
-.gates li.on.prevent .e{color:var(--pq-bronze)}
-.gates li.none{display:block;cursor:default}
-.fn.stop{background:var(--pq-bronze-wash);box-shadow:inset 0 0 0 2px var(--pq-bronze)}
-.fn.stop .no{background:var(--pq-bronze);border-color:var(--pq-bronze);color:var(--pq-ink)}
-.fn.stop .tag{color:var(--pq-bronze)}
-.fn.touch .tag{color:var(--pq-bronze-light)}
-.fn.pass .tag{color:var(--pq-ivory-mid)}
-.fn.after{opacity:0.4;background:transparent;box-shadow:inset 0 0 0 1px var(--pq-ivory-line)}
-.fn.end .ft{font-size:16px;font-weight:700}
-.fn.end .fi{margin-top:6px;font-size:12.5px;line-height:1.5;color:var(--pq-ivory-soft)}
-.fn.end.blocked{box-shadow:inset 0 0 0 1px var(--pq-bronze-line)}
-.fn.end.blocked .ft{color:var(--pq-bronze)}
-.fn.end.blocked .fi{color:var(--pq-ivory-dim)}
-.fn.end.reduced .ft{color:var(--pq-bronze-light)}
-.fn.end.damage{box-shadow:inset 0 0 0 2px rgba(245,240,232,0.55)}
-.fn.chg .fh::after{content:"바뀜";margin-left:6px;font-size:11px;font-weight:600;color:var(--pq-ivory)}
-.fn.chg{outline:1px dashed var(--pq-ivory-mid);outline-offset:3px}
-@media(prefers-reduced-motion:no-preference){
-  .fn{transition:opacity 320ms var(--pq-ease),transform 320ms var(--pq-ease)}
-  .fn.pending{opacity:0;transform:translateX(-8px)}
-}
-
+/* 공격 흐름도 스타일은 flow.css (랜딩 페이지와 같이 쓴다) */
 /* 단계 — 넓은 화면: 단계 목록 + 오른쪽 결과 */
 .walk{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:32px;align-items:start}
 .walk:has(.stages:empty){display:none}
@@ -590,9 +603,9 @@ tr.chg>td{background:var(--pq-bronze-wash)}
 <div class="wrap wide">
 
 <header class="topbar">
-<a class="brand" href="./" aria-label="PivoxPolicy 대시보드">Pivox<span class="b">Policy</span></a>
+<a class="brand" href="./" aria-label="PivoxPolicy 홈">Pivox<span class="b">Policy</span></a>
 <nav class="nav" aria-label="페이지">
-<a href="./">대시보드</a><a href="sim.html" aria-current="page">모의 테스트</a>
+<a href="dashboard.html">대시보드</a><a href="sim.html" aria-current="page">모의 테스트</a>
 </nav>
 </header>
 
@@ -732,7 +745,7 @@ tr.chg>td{background:var(--pq-bronze-wash)}
 
 <footer class="site">
 <span>PivoxPolicy · 정책 연구용 모의 테스트 — 법률 자문이 아니다.</span>
-<span class="links"><a href="./">대시보드</a><a href="./simulation.md">프리셋별 표 (simulation.md)</a></span>
+<span class="links"><a href="./">홈</a><a href="dashboard.html">대시보드</a><a href="./simulation.md">프리셋별 표 (simulation.md)</a></span>
 </footer>
 
 </div>

@@ -1,7 +1,7 @@
 """정적 대시보드 한 장 생성 — Pivox(블랙·골드) 디자인.
 
 레지스트리(매트릭스·공백·루브릭·연표·문서)와 intel.jsonl(최신 동향·사건)을 읽어
-out/index.html 한 장으로 낸다. CSS·뼈대는 templates/ (pivoxmap·pivoxdata·pivoxquant 에서 옮긴 것).
+out/dashboard.html 한 장으로 낸다(첫 화면 out/index.html 은 landing.py). CSS·뼈대는 templates/ (pivoxmap·pivoxdata·pivoxquant 에서 옮긴 것).
 점수·레벨은 '증거 수준' 이지 '통제 유무/조언' 이 아니다 — 금지어(추천·조언·안전·적정) 쓰지 않는다.
 """
 
@@ -486,6 +486,6 @@ def build(out_dir: Path = OUT_DIR, snapshot_dir: Path = SNAPSHOT_DIR, now: datet
     page = re.sub(r"\{\{([A-Z0-9_]+)\}\}", lambda m: repl.get(m.group(1), m.group(0)), page)
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    p = out_dir / "index.html"
+    p = out_dir / "dashboard.html"
     p.write_text(page, encoding="utf-8")
     return p

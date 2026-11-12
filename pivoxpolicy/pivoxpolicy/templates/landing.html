@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PivoxPolicy — AI 에이전트 시대의 금융 내부통제</title>
+<meta name="description" content="규제 {{N_DOCS}}건을 7개 통제 × 두 층(사람·계정 / AI)으로 재고, 실제 사건 {{N_INC}}건으로 다시 돌려 보는 정책 연구 도구." />
+<meta name="theme-color" content="#050505" />
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<style>
+{{TOKENS_CSS}}
+{{BASE_CSS}}
+{{FLOW_CSS}}
+{{LANDING_CSS}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">본문으로</a>
+<div class="wrap land">
+
+<header class="topbar">
+<a class="brand" href="./" aria-label="PivoxPolicy 홈">Pivox<span class="b">Policy</span></a>
+<nav class="nav" aria-label="페이지">
+<a href="#finding">발견</a><a href="#sim">모의 테스트</a><a href="#how">만드는 법</a><a href="dashboard.html">대시보드</a>
+</nav>
+</header>
+
+<main id="main">
+
+<!-- 1. 머리말: 연구 질문 → 한 문단 → 두 갈래 -->
+<header class="hero land-hero" id="top">
+<span class="eyebrow">정책 연구 · AI 에이전트 금융 내부통제</span>
+<h1>AI 에이전트 시대, 금융회사 내부통제는 안전한가</h1>
+<p class="lede">규제가 요구하는 통제를 <b>사람·계정</b>에 대한 것과 <b>AI 에이전트</b>에 대한 것으로 나눠 재고, 실제 사건으로 그 통제가 있었다면 어땠을지 다시 돌려 본다. 규제 {{N_DOCS}}건 · 통제 7개 · 실제 사건 {{N_INC}}건.</p>
+<div class="cta">
+<a class="btn btn-primary" href="sim.html">모의 테스트 열기</a>
+<a class="btn" href="dashboard.html">대시보드 보기</a>
+</div>
+<p class="meta"><time datetime="{{BUILT_AT_ISO}}">{{BUILT_AT}}</time> 레지스트리 기준 · 숫자는 빌드할 때마다 다시 계산 · 법률 자문이 아니다</p>
+</header>
+
+<!-- 2. 숫자 다섯 -->
+<section class="figs" aria-label="한눈에">
+<div><span class="v">{{N_DOCS}}</span><span class="k">규제·가이드라인 문서</span><span class="h">규범 문서 {{N_NORM}}건 · 한국 · 미국 · EU · 국제</span></div>
+<div><span class="v">{{N_INC}}</span><span class="k">AI 에이전트 실제 사건</span><span class="h">실패한 통제가 확인된 것 {{JUDGED}}건</span></div>
+<div><span class="v">{{INC_K}}</span><span class="k">사건 판정 일치도 κ</span><span class="h">서로 보지 않은 코더 두 팀</span></div>
+<div><span class="v">{{GAPS}}<small>칸</small></span><span class="k">간극</span><span class="h">사람에겐 구속력, AI 에겐 없음</span></div>
+<div><span class="v">{{G3}}<small>칸</small></span><span class="k">에이전트를 이름 붙인 구속력 요구</span><span class="h">관할 4 × 통제 7 중</span></div>
+</section>
+
+<!-- 3. 발견 -->
+<section id="finding" aria-labelledby="h-find">
+<div class="sec-h"><h2 id="h-find">발견 — 사람에겐 묶여 있고, AI 에겐 풀려 있다</h2><span>조정본 매트릭스 · {{BUILT_AT}}</span></div>
+<div class="find">
+<ol class="claims">
+<li><b>사람·계정 층은 이미 구속력이 있다.</b> 한국 · 미국 · EU 의 {{CELLS3}}칸(관할 3 × 통제 7) 중 {{A2}}칸을 구속력 있는 문서가 요구한다.</li>
+<li><b>같은 통제를 AI 에 적용하라는 구속력 요구는 {{G2}}칸뿐이다.</b> 에이전트를 이름으로 명시한 구속력 문서는 {{G3}}칸 — 나머지는 가이드라인(자율)이거나 다루지 않는다.</li>
+<li><b>간극 {{GAPS}}칸</b> — 한국 {{GAPS_KR}} · 미국 {{GAPS_US}} · EU {{GAPS_EU}}. 사람·계정에는 구속력 있는 요구가 있는데, 같은 통제를 AI 에 적용하라는 구속력 요구는 없는 칸이다.</li>
+<li><b>실제 사건에서 가장 자주 실패한 통제</b>는 {{TOP_FAILS}} (사건 {{N_INC}}건 조정본).</li>
+</ol>
+<figure class="mini-wrap">
+{{MINI}}
+<figcaption>칸 = 그 관할에서 그 통제를 요구하는 가장 센 문서. 구속 = 구속력 · 자율 = 가이드라인 · 명시 = 구속력 + 에이전트 명시 · — = 다루지 않음. 각 관할의 왼쪽이 사람·계정 층, 오른쪽이 AI 적용 층.</figcaption>
+</figure>
+</div>
+</section>
+
+<!-- 4. 모의 테스트 -->
+<section id="sim" aria-labelledby="h-sim">
+<div class="sec-h"><h2 id="h-sim">모의 테스트 — 통제를 켜고 끄며 공격을 다시 돌린다</h2><a href="sim.html">열기 →</a></div>
+<p class="lead2">회사의 통제 수준과 에이전트 환경을 고르면, 공격 원형 {{N_SCN}}개가 단계마다 어느 통제 앞에서 멈추는지와 실제 사건 {{N_INC}}건이 그 설정이었다면 어떻게 끝났을지가 바로 계산된다. 가상 회사 데모 케이스 {{N_CASES}}개 · 에이전트 종류 {{N_PROFILES}}개 · 관할 프리셋 · 개선 조치 CSV · OWASP Agentic Top 10 커버리지 · 변경안 비교.</p>
+<figure class="preview">
+{{PREVIEW}}
+<figcaption>{{PREVIEW_CAP}} 위 = 한국 강제 규제만 지키는 회사, 아래 = 모든 통제를 AI 까지. 원형·단계는 저자 설계다.</figcaption>
+</figure>
+<div class="sim-two">
+<div>
+<h3 class="h3">실제 사건 — 그 설정이었다면 막혔을 사건 (판단할 수 있는 {{JUDGED}}건 중)</h3>
+{{BARS}}
+<p class="fine">반사실 계산이지 예측이 아니다. 진한 막대 = 하한(그 사건에서 실패한 통제가 모두 켜짐), 옅은 막대 = 상한(사전·사용 중 통제가 하나라도 켜짐).</p>
+</div>
+<div class="uses">
+<h3 class="h3">이렇게 쓴다</h3>
+<ul>
+<li><b>발표·학회</b> — 데모 케이스를 ← → 로 넘기며, 한 가지만 다른 두 회사가 왜 다르게 끝나는지</li>
+<li><b>보안 담당자</b> — 우리 회사 통제와 에이전트를 넣고, 통제 하나씩 AI 까지 올렸을 때의 효과를 CSV 로</li>
+<li><b>정책</b> — 관할 프리셋끼리, 새 규제가 들어오면 결과가 어떻게 바뀌는지 이력으로</li>
+</ul>
+<p><a class="btn btn-primary" href="sim.html">모의 테스트 열기</a></p>
+</div>
+</div>
+</section>
+
+<!-- 5. 만드는 법 -->
+<section id="how" aria-labelledby="h-how">
+<div class="sec-h"><h2 id="h-how">만드는 법 — 수집에서 모의 테스트까지</h2><span>무엇이 자동이고 무엇이 사람인지</span></div>
+{{PIPELINE}}
+<p class="fine pipe-note">규제가 새로 들어오거나 판정이 바뀌면 ⑤ · ⑥ 이 다시 계산되고, 결과가 달라진 때만 이력이 남는다. 판정은 AI 코더 두 팀과 조정 — 사람 코더 검증은 아직이다.</p>
+</section>
+
+<!-- 6. 들어가기 -->
+<section id="go" aria-labelledby="h-go">
+<div class="sec-h"><h2 id="h-go">어디로 갈까</h2></div>
+<div class="go">
+<a class="card" href="sim.html"><span class="k">모의 테스트</span><span class="t">통제 · 에이전트를 바꾸며 공격 흐름과 실제 사건을 다시 돌린다</span><span class="h">데스크톱 화면 기준</span></a>
+<a class="card" href="dashboard.html#matrix"><span class="k">대시보드 · 매트릭스</span><span class="t">관할 × 통제 × 두 층, 칸마다 근거 문서와 조문</span><span class="h">동향 · 사건 · 공백 · 연표 · 문서</span></a>
+<a class="card" href="dashboard.html#method"><span class="k">출처 · 방법</span><span class="t">코드북 · κ · 조정 · 이 숫자로 말할 수 없는 것</span><span class="h">발행 주체 원문에서</span></a>
+</div>
+</section>
+
+<!-- 7. 한계 -->
+<section id="limits" aria-labelledby="h-lim">
+<div class="sec-h"><h2 id="h-lim">이 연구가 말할 수 없는 것</h2></div>
+<ul class="fine lim">
+<li>법률 자문이 아니다. 공개된 문서·사건 자료로 '무엇이 요구되는가' 와 '공개 증거 수준' 을 잰다 — 회사가 실제로 통제를 갖췄는지는 모른다.</li>
+<li>코더는 같은 계열의 AI 두 팀이다. κ 는 같은 코드북을 두 번 독립 적용했을 때의 재현성이지 정확성이 아니다. 사람 코더 검증은 아직이다.</li>
+<li>모의 테스트의 사건 결과는 반사실 계산이다. 실패한 통제가 공개 자료에 없는 사건은 '판단 근거 없음' 으로 따로 센다.</li>
+<li>공격 원형 · 단계 · 데모 케이스(가상 회사)는 저자 설계다. 규제 프리셋은 적용 대상(예: 고영향 AI 만)을 따지지 않는다.</li>
+</ul>
+</section>
+
+</main>
+
+<footer class="site">
+<span>PivoxPolicy · 정책 연구 — 법률 자문이 아니다.</span>
+<span class="links"><a href="sim.html">모의 테스트</a><a href="dashboard.html">대시보드</a><a href="./simulation.md">프리셋별 표</a></span>
+</footer>
+
+</div>
+</body>
+</html>

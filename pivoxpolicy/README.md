@@ -55,11 +55,20 @@ python3 -m pivoxpolicy.cli assess --compare             # 기관 × 차원 격�
 python3 -m pivoxpolicy.cli report  # out/ 에 전부 쓰기 (매트릭스·연표·공백·κ·평가 프로필)
 python3 -m pivoxpolicy.cli incidents  # AI 에이전트 보안 사건 45건 × 7통제 교차표
 python3 -m pivoxpolicy.cli sim     # out/sim.html 모의 테스트 (통제를 켜고 끄며 공격 원형·실제 사건을 다시 돌림)
-python3 -m pivoxpolicy.cli site    # out/index.html 정적 대시보드 (Pivox 블랙·골드 — matrix·동향·사건·프로필 한 장)
+python3 -m pivoxpolicy.cli site    # out/ 정적 사이트 — index.html 첫 화면 · dashboard.html 대시보드 · sim.html 모의 테스트
 python3 -m pytest -q
 ```
 
-## 대시보드 (out/index.html)
+## 첫 화면 (out/index.html, 2026-11-12)
+
+`site` 명령이 대시보드 · 모의 테스트 다음에 낸다(`pivoxpolicy/landing.py`, 템플릿 `landing.html` · `landing.css` · 흐름도 `flow.css`).
+연구 질문 → 숫자 다섯(문서 · 사건 · 사건 κ · 간극 · 에이전트 명시 구속력 칸) → 발견(주장 넷 + 한국·미국·EU × 7통제 × 두 층 작은 매트릭스) →
+모의 테스트 미리보기(한 원형을 '한국 강제 규제만' 과 '모든 통제를 AI 까지' 두 줄 흐름도로, 프리셋별 사건 막힘 막대) →
+만드는 법(수집 → 후보 → 문서 → 코딩 → 매트릭스 → 모의 테스트, 단계마다 자동 / 사람 / AI 두 팀 / 계산) → 어디로 갈까 → 한계.
+**숫자는 전부 빌드할 때 레지스트리에서 계산한다**(손으로 적은 숫자 없음 — `tests/test_landing.py` 가 확인). 스크립트 없음, 폰에서도 읽힌다.
+대시보드는 `out/dashboard.html` 로 옮겼다 — 워드마크는 첫 화면으로, 메뉴의 '대시보드' 는 dashboard.html 로.
+
+## 대시보드 (out/dashboard.html)
 
 `site` 명령이 레지스트리 + intel.jsonl 을 한 페이지로 낸다. 디자인은 **PivoxQuant·PivoxMap·PivoxData 와 맞췄다**
 (Vantablack `#050505` + Bronze `#B8956A` + Pretendard, 뉴스 사이트형 한 페이지, 알약·박스·글로우·italic 없음).

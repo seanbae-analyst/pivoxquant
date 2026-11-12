@@ -301,11 +301,13 @@ def cmd_sim(_: argparse.Namespace) -> int:
 
 
 def cmd_site(_: argparse.Namespace) -> int:
+    from . import landing as landing_mod
     from . import sim as sim_mod
     p = site_mod.build()
     print(f"wrote {p}")
     for q in sim_mod.build():   # 대시보드 메뉴의 '모의 테스트' 가 가리키는 페이지 — 같이 낸다
         print(f"wrote {q}")
+    print(f"wrote {landing_mod.build()}")   # 첫 화면 — 모의 테스트 이력까지 반영한 뒤에
     return 0
 
 
@@ -378,7 +380,7 @@ def build_parser() -> argparse.ArgumentParser:
     icp.set_defaults(fn=cmd_incident_corpus)
     sub.add_parser("pending", help="자동 수집 피드에서 아직 레지스트리에 없는 새 규제·가이드라인 후보 → out/pending-regulations.md").set_defaults(fn=cmd_pending)
     sub.add_parser("sim", help="out/sim.html 모의 테스트 페이지 + out/simulation.md 프리셋 표").set_defaults(fn=cmd_sim)
-    sub.add_parser("site", help="out/index.html 정적 대시보드 생성 (Pivox 디자인)").set_defaults(fn=cmd_site)
+    sub.add_parser("site", help="out/ 정적 사이트 — index.html 첫 화면 · dashboard.html 대시보드 · sim.html 모의 테스트").set_defaults(fn=cmd_site)
     return p
 
 

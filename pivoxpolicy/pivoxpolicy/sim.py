@@ -617,6 +617,7 @@ def build(out_dir: Path = OUT_DIR, history_path: Path | None = HISTORY_PATH) -> 
     html = (TEMPLATES / "sim.html").read_text(encoding="utf-8")
     for k, v in {"TOKENS_CSS": (TEMPLATES / "tokens.css").read_text(encoding="utf-8"),
                  "BASE_CSS": (TEMPLATES / "base.css").read_text(encoding="utf-8"),
+                 "FLOW_CSS": (TEMPLATES / "flow.css").read_text(encoding="utf-8"),
                  "SIM_CSS": (TEMPLATES / "sim.css").read_text(encoding="utf-8"),
                  "N_INCIDENTS": str(len(p["incidents"])), "N_SCENARIOS": str(len(p["scenarios"]))}.items():
         html = html.replace("{{" + k + "}}", v)
