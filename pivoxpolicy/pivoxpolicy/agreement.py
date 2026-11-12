@@ -244,6 +244,73 @@ def render_incident_v2_agreement(raw_a: dict[str, Any], raw_b: dict[str, Any], a
     return "\n".join(lines) + "\n"
 
 
+def is_incident_adjudicated(raw: dict[str, Any] | None) -> bool:
+    """두 v2 사건 코더를 칸마다 합친 조정본인가 (adjudicates: [A, B]) — κ 에서 뺀다."""
+    return is_incident_v2(raw) and bool((raw or {}).get("adjudicates"))
+
+
+def independent_incident_v2(raws: dict[str, Any]) -> list[str]:
+    """κ 를 낼 수 있는 v2 사건 코더 — 조정본을 뺀 이름순."""
+    return [n for n in sorted(raws) if is_incident_v2(raws[n]) and not is_incident_adjudicated(raws[n])]
+
+
+def _cell_key(cell: dict[str, Any] | None) -> tuple[Any, Any, Any]:
+    c = cell or {}
+    f = c.get("failed")
+    return (f, c.get("level"), c.get("layer")) if f is True else (f, None, None)
+
+
+def validate_incident_adjudication(raw: dict[str, Any], raws: dict[str, Any]) -> list[str]:
+    """조정본 검사 — 원본 둘이 같은 칸(failed · level · layer)은 원본 그대로, 갈린 칸은 판정이 있고 결과가 원본 한쪽."""
+    if not is_incident_adjudicated(raw):
+        return []
+    srcs = raw.get("adjudicates") or []
+    if len(srcs) != 2 or any(s not in raws for s in srcs):
+        return [f"adjudicates 는 있는 사건 코더 둘이어야 함: {srcs}"]
+    a, b = ((raws[s].get("incidents") or {}) for s in srcs)
+    mine = raw.get("incidents") or {}
+    problems: list[str] = []
+    ruled: set[tuple[str, str]] = set()
+    for d in raw.get("adjudication") or []:
+        if d.get("follows") not in srcs or not d.get("reason"):
+            problems.append(f"adjudication {d.get('incident')}.{d.get('control')}: follows(원본 코더 중 하나) · reason 필요")
+        ruled.add((d.get("incident"), d.get("control")))
+    for iid in sorted(set(a) | set(b) | set(mine)):
+        for c in CONTROL_IDS:
+            ka = _cell_key(((a.get(iid) or {}).get("controls") or {}).get(c))
+            kb = _cell_key(((b.get(iid) or {}).get("controls") or {}).get(c))
+            kc = _cell_key(((mine.get(iid) or {}).get("controls") or {}).get(c))
+            if ka == kb:
+                if kc != ka:
+                    problems.append(f"{iid}.{c}: 원본 둘이 {ka} 로 같은데 조정본은 {kc}")
+                if (iid, c) in ruled:
+                    problems.append(f"{iid}.{c}: 원본이 일치하는데 adjudication 에 있음")
+            elif (iid, c) not in ruled:
+                problems.append(f"{iid}.{c}: 원본이 갈렸는데({ka} vs {kb}) adjudication 에 판정 없음")
+            elif kc not in (ka, kb):
+                problems.append(f"{iid}.{c}: 조정 결과 {kc} 가 원본 어느 쪽도 아님")
+    return problems
+
+
+def consensus_counts(raw: dict[str, Any], evidence: dict[str, str]) -> dict[str, dict[str, int]]:
+    """조정본 → 통제 id → {total, primary, vendor, press, stated, agent}. 원문이 얇은 사건은 뺀다.
+    evidence = 사건 id → evidence_level (incidents.yaml)."""
+    out: dict[str, dict[str, int]] = {}
+    view = incident_view(raw, "any")
+    cells = raw.get("incidents") or {}
+    for iid, row in view.items():
+        for c, hit in row.items():
+            if not hit:
+                continue
+            r = out.setdefault(c, {"total": 0, "primary": 0, "vendor": 0, "press": 0, "stated": 0, "agent": 0})
+            cell = cells[iid]["controls"][c]
+            r["total"] += 1
+            r[evidence.get(iid, "press")] = r.get(evidence.get(iid, "press"), 0) + 1
+            r["stated"] += cell.get("level") == "stated"
+            r["agent"] += cell.get("layer") == "agent"
+    return out
+
+
 def incident_coding_yaml_v2(result: dict[str, Any], coder: str, coded_at: str, basis: str,
                             header: list[str] | None = None) -> str:
     """블라인드 에이전트 JSON → incident_codings YAML (codebook: 2)."""

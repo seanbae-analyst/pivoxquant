@@ -101,3 +101,39 @@ def test_kev_subset_keeps_only_matching_entries():
         {"cveID": "C-1", "product": "Langflow"}, {"cveID": "C-2", "product": "Other"}]}).encode()
     t = ic.kev_subset(body, "langflow")
     assert "C-1" in t and "C-2" not in t
+
+
+# ── 조정본 ──
+
+def _trio(ruling, consensus_vendors):
+    a = raw({"i1": rec(vendors=t("stated", "agent"))}, "a")
+    b = raw({"i1": rec()}, "b")
+    c = raw({"i1": rec(vendors=consensus_vendors)}, "c")
+    c.update(adjudicates=["a", "b"], adjudication=ruling)
+    return {"a": a, "b": b, "c": c}
+
+
+RULE = [{"incident": "i1", "control": "vendors", "decision": False, "follows": "b", "reason": "CVE 만"}]
+
+
+def test_incident_consensus_passes_and_is_left_out_of_kappa():
+    rs = _trio(RULE, {"failed": False})
+    assert ag.validate_incident_adjudication(rs["c"], rs) == []
+    assert ag.independent_incident_v2(rs) == ["a", "b"]
+
+
+def test_incident_consensus_catches_unruled_and_changed_cells():
+    rs = _trio([], {"failed": False})
+    assert any("판정 없음" in p for p in ag.validate_incident_adjudication(rs["c"], rs))
+    rs = _trio(RULE, {"failed": False})
+    rs["c"]["incidents"]["i1"]["controls"]["kill_switch"] = t()
+    assert any("kill_switch" in p and "같은데" in p for p in ag.validate_incident_adjudication(rs["c"], rs))
+    rs = _trio(RULE, t("inferred", "analog"))   # 어느 원본도 아님
+    assert any("어느 쪽도 아님" in p for p in ag.validate_incident_adjudication(rs["c"], rs))
+
+
+def test_consensus_counts_split_level_layer_and_evidence():
+    r = raw({"i1": rec(vendors=t("stated", "agent")), "i2": rec(vendors=t("inferred", "analog")),
+             "i3": {"basis": "thin", "controls": {c: {"failed": None} for c in CTL}}})
+    cc = ag.consensus_counts(r, {"i1": "primary", "i2": "press"})
+    assert cc["vendors"] == {"total": 2, "primary": 1, "vendor": 0, "press": 1, "stated": 1, "agent": 1}

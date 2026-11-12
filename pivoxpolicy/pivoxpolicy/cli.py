@@ -42,7 +42,8 @@ def cmd_check(_: argparse.Namespace) -> int:
     for coder, raw in agreement_mod.load_incident_codings().items():
         if agreement_mod.is_incident_v2(raw):
             corpus = SNAPSHOT_DIR / "incident_content"   # 받아 둔 원문이 있으면 인용도 대조
-            for p in agreement_mod.validate_incident_v2(raw, inc_ids, corpus if corpus.exists() else None):
+            for p in (agreement_mod.validate_incident_v2(raw, inc_ids, corpus if corpus.exists() else None)
+                      + agreement_mod.validate_incident_adjudication(raw, agreement_mod.load_incident_codings())):
                 print(f"✗ incident_codings/{coder}: {p}")
                 problems += 1
     n_url = sum(1 for d in docs.values() if d.url)
@@ -262,7 +263,7 @@ def cmd_incident_kappa(args: argparse.Namespace) -> int:
             return 1
         basis = {k: (v or {}).get("basis", "") for k, v in (raw.get("incidents") or {}).items()}
         print(agreement_mod.render_incident_agreement(first, second, n, basis))
-    v2 = [n for n in sorted(raws) if agreement_mod.is_incident_v2(raws[n])]
+    v2 = agreement_mod.independent_incident_v2(raws)
     if not args.coder and len(v2) >= 2:   # 코드북 v2 코더 둘 — 관점별 κ
         print(agreement_mod.render_incident_v2_agreement(raws[v2[0]], raws[v2[1]], v2[0], v2[1], set(first)))
     return 0

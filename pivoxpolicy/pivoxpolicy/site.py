@@ -263,6 +263,19 @@ def _incident_note(controls, incs) -> str:
     raws = agreement_mod.load_incident_codings()
     if not incs or not raws:
         return ""
+    pair = agreement_mod.independent_incident_v2(raws)
+    adj = next((n for n in sorted(raws) if agreement_mod.is_incident_adjudicated(raws[n])), None)
+    if len(pair) >= 2:   # 코드북 v2 — 독립 두 팀의 κ 와 조정본
+        ids = {i.id for i in incs}
+        va = agreement_mod.incident_view(raws[pair[0]], "any", ids)
+        vb = agreement_mod.incident_view(raws[pair[1]], "any", ids)
+        common = sorted(set(va) & set(vb))
+        x = [va[i][c] for i in common for c in agreement_mod.CONTROL_IDS]
+        y = [vb[i][c] for i in common for c in agreement_mod.CONTROL_IDS]
+        k = kappa_mod.cohen_kappa(x, y).kappa
+        return (f"<li>사건 × 통제는 코드북 v2(registry/incident_codebook.yaml) — 원문이 실패를 적었거나 원문 사실에서 따라 나오는 것만. "
+                f"독립 두 팀({_e(pair[0])} · {_e(pair[1])}) κ {'n/a' if k is None else f'{k:.2f}'} ({len(common)}건)."
+                + (f" 사건 열은 갈린 칸을 판정한 조정본 {_e(adj)} 이다." if adj else "") + "</li>")
     coder = sorted(raws)[0]
     first = {i.id: list(i.related_controls) for i in incs}
     second = agreement_mod.second_controls(raws[coder], set(first))
@@ -368,6 +381,11 @@ def build(out_dir: Path = OUT_DIR, snapshot_dir: Path = SNAPSHOT_DIR, now: datet
     now_html, inc_html, now_src, inc_src = _now_and_incidents(items)
     incs = incidents_mod.load_incidents(control_ids={c.id for c in controls})
     inc_counts = incidents_mod.control_counts(incs)
+    from . import agreement as agreement_mod
+    inc_raws = agreement_mod.load_incident_codings()
+    inc_adj = next((n for n in sorted(inc_raws) if agreement_mod.is_incident_adjudicated(inc_raws[n])), None)
+    if inc_adj and incs:   # 조정본이 있으면 사건 열은 조정본 — 1차(finder) 판단 대신
+        inc_counts = agreement_mod.consensus_counts(inc_raws[inc_adj], {i.id: i.evidence_level for i in incs})
     if incs:
         cur = sorted(incs, key=lambda x: x.date, reverse=True)
         inc_html = (_incident_rows(cur[:12])

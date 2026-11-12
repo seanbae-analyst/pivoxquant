@@ -120,6 +120,28 @@ def render_adjudication(coder: str, coding: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def render_incident_consensus(name: str, raw: dict[str, Any], incs: list[Any], controls: list[Control]) -> str:
+    """조정본 기준 통제별 사건 수 — 수준(적음/추론)·층(AI/일반)·증거 수준별, 그리고 판정 목록."""
+    ev = {i.id: i.evidence_level for i in incs}
+    cc = agreement_mod.consensus_counts(raw, ev)
+    n = len(agreement_mod.incident_view(raw, "any"))
+    a, b = raw.get("adjudicates") or ["?", "?"]
+    lines = [f"# 사건 × 통제 — 조정본 `{name}` (`{a}` + `{b}`)", "",
+             f"원문으로 판단할 수 있었던 사건 **{n}**건. 칸 = 이 통제가 실패했다고 본 사건 수.", "",
+             "| # | 통제 | 사건 | 원문이 적음 | 추론 | AI 층 | 일반 층 | 1차 출처 | 벤더 | 보도 |",
+             "|---|---|---|---|---|---|---|---|---|---|"]
+    for c in controls:
+        r = cc.get(c.id, {})
+        t = r.get("total", 0)
+        lines.append(f"| {c.num} | {c.name_ko} | **{t}** | {r.get('stated', 0)} | {t - r.get('stated', 0)} | {r.get('agent', 0)} | "
+                     f"{t - r.get('agent', 0)} | {r.get('primary', 0)} | {r.get('vendor', 0)} | {r.get('press', 0)} |")
+    rows = raw.get("adjudication") or []
+    lines += ["", f"## 판정 {len(rows)}칸 — 두 코더가 갈린 칸", ""]
+    for d in rows:
+        lines.append(f"- `{d.get('incident')}` × {d.get('control')} → **{d.get('decision')}** (`{d.get('follows')}` 쪽): {d.get('reason')}")
+    return "\n".join(lines) + "\n"
+
+
 def write_all(
     docs: dict[str, Document],
     controls: list[Control],
@@ -194,7 +216,10 @@ def write_all(
             basis = {k: (v or {}).get("basis", "") for k, v in (raw.get("incidents") or {}).items()}
             w(f"incident-kappa-{coder}.md", agreement_mod.render_incident_agreement(first, second, coder, basis))
         raws = agreement_mod.load_incident_codings()
-        v2 = [n for n in sorted(raws) if agreement_mod.is_incident_v2(raws[n])]
+        for n, raw in sorted(raws.items()):
+            if agreement_mod.is_incident_adjudicated(raw):
+                w(f"incidents-{n}.md", render_incident_consensus(n, raw, incs, controls))
+        v2 = agreement_mod.independent_incident_v2(raws)
         if len(v2) >= 2:
             w(f"incident-kappa-{v2[0]}-vs-{v2[1]}.md",
               agreement_mod.render_incident_v2_agreement(raws[v2[0]], raws[v2[1]], v2[0], v2[1], set(first)))
