@@ -82,7 +82,7 @@ obligations:
     control: unique_id
     layer: analog
     extends: interpretive
-    owner: 정보보호최고책임자(CISO)
+    owner: 정보보안 책무 임원(CISO)
 
   - id: efsr-13-1-1-access
     doc: 전자금융감독규정
@@ -95,7 +95,7 @@ obligations:
     control: least_privilege
     layer: analog
     extends: interpretive
-    owner: 정보보호최고책임자(CISO)
+    owner: 정보보안 책무 임원(CISO)
 
   - id: efsr-13-1-2
     doc: 전자금융감독규정
@@ -109,7 +109,7 @@ obligations:
     layer: analog
     extends: interpretive
     note: 에이전트, 모델, API 키가 '전산자료' 인지는 해석이 필요하다. 문언은 자료(데이터) 쪽에 가깝다.
-    owner: 정보보호최고책임자(CISO)
+    owner: 정보보안 책무 임원(CISO)
 
   - id: efsr-13-1-9
     doc: 전자금융감독규정
@@ -123,7 +123,7 @@ obligations:
     layer: analog
     extends: interpretive
     note: 에이전트의 도구 호출이 정보처리시스템을 거치면 가동기록에 남는다. 다만 입력 출처(프롬프트·외부 글)까지 남기라는 문언은 없다.
-    owner: 정보보호최고책임자(CISO)
+    owner: 정보보안 책무 임원(CISO)
 
   - id: efsr-13-1-11
     doc: 전자금융감독규정
@@ -137,7 +137,7 @@ obligations:
     layer: analog
     extends: interpretive
     note: 문언의 계기는 인사조치(전출·퇴직)다. 에이전트의 이상 행동 때 즉시 중단하라는 뜻으로 읽을지는 해석이다.
-    owner: 정보보호최고책임자(CISO)
+    owner: 정보보안 책무 임원(CISO)
 
   - id: efsr-13-3
     doc: 전자금융감독규정
@@ -151,7 +151,7 @@ obligations:
     layer: analog
     extends: interpretive
     note: 대상은 '정보처리시스템 관리자' 의 행위다. 송금·주문 같은 업무 행위를 하는 에이전트에 미치는지는 해석이다.
-    owner: 정보보호최고책임자(CISO)
+    owner: 정보보안 책무 임원(CISO)
 
   - id: efsr-37-2-5-2
     doc: 전자금융감독규정
@@ -164,7 +164,7 @@ obligations:
     effective: 현행. 금융위 2026-11-05 발표(대형사 연 2회, 수시평가, API를 포함한 외부접점 전부)는 규정변경예고 예정이며 아직 시행 전이다.
     runtime: false
     category: 취약점 분석·평가
-    owner: 정보보호최고책임자(CISO)
+    owner: 정보보안 책무 임원(CISO)
 
   # ── 금융회사의 정보처리 업무 위탁에 관한 규정 — 외부 모델(클라우드 · 해외 API)을 쓸 때 ──
   - id: outsourcing-4-3
@@ -180,7 +180,7 @@ obligations:
     layer: analog
     extends: interpretive
     note: 외부 LLM API 이용이 '정보처리 위탁' 인지부터 해석이 갈린다.
-    owner: 정보보호최고책임자(CISO)
+    owner: 정보보안 책무 임원(CISO)
 
   # ── AI 기본법 — AI 를 명시한 유일한 강제 조문. 고영향 AI 에만 ──
   - id: aibasic-34-1-4
@@ -188,13 +188,14 @@ obligations:
     article: 제34조 제1항 제4호
     force: law
     quote: "고영향 인공지능에 대한 사람의 관리ㆍ감독"
-    quote_verified: registry
+    quote_verified: primary
     source: https://www.law.go.kr/법령/인공지능발전과신뢰기반조성등에관한기본법
     requires: 고영향 AI 사업자는 그 AI를 사람이 관리·감독하는 조치를 한다.
     when: {high_impact: true}
     control: human_approval
     layer: agent
-    note: 2026-01-22 시행, 과태료 계도기간 최소 1년. 고영향 AI 는 법정 영역(채용, 대출 심사 같은 판단·평가) + 중대성(과기정통부 판단 가이드라인)으로 가린다.
+    note: 고영향 AI는 법정 영역(제2조 제4호 사목 '채용, 대출 심사 등 개인의 권리ㆍ의무 관계에 중대한 영향을 미치는 판단 또는 평가')과 중대성(과기정통부 판단 가이드라인 2026.4.29 수정본, 4점 이상)으로 가린다. 관리·감독자의 성명과 연락처를 게시하고 이행 문서를 5년 보관한다(시행령 제27조). 대출 심사는 신용정보법 · 금소법 준수로 일부 의무를 이행한 것으로 보지만, 제4호(사람의 관리·감독)에는 간주 규정이 없다.
+    effective: 2026.1.22 시행. 제34조 위반에 직접 과태료는 없고 사실조사 · 시정명령(제40조)을 거쳐 불이행 시 3천만원 이하. 과기정통부는 최소 1년 계도기간을 운영한다.
     owner: 대표이사 · AI 담당 임원
 
   # ── 금융분야 AI 가이드라인 (개정, 2026-06) — 자율 ──
@@ -221,7 +222,7 @@ obligations:
     when: {external_llm_any: [domestic_cloud, foreign_api]}
     control: vendors
     layer: agent
-    owner: 정보보호최고책임자(CISO)
+    owner: 정보보안 책무 임원(CISO)
 
   - id: fscai-7-24
     doc: 금융분야 AI 가이드라인 (개정)
@@ -233,7 +234,7 @@ obligations:
     requires: AI 시스템에는 업무에 필요한 최소 권한만 주고 자동화된 접근을 따로 모니터링한다.
     control: least_privilege
     layer: agent
-    owner: 정보보호최고책임자(CISO)
+    owner: 정보보안 책무 임원(CISO)
 
   - id: fscai-3-2-hitl
     doc: 금융분야 AI 가이드라인 (개정)
@@ -269,7 +270,7 @@ obligations:
     requires: 생성형 AI 서비스의 입출력 데이터 로그를 남긴다.
     control: audit_trail
     layer: agent
-    owner: 정보보호최고책임자(CISO)
+    owner: 정보보안 책무 임원(CISO)
 
   - id: fscai-netsep-apikey
     doc: 금융분야 AI 가이드라인 (개정)
@@ -282,7 +283,7 @@ obligations:
     control: unique_id
     layer: analog
     extends: interpretive
-    owner: 정보보호최고책임자(CISO)
+    owner: 정보보안 책무 임원(CISO)
 
   # ── 금융보안원 금융분야 AI 에이전트 보안 평가기준 (2026-10) — 에이전트를 이름으로 다룬 자율 기준 ──
   - id: fsiagent-6-7
@@ -295,7 +296,7 @@ obligations:
     requires: 에이전트의 도구 권한을 제어하고 샌드박스에서 실행한다.
     control: least_privilege
     layer: agent
-    owner: 정보보호최고책임자(CISO)
+    owner: 정보보안 책무 임원(CISO)
 
   - id: fsiagent-12
     doc: 금융보안원 금융분야 AI 에이전트 보안 평가기준
@@ -307,7 +308,7 @@ obligations:
     requires: 모델뿐 아니라 외부 도구, 플러그인 등 구성요소 전반을 검증한다.
     control: vendors
     layer: agent
-    owner: 정보보호최고책임자(CISO)
+    owner: 정보보안 책무 임원(CISO)
 
   - id: fsiagent-13-14
     doc: 금융보안원 금융분야 AI 에이전트 보안 평가기준
@@ -344,7 +345,7 @@ obligations:
     requires: 에이전트의 로깅·감사 체계를 갖춘다.
     control: audit_trail
     layer: agent
-    owner: 정보보호최고책임자(CISO)
+    owner: 정보보안 책무 임원(CISO)
 
   # ── 전자금융감독규정 제14조의2 · 제15조 — 클라우드 · 망분리 (조사: 국가법령정보센터 현행 원문 대조, 2026-11-12) ──
   - id: efsr-14-2-1
@@ -359,7 +360,7 @@ obligations:
     runtime: false
     category: 클라우드 이용 절차
     effective: 개정 2025.2.5
-    owner: 정보보호최고책임자(CISO)
+    owner: 정보보안 책무 임원(CISO)
 
   - id: efsr-14-2-4
     doc: 전자금융감독규정
@@ -373,7 +374,7 @@ obligations:
     runtime: false
     category: 감독당국 보고
     effective: 개정 2025.2.5
-    owner: 정보보호최고책임자(CISO)
+    owner: 정보보안 책무 임원(CISO)
 
   - id: efsr-14-2-7
     doc: 전자금융감독규정
@@ -389,7 +390,7 @@ obligations:
     prohibits: true
     unless: 해외 사업자라도 국내 리전에 설치된 시스템에서 처리하거나, 프롬프트에서 해당 정보를 빼거나 가명처리하면 해소된다.
     effective: 단서 신설 2018.12.21, 개정 2025.2.5
-    owner: 정보보호최고책임자(CISO)
+    owner: 정보보안 책무 임원(CISO)
 
   - id: efsr-15-1-3
     doc: 전자금융감독규정
@@ -406,7 +407,7 @@ obligations:
     unless: 예외(개인신용정보 없는 연구·개발, 금감원장 확인, 세칙 제2조의3의 SaaS 예외)나 혁신금융서비스 지정, 비조치의견서가 있으면 해소된다.
     note: 2026-09-03 '제2차 망분리 규제 긴급 완화'는 보안 목적 AI에 한정된 비조치의견서이고 규정 문언은 바뀌지 않았다. 2026-11-05 '전면해제 TF'는 논의 단계다.
     effective: 개정 2022.11.23
-    owner: 정보보호최고책임자(CISO)
+    owner: 정보보안 책무 임원(CISO)
 
   - id: fssdetail-2-3-1-3
     doc: 전자금융감독규정시행세칙
@@ -421,7 +422,7 @@ obligations:
     category: 망분리 예외 조건
     note: LLM API가 이 SaaS 예외에 드는지는 해석이 필요하다. 원문의 큰따옴표는 작은따옴표로 옮겼다.
     effective: 신설 2026.4.20
-    owner: 정보보호최고책임자(CISO)
+    owner: 정보보안 책무 임원(CISO)
 
   # ── 금융회사의 정보처리 업무 위탁에 관한 규정 — 국외 위탁 ──
   - id: outsourcing-5-1
@@ -438,7 +439,7 @@ obligations:
     prohibits: true
     unless: 프롬프트와 로그에서 고유식별정보를 빼면 해소된다. 해외 LLM API 이용이 '정보처리 위탁'인지는 해석이 갈린다.
     effective: 개정 2015.7.22
-    owner: 정보보호최고책임자(CISO)
+    owner: 정보보안 책무 임원(CISO)
 
   - id: outsourcing-7-1
     doc: 금융회사의 정보처리 업무 위탁에 관한 규정
@@ -755,3 +756,191 @@ obligations:
     layer: agent
     note: 2014.11 가이드라인의 사본에서 읽었다. 지금도 유효한지는 확인하지 못했다. 자동화된 주문 시스템을 직접 다루므로 AI까지로 셌다.
     owner: 준법감시인
+
+  # ── 지배구조법 · 시행령 · 지배구조 감독규정 — 내부통제기준 · 준법감시인 · 책무구조도 (조사: 국가법령정보센터 현행 원문 대조, 2026-11-12) ──
+  - id: gov-24-1
+    doc: 금융회사의 지배구조에 관한 법률
+    article: 제24조 제1항
+    force: law
+    quote: "금융회사는 법령을 준수하고, 경영을 건전하게 하며, 주주 및 이해관계자 등을 보호하기 위하여 금융회사의 임직원이 직무를 수행할 때 준수하여야 할 기준 및 절차(이하 “내부통제기준”이라 한다)를 마련하여야 한다."
+    quote_verified: primary
+    source: https://www.law.go.kr/법령/금융회사의지배구조에관한법률/제24조
+    requires: 임직원이 직무를 수행할 때 지킬 기준과 절차(내부통제기준)를 마련한다. 에이전트의 권한, 승인, 기록 절차도 여기에 담는다.
+    runtime: false
+    category: 내부통제기준
+    note: 마련하지 않으면 과태료 1억원 이하(제43조 제1항 제16호).
+    effective: 현행 문안 시행 2026.1.2
+    owner: 준법감시인
+
+  - id: gov-dec-19-1
+    doc: 금융회사의 지배구조에 관한 법률 시행령
+    article: 제19조 제1항
+    force: decree
+    quote: "내부통제기준에는 금융회사의 내부통제가 실효성있게 이루어질 수 있도록 다음 각 호의 사항이 포함되어야 한다. 1. 업무의 분장 및 조직구조 2. 임직원이 업무를 수행할 때 준수하여야 하는 절차 … 13. … 금융위원회가 정하여 고시하는 사항"
+    quote_verified: primary
+    source: https://www.law.go.kr/법령/금융회사의지배구조에관한법률시행령/제19조
+    requires: 업무분장, 업무 절차, 준수 여부 점검 등 13개 항목을 내부통제기준에 담는다.
+    runtime: false
+    category: 내부통제기준
+    note: 13개 호 어디에도 IT, 전산, 신기술 항목은 없다. AI 에이전트는 제1호(업무분장), 제2호(절차), 제6호(점검)로 담아야 한다.
+    effective: 제1항 최종개정 2021.3.23
+    owner: 준법감시인
+
+  - id: gov-sup-11-annex2-6
+    doc: 금융회사 지배구조 감독규정
+    article: 제11조 제1항 · 별표 2 제6호
+    force: supervisory_regulation
+    quote: "내부통제기준은 금융회사(…)의 가능한 모든 업무활동을 포괄할 수 있어야 하며, 업무절차 및 전산시스템은 적절한 단계로 구분하여 집행되도록 설계되어야 한다."
+    quote_verified: primary
+    source: https://www.law.go.kr/행정규칙/금융회사지배구조감독규정
+    requires: 업무절차와 전산시스템을 적절한 단계로 나눠 집행되도록 설계한다.
+    control: human_approval
+    layer: analog
+    extends: interpretive
+    note: 내부통제 규정 가운데 전산을 명시한 유일한 문구다. 에이전트가 제안부터 실행까지 한 번에 하는 구조에 단계 분리(제안, 승인, 실행)를 요구하는 근거로 읽을 수 있다. 단계를 사람 승인으로 나눠야 하는지, 자동 검사로도 되는지는 해석이다.
+    effective: 금융위원회고시 제2026-40호(2026.10.2)
+    owner: 전산시스템 운영·관리 책무 임원
+
+  - id: gov-sup-annex3-4-ba
+    doc: 금융회사 지배구조 감독규정
+    article: 제11조 제2항 · 별표 3 제4호 바목
+    force: supervisory_regulation
+    quote: "[별표 3] 4. 해당 금융회사가 금융투자업자인 경우 … 바. 매매주문의 처리절차ㆍ방법이나 기준에 관한 사항"
+    quote_verified: primary
+    source: https://www.law.go.kr/행정규칙/금융회사지배구조감독규정
+    requires: 매매주문의 처리절차, 방법, 기준을 내부통제기준에 둔다. 에이전트가 주문을 내면 그 절차도 여기에 담는다.
+    when: {activities_any: [order]}
+    runtime: false
+    category: 내부통제기준
+    effective: 별표 3 개정 2022.12.21
+    owner: 준법감시인
+
+  - id: gov-25-1
+    doc: 금융회사의 지배구조에 관한 법률
+    article: 제25조 제1항
+    force: law
+    quote: "금융회사(…)는 내부통제기준의 준수 여부를 점검하고 내부통제기준을 위반하는 경우 이를 조사하는 등 내부통제 관련 업무를 총괄하는 사람(이하 “준법감시인”이라 한다)을 1명 이상 두어야 하며, …"
+    quote_verified: primary
+    source: https://www.law.go.kr/법령/금융회사의지배구조에관한법률/제25조
+    requires: 준법감시인을 두고, 준법감시인이 에이전트의 기록과 판단 근거를 볼 수 있게 한다(독립적 직무수행과 자료요구 응대, 제30조 제1항 · 제3항).
+    runtime: false
+    category: 준법감시
+    owner: 준법감시인
+
+  - id: gov-30-2-1
+    doc: 금융회사의 지배구조에 관한 법률
+    article: 제30조의2 제1항
+    force: law
+    quote: "금융회사의 임원(…)은 제30조의3제1항에 따른 책무구조도에서 정하는 자신의 책무와 관련하여 내부통제 및 위험관리(이하 “내부통제등”이라 한다)가 효과적으로 작동할 수 있도록 다음 각 호의 관리조치를 하여야 한다."
+    quote_verified: primary
+    source: https://www.law.go.kr/법령/금융회사의지배구조에관한법률/제30조의2
+    requires: 에이전트가 맡은 업무의 책무 임원이 그 통제가 마련되고 집행되는지 점검하고 시정하며 대표이사등에게 보고한다.
+    runtime: false
+    category: 책무구조도
+    note: 위반하면 제35조의2에 따라 제재받는다. 이 보고서의 '책무별 미충족' 표가 이 점검의 출발점이 된다.
+    effective: 2024.7.3 시행. 최초 책무구조도를 제출한 때부터 적용(부칙 제4조).
+    owner: 책무 임원
+
+  - id: gov-30-3-1
+    doc: 금융회사의 지배구조에 관한 법률
+    article: 제30조의3 제1항
+    force: law
+    quote: "금융회사의 대표이사등은 제30조의2에 따른 관리의무를 이행하여야 하는 임원과 임원의 직책별로 … 대통령령으로 정하는 책무를 배분한 문서(이하 “책무구조도”라고 한다)를 마련하여야 한다."
+    quote_verified: primary
+    source: https://www.law.go.kr/법령/금융회사의지배구조에관한법률/제30조의3
+    requires: 책무를 임원별로 한 명씩 배분한 책무구조도를 마련하고, 에이전트 관련 책무(정보보안, 전자금융, 전산시스템 운영·관리)를 거기에 매핑한다.
+    runtime: false
+    category: 책무구조도
+    note: 시행령 별표 1에 '정보보안업무', '전자금융업무', '전산시스템 운영ㆍ관리 업무와 관련된 책무'가 있다. 제출 기한은 대형 금융투자업자 2025.7.2, 그 밖의 금융투자업자 2026.7.2로 계산된다(부칙에서 역산, 금융위 문서로는 확인하지 않음).
+    effective: 2024.7.3 시행
+    owner: 대표이사
+
+  - id: gov-30-4-1-5
+    doc: 금융회사의 지배구조에 관한 법률
+    article: 제30조의4 제1항 제5호
+    force: law
+    quote: "금융회사의 대표이사등은 내부통제등의 전반적 집행 및 운영에 대한 최종적인 책임자로서 다음 각 호의 총괄적인 관리조치를 실효성 있게 하여야 한다. … 5. 임직원의 법령 또는 내부통제기준등 위반을 초래할 수 있는 대통령령으로 정하는 잠재적 위험요인 또는 취약분야에 대한 점검"
+    quote_verified: primary
+    source: https://www.law.go.kr/법령/금융회사의지배구조에관한법률/제30조의4
+    requires: 대표이사가 AI 에이전트 도입을 새 위험요인으로 점검하고 이사회에 보고한다.
+    runtime: false
+    category: 책무구조도
+    note: 시행령 제25조의4 제1항 제1호는 '업무가 신규로 추가되는 등의 사유로 … 내부통제기준등의 제정ㆍ개정이 필요한 사항'을 위험요인으로 든다. 에이전트 도입이 바로 이 경우다.
+    effective: 2024.7.3 시행
+    owner: 대표이사
+
+  # ── 금융소비자보호법 — 고객을 상대하는 에이전트 ──
+  - id: fcpa-17
+    doc: 금융소비자 보호에 관한 법률
+    article: 제17조 제2항 · 제3항
+    force: law
+    quote: "금융상품판매업자등은 일반금융소비자에게 … 금융상품 계약 체결을 권유(금융상품자문업자가 자문에 응하는 경우를 포함한다…)하는 경우에는 면담ㆍ질문 등을 통하여 … 정보를 파악하고 … 확인을 받아 이를 유지ㆍ관리하여야 하며 …"
+    quote_verified: primary
+    source: https://www.law.go.kr/법령/금융소비자보호에관한법률/제17조
+    requires: 권유나 자문 전에 고객 정보를 파악해 확인받고 보관하며, 적합하지 않은 계약은 권유하지 않는다.
+    when: {activities_any: [advice, credit], retail: true}
+    runtime: false
+    category: 고객 권유 · 설명
+    note: 채널 예외가 없어 로보어드바이저와 챗봇의 권유에도 그대로 걸린다(조문 해석). 증권사 신용공여도 대출성 상품이다.
+    effective: 2021.3.25
+    owner: 소비자보호 총괄책임자
+
+  - id: fcpa-18
+    doc: 금융소비자 보호에 관한 법률
+    article: 제18조 제1항 · 제2항
+    force: law
+    quote: "금융상품판매업자는 … 일반금융소비자에게 계약 체결을 권유하지 아니하고 금융상품 판매 계약을 체결하려는 경우에는 미리 면담ㆍ질문 등을 통하여 … 정보를 파악하여야 한다."
+    quote_verified: primary
+    source: https://www.law.go.kr/법령/금융소비자보호에관한법률/제18조
+    requires: 권유 없이 판매할 때도 정보를 파악하고, 적정하지 않으면 고객에게 알리고 확인받는다.
+    when: {activities_any: [order, credit], retail: true}
+    runtime: false
+    category: 고객 권유 · 설명
+    note: 대상은 파생상품, 고난도상품, 증권 담보 대출성 상품 등 시행령 제12조 제1항의 상품이다. 고객 지시를 바로 실행하는 에이전트와 주식담보대출 자동 실행에 걸린다.
+    effective: 2021.3.25
+    owner: 소비자보호 총괄책임자
+
+  - id: fcpa-19
+    doc: 금융소비자 보호에 관한 법률
+    article: 제19조 제1항
+    force: law
+    quote: "금융상품판매업자등은 일반금융소비자에게 계약 체결을 권유(금융상품자문업자가 자문에 응하는 것을 포함한다)하는 경우 및 일반금융소비자가 설명을 요청하는 경우에는 다음 각 호의 금융상품에 관한 중요한 사항(…)을 일반금융소비자가 이해할 수 있도록 설명하여야 한다."
+    quote_verified: primary
+    source: https://www.law.go.kr/법령/금융소비자보호에관한법률/제19조
+    requires: 중요사항을 고객이 이해할 수 있게 설명하고 확인받는다. 거짓이나 왜곡된 설명을 하지 않는다(제3항).
+    when: {activities_any: [advice, customer_service, credit], retail: true}
+    runtime: false
+    category: 고객 권유 · 설명
+    note: 챗봇이 환각으로 틀린 설명을 하면 제3항의 '왜곡'이 될 수 있다. 금융위 온라인 설명의무 가이드라인(2022.8.11)은 설명서를 게시만 하는 방식을 지양하라고 한다.
+    effective: 2021.3.25
+    owner: 소비자보호 총괄책임자
+
+  - id: fcpa-21
+    doc: 금융소비자 보호에 관한 법률
+    article: 제21조 제1호
+    force: law
+    quote: "금융상품판매업자등은 계약 체결을 권유(…)하는 경우에 다음 각 호의 어느 하나에 해당하는 행위를 해서는 아니 된다. … 1. 불확실한 사항에 대하여 단정적 판단을 제공하거나 확실하다고 오인하게 할 소지가 있는 내용을 알리는 행위"
+    quote_verified: primary
+    source: https://www.law.go.kr/법령/금융소비자보호에관한법률/제21조
+    requires: 단정적 판단 제공, 사실과 다른 고지, 근거 없는 비교, 요청 없는 실시간 권유를 하지 않는다.
+    when: {activities_any: [advice, customer_service]}
+    runtime: false
+    category: 고객 권유 · 설명
+    note: 모델 출력에서 단정 표현을 걸러 내는 필터가 필요하다. 전문금융소비자를 상대할 때도 걸린다.
+    effective: 2021.3.25
+    owner: 소비자보호 총괄책임자
+
+  # ── AI 기본법 제33조 — 고영향 여부 사전 검토 ──
+  - id: aibasic-33-1
+    doc: 인공지능 발전과 신뢰 기반 조성 등에 관한 기본법 (AI 기본법)
+    article: 제33조 제1항
+    force: law
+    quote: "인공지능사업자는 인공지능 또는 이를 이용한 제품ㆍ서비스를 제공하는 경우 그 인공지능이 고영향 인공지능에 해당하는지에 대하여 사전에 검토하여야 하며, …"
+    quote_verified: primary
+    source: https://www.law.go.kr/법령/인공지능발전과신뢰기반조성등에관한기본법/제33조
+    requires: 에이전트를 도입할 때마다 고영향 AI 해당 여부를 미리 검토한다. 과기정통부에 확인을 요청하면 30일 안에 회신받는다(시행령 제25조).
+    runtime: false
+    category: 고영향 AI 사전 검토
+    note: 고객에게 제공하지 않는 순수 내부용 에이전트가 '제공'에 해당하는지는 해석이다. 이 도구의 고영향 추정은 이 검토를 대신하지 않는다.
+    effective: 2026.1.22
+    owner: AI 담당 임원

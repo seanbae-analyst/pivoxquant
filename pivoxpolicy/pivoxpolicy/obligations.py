@@ -128,11 +128,16 @@ def high_impact(profile: dict[str, Any]) -> tuple[bool, str]:
         return True, "회사가 고영향 AI 에 해당한다고 판단했다."
     if h == "not_high":
         return False, "회사가 고영향 AI 에 해당하지 않는다고 판단했다."
-    if "credit" in (profile.get("activities") or []):
-        return True, ("추정: 신용공여 심사는 법정 영역(대출 심사 등 개인의 권리·의무에 중대한 영향을 미치는 판단·평가)에 해당할 수 있다. "
-                      "중대성은 과기정통부 판단 가이드라인으로 따로 가려야 한다.")
-    return False, ("추정: 주문, 정산, 상담, 내부 업무는 법정 영역(채용, 대출 심사 같은 판단·평가)에 들지 않을 가능성이 크다. "
-                   "고객에 대한 판단·평가를 한다면 다시 본다.")
+    acts = set(profile.get("activities") or [])
+    if "credit" in acts:
+        return True, ("추정: 신용공여(신용융자 · 주식담보대출) 심사는 법정 영역(제2조 제4호 사목 '대출 심사 등')에 들고, 과기정통부 "
+                      "판단 가이드라인(2026.4.29)은 AI가 최종 결정을 하거나 그에 상당한 영향을 주면 고영향으로 본다. "
+                      "결과를 단순 참고로만 쓰거나 중대성 점수가 4점 미만이면 해당하지 않을 수 있다.")
+    if "advice" in acts:
+        return False, ("추정: 투자자문은 법정 영역에 열거되지 않았고 가이드라인의 금융 사례도 대출 심사뿐이다. "
+                       "다만 사목의 '등'이 열린 표현이라 확정할 수 없다. 사전 검토(제33조)를 거친다.")
+    return False, ("추정: 주문 · 정산 자동화는 법정 영역에 없고, 가이드라인은 상담 챗봇을 대출 심사에서 명시적으로 뺀다. "
+                   "고객에 대한 판단 · 평가를 하게 되면 다시 본다.")
 
 
 def applies(ob: dict[str, Any], profile: dict[str, Any], labels: dict[str, str] | None = None) -> tuple[bool, str]:

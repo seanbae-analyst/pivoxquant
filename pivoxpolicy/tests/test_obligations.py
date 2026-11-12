@@ -38,7 +38,7 @@ def test_ai_basic_act_only_for_high_impact():
     assert settle["levels"]["binding_explicit"]["human_approval"] == 1          # AI 층 강제 의무 없음
     assert max(settle["levels"]["binding_explicit"].values()) == 1
     credit = O.assess(LIB, prof(activities=["credit"]))
-    assert credit["high_impact"]["value"] is True and "추정" in credit["high_impact"]["reason"]
+    assert credit["high_impact"]["value"] is True and "추정" in credit["high_impact"]["reason"] and "가이드라인" in credit["high_impact"]["reason"]
     assert credit["levels"]["binding_explicit"]["human_approval"] == 2
     assert credit["basis"]["binding_explicit"]["human_approval"] == ["aibasic-34-1-4"]
     # 회사가 직접 판단하면 그것을 따른다
