@@ -479,6 +479,13 @@ git push git@github.com:seanbae-analyst/pivoxpolicy.git pivoxpolicy-split:main
 
 옮긴 다음 `pivoxquant` 에서는 이 디렉터리와 `.dockerignore` 의 `pivoxpolicy` 줄을 지운다.
 
+### policy.pivoxquant.com 으로 띄우기 (2026-11-12 계획, 아직 안 함)
+
+1. 새 저장소를 Vercel 에서 Import — Root `./`, Framework `Other`. 설정은 루트의 `vercel.json`(outputDirectory `out` · cleanUrls · 보안 머리글)이 정한다.
+2. Vercel 프로젝트 Settings → Domains 에 `policy.pivoxquant.com` 추가.
+3. 가비아 DNS(pivoxquant.com)에 Vercel 이 보여 주는 레코드를 넣는다 — 보통 A `policy` → `76.76.21.21`(`map` 과 같다) 또는 CNAME(값 끝에 점).
+4. `curl -sI https://policy.pivoxquant.com` 이 200 이고 CSP 머리글이 보이는지 확인. 이 앱을 내릴 땐 가비아 `policy` 레코드부터 지운다(하위 도메인 탈취).
+
 ## 다음 할 일 (우선순위)
 
 1. **사람 코더 1명** — `registry/codings/TEMPLATE.yaml` + 코퍼스 21건(본문은 저장소에 없다 — `snapshots/corpus.json` 의 출처로 다시 받거나 보관한 zip) → `kappa`.
@@ -489,3 +496,4 @@ git push git@github.com:seanbae-analyst/pivoxpolicy.git pivoxpolicy-split:main
 6. **실험의 외부 타당성** — 합성 유형 일곱 개 대신(또는 함께) 실제 증권사 에이전트 명세 몇 개를 같은 실험에 넣는다. 의무 라이브러리 변호사 검토 뒤 다시 돌려 발견이 남는지 본다.
 7. **실제 LLM 레드팀 한 번** — 키가 있으면 `llm-redteam` 을 유형 몇 개에 돌려, 실험의 '승인 의존 · 미차단' 이 모델 행동으로도 나오는지(지시 추종률) 함께 적는다.
 8. 은행 등 다른 업권의 의무 라이브러리(지금은 증권만).
+9. 런타임 콘솔(`runtime-ui.js`)의 셀 상세 · 시나리오 결과에 노선도(`flow.route` 와 같은 규칙)를 그린다 — 지금은 실험 페이지 · 진단 보고서에만 있다.
