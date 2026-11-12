@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from pivoxpolicy import sim
-from pivoxpolicy.runtime import cases, policy
+from pivoxpolicy.runtime import cases
 
 from tests.test_runtime import ALL2, APPROVED, NONE, agent
 
