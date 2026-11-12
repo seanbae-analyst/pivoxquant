@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'none'; style-src 'unsafe-inline' https://cdn.jsdelivr.net; font-src https://cdn.jsdelivr.net data:; img-src data:; base-uri 'none'; form-action 'none'" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PivoxPolicy — AI 에이전트 시대의 금융 내부통제</title>
+<meta name="description" content="규제 32건을 7개 통제 × 두 층(사람·계정 / AI)으로 재고, 실제 사건 45건으로 다시 돌려 보는 정책 연구 도구." />
+<meta name="theme-color" content="#050505" />
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<style>
+:root {
+  /* pivoxmap/frontend/src/app/globals.css :root (L11-64) 에서 이름·값 그대로 복사 — 이 정적 페이지가 쓰는 것만.
+     pivoxquant globals.css :root(L200-470) 와 대조: 아래 값은 전부 같다. 단 --pq-ivory-faint 만 pivoxquant 는 0.50 (2026-09-10 AA 보정) —
+     여기선 pivoxmap 값(0.45)을 그대로 두되 본문 글자색으로는 쓰지 않는다(rules 참고). 가격색 --pq-up/--pq-down 은 이 페이지에 가격이 없어 뺐다. */
+  --pq-ink: #050505;
+  --pq-ivory: #F5F0E8;
+  --pq-bronze: #B8956A;
+  --pq-bronze-light: #A3845C;
+  --pq-bronze-deep: #6F5636;
+  --pq-onyx: #111111;
+
+  --pq-ivory-soft: rgba(245, 240, 232, 0.78);
+  --pq-ivory-mid: rgba(245, 240, 232, 0.65);
+  --pq-ivory-dim: rgba(245, 240, 232, 0.55);
+  --pq-ivory-faint: rgba(245, 240, 232, 0.45);
+  --pq-ivory-line: rgba(245, 240, 232, 0.08);
+  --pq-ivory-line-soft: rgba(245, 240, 232, 0.06);
+  --pq-ivory-line-faint: rgba(245, 240, 232, 0.04);
+  --pq-card-veil: var(--pq-ivory-line-faint);
+  --pq-card-veil-strong: var(--pq-ivory-line-soft);
+
+  --pq-live: #7db487;
+  --pq-stale: #a88f4a;
+  --pq-error: #d18888;
+  /* 알림 칸 바탕 · 테두리 (로그인 화면 Callout — 강조색을 옅게 깐다) */
+  --pq-bronze-wash: rgba(184, 149, 106, 0.07);
+  --pq-bronze-line: rgba(184, 149, 106, 0.30);
+  /* 버튼 · 입력 테두리 (헤어라인 0.08 보다 한 단 진하게 — 2026-10-15 새 흐름) */
+  --pq-ivory-line-strong: rgba(245, 240, 232, 0.16);
+  /* 화면 넘김 (components/Screen.tsx · AppShell) */
+  --pq-ease: cubic-bezier(0.2, 0.75, 0.2, 1);
+
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
+  --font-code: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;   /* kbd · code 만 */
+
+  --pq-radius-card: 14px;
+  --pq-radius-ctl: 10px;
+  --pq-radius-chip: 6px;
+}
+/* base.css — Pivox 연구 대시보드(정적 HTML 한 장). 토큰은 tokens_css(pivoxmap globals.css :root 복사).
+   레이아웃 뼈대는 pivoxdata(research.css .wrap · ui.css .topbar/.nav/footer.site · index.html .sec-h),
+   글꼴·자간·모서리·컴포넌트 리듬은 pivoxmap globals.css(2026-10-15) 를 따른다. 박스·알약 배지·글로우·그라디언트·italic 없음. */
+
+*,*::before,*::after{box-sizing:border-box}
+html{color-scheme:dark;accent-color:var(--pq-bronze);-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh;background:var(--pq-ink);color:var(--pq-ivory);font-family:var(--font-sans);font-size:15px;line-height:1.6;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-feature-settings:"ss05";
+  word-break:keep-all;overflow-wrap:break-word;text-wrap:pretty}   /* keep-all = 어절 단위 줄바꿈. anywhere 가 아니라 break-word — 칸이 한 글자씩 세로로 눌리지 않게 */
+::selection{background:rgba(184,149,106,0.35)}
+:focus-visible{outline:2px solid var(--pq-bronze);outline-offset:2px;border-radius:var(--pq-radius-chip)}
+img,svg{max-width:100%;height:auto}
+.skip{position:absolute;left:-9999px;top:8px;z-index:100;padding:8px 12px;border-radius:var(--pq-radius-ctl);background:var(--pq-onyx);border:1px solid var(--pq-ivory-line-strong);color:var(--pq-ivory)}
+.skip:focus{left:16px}
+
+/* ── 레이아웃: 한 칸, 위아래로 읽는다. 가로 스크롤은 .tblwrap 과 폰의 .nav 안에서만 ── */
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px 72px}
+main{display:grid;gap:56px;padding-top:28px}
+main>*,section>*{min-width:0}   /* 넓은 표가 칸(그리드 항목)을 넓혀 페이지를 옆으로 밀지 않게 */
+@media(max-width:560px){.wrap{padding:0 16px 56px}main{gap:44px;padding-top:16px}}
+
+/* ── 글 ── */
+h1,h2,h3{margin:0;font-family:var(--font-sans);font-style:normal;text-wrap:balance}
+h1{font-size:clamp(28px,3.2vw,36px);font-weight:700;letter-spacing:-0.03em;line-height:1.2}   /* 머리말은 포스터가 아니라 신문 제호 크기 */
+h2{font-size:20px;font-weight:650;letter-spacing:-0.02em;line-height:1.3}
+h3{font-size:16px;font-weight:600;letter-spacing:-0.01em;line-height:1.4}
+p{margin:0;color:var(--pq-ivory-soft);max-width:72ch}
+p+p{margin-top:10px}
+.lede{font-size:17px;line-height:1.75;letter-spacing:-0.01em;color:var(--pq-ivory-soft);max-width:64ch}
+.eyebrow{font-size:13px;letter-spacing:0.01em;color:var(--pq-bronze);font-weight:500}   /* pivoxmap .pq-eyebrow 그대로 — 대문자·넓은 자간 없음 */
+.meta,.fine{font-size:13px;line-height:1.6;color:var(--pq-ivory-dim)}
+b,strong{font-weight:600;color:var(--pq-ivory)}
+a{color:var(--pq-bronze);text-decoration:none}
+a:hover{text-decoration:underline;text-underline-offset:3px}
+ul,ol{margin:0;padding-left:20px}
+li{margin:4px 0}
+li::marker{color:var(--pq-ivory-faint)}
+time{font-variant-numeric:tabular-nums}
+code,kbd{font-family:var(--font-code);font-size:0.86em}
+code{padding:1px 6px;border:1px solid var(--pq-ivory-line);border-radius:var(--pq-radius-chip);background:var(--pq-onyx);color:var(--pq-ivory-soft)}
+
+/* ── 머리 띠: 이름 + 메뉴 한 줄 (pivoxdata ui.css .topbar/.brand/.nav) ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;height:64px}
+.brand{display:inline-flex;align-items:center;flex-shrink:0;white-space:nowrap;font-size:18px;font-weight:700;letter-spacing:-0.02em;color:var(--pq-ivory)}
+.brand:hover{text-decoration:none}
+.brand .b{color:var(--pq-bronze)}   /* 'Pivox' 아이보리 + 접미 브론즈 — 세 제품 공통 워드마크 */
+.nav{display:flex;align-items:center;gap:4px;margin-left:auto;font-size:14px}
+.nav a{color:var(--pq-ivory-dim);padding:7px 11px;border-radius:var(--pq-radius-ctl);white-space:nowrap;transition:color 150ms,background-color 150ms}
+.nav a:hover{color:var(--pq-ivory);background:var(--pq-card-veil-strong);text-decoration:none}
+.nav a[aria-current]{color:var(--pq-ivory)}
+@media(max-width:780px){.nav a{padding-left:8px;padding-right:8px}.topbar{gap:8px}}
+@media(max-width:640px){
+  .topbar{flex-wrap:wrap;height:auto;padding:10px 0 0;row-gap:2px;border-bottom:1px solid var(--pq-ivory-line)}
+  .brand{min-height:44px}
+  /* 폰: 메뉴가 둘째 줄에 한 줄로, 넘치면 옆으로 민다(거터 밖까지). 아래 탭 바 없음 */
+  .nav{flex:1 0 100%;gap:0;margin:0 -16px;padding:0 12px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .nav::-webkit-scrollbar{display:none}
+  .nav a{display:inline-flex;align-items:center;min-height:44px;padding:0 10px;font-size:14.5px;border-radius:0}
+  .nav a[aria-current]{box-shadow:inset 0 -2px 0 var(--pq-bronze)}
+}
+
+/* ── 머리말 한 줄 ── */
+.hero .eyebrow{display:block;margin-bottom:14px}
+.hero h1{margin-bottom:10px}
+.hero .meta{margin-top:14px}
+
+/* ── 섹션: 앵커 · 헤딩 줄(제목 + 오른쪽 흐린 설명) · 끝에 '출처 · 기준일' 한 줄 ── */
+section{scroll-margin-top:16px}
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:0 0 14px}
+.sec-h h2 a{color:inherit}
+.sec-h h2 a:hover{text-decoration:underline;text-underline-offset:4px}
+.sec-h span{font-size:13px;color:var(--pq-ivory-dim);text-align:right}
+.src{display:flex;flex-wrap:wrap;gap:2px 10px;margin:16px 0 0;max-width:none;font-size:13px;line-height:1.6;color:var(--pq-ivory-dim)}
+/* 항목 사이는 '·' 대신 1px 헤어라인 — 줄이 바뀌어도 구분자가 줄 머리에 남지 않는다 (pivoxdata ui.css .r-k) */
+.src>*:not(:last-child)::after{content:"";display:inline-block;width:1px;height:10px;margin-left:10px;background:var(--pq-ivory-line-strong);vertical-align:-1px}
+.src a{color:var(--pq-ivory-dim);text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--pq-ivory-line-strong)}
+.src a:hover{color:var(--pq-ivory)}
+
+/* ── 카드: 14px · veil 바탕 · 헤어라인 테두리. 꼭 필요한 곳(평가 프로필 숫자 칸)에만 — 목록은 카드로 감싸지 않는다 ── */
+.card{background:var(--pq-card-veil);border:1px solid var(--pq-ivory-line);border-radius:var(--pq-radius-card);padding:18px 20px;min-width:0}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.card .k{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--pq-ivory-dim)}
+.card .v{margin-top:6px;font-size:28px;font-weight:700;letter-spacing:-0.03em;line-height:1.15;font-variant-numeric:tabular-nums}
+.card .h{margin-top:2px;font-size:13px;color:var(--pq-ivory-dim)}
+
+/* ── 표: 헤더 행 헤어라인(한 단 진한 0.16), 본문 행 헤어라인 0.08, 숫자 tabular, 행 hover 는 card-veil ── */
+.tblwrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+th,td{padding:10px 12px;text-align:left;vertical-align:top;overflow-wrap:break-word}
+th{font-size:13px;font-weight:600;letter-spacing:0.01em;color:var(--pq-ivory-dim);white-space:nowrap;border-bottom:1px solid var(--pq-ivory-line-strong)}
+td{border-bottom:1px solid var(--pq-ivory-line)}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:var(--pq-card-veil)}
+.num{text-align:right;white-space:nowrap}
+td time{white-space:nowrap}
+/* 매트릭스(통제 × 관할): 첫 열은 통제 이름, 나머지 칸은 점수(heat_scale 의 .h-0 ~ .h-3 · .h-x) */
+.matrix th:first-child,.matrix td:first-child{min-width:160px}
+.matrix th:not(:first-child),.matrix td:not(:first-child){text-align:center;min-width:64px}
+.matrix td:not(:first-child){font-weight:600}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin:10px 0 0;max-width:none;font-size:13px;color:var(--pq-ivory-dim)}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:3px;margin-right:7px;vertical-align:-2px}
+.legend i.h-x{outline-offset:-1px}
+
+/* ── 줄 목록: 사건 · 지금 바뀐 것 · 연표 · 공백 — 박스 없이 헤어라인, 날짜 열 + 내용 열 (pivoxdata .events/.case) ── */
+.rows{list-style:none;margin:0;padding:0;border-top:1px solid var(--pq-ivory-line-strong)}
+.rows>li{display:grid;grid-template-columns:96px minmax(0,1fr);gap:4px 14px;margin:0;padding:12px 0;border-bottom:1px solid var(--pq-ivory-line)}
+.rows time,.rows .d{font-size:13px;color:var(--pq-ivory-dim);white-space:nowrap;padding-top:2px}
+.rows .t{font-weight:600;color:var(--pq-ivory)}
+.rows .t a{color:inherit}
+.rows .s{margin-top:2px;font-size:14px;line-height:1.6;color:var(--pq-ivory-mid);max-width:72ch}
+.rows .k{font-size:13px;color:var(--pq-ivory-dim)}   /* 분류(관할 · 통제 · 종류) 한 줄 — 칩 아님 */
+@media(max-width:560px){.rows>li{grid-template-columns:1fr;gap:2px}}
+
+/* ── 상태 글자: live / stale / error 는 색 글자(+점)뿐. 바탕·테두리·알약 없음 ── */
+.st{font-size:13px;font-weight:600;white-space:nowrap}
+.st::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor;margin-right:6px;vertical-align:1px}
+.st-live{color:var(--pq-live)}
+.st-stale{color:var(--pq-stale)}
+.st-error{color:var(--pq-error)}
+
+/* ── 안내 칸: 네 변 테두리(한쪽 막대 아님). 범위·한계 설명 같은 읽을거리 ── */
+.note{padding:12px 16px;border-radius:var(--pq-radius-ctl);background:var(--pq-card-veil);box-shadow:inset 0 0 0 1px var(--pq-ivory-line);font-size:13px;line-height:1.65;color:var(--pq-ivory-dim);max-width:none}
+.note-bronze{background:var(--pq-bronze-wash);box-shadow:inset 0 0 0 1px var(--pq-bronze-line);color:var(--pq-ivory-soft)}
+.note b{color:var(--pq-bronze);font-weight:600}
+
+/* ── 버튼: 꼭 필요한 곳(파일 받기)에만 — pivoxmap .pq-btn/.pq-btn-line/.pq-btn-md 리듬 ── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:42px;padding:0 16px;font:inherit;font-size:15px;font-weight:500;letter-spacing:0.01em;
+  border-radius:var(--pq-radius-ctl);white-space:nowrap;cursor:pointer;border:1px solid var(--pq-ivory-line-strong);color:var(--pq-ivory);background:transparent;
+  transition:background-color 220ms var(--pq-ease),color 220ms var(--pq-ease),border-color 220ms var(--pq-ease)}
+.btn:hover{background:var(--pq-card-veil-strong);border-color:rgba(245,240,232,0.26);text-decoration:none}
+.btn-primary{background:var(--pq-bronze);color:var(--pq-ink);border-color:transparent}
+.btn-primary:hover{background:var(--pq-bronze-light)}
+.btn[disabled]{opacity:0.45;pointer-events:none}
+
+/* ── 접기: 방법 · 긴 목록 (pivoxmap details.pq-faq — 헤어라인 위아래, 브론즈 '+') ── */
+details{border-top:1px solid var(--pq-ivory-line)}
+details:last-of-type{border-bottom:1px solid var(--pq-ivory-line)}
+summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 0;font-size:15px;font-weight:600;color:var(--pq-ivory)}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";flex:none;width:1em;line-height:1;text-align:center;color:var(--pq-bronze);transition:transform 250ms}
+details[open] summary::after{transform:rotate(45deg)}
+details>:not(summary){padding-bottom:16px}
+
+/* ── 바닥 (pivoxdata ui.css footer.site) ── */
+footer.site{margin-top:72px;padding:22px 0 8px;border-top:1px solid var(--pq-ivory-line);display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center;justify-content:space-between;font-size:13px;color:var(--pq-ivory-dim)}
+footer.site a{color:var(--pq-ivory-dim)}
+footer.site a:hover{color:var(--pq-ivory)}
+footer.site .links{display:flex;flex-wrap:wrap;gap:4px 16px}
+@media(max-width:640px){footer.site{margin-top:40px}}
+@media(max-width:560px){footer.site .links{gap:0 4px}footer.site .links a{display:inline-flex;align-items:center;min-height:44px;padding:0 8px}}
+
+/* ── 움직임 ── */
+@media(prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
+/* flow.css — 흐름도(진입 → 단계 → 결과). 모의 테스트(sim.html)와 랜딩(index.html)이 같이 쓴다.
+   칸 = .fn, 화살표 = 앞 칸과의 사이(::before 선 + ::after 화살촉). 지나간 길은 실선, 오지 않은 길은 점선. */
+/* ── 공격 흐름: 진입 → 단계(통제 관문) → 결과. 화살표는 공격이 지나간 길, 점선은 오지 않은 길 ── */
+.flow-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-top:24px}
+.flow-h .h3{margin:0 0 10px}
+.flow-h #flow-name{color:var(--pq-bronze)}
+.flow-key{display:inline-flex;align-items:center;gap:6px}
+.flow-key i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-left:6px}
+.flow-key i.k-on{background:var(--pq-bronze)}
+.flow-key i.k-off{box-shadow:inset 0 0 0 1px var(--pq-ivory-dim)}
+.flow-wrap{display:grid;gap:18px}
+.flow-top{display:flex;align-items:baseline;gap:12px;margin-bottom:8px}
+.flow-l{font-size:13px;font-weight:700;color:var(--pq-bronze)}
+.entry{font-size:12.5px;color:var(--pq-ivory-dim)}
+.flow-none{padding:14px 16px;border-radius:var(--pq-radius-ctl);box-shadow:inset 0 0 0 1px var(--pq-ivory-line);font-size:13.5px;color:var(--pq-ivory-mid)}
+.flow-none b{color:var(--pq-ivory)}
+.flow{display:grid;gap:0 30px;list-style:none;margin:0;padding:0;align-items:stretch}
+.fn{position:relative;min-width:0;margin:0;padding:12px 12px 10px;border-radius:var(--pq-radius-ctl);background:var(--pq-card-veil);
+  box-shadow:inset 0 0 0 1px var(--pq-ivory-line-strong)}
+.fn+.fn::before{content:"";position:absolute;left:-27px;top:24px;width:20px;border-top:2px solid var(--pq-ivory-mid)}
+.fn+.fn::after{content:"";position:absolute;left:-9px;top:19px;border:6px solid transparent;border-left-color:var(--pq-ivory-mid)}
+.fn.after::before,.fn.end.blocked::before{border-top:2px dashed var(--pq-ivory-line-strong)}
+.fn.after::after,.fn.end.blocked::after{border-left-color:var(--pq-ivory-line-strong)}
+.fh{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:24px}
+.fn .no{display:inline-flex;align-items:center;justify-content:center;flex:none;width:24px;height:24px;border-radius:50%;
+  border:1px solid var(--pq-ivory-line-strong);font-size:12px;font-weight:600;color:var(--pq-ivory);font-variant-numeric:tabular-nums}
+.fn .tag{font-size:12px;font-weight:600;color:var(--pq-ivory-dim);text-align:right}
+.fn .ft{margin-top:8px;font-size:13.5px;font-weight:600;line-height:1.4;color:var(--pq-ivory)}
+.gates{list-style:none;margin:10px 0 0;padding:8px 0 0;border-top:1px solid var(--pq-ivory-line);display:grid;gap:4px}
+.gates li{display:grid;grid-template-columns:10px minmax(0,1fr) auto;align-items:baseline;gap:6px;margin:0;font-size:12px;color:var(--pq-ivory-dim);cursor:help}
+.gates li i{display:block;width:9px;height:9px;border-radius:2px;box-shadow:inset 0 0 0 1px var(--pq-ivory-dim);align-self:center}
+.gates li.on{color:var(--pq-ivory)}
+.gates li.on i{background:var(--pq-bronze);box-shadow:none}
+.gates li.on .e{color:var(--pq-bronze-light);font-weight:600}
+.gates li.on.prevent .e{color:var(--pq-bronze)}
+.gates li.none{display:block;cursor:default}
+.fn.stop{background:var(--pq-bronze-wash);box-shadow:inset 0 0 0 2px var(--pq-bronze)}
+.fn.stop .no{background:var(--pq-bronze);border-color:var(--pq-bronze);color:var(--pq-ink)}
+.fn.stop .tag{color:var(--pq-bronze)}
+.fn.touch .tag{color:var(--pq-bronze-light)}
+.fn.pass .tag{color:var(--pq-ivory-mid)}
+.fn.after{opacity:0.4;background:transparent;box-shadow:inset 0 0 0 1px var(--pq-ivory-line)}
+.fn.end .ft{font-size:16px;font-weight:700}
+.fn.end .fi{margin-top:6px;font-size:12.5px;line-height:1.5;color:var(--pq-ivory-soft)}
+.fn.end.blocked{box-shadow:inset 0 0 0 1px var(--pq-bronze-line)}
+.fn.end.blocked .ft{color:var(--pq-bronze)}
+.fn.end.blocked .fi{color:var(--pq-ivory-dim)}
+.fn.end.reduced .ft{color:var(--pq-bronze-light)}
+.fn.end.damage{box-shadow:inset 0 0 0 2px rgba(245,240,232,0.55)}
+.fn.chg .fh::after{content:"바뀜";margin-left:6px;font-size:11px;font-weight:600;color:var(--pq-ivory)}
+.fn.chg{outline:1px dashed var(--pq-ivory-mid);outline-offset:3px}
+@media(prefers-reduced-motion:no-preference){
+  .fn{transition:opacity 320ms var(--pq-ease),transform 320ms var(--pq-ease)}
+  .fn.pending{opacity:0;transform:translateX(-8px)}
+}
+
+/* 좁은 화면(랜딩만 해당 — 모의 테스트는 데스크톱 전용): 칸을 세로로 쌓고 화살표를 아래로 */
+@media(max-width:860px){
+  .flow{grid-template-columns:minmax(0,1fr)!important;gap:22px 0}
+  .fn+.fn::before{left:22px;top:-20px;width:0;height:12px;border-top:0;border-left:2px solid var(--pq-ivory-mid)}
+  .fn+.fn::after{left:17px;top:-10px;border:6px solid transparent;border-top-color:var(--pq-ivory-mid);border-left-color:transparent}
+  .fn.after::before,.fn.end.blocked::before{border-top:0;border-left:2px dashed var(--pq-ivory-line-strong)}
+  .fn.after::after,.fn.end.blocked::after{border-left-color:transparent;border-top-color:var(--pq-ivory-line-strong)}
+  .flow-h,.flow-top{flex-wrap:wrap}
+}
+
+/* landing.css — 첫 화면(out/index.html). 토큰 · 뼈대는 tokens.css · base.css, 흐름도는 flow.css.
+   박스 장식 · 알약 · 글로우 · 그라디언트 · italic 없음, 빨강 · 초록 없음. 폰에서도 읽힌다(모의 테스트와 달리). */
+
+.wrap.land{max-width:1200px}
+.land-hero{padding-top:24px}
+.land-hero h1{font-size:clamp(30px,4vw,46px);max-width:22ch}
+.land-hero .lede{max-width:70ch}
+.land-hero .lede b{color:var(--pq-ivory);font-weight:600}
+.cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.land-hero .meta{font-size:13px;color:var(--pq-ivory-dim)}
+.sec-h>a{font-size:14px;color:var(--pq-bronze);white-space:nowrap}
+
+/* 숫자 다섯 — 칸 사이 선만 */
+.figs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border-top:1px solid var(--pq-ivory-line-strong);border-bottom:1px solid var(--pq-ivory-line-strong)}
+.figs>div{display:flex;flex-direction:column;gap:2px;padding:20px 18px 18px;min-width:0}
+.figs>div+div{box-shadow:inset 1px 0 0 var(--pq-ivory-line)}
+.figs .v{font-size:36px;font-weight:700;letter-spacing:-0.03em;line-height:1.1;color:var(--pq-bronze);font-variant-numeric:tabular-nums}
+.figs .v small{margin-left:3px;font-size:16px;font-weight:600;color:var(--pq-ivory-dim)}
+.figs .k{margin-top:6px;font-size:14px;font-weight:600;color:var(--pq-ivory)}
+.figs .h{font-size:12.5px;line-height:1.5;color:var(--pq-ivory-dim)}
+
+/* 발견 — 주장 넷 + 작은 매트릭스 */
+.find{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:40px;align-items:start}
+.claims{margin:0;padding:0;list-style:none;counter-reset:c;display:grid;gap:0}
+.claims li{counter-increment:c;position:relative;margin:0;padding:14px 0 14px 40px;border-top:1px solid var(--pq-ivory-line);font-size:15px;line-height:1.7;color:var(--pq-ivory-soft)}
+.claims li:first-child{border-top:0;padding-top:0}
+.claims li::before{content:counter(c);position:absolute;left:0;top:14px;width:26px;height:26px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--pq-bronze);box-shadow:inset 0 0 0 1px var(--pq-bronze-line)}
+.claims li:first-child::before{top:0}
+.claims b{color:var(--pq-ivory);font-weight:600}
+.mini-wrap{margin:0}
+.mini{width:100%;border-collapse:separate;border-spacing:2px;table-layout:fixed;font-size:12.5px}
+.mini th,.mini td{border:0;padding:0}
+.mini thead th{padding:0 2px 6px;text-align:center;font-size:13px;font-weight:600;color:var(--pq-ivory);white-space:normal}
+.mini thead th small{display:block;font-size:11.5px;font-weight:500;color:var(--pq-ivory-dim)}
+.mini thead th:first-child{width:34%;text-align:left}
+.mini tbody th{padding:0 8px 0 0;font-size:13px;font-weight:500;color:var(--pq-ivory-soft);text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mini td{height:30px;text-align:center;vertical-align:middle;border-radius:3px;font-weight:600;font-size:12px}
+.mini td.s0{color:var(--pq-ivory-faint);box-shadow:inset 0 0 0 1px var(--pq-ivory-line)}
+.mini td.s1{background:var(--pq-bronze-line);color:var(--pq-ivory)}
+.mini td.s2{background:var(--pq-bronze);color:var(--pq-ink)}
+.mini td.s3{background:var(--pq-ivory);color:var(--pq-ink)}
+.mini td.ai{position:relative}
+.mini-wrap figcaption,.preview figcaption{margin-top:10px;font-size:12.5px;line-height:1.6;color:var(--pq-ivory-dim)}
+
+/* 모의 테스트 미리보기 */
+.lead2{margin:0 0 18px;font-size:15.5px;line-height:1.75;color:var(--pq-ivory-soft);max-width:92ch}
+.preview{margin:0;display:grid;gap:18px}
+.sim-two{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:40px;margin-top:28px}
+.bars{display:grid;grid-template-columns:minmax(120px,auto) minmax(0,1fr) auto;align-items:center;gap:10px 12px;margin:0 0 10px}
+.bars dt{font-size:13px;color:var(--pq-ivory-soft);white-space:nowrap}
+.bars dd{margin:0;min-width:0}
+.bars .n{font-size:13px;font-weight:600;color:var(--pq-ivory);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.track{position:relative;display:block;height:12px;border-radius:2px;background:var(--pq-ivory-line);overflow:hidden}
+.track .hi,.track .lo{position:absolute;left:0;top:0;bottom:0}
+.track .hi{background:var(--pq-bronze-line)}
+.track .lo{background:var(--pq-bronze)}
+.uses ul{margin:0 0 16px;padding:0;list-style:none}
+.uses li{margin:0;padding:10px 0;border-top:1px solid var(--pq-ivory-line);font-size:14.5px;line-height:1.65;color:var(--pq-ivory-soft)}
+.uses li:first-child{border-top:0;padding-top:0}
+.uses b{color:var(--pq-ivory);font-weight:600}
+
+/* 만드는 법 — 흐름도(flow.css) 위에 설명 칸 */
+.pipe .fn .tag{color:var(--pq-bronze)}
+.pipe .fn .ft{font-size:15px}
+.pipe .fn .fi{margin-top:6px;font-size:12.5px;line-height:1.55;color:var(--pq-ivory-mid)}
+.pipe-note{margin-top:12px;max-width:none}
+
+/* 들어가기 */
+.go{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.go .card{display:flex;flex-direction:column;gap:6px;color:inherit;transition:border-color 150ms var(--pq-ease),background-color 150ms var(--pq-ease)}
+.go .card:hover{text-decoration:none;border-color:var(--pq-bronze-line);background:var(--pq-bronze-wash)}
+.go .card .k{font-size:13px;color:var(--pq-bronze);font-weight:600}
+.go .card .t{font-size:15.5px;font-weight:600;line-height:1.5;color:var(--pq-ivory)}
+.go .card .h{font-size:12.5px;color:var(--pq-ivory-dim)}
+.lim li{margin:6px 0}
+
+@media(max-width:980px){
+  .figs{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .figs>div:nth-child(4){box-shadow:none}
+  .figs>div:nth-child(n+4){border-top:1px solid var(--pq-ivory-line)}
+  .find,.sim-two{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:860px){
+  .pipe{grid-template-columns:minmax(0,1fr)!important}
+  .go{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:560px){
+  .figs{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .figs>div{padding:16px 12px}
+  .figs>div:nth-child(n){box-shadow:none;border-top:1px solid var(--pq-ivory-line)}
+  .figs>div:nth-child(-n+2){border-top:0}
+  .figs>div:nth-child(2n){box-shadow:inset 1px 0 0 var(--pq-ivory-line)}
+  .figs .v{font-size:30px}
+  .mini tbody th{white-space:normal;font-size:12px}
+  .mini thead th:first-child{width:30%}
+  .bars{grid-template-columns:minmax(0,1fr) auto}
+  .bars dt{grid-column:1/-1;margin-bottom:-6px}
+}
+
+</style>
+</head>
+<body>
+<a class="skip" href="#main">본문으로</a>
+<div class="wrap land">
+
+<header class="topbar">
+<a class="brand" href="pivoxpolicy-home.html" aria-label="PivoxPolicy 홈">Pivox<span class="b">Policy</span></a>
+<nav class="nav" aria-label="페이지">
+<a href="#finding">발견</a><a href="#sim">모의 테스트</a><a href="#how">만드는 법</a><a href="pivoxpolicy-dashboard.html">대시보드</a>
+</nav>
+</header>
+
+<main id="main">
+
+
+<header class="hero land-hero" id="top">
+<span class="eyebrow">정책 연구 · AI 에이전트 금융 내부통제</span>
+<h1>AI 에이전트 시대, 금융회사 내부통제는 안전한가</h1>
+<p class="lede">규제가 요구하는 통제를 <b>사람·계정</b>에 대한 것과 <b>AI 에이전트</b>에 대한 것으로 나눠 재고, 실제 사건으로 그 통제가 있었다면 어땠을지 다시 돌려 본다. 규제 32건 · 통제 7개 · 실제 사건 45건.</p>
+<div class="cta">
+<a class="btn btn-primary" href="pivoxpolicy-sim.html">모의 테스트 열기</a>
+<a class="btn" href="pivoxpolicy-dashboard.html">대시보드 보기</a>
+</div>
+<p class="meta"><time datetime="2026-11-12T08:32:22Z">2026-11-12</time> 레지스트리 기준 · 숫자는 빌드할 때마다 다시 계산 · 법률 자문이 아니다</p>
+</header>
+
+
+<section class="figs" aria-label="한눈에">
+<div><span class="v">32</span><span class="k">규제·가이드라인 문서</span><span class="h">규범 문서 23건 · 한국 · 미국 · EU · 국제</span></div>
+<div><span class="v">45</span><span class="k">AI 에이전트 실제 사건</span><span class="h">실패한 통제가 확인된 것 25건</span></div>
+<div><span class="v">0.96</span><span class="k">사건 판정 일치도 κ</span><span class="h">서로 보지 않은 코더 두 팀</span></div>
+<div><span class="v">16<small>칸</small></span><span class="k">간극</span><span class="h">사람에겐 구속력, AI 에겐 없음</span></div>
+<div><span class="v">0<small>칸</small></span><span class="k">에이전트를 이름 붙인 구속력 요구</span><span class="h">관할 4 × 통제 7 중</span></div>
+</section>
+
+
+<section id="finding" aria-labelledby="h-find">
+<div class="sec-h"><h2 id="h-find">발견 — 사람에겐 묶여 있고, AI 에겐 풀려 있다</h2><span>조정본 매트릭스 · 2026-11-12</span></div>
+<div class="find">
+<ol class="claims">
+<li><b>사람·계정 층은 이미 구속력이 있다.</b> 한국 · 미국 · EU 의 21칸(관할 3 × 통제 7) 중 19칸을 구속력 있는 문서가 요구한다.</li>
+<li><b>같은 통제를 AI 에 적용하라는 구속력 요구는 3칸뿐이다.</b> 에이전트를 이름으로 명시한 구속력 문서는 0칸 — 나머지는 가이드라인(자율)이거나 다루지 않는다.</li>
+<li><b>간극 16칸</b> — 한국 6 · 미국 6 · EU 4. 사람·계정에는 구속력 있는 요구가 있는데, 같은 통제를 AI 에 적용하라는 구속력 요구는 없는 칸이다.</li>
+<li><b>실제 사건에서 가장 자주 실패한 통제</b>는 최소 권한 19건, 사람 승인 16건 (사건 45건 조정본).</li>
+</ol>
+<figure class="mini-wrap">
+<table class="mini"><thead><tr><th scope="col">통제</th><th scope="col" colspan="2">한국<small>사람 · AI</small></th><th scope="col" colspan="2">미국<small>사람 · AI</small></th><th scope="col" colspan="2">EU<small>사람 · AI</small></th></tr></thead><tbody><tr><th scope="row">1. 인벤토리</th><td class="s2" title="한국 · 사람·계정 층 — 구속력">구속</td><td class="s1 ai" title="한국 · AI 적용 층 — 자율">자율</td><td class="s2" title="미국 · 사람·계정 층 — 구속력">구속</td><td class="s1 ai" title="미국 · AI 적용 층 — 자율">자율</td><td class="s2" title="EU · 사람·계정 층 — 구속력">구속</td><td class="s0 ai" title="EU · AI 적용 층 — 다루지 않음">—</td></tr><tr><th scope="row">2. 공급자 관리</th><td class="s2" title="한국 · 사람·계정 층 — 구속력">구속</td><td class="s1 ai" title="한국 · AI 적용 층 — 자율">자율</td><td class="s2" title="미국 · 사람·계정 층 — 구속력">구속</td><td class="s1 ai" title="미국 · AI 적용 층 — 자율">자율</td><td class="s2" title="EU · 사람·계정 층 — 구속력">구속</td><td class="s0 ai" title="EU · AI 적용 층 — 다루지 않음">—</td></tr><tr><th scope="row">3. 고유 식별자</th><td class="s2" title="한국 · 사람·계정 층 — 구속력">구속</td><td class="s0 ai" title="한국 · AI 적용 층 — 다루지 않음">—</td><td class="s1" title="미국 · 사람·계정 층 — 자율">자율</td><td class="s1 ai" title="미국 · AI 적용 층 — 자율">자율</td><td class="s0" title="EU · 사람·계정 층 — 다루지 않음">—</td><td class="s0 ai" title="EU · AI 적용 층 — 다루지 않음">—</td></tr><tr><th scope="row">4. 최소 권한</th><td class="s2" title="한국 · 사람·계정 층 — 구속력">구속</td><td class="s1 ai" title="한국 · AI 적용 층 — 자율">자율</td><td class="s2" title="미국 · 사람·계정 층 — 구속력">구속</td><td class="s1 ai" title="미국 · AI 적용 층 — 자율">자율</td><td class="s2" title="EU · 사람·계정 층 — 구속력">구속</td><td class="s0 ai" title="EU · AI 적용 층 — 다루지 않음">—</td></tr><tr><th scope="row">5. 사람 승인</th><td class="s2" title="한국 · 사람·계정 층 — 구속력">구속</td><td class="s2 ai" title="한국 · AI 적용 층 — 구속력">구속</td><td class="s2" title="미국 · 사람·계정 층 — 구속력">구속</td><td class="s1 ai" title="미국 · AI 적용 층 — 자율">자율</td><td class="s2" title="EU · 사람·계정 층 — 구속력">구속</td><td class="s2 ai" title="EU · AI 적용 층 — 구속력">구속</td></tr><tr><th scope="row">6. 감사 기록</th><td class="s2" title="한국 · 사람·계정 층 — 구속력">구속</td><td class="s1 ai" title="한국 · AI 적용 층 — 자율">자율</td><td class="s2" title="미국 · 사람·계정 층 — 구속력">구속</td><td class="s1 ai" title="미국 · AI 적용 층 — 자율">자율</td><td class="s2" title="EU · 사람·계정 층 — 구속력">구속</td><td class="s0 ai" title="EU · AI 적용 층 — 다루지 않음">—</td></tr><tr><th scope="row">7. 즉시 중단</th><td class="s2" title="한국 · 사람·계정 층 — 구속력">구속</td><td class="s1 ai" title="한국 · AI 적용 층 — 자율">자율</td><td class="s2" title="미국 · 사람·계정 층 — 구속력">구속</td><td class="s1 ai" title="미국 · AI 적용 층 — 자율">자율</td><td class="s2" title="EU · 사람·계정 층 — 구속력">구속</td><td class="s2 ai" title="EU · AI 적용 층 — 구속력">구속</td></tr></tbody></table>
+<figcaption>칸 = 그 관할에서 그 통제를 요구하는 가장 센 문서. 구속 = 구속력 · 자율 = 가이드라인 · 명시 = 구속력 + 에이전트 명시 · — = 다루지 않음. 각 관할의 왼쪽이 사람·계정 층, 오른쪽이 AI 적용 층.</figcaption>
+</figure>
+</div>
+</section>
+
+
+<section id="sim" aria-labelledby="h-sim">
+<div class="sec-h"><h2 id="h-sim">모의 테스트 — 통제를 켜고 끄며 공격을 다시 돌린다</h2><a href="pivoxpolicy-sim.html">열기 →</a></div>
+<p class="lead2">회사의 통제 수준과 에이전트 환경을 고르면, 공격 원형 12개가 단계마다 어느 통제 앞에서 멈추는지와 실제 사건 45건이 그 설정이었다면 어떻게 끝났을지가 바로 계산된다. 가상 회사 데모 케이스 25개 · 에이전트 종류 8개 · 관할 프리셋 · 사건 흐름 · 사건→통제→조문 추적 · 개선 조치 CSV · 변경안 비교 · 새 규제 가정해 보기 · OWASP Agentic Top 10 커버리지 · 자가 진단 · 정책 초안.</p>
+<figure class="preview">
+<div class="flow-row"><div class="flow-top"><span class="flow-l">한국 — 강제 규제만</span></div><ol class="flow" style="grid-template-columns:repeat(4, minmax(0,1fr)) 176px" aria-label="한국 — 강제 규제만 — 공격 흐름"><li class="fn pass"><div class="fh"><span class="no">1</span><span class="tag">통과</span></div><div class="ft">업체·연동이 뚫리거나 AI 인프라가 노출된다</div><ul class="gates"><li class="off" title="인벤토리 · AI 적용 — 에이전트·AI 엔드포인트 목록이 있어 열린 채 잊힌 것이 없다"><i></i><span class="g">인벤토리 AI</span><span class="e">꺼짐</span></li><li class="off" title="공급자 관리 · AI 적용 — 연동 업체와 사고 통지 계약이 있어 침해를 빨리 듣는다"><i></i><span class="g">공급자 관리 AI</span><span class="e">꺼짐</span></li></ul></li><li class="fn pass"><div class="fh"><span class="no">2</span><span class="tag">통과</span></div><div class="ft">훔친 토큰으로 접근한다</div><ul class="gates"><li class="off" title="고유 식별자 · AI 적용 — 연동·에이전트마다 자격증명이 달라 하나가 털려도 그 범위뿐이다"><i></i><span class="g">고유 식별자 AI</span><span class="e">꺼짐</span></li><li class="off" title="최소 권한 · AI 적용 — 연동 권한이 최소라 대량 조회가 안 된다"><i></i><span class="g">최소 권한 AI</span><span class="e">꺼짐</span></li></ul></li><li class="fn pass"><div class="fh"><span class="no">3</span><span class="tag">통과</span></div><div class="ft">대량 조회</div><ul class="gates"><li class="off" title="감사 기록 · AI 적용 — 연동별 호출 기록으로 이상을 본다"><i></i><span class="g">감사 기록 AI</span><span class="e">꺼짐</span></li></ul></li><li class="fn pass"><div class="fh"><span class="no">4</span><span class="tag">통과</span></div><div class="ft">토큰 폐기</div><ul class="gates"><li class="off" title="즉시 중단 · AI 적용 — 해당 연동·에이전트 자격증명을 즉시 폐기한다"><i></i><span class="g">즉시 중단 AI</span><span class="e">꺼짐</span></li></ul></li><li class="fn end damage"><div class="fh"><span class="tag">결과</span></div><div class="ft">피해 발생</div><p class="fi">연동된 데이터 대량 조회·AI 자원 도용</p></li></ol></div><div class="flow-row"><div class="flow-top"><span class="flow-l">모든 통제를 AI 까지</span></div><ol class="flow" style="grid-template-columns:repeat(4, minmax(0,1fr)) 176px" aria-label="모든 통제를 AI 까지 — 공격 흐름"><li class="fn touch"><div class="fh"><span class="no">1</span><span class="tag">범위 제한 · 기록·탐지</span></div><div class="ft">업체·연동이 뚫리거나 AI 인프라가 노출된다</div><ul class="gates"><li class="on limit" title="인벤토리 · AI 적용 — 에이전트·AI 엔드포인트 목록이 있어 열린 채 잊힌 것이 없다"><i></i><span class="g">인벤토리 AI</span><span class="e">범위 제한</span></li><li class="on detect" title="공급자 관리 · AI 적용 — 연동 업체와 사고 통지 계약이 있어 침해를 빨리 듣는다"><i></i><span class="g">공급자 관리 AI</span><span class="e">기록·탐지</span></li></ul></li><li class="fn touch"><div class="fh"><span class="no">2</span><span class="tag">범위 제한 · 범위 제한</span></div><div class="ft">훔친 토큰으로 접근한다</div><ul class="gates"><li class="on limit" title="고유 식별자 · AI 적용 — 연동·에이전트마다 자격증명이 달라 하나가 털려도 그 범위뿐이다"><i></i><span class="g">고유 식별자 AI</span><span class="e">범위 제한</span></li><li class="on limit" title="최소 권한 · AI 적용 — 연동 권한이 최소라 대량 조회가 안 된다"><i></i><span class="g">최소 권한 AI</span><span class="e">범위 제한</span></li></ul></li><li class="fn touch"><div class="fh"><span class="no">3</span><span class="tag">기록·탐지</span></div><div class="ft">대량 조회</div><ul class="gates"><li class="on detect" title="감사 기록 · AI 적용 — 연동별 호출 기록으로 이상을 본다"><i></i><span class="g">감사 기록 AI</span><span class="e">기록·탐지</span></li></ul></li><li class="fn touch"><div class="fh"><span class="no">4</span><span class="tag">멈춤·회수</span></div><div class="ft">토큰 폐기</div><ul class="gates"><li class="on contain" title="즉시 중단 · AI 적용 — 해당 연동·에이전트 자격증명을 즉시 폐기한다"><i></i><span class="g">즉시 중단 AI</span><span class="e">멈춤·회수</span></li></ul></li><li class="fn end reduced"><div class="fh"><span class="tag">결과</span></div><div class="ft">피해 축소</div><p class="fi">연동된 데이터 대량 조회·AI 자원 도용</p></li></ol></div>
+<figcaption>AI 연동·자격증명 탈취 — 고객 상담 에이전트, 실제 사건 7건이 이 경로였다. 위 = 한국 강제 규제만 지키는 회사, 아래 = 모든 통제를 AI 까지. 원형·단계는 저자 설계다.</figcaption>
+</figure>
+<div class="sim-two">
+<div>
+<h3 class="h3">실제 사건 — 그 설정이었다면 막혔을 사건 (판단할 수 있는 25건 중)</h3>
+<dl class="bars"><dt>통제 없음</dt><dd><span class="track" role="img" aria-label="막혔을 사건 0 / 25"><span class="hi" style="width:0.0%"></span><span class="lo" style="width:0.0%"></span></span></dd><dd class="n">0건</dd><dt>한국 — 강제 규제만</dt><dd><span class="track" role="img" aria-label="막혔을 사건 5~21 / 25"><span class="hi" style="width:84.0%"></span><span class="lo" style="width:20.0%"></span></span></dd><dd class="n">5~21건</dd><dt>미국 — 강제 규제만</dt><dd><span class="track" role="img" aria-label="막혔을 사건 3~7 / 25"><span class="hi" style="width:28.0%"></span><span class="lo" style="width:12.0%"></span></span></dd><dd class="n">3~7건</dd><dt>EU — 강제 규제만</dt><dd><span class="track" role="img" aria-label="막혔을 사건 4~19 / 25"><span class="hi" style="width:76.0%"></span><span class="lo" style="width:16.0%"></span></span></dd><dd class="n">4~19건</dd><dt>모든 통제를 AI 까지</dt><dd><span class="track" role="img" aria-label="막혔을 사건 25 / 25"><span class="hi" style="width:100.0%"></span><span class="lo" style="width:100.0%"></span></span></dd><dd class="n">25건</dd></dl>
+<p class="fine">반사실 계산이지 예측이 아니다. 진한 막대 = 하한(그 사건에서 실패한 통제가 모두 켜짐), 옅은 막대 = 상한(사전·사용 중 통제가 하나라도 켜짐).</p>
+</div>
+<div class="uses">
+<h3 class="h3">이렇게 쓴다</h3>
+<ul>
+<li><b>발표·학회</b> — 데모 케이스를 ← → 로 넘기며, 한 가지만 다른 두 회사가 왜 다르게 끝나는지</li>
+<li><b>보안 담당자</b> — 우리 회사 통제와 에이전트를 넣고, 통제 하나씩 AI 까지 올렸을 때의 효과를 CSV 로</li>
+<li><b>정책</b> — 관할 프리셋끼리, 새 규제가 들어오면 결과가 어떻게 바뀌는지 이력으로</li>
+</ul>
+<p><a class="btn btn-primary" href="pivoxpolicy-sim.html">모의 테스트 열기</a></p>
+</div>
+</div>
+</section>
+
+
+<section id="how" aria-labelledby="h-how">
+<div class="sec-h"><h2 id="h-how">만드는 법 — 수집에서 모의 테스트까지</h2><span>무엇이 자동이고 무엇이 사람인지</span></div>
+<ol class="flow pipe" style="grid-template-columns:repeat(6, minmax(0,1fr))" aria-label="이 연구가 만들어지는 흐름"><li class="fn pass"><div class="fh"><span class="no">1</span><span class="tag">자동</span></div><div class="ft">수집</div><p class="fi">발행 주체 피드 79곳(규제기관 · 표준 · 위협 보고) — 지금까지 916건</p></li><li class="fn pass"><div class="fh"><span class="no">2</span><span class="tag">자동</span></div><div class="ft">후보</div><p class="fi">AI·에이전트와 닿는 새 규제·가이드라인을 점수로 골라 &#x27;반영 대기&#x27; — 지금 16건</p></li><li class="fn pass"><div class="fh"><span class="no">3</span><span class="tag">사람</span></div><div class="ft">문서</div><p class="fi">사람이 레지스트리에 올린다 — 문서 32건(규범 문서 23건), 원문 스냅숏 고정</p></li><li class="fn pass"><div class="fh"><span class="no">4</span><span class="tag">AI 두 팀 + 조정</span></div><div class="ft">코딩</div><p class="fi">서로 보지 않는 두 팀이 7통제 × 두 층으로 판정 — 문서 κ 사람·계정 0.92 · AI 1.00, 사건 κ 0.96</p></li><li class="fn pass"><div class="fh"><span class="no">5</span><span class="tag">계산</span></div><div class="ft">매트릭스</div><p class="fi">관할 × 통제 × 두 층 — 간극 16칸</p></li><li class="fn pass"><div class="fh"><span class="no">6</span><span class="tag">계산</span></div><div class="ft">모의 테스트</div><p class="fi">공격 원형 12개 · 실제 사건 45건 반사실 — 결과가 바뀌면 이력(2줄)과 데모 경고</p></li></ol>
+<p class="fine pipe-note">규제가 새로 들어오거나 판정이 바뀌면 ⑤ · ⑥ 이 다시 계산되고, 결과가 달라진 때만 이력이 남는다. 판정은 AI 코더 두 팀과 조정 — 사람 코더 검증은 아직이다.</p>
+</section>
+
+
+<section id="go" aria-labelledby="h-go">
+<div class="sec-h"><h2 id="h-go">어디로 갈까</h2></div>
+<div class="go">
+<a class="card" href="pivoxpolicy-sim.html"><span class="k">모의 테스트</span><span class="t">통제 · 에이전트를 바꾸며 공격 흐름과 실제 사건을 다시 돌린다</span><span class="h">데스크톱 화면 기준</span></a>
+<a class="card" href="pivoxpolicy-dashboard.html#matrix"><span class="k">대시보드 · 매트릭스</span><span class="t">관할 × 통제 × 두 층, 칸마다 근거 문서와 조문</span><span class="h">동향 · 사건 · 공백 · 연표 · 문서</span></a>
+<a class="card" href="pivoxpolicy-dashboard.html#method"><span class="k">출처 · 방법</span><span class="t">코드북 · κ · 조정 · 이 숫자로 말할 수 없는 것</span><span class="h">발행 주체 원문에서</span></a>
+</div>
+</section>
+
+
+<section id="limits" aria-labelledby="h-lim">
+<div class="sec-h"><h2 id="h-lim">이 연구가 말할 수 없는 것</h2></div>
+<ul class="fine lim">
+<li>법률 자문이 아니다. 공개된 문서·사건 자료로 '무엇이 요구되는가' 와 '공개 증거 수준' 을 잰다 — 회사가 실제로 통제를 갖췄는지는 모른다.</li>
+<li>코더는 같은 계열의 AI 두 팀이다. κ 는 같은 코드북을 두 번 독립 적용했을 때의 재현성이지 정확성이 아니다. 사람 코더 검증은 아직이다.</li>
+<li>모의 테스트의 사건 결과는 반사실 계산이다. 실패한 통제가 공개 자료에 없는 사건은 '판단 근거 없음' 으로 따로 센다.</li>
+<li>공격 원형 · 단계 · 데모 케이스(가상 회사)는 저자 설계다. 규제 프리셋은 적용 대상(예: 고영향 AI 만)을 따지지 않는다.</li>
+</ul>
+</section>
+
+</main>
+
+<footer class="site">
+<span>PivoxPolicy · 정책 연구 — 법률 자문이 아니다.</span>
+<span class="links"><a href="pivoxpolicy-sim.html">모의 테스트</a><a href="pivoxpolicy-dashboard.html">대시보드</a><a href="./simulation.md">프리셋별 표</a><a href="pivoxpolicy-sim.html" download>모의 테스트 파일로 받기(오프라인)</a></span>
+</footer>
+
+</div>
+</body>
+</html>

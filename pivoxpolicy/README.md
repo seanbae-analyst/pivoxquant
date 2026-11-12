@@ -68,6 +68,17 @@ python3 -m pytest -q
 **숫자는 전부 빌드할 때 레지스트리에서 계산한다**(손으로 적은 숫자 없음 — `tests/test_landing.py` 가 확인). 스크립트 없음, 폰에서도 읽힌다.
 대시보드는 `out/dashboard.html` 로 옮겼다 — 워드마크는 첫 화면으로, 메뉴의 '대시보드' 는 dashboard.html 로.
 
+## 오프라인 사본 (out/offline/, 2026-11-12)
+
+`out/` 은 처음부터 정적 사이트다 — 서버 · DB · 빌드 단계가 없고, Vercel 은 파일을 내보내고 보안 헤더를 붙일 뿐이다.
+`cli bundle`(그리고 `cli site` 끝에서)이 세 페이지를 **파일 하나씩**으로 묶는다(`pivoxpolicy/bundle.py`):
+`out/offline/pivoxpolicy-home.html` · `pivoxpolicy-dashboard.html` · `pivoxpolicy-sim.html` (+ simulation.md · pending-regulations.md).
+- 더블클릭으로 연다 — 서버 · 인터넷 없이(학회장 노트북 · USB · 메일 첨부). 모의 테스트는 `pivoxpolicy-sim.html` 하나로 전부 돈다(약 250KB).
+- 스크립트를 페이지 안에 넣고, 페이지 안 `<meta>` CSP 로 **그 스크립트(sha256)만** 실행한다 — 외부 스크립트 · 네트워크 요청 없음.
+  인라인 데이터의 `</` · `<!--` 는 이스케이프한다(피드 제목 같은 외부 글이 `<script>` 를 끊지 못하게, `tests/test_bundle.py`).
+- 유일한 네트워크 요청은 글꼴(Pretendard CDN)이다. 인터넷이 없으면 시스템 글꼴(Apple SD Gothic Neo · 맑은 고딕)로 보인다.
+- 첫 화면 꼬리말의 '모의 테스트 파일로 받기' 가 배포 사이트에서 이 파일을 내려받게 한다.
+
 ## 대시보드 (out/dashboard.html)
 
 `site` 명령이 레지스트리 + intel.jsonl 을 한 페이지로 낸다. 디자인은 **PivoxQuant·PivoxMap·PivoxData 와 맞췄다**

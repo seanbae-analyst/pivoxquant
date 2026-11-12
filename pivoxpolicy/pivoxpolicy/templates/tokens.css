@@ -30,7 +30,7 @@
   /* 화면 넘김 (components/Screen.tsx · AppShell) */
   --pq-ease: cubic-bezier(0.2, 0.75, 0.2, 1);
 
-  --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
   --font-code: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;   /* kbd · code 만 */
 
   --pq-radius-card: 14px;
