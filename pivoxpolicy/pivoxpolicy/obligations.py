@@ -9,14 +9,14 @@
   binding_interpretive  강제 조문만. 사람 · 계정 조문 중 에이전트에도 미친다고 읽을 여지가 있는 것(extends: interpretive)도 수준 2
   guideline             자율 가이드라인 · 평가기준까지. 해석 여지도 수준 2
 
-설계 충돌(prohibits: true): 통제 수준과 상관없이 프로필 자체가 조문과 맞지 않는 경우(예: 개인신용정보를 해외 클라우드에서 처리 —
+구성상 저촉(prohibits: true): 통제 수준과 상관없이 프로필 자체가 조문과 맞지 않는 경우(예: 개인신용정보를 해외 클라우드에서 처리 —
 전자금융감독규정 제14조의2 제7항은 국내 설치를 요구). unless 에 예외 사유를 적는다.
 
-결함과 조문을 잇는 분류(classify)
-  violation             적용되는 강제 조문이 그 통제를 문언대로 AI 까지 요구한다(명시 또는 행위 규율) → 위반 소지
-  interpretive          강제 조문이 사람 · 계정 층만 말하고, 에이전트에 미치는지는 해석 → 해석에 따라 위반 소지
-  guideline             자율 규범만 요구한다 → 가이드라인 미이행
-  gap                   적용되는 조문이 없다 → 규제 공백(합법이지만 위험)
+결과와 조문을 잇는 분류(classify, 이름은 terms.LINK · terms.STOP)
+  violation             적용되는 강제 조문이 그 통제를 문언대로 AI 까지 요구한다(AI 명시 또는 행위 규율) → 명문 요구 미충족
+  interpretive          강제 조문이 사람 · 계정 층만 말하고, 에이전트에 미치는지는 해석 → 해석상 요구 미충족
+  guideline             자율 규범만 요구한다 → 자율규범 미이행
+  gap                   적용되는 조문이 없다 → 규율 공백(합법이지만 위험)
 """
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ FORCES = (*sorted(BINDING), "guideline", "criteria")
 FORCE_KO = {"law": "법률", "decree": "시행령", "supervisory_regulation": "감독규정", "exchange_rule": "거래소 규정",
             "guideline": "가이드라인", "criteria": "평가기준"}
 MODES = ("binding_explicit", "binding_interpretive", "guideline")
-MODE_KO = {"binding_explicit": "강제 조문, 문언대로", "binding_interpretive": "강제 조문, 해석 포함", "guideline": "가이드라인까지"}
+MODE_KO = {"binding_explicit": "명문 기준", "binding_interpretive": "확장 해석 기준", "guideline": "자율규범 포함 기준"}   # = terms.MODE
 EXTENDS = (None, "interpretive", "direct")
 VERIFIED = ("registry", "primary", "secondary", "none")
 WHEN_KEYS = ("activities_any", "data_any", "external_llm_any", "activities_none", "data_none", "retail", "automated_decision", "high_impact")
@@ -82,7 +82,7 @@ def validate_library(lib: dict[str, Any], control_ids: set[str]) -> list[str]:
         elif not ob.get("category"):
             probs.append(f"{oid}: 런타임 밖 의무에는 category 필요")
         if ob.get("prohibits") and ob.get("runtime", True):
-            probs.append(f"{oid}: 설계 충돌(prohibits)은 런타임 밖 의무로 둔다(runtime: false)")
+            probs.append(f"{oid}: 구성상 저촉(prohibits)은 런타임 외 의무로 둔다(runtime: false)")
         for k, v in (ob.get("when") or {}).items():
             if k not in WHEN_KEYS:
                 probs.append(f"{oid}: when 키 {k} 는 {WHEN_KEYS}")
@@ -249,7 +249,7 @@ def assess(lib: dict[str, Any], profile: dict[str, Any], levels: dict[str, int] 
 
 
 def _status(row: dict[str, Any], levels: dict[str, int]) -> str:
-    """conflict(설계 충돌) · met — 해석까지 충족 · partial — 사람 · 계정 층만(에이전트까지는 해석 영역) · unmet · offline(런타임 밖)."""
+    """conflict(구성상 저촉) · met — 해석까지 충족 · partial — 사람 · 계정 층만(에이전트까지는 해석 영역) · unmet · offline(런타임 밖)."""
     if row.get("prohibits"):
         return "conflict"
     if not row["runtime"]:
@@ -270,7 +270,7 @@ def preset_columns(assessment: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def classify(assessment: dict[str, Any], controls: list[str]) -> dict[str, Any]:
-    """결함 · 사람 승인에 기댐을 막는 통제들 → 그 통제를 요구하는 적용 조문과 분류(위반 소지 · 해석 · 가이드라인 · 공백)."""
+    """미차단 · 승인 의존을 자동 차단으로 바꾸는 통제들(또는 차단한 통제) → 그 통제를 요구하는 적용 조문과 분류."""
     rel = [r for r in assessment["applicable"] if r["runtime"] and r["control"] in controls]
     # 가장 센 근거부터: 강제 · 문언대로(명시 또는 행위 규율) → 강제 · 해석 → 자율
     rel.sort(key=lambda r: (0 if r["binding"] and (r["layer"] == "agent" or r.get("extends") == "direct") else 1 if r["binding"] else 2))

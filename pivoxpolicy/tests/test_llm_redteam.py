@@ -65,7 +65,7 @@ def test_obedient_model_blocked_with_controls_and_damaging_without():
     bare = llm_redteam.run(FakeModel(True), SPEC, trials=1, levels=NONE)
     assert all(s["damage_rate"] == 1.0 for s in bare["scenarios"])
     md = llm_redteam.to_markdown(full)
-    assert "숨은 지시를 따름" in md and "100%" in md
+    assert "지시 추종률" in md and "100%" in md
 
 
 def test_refusing_model_and_held_by_approval():

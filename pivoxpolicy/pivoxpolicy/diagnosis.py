@@ -1,6 +1,6 @@
 """AI 에이전트 내부통제 진단 보고서(diagnosis) — 에이전트 하나(등록부 · 적용성 프로필 · 공격 케이스)로 문서 한 벌을 만든다.
 
-담는 것: 요약 · 통제 매트릭스(RCM) · 조문별 충족 · 공격 시험 결과와 결함 분류 · 설계 충돌 · 우선 조치 · 책무별 미충족 ·
+담는 것: 요약 · 통제 매트릭스(RCM) · 조문별 충족 · 시나리오 시험 결과와 조문 관계 · 구성상 저촉 · 우선 조치 · 책무별 미충족 ·
 한계 · 증적. 내용은 섹션 목록(sections) 하나로 만들고 Markdown · HTML 로 그린다(두 형식의 내용이 어긋나지 않게).
 CSV 는 RCM 과 조문 표 두 가지.
 
@@ -20,14 +20,12 @@ from pathlib import Path
 from typing import Any
 
 from . import obligations as obl
+from . import terms as T
 from .runtime import cases as cases_mod
 from .runtime import policy
 
-LV_KO = ["없음", "사람·계정", "AI까지"]
-VERDICT_KO = {"good": "막음", "held": "사람 승인에 기댐", "defect": "결함(뚫림)", "friction": "업무 마찰", "na": "해당 없음"}
-BENIGN_KO = {"good": "처리됨", "friction": "업무 마찰(막힘)", "na": "해당 없음"}
-LINK_KO = {"violation": "위반 소지", "interpretive": "해석에 따라 위반 소지", "guideline": "가이드라인 미이행", "gap": "규제 공백"}
-STATUS_KO = {"met": "충족", "partial": "사람·계정 층만", "unmet": "미충족", "offline": "런타임 밖(증적 점검)", "conflict": "설계 충돌"}
+LV_KO = T.LEVEL
+STATUS_KO = T.STATUS
 TYPE_KO = {"inventory": "예방", "vendors": "예방", "unique_id": "예방", "least_privilege": "예방", "human_approval": "예방",
            "audit_trail": "탐지", "kill_switch": "대응"}
 VERIFIED_KO = {"primary": "법령 원문", "registry": "문서 코딩 원문 대조", "secondary": "2차 자료", "none": "인용 없음"}
@@ -74,11 +72,12 @@ def _short_ref(r: dict[str, Any]) -> str:
 
 
 def _strength(r: dict[str, Any]) -> str:
-    if not r["binding"]:
-        return "자율"
-    if r.get("layer") == "agent" or r.get("extends") == "direct":
-        return "강제 · 문언대로"
-    return "강제 · 해석" if r.get("extends") == "interpretive" else "강제 · 사람·계정"
+    return T.strength(r)
+
+
+def _strong(r: dict[str, Any]) -> int:
+    """근거 조문 정렬: 강제 · (AI 명시 · 행위 규율) → 강제 · 그 밖 → 자율."""
+    return 0 if r["binding"] and (r.get("layer") == "agent" or r.get("extends") == "direct") else 1 if r["binding"] else 2
 
 
 # ── 진단(데이터) ──
@@ -119,21 +118,21 @@ def _rcm(A, res, levels, ctls, by_ob) -> list[dict[str, Any]]:
     for c in ctls:
         cid = c["id"]
         rel = [r for r in A["applicable"] if r["runtime"] and r["control"] == cid]
-        rel.sort(key=lambda r: (0 if _strength(r) == "강제 · 문언대로" else 1 if r["binding"] else 2))
+        rel.sort(key=_strong)
         need = {m: A["levels"][m][cid] for m in obl.MODES}
         cur = levels[cid]
         touched = [r for r in res["results"] if r.get("control") == cid or cid in (r.get("fixes") or [])]
         vc = Counter(r["verdict"] for r in touched)
         if cur < need["binding_explicit"]:
-            judge = "미흡: 강제 조문(문언대로) 미달"
+            judge = "명문 기준 미달"
         elif cur < need["binding_interpretive"]:
-            judge = "해석 리스크: 해석하면 미달"
+            judge = "확장 해석 기준 미달"
         elif cur < need["guideline"]:
-            judge = "가이드라인 미이행"
+            judge = "자율규범 포함 기준 미달"
         else:
             judge = "적정(조문 기준)"
         if cid == "human_approval" and vc.get("held"):
-            judge += f". 승인자에만 기대는 공격 {vc['held']}건"
+            judge += f". 승인 의존 {vc['held']}건"
         owners = Counter(r.get("owner") for r in rel if r.get("owner"))
         rows.append({"id": f"PVX-{c['num']}", "control": cid, "name": c["name"], "type": TYPE_KO[cid],
                      "mode": {2: "자동", 1: "수동", 0: "없음"}[cur],
@@ -141,8 +140,9 @@ def _rcm(A, res, levels, ctls, by_ob) -> list[dict[str, Any]]:
                      "risks": [r["title"] for r in touched], "basis": [f"{_short_ref(r)} ({_strength(r)})" for r in rel[:3]],
                      "basis_more": max(0, len(rel) - 3), "need": need, "current": cur,
                      "owner": owners.most_common(1)[0][0] if owners else "미정",
-                     "test": f"공격 케이스 {len(touched)}개(이 통제에서 멈췄거나 이 통제가 처방인 것)를 샌드박스에서 같은 정책 엔진으로 재실행",
-                     "result": ", ".join(f"{VERDICT_KO[k]} {v}" for k, v in vc.items()) or "관련 케이스 없음", "judgment": judge})
+                     "test": f"시나리오 {len(touched)}개(이 통제에서 멈췄거나 이 통제가 단일 보완 통제인 것)를 샌드박스에서 같은 정책 엔진으로 재실행",
+                     "result": ", ".join(f"{T.SUMMARY[k] if k == 'friction' else T.ATTACK.get(k, T.SUMMARY.get(k, k))} {v}" for k, v in vc.items()) or "관련 시나리오 없음",
+                     "judgment": judge})
     return rows
 
 
@@ -151,7 +151,7 @@ def _actions(A, res, levels, ctls) -> list[dict[str, Any]]:
     out = []
     for r in A["applicable"]:
         if r.get("prohibits"):
-            out.append({"rank": 0, "title": f"설계 충돌 해소: {_short_ref(r)}", "why": r["requires"], "how": r.get("unless") or "",
+            out.append({"rank": 0, "title": f"구성상 저촉 해소: {_short_ref(r)}", "why": r["requires"], "how": r.get("unless") or "",
                         "basis": [_ref(r)], "kind": "conflict"})
     fixed: dict[str, list[str]] = {}
     for r in res["results"]:
@@ -167,13 +167,13 @@ def _actions(A, res, levels, ctls) -> list[dict[str, Any]]:
         rel = [by_id[i] for i in link["obligations"]][:3]          # classify 가 센 근거부터 정렬해 둔 순서 그대로
         n = len(fixed.get(c, []))
         out.append({"rank": rank[link["kind"]], "n": n, "title": f"{_josa(name[c], '을', '를')} AI까지로 올린다",
-                    "why": (f"공격 {n}건이 기계 차단으로 바뀐다(같은 엔진으로 재실행해 확인)." if n else "시험한 케이스 중 이것 하나로 바뀌는 것은 없지만 조문이 요구한다.")
-                    + f" 분류: {LINK_KO[link['kind']]}.",
+                    "why": (f"미차단 · 승인 의존 시나리오 {n}건이 자동 차단으로 바뀐다(같은 엔진으로 재실행해 확인)." if n
+                            else "시험한 시나리오 가운데 이것 하나로 바뀌는 것은 없지만 조문이 요구한다.") + f" 관계: {T.LINK[link['kind']]}.",
                     "how": "", "basis": [f"{_ref(x)} ({_strength(x)})" for x in rel], "kind": link["kind"]})
     cats = Counter(r.get("category") for r in A["applicable"] if not r["runtime"] and not r.get("prohibits"))
     if cats:
-        out.append({"rank": 5, "title": "런타임 밖 의무를 증적으로 점검한다",
-                    "why": ", ".join(f"{k} {v}개" for k, v in cats.most_common()), "how": "조문별 충족 표의 '런타임 밖' 행마다 담당 책무와 증적을 정한다.",
+        out.append({"rank": 5, "title": "런타임 외 의무를 증적으로 점검한다",
+                    "why": ", ".join(f"{k} {v}개" for k, v in cats.most_common()), "how": "조문별 충족 표의 '런타임 외' 행마다 담당 책무와 증적을 정한다.",
                     "basis": [], "kind": "offline"})
     out.sort(key=lambda a: (a["rank"], -a.get("n", 0), a["title"]))
     return out
@@ -206,16 +206,16 @@ def sections(D: dict[str, Any]) -> list[tuple]:
                      ("쓰는 모델", lab.get(prof["external_llm"], prof["external_llm"])), ("일반투자자", "상대한다" if prof["retail"] else "아니다"),
                      ("AI 기본법 고영향", ("해당(추정 포함)" if A["high_impact"]["value"] else "해당 안 함(추정 포함)"))]))
     hl = [f"걸리는 조문 {s['applicable']}개(강제 {s['binding']}, 자율 {s['voluntary']}), 걸리지 않는 조문 {s['not_applicable']}개.",
-          f"지금 통제 기준: 충족 {s['met']}, 사람·계정 층만 {s['partial']}, 미충족 {s['unmet']}, 런타임 밖 {s['offline'] - s['conflict']}, 설계 충돌 {s['conflict']}.",
-          f"공격 시험({D['case_source']} {len(res['results'])}개): 결함 {rs['defect']}, 사람 승인에 기댐 {rs['held']}, 막음 {sum(1 for r in res['results'] if r['kind'] == 'attack' and r['verdict'] == 'good')}, "
-          f"업무 마찰 {rs['friction']}, 해당 없음 {rs['na']}."]
+          f"지금 통제 기준: 충족 {s['met']}, 사람·계정 층만 충족 {s['partial']}, 미충족 {s['unmet']}, 런타임 외 {s['offline'] - s['conflict']}, 구성상 저촉 {s['conflict']}.",
+          f"시나리오 시험({D['case_source']} {len(res['results'])}개): 미차단 {rs['defect']}, 승인 의존 {rs['held']}, "
+          f"자동 차단 {sum(1 for r in res['results'] if r['kind'] == 'attack' and r['verdict'] == 'good')}, 정상 업무 제약 {rs['friction']}, 공격면 없음 {rs['na']}."]
     def col(pid):
         p = cols.get(pid)
-        return f"결함 {p['summary']['defect']}, 승인 기댐 {p['summary']['held']}" if p else "—"
-    hl.append(f"걸리는 조문만큼 통제를 갖추면: 강제 조문을 문언대로 → {col('OB-binding_explicit')} · 해석 포함 → {col('OB-binding_interpretive')} · "
-              f"가이드라인까지 → {col('OB-guideline')}. 지금 통제 → {col('current')}.")
+        return f"미차단 {p['summary']['defect']}, 승인 의존 {p['summary']['held']}" if p else "—"
+    hl.append(f"걸리는 조문만큼 통제를 갖추면 명문 기준 {col('OB-binding_explicit')}, 확장 해석 기준 {col('OB-binding_interpretive')}, "
+              f"자율규범 포함 기준 {col('OB-guideline')}. 지금 통제는 {col('current')}.")
     if s["conflict"]:
-        hl.append(f"설계 충돌 {s['conflict']}건은 통제를 켜도 풀리지 않는다. 우선 조치 맨 앞에 둔다.")
+        hl.append(f"구성상 저촉 {s['conflict']}건은 통제를 켜도 풀리지 않는다. 우선 조치 맨 앞에 둔다.")
     S.append(("list", hl))
     S.append(("p", "AI 기본법 고영향 판단: " + A["high_impact"]["reason"]))
     # 우선 조치
@@ -226,44 +226,45 @@ def sections(D: dict[str, Any]) -> list[tuple]:
     S.append(("table", ["순서", "조치", "이유", "근거 조문"], rows or [["—", "조치할 것이 없다", "", ""]]))
     # RCM
     S.append(("h2", "3. 통제 매트릭스 (RCM)"))
-    S.append(("p", "통제마다 대응 위험(이 통제에서 멈췄거나 이 통제가 처방인 공격), 유형, 수행 방식, 근거 조문, 요구 수준(강제 · 문언대로 / 해석 포함 / "
-                   "가이드라인까지)과 지금 수준, 책무, 시험 결과, 판정을 적는다. 수행 방식에서 자동은 런타임이 호출마다 집행한다는 뜻이고, "
+    S.append(("p", "통제마다 대응 위험(이 통제에서 멈췄거나 이 통제가 단일 보완 통제인 시나리오), 유형, 수행 방식, 근거 조문, 요구 수준(명문 기준 / "
+                   "확장 해석 기준 / 자율규범 포함 기준)과 지금 수준, 책무, 시험 결과, 판정을 적는다. 수행 방식에서 자동은 런타임이 호출마다 집행한다는 뜻이고, "
                    "수동은 사람 절차라 런타임 밖이라는 뜻이다. 근거 조문은 센 것부터 세 개."))
     rows = []
     for r in D["rcm"]:
         rows.append([r["id"], r["name"], r["type"], r["mode"], "; ".join(r["risks"][:4]) + (f" 외 {len(r['risks']) - 4}" if len(r["risks"]) > 4 else "") or "—",
                      "; ".join(r["basis"]) + (f" 외 {r['basis_more']}" if r["basis_more"] else "") or "걸리는 조문 없음",
                      " / ".join(LV_KO[r["need"][m]] for m in obl.MODES), LV_KO[r["current"]], r["owner"], r["result"], r["judgment"]])
-    S.append(("table", ["ID", "통제", "유형", "수행", "대응 위험", "근거 조문", "요구(문언 / 해석 / 가이드라인)", "지금", "책무", "시험 결과", "판정"], rows, "rcm"))
-    # 설계 충돌
+    S.append(("table", ["ID", "통제", "유형", "수행", "대응 위험", "근거 조문", "요구(명문 / 확장 해석 / 자율규범)", "지금", "책무", "시험 결과", "판정"], rows, "rcm"))
+    # 구성상 저촉
     cf = [r for r in A["applicable"] if r.get("prohibits")]
     if cf:
-        S.append(("h2", "4. 설계 충돌"))
+        S.append(("h2", "4. 구성상 저촉"))
         S.append(("table", ["조문", "요구", "해소 방법"], [[_ref(r), r["requires"], r.get("unless") or ""] for r in cf]))
     # 공격 시험
-    S.append(("h2", "5. 공격 시험 결과"))
-    S.append(("p", f"{D['case_source']}를 지금 통제로 샌드박스에서 돌렸다. 사람 승인에서 멈춘 공격은 승인자가 승인한다고 치고(요약에 속음, 승인 피로) "
-                   "한 번 더 돌려, 뒤의 통제가 막으면 막음, 뚫리면 '사람 승인에 기댐'으로 센다. 처방은 통제 하나를 AI까지로 올려 다시 돌려 확인한 것만 적는다."))
+    S.append(("h2", "5. 시나리오 시험 결과"))
+    S.append(("p", f"{D['case_source']}를 지금 통제로 샌드박스에서 돌렸다. 사람 승인 단계에서 멈춘 공격은 승인자가 승인한다고 가정하고(요약에 속음, 승인 피로) "
+                   "한 번 더 돌려, 뒤의 통제가 막으면 자동 차단, 실행되면 승인 의존으로 분류한다. 단일 보완 통제는 통제 하나를 AI 수준으로 올려 다시 돌려 "
+                   "자동 차단으로 바뀌는 것만 적는다."))
     rows = []
     name = {c["id"]: c["name"] for c in D["controls"]}
     for r in res["results"]:
-        vk = (VERDICT_KO if r["kind"] == "attack" else BENIGN_KO).get(r["verdict"], r["verdict"])
+        vk = T.verdict_label(r["kind"], r["verdict"], r.get("control"))
         stop = f"{name[r['control']]} · {r['stopped_at']}단계" if r.get("control") else "—"
         link = r.get("link")
-        lk = ("" if not link else (("차단 근거: " if link.get("basis") == "stop" else "") + LINK_KO[link["kind"]]))
+        lk = "" if not link else (T.STOP if link.get("basis") == "stop" else T.LINK)[link["kind"]]
         rows.append([r["title"], "공격" if r["kind"] == "attack" else "정상 업무", vk, stop, ", ".join(name[c] for c in r.get("fixes") or []) or "—", lk or "—"])
-    S.append(("table", ["케이스", "종류", "판정", "멈춘 곳", "처방(통제 하나)", "조문 분류"], rows))
+    S.append(("table", ["시나리오", "종류", "판정", "멈춘 곳", "단일 보완 통제", "조문과의 관계"], rows))
     # 조문별 충족
     S.append(("h2", "6. 조문별 충족"))
     rows = [[_ref(r), r["force_ko"], _strength(r), r["requires"], (name.get(r["control"], "") if r["runtime"] else (r.get("category") or "")),
              STATUS_KO.get(r.get("status"), ""), r.get("owner") or "", VERIFIED_KO.get(r.get("quote_verified"), "")] for r in A["applicable"]]
-    S.append(("table", ["조문", "강제력", "에이전트에 미치는 방식", "요구", "통제 · 분류", "지금 상태", "책무", "인용"], rows))
+    S.append(("table", ["조문", "강제력", "강제력 · 미치는 방식", "요구", "통제 · 분류", "지금 상태", "책무", "인용"], rows))
     S.append(("details", f"걸리지 않는 조문 {len(A['not_applicable'])}개와 이유", [f"{_ref(r)}: {r['reason']}" for r in A["not_applicable"]]))
     # 책무별
     S.append(("h2", "7. 책무별 미충족"))
     S.append(("p", "지배구조법 제30조의2에 따라 책무 임원이 점검할 목록이다. 책무명은 시행령 별표 1을 따른 흔한 배정이며, 실제 배정은 회사의 책무구조도를 따른다."))
     rows = [[o["owner"], "; ".join(o["conflict"]) or "—", "; ".join(o["unmet"]) or "—", "; ".join(o["partial"]) or "—", str(len(o["offline"]))] for o in D["owners"]]
-    S.append(("table", ["책무", "설계 충돌", "미충족", "사람·계정 층만", "런타임 밖(증적 점검, 개수)"], rows or [["—", "", "", "", ""]]))
+    S.append(("table", ["책무", "구성상 저촉", "미충족", "사람·계정 층만 충족", "런타임 외(증적 점검, 개수)"], rows or [["—", "", "", "", ""]]))
     # 명세 가져오기
     it = D["intake"]
     if it.get("tools"):
@@ -278,10 +279,10 @@ def sections(D: dict[str, Any]) -> list[tuple]:
     S.append(("h2", "9. 한계"))
     vq = Counter(r.get("quote_verified") for r in D["lib"].get("obligations") or [])
     S.append(("list", [
-        "변호사 검토 전이다. 조문 대응, 적용 조건, '해석' 과 '문언대로' 의 구분은 이 도구의 초안이다.",
+        "변호사 검토 전이다. 조문 대응, 적용 조건, 조문이 에이전트에 미치는 방식(AI 명시, 행위 규율, 주체 확장 해석)의 구분은 이 도구의 초안이다.",
         f"의무 라이브러리 기준일 {D['lib'].get('as_of')}, 조문 {len(D['lib'].get('obligations') or [])}개(인용 확인: " +
         ", ".join(f"{VERIFIED_KO.get(k, k)} {v}" for k, v in vq.most_common()) + "). 개정은 자동으로 감지하지 못한다.",
-        "공격 시험은 정책 엔진 샌드박스 재실행이다. 실제 모델이 숨은 지시를 따르는지는 LLM 레드팀으로 따로 본다.",
+        "시나리오 시험은 정책 엔진 샌드박스 재실행이다. 실제 모델이 숨은 지시를 따르는지는 LLM 레드팀으로 따로 본다.",
         "입력 출처(외부 글인지)는 에이전트가 스스로 신고한다. 키를 가진 공격자는 출처를 위조할 수 있다(게이트웨이 · 프록시로 풀 과제).",
         "지금 통제 수준은 회사의 자가 진단 값이다. 운영 효과성(실제로 그렇게 돌고 있는지)은 감사 기록으로 따로 확인한다.",
         "도구 종류와 프로필은 명세에서 추정한 값이 섞여 있다(8절)."]))
@@ -392,8 +393,8 @@ def _csv(header: list[str], rows: list[list[Any]]) -> str:
 
 
 def rcm_csv(D: dict[str, Any]) -> str:
-    return _csv(["통제 ID", "통제", "유형", "수행 방식(자동=런타임 집행, 수동=사람 절차)", "통제 내용", "대응 위험", "근거 조문", "요구(강제·문언대로)", "요구(강제·해석 포함)",
-                 "요구(가이드라인까지)", "지금 수준", "책무", "시험 방법", "시험 결과", "판정"],
+    return _csv(["통제 ID", "통제", "유형", "수행 방식(자동=런타임 집행, 수동=사람 절차)", "통제 내용", "대응 위험", "근거 조문", "요구(명문 기준)", "요구(확장 해석 기준)",
+                 "요구(자율규범 포함 기준)", "지금 수준", "책무", "시험 방법", "시험 결과", "판정"],
                 [[r["id"], r["name"], r["type"], r["mode"], r["description"], "; ".join(r["risks"]), "; ".join(r["basis"]),
                   LV_KO[r["need"]["binding_explicit"]], LV_KO[r["need"]["binding_interpretive"]], LV_KO[r["need"]["guideline"]],
                   LV_KO[r["current"]], r["owner"], r["test"], r["result"], r["judgment"]] for r in D["rcm"]])
@@ -402,7 +403,7 @@ def rcm_csv(D: dict[str, Any]) -> str:
 def obligations_csv(D: dict[str, Any]) -> str:
     A = D["assessment"]
     name = {c["id"]: c["name"] for c in D["controls"]}
-    return _csv(["조문", "강제력", "에이전트에 미치는 방식", "요구", "통제", "분류", "지금 상태", "책무", "적용 이유", "인용", "인용 확인", "출처", "시행·개정"],
+    return _csv(["조문", "강제력", "강제력 · 미치는 방식", "요구", "통제", "분류", "지금 상태", "책무", "적용 이유", "인용", "인용 확인", "출처", "시행·개정"],
                 [[_ref(r), r["force_ko"], _strength(r), r["requires"], name.get(r["control"], "") if r["runtime"] else "", r.get("category") or "",
                   STATUS_KO.get(r.get("status"), ""), r.get("owner") or "", r.get("reason") or "", r.get("quote") or "",
                   VERIFIED_KO.get(r.get("quote_verified"), ""), r.get("source") or "", r.get("effective") or ""] for r in A["applicable"]])

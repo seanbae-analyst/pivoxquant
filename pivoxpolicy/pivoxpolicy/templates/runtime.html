@@ -124,18 +124,18 @@
 <p class="row"><button type="button" class="btn btn-primary" id="ob-run">적용 조문 보기</button><button type="button" class="btn" id="ob-save">프로필 저장</button><span class="fine" id="ob-msg" aria-live="polite"></span></p>
 <div id="ob-out"></div>
 <h4>진단 보고서</h4>
-<p class="fine">요약, 통제 매트릭스(RCM), 조문별 충족, 공격 시험과 결함 분류, 설계 충돌, 우선 조치, 책무별 미충족, 한계, 증적을 한 문서로 낸다. 저장된 통제와 프로필로 샌드박스에서 만든다.</p>
+<p class="fine">요약, 통제 매트릭스(RCM), 조문별 충족, 시나리오 시험과 조문 관계, 구성상 저촉, 우선 조치, 책무별 미충족, 한계, 증적을 한 문서로 낸다. 저장된 통제와 프로필로 샌드박스에서 만든다.</p>
 <p class="row" id="rep-links"></p>
 </div>
 
 <div id="attack" class="attack" hidden>
-<h4>공격 팀</h4>
-<p class="fine">공격 케이스 9개와 정상 업무 2개를 이 에이전트의 통제로 샌드박스에서 돌린다(저장하기 전이면 화면의 수준으로). 공격이 통과하면 <b>결함</b>, 사람 승인에서만 멈추면 <b>사람 승인에 기댐</b>, 정상 업무가 막히면 <b>업무 마찰</b>이다. 에이전트 상태는 바뀌지 않는다.</p>
-<p class="row"><button type="button" class="btn btn-primary" id="d-cases">공격 팀 투입</button><span class="fine" id="cases-hint"></span></p>
+<h4>시나리오 시험</h4>
+<p class="fine">이 에이전트의 공격 시나리오와 정상 업무를 지금 통제로 샌드박스에서 돌린다(저장하기 전이면 화면의 수준으로). 공격은 <b>자동 차단</b>(런타임 통제가 막음), <b>승인 의존</b>(사람 승인 단계에서만 멈춤, 승인하면 실행), <b>미차단</b>(끝까지 실행)으로 나누고, 정상 업무는 정상 처리, 승인 대기, 과잉 차단으로 나눈다. 에이전트 상태는 바뀌지 않는다.</p>
+<p class="row"><button type="button" class="btn btn-primary" id="d-cases">시나리오 시험 실행</button><span class="fine" id="cases-hint"></span></p>
 <div id="cases-out"></div>
 
-<h4>규제별 비교</h4>
-<p class="fine">같은 케이스를 관할과 강제력마다 정한 통제 수준으로 바꿔(샌드박스) 돌린다. 규제가 셀수록 결함이 줄고 정상 업무의 마찰이 는다. 그 맞바꿈을 한 표로 본다.</p>
+<h4>규제 기준별 비교</h4>
+<p class="fine">같은 시나리오를 규제 기준마다 정한 통제 수준으로 바꿔(샌드박스) 돌린다. 적용성 프로필이 있으면 이 에이전트에 걸리는 조문으로 만든 세 기준(명문, 확장 해석, 자율규범 포함)이 맨 앞에 붙고, 관할 프리셋은 비교용이다. 기준이 강할수록 미차단은 줄고 정상 업무 제약은 는다.</p>
 <div id="reg-pick" class="reg-pick"></div>
 <p class="row"><button type="button" class="btn" id="d-matrix">규제별로 비교</button><span class="fine" id="matrix-hint"></span></p>
 <div id="matrix-out"></div>

@@ -346,8 +346,8 @@ def cmd_diagnose(a: argparse.Namespace) -> int:
     for name, text in files.items():
         (out / name).write_text(text, encoding="utf-8")
     s, rs = D["assessment"]["summary"], D["attack"]["summary"]
-    print(f"{agent['name']}: 걸리는 조문 {s['applicable']}(강제 {s['binding']}) · 설계 충돌 {s['conflict']} · 미충족 {s['unmet']} · "
-          f"공격 결함 {rs['defect']} · 승인 기댐 {rs['held']}")
+    print(f"{agent['name']}: 걸리는 조문 {s['applicable']}(강제 {s['binding']}) · 구성상 저촉 {s['conflict']} · 미충족 {s['unmet']} · "
+          f"시나리오 미차단 {rs['defect']} · 승인 의존 {rs['held']}")
     for w in r["warnings"]:
         print(f"  확인: {w}")
     print(f"→ {out}/ ({', '.join(files)})")

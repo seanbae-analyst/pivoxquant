@@ -111,12 +111,12 @@ def test_cases_and_matrix_endpoints(srv):
     st, r, _ = call(base, "POST", "/admin/api/agents", {"name": "정산 에이전트", "owner": "재무팀", "profile": "trading",
                                                         "env": {"tools": "pay", "untrusted_input": True}, "levels": ALL2}, headers=h)
     aid = r["agent"]["id"]
-    # 공격 팀 — 모든 통제를 AI까지 켠 에이전트엔 결함이 없어야 한다
+    # 시나리오 시험 — 모든 통제를 AI까지 켠 에이전트엔 미차단이 없어야 한다
     st, cs, _ = call(base, "POST", f"/admin/api/agents/{aid}/cases", {}, headers=h)
     assert st == 200 and cs["summary"]["defect"] == 0 and cs["summary"]["friction"] >= 1
     by = {r["id"]: r for r in cs["results"]}
     assert by["news-injection"]["verdict"] == "good" and by["normal-settlement"]["verdict"] == "friction"
-    # 규제별 비교 — 통제 없음에서 결함이 가장 많고, 모두 AI까지에서 가장 적다
+    # 규제 기준별 비교 — 통제 없음에서 미차단이 가장 많고, 모두 AI까지에서 가장 적다
     st, mx, _ = call(base, "POST", f"/admin/api/agents/{aid}/matrix", {"presets": ["none", "KR-2", "all"]}, headers=h)
     assert st == 200 and [p["preset"] for p in mx["presets"]] == ["none", "KR-2", "all"]
     cols = {p["preset"]: p for p in mx["presets"]}
@@ -153,7 +153,7 @@ def test_agent_api_rejects_bad_input(srv):
 
 
 def test_obligations_profile_and_matrix_columns(srv):
-    """적용성 프로필 → 적용 조문 · 미적용(이유) · 비교표의 '적용 조문' 열 · 결함과 조문 분류."""
+    """적용성 프로필 → 적용 조문 · 미적용(이유) · 비교표의 '적용 조문' 열 · 결과와 조문의 관계."""
     base, _ = srv
     h = login(base)
     st, r, _ = call(base, "POST", "/admin/api/agents", {"name": "정산 에이전트", "owner": "재무팀", "profile": "trading",
@@ -166,7 +166,7 @@ def test_obligations_profile_and_matrix_columns(srv):
     assert "aibasic-34-1-4" in {x["id"] for x in ob["not_applicable"]}
     assert ob["summary"]["unmet"] == 0                                              # 모든 통제를 AI까지 켠 에이전트
     assert call(base, "POST", f"/admin/api/agents/{aid}/obligations", {"profile": {"activities": ["fly"]}}, headers=h)[0] == 400
-    # 저장 → 비교표에 적용 조문 열이 붙고, 결함 칸에 조문 분류가 달린다
+    # 저장 → 비교표에 적용 조문 열이 붙고, 미차단 셀에 조문과의 관계가 달린다
     assert call(base, "PATCH", f"/admin/api/agents/{aid}", {"compliance": settle}, headers=h)[0] == 200
     st, mx, _ = call(base, "POST", f"/admin/api/agents/{aid}/matrix", {"presets": ["none"]}, headers=h)
     ids = [p["preset"] for p in mx["presets"]]
@@ -179,7 +179,7 @@ def test_obligations_profile_and_matrix_columns(srv):
 
 
 def test_intake_preview_and_register(srv):
-    """명세 붙여 넣기 → 미리보기(추정 · 경고 · 케이스) → 등록(키 · 프로필 · 케이스 · 구성요소 승인) → 공격 팀이 그 케이스로 돈다."""
+    """명세 붙여 넣기 → 미리보기(추정 · 경고 · 케이스) → 등록(키 · 프로필 · 케이스 · 구성요소 승인) → 시나리오 시험이 그 케이스로 돈다."""
     from pathlib import Path
     base, _ = srv
     h = login(base)

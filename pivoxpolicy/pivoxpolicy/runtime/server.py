@@ -29,6 +29,7 @@ from typing import Any, Callable
 from wsgiref.simple_server import WSGIRequestHandler, WSGIServer, make_server
 
 from .. import obligations as obligations_mod
+from .. import terms
 from . import cases as cases_mod
 from . import redteam
 from .service import AuthError, PROFILE_TOOLS, Runtime, RuntimeError_, clean_levels
@@ -63,7 +64,7 @@ def _meta_payload() -> dict[str, Any]:
             "profile_tools": PROFILE_TOOLS, "scenarios": [{"id": s["id"], "title": s["title"]} for s in p["scenarios"]],
             "cases": [{k: c.get(k) for k in ("id", "kind", "title", "story", "scenario")} for c in cs],
             "matrix_default": ["none", "US-2", "EU-2", "KR-2", "all"], "kinds": ["read", "write", "send", "exec", "pay"],
-            "regulation": p["regulation"], "jurisdictions": p["jurisdictions"], "obligations": _obligations_meta()}
+            "regulation": p["regulation"], "jurisdictions": p["jurisdictions"], "obligations": _obligations_meta(), "terms": terms.as_dict()}
 
 
 def _obligations_meta() -> dict[str, Any]:
@@ -316,7 +317,7 @@ class App:
         return self.json(sr, res)
 
     def run_cases(self, environ, sr, aid):
-        """현재 통제로 공격 팀을 돌린다. levels 를 주면 저장하지 않은 화면의 수준으로 돌린다(샌드박스 — 저장 안 함)."""
+        """현재 통제로 시나리오 시험을 돌린다. levels 를 주면 저장하지 않은 화면의 수준으로 돌린다(샌드박스 — 저장 안 함)."""
         a = self.rt.agent(aid)
         d = self.obj(environ)
         preview = "levels" in d
@@ -347,12 +348,12 @@ class App:
         if "current_levels" in d:
             chosen = [{"id": "current", "label": "지금 설정", "levels": clean_levels(d["current_levels"])}, *chosen]
         res = cases_mod.run_matrix(a, chosen, a.get("cases") or None, approved=self.rt.store.components())
-        if assessment:   # 결함마다 그 통제를 요구하는 적용 조문과 분류(위반 소지 · 해석 · 가이드라인 · 공백)
+        if assessment:   # 결과마다 그 통제를 요구하는 적용 조문과 관계(terms.LINK · terms.STOP)
             for col in res["presets"]:
                 for cell in col["cells"].values():
-                    if cell.get("fixes"):                              # 뚫렸거나 승인에 기댐 → 막을 통제를 요구하는 조문
+                    if cell.get("fixes"):                              # 미차단 · 승인 의존 → 단일 보완 통제를 요구하는 조문
                         cell["link"] = {**obligations_mod.classify(assessment, cell["fixes"]), "basis": "fix"}
-                    elif cell.get("control") and cell.get("verdict") == "good":   # 막힘 → 이 차단을 요구하는 조문
+                    elif cell.get("control") and cell.get("verdict") == "good":   # 자동 차단 → 이 차단을 요구하는 조문
                         cell["link"] = {**obligations_mod.classify(assessment, [cell["control"]]), "basis": "stop"}
             res["obligations"] = {r["id"]: {k: r.get(k) for k in ("doc", "article", "force_ko", "binding", "quote", "quote_verified",
                                                                    "source", "requires", "control", "layer", "extends", "note")}

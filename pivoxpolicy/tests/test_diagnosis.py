@@ -21,17 +21,17 @@ def D():
 
 def test_actions_conflict_first_then_binding(D):
     acts = D["actions"]
-    assert acts[0]["kind"] == "conflict" and "제15조" in acts[0]["title"]
+    assert acts[0]["kind"] == "conflict" and acts[0]["title"].startswith("구성상 저촉") and "제15조" in acts[0]["title"]
     lp = next(a for a in acts if a["title"].startswith("최소 권한을"))
-    assert lp["kind"] == "violation" and "제70조" in lp["basis"][0]               # 가장 센 근거(문언대로)가 앞
+    assert lp["kind"] == "violation" and "제70조" in lp["basis"][0]               # 가장 센 근거(강제 · 행위 규율)가 앞
     audit = next(a for a in acts if a["title"].startswith("감사 기록을"))
-    assert "강제 · 문언대로" in audit["basis"][0]
+    assert "강제 · 행위 규율" in audit["basis"][0]
 
 
 def test_rcm_rows(D):
     rows = {r["control"]: r for r in D["rcm"]}
-    assert len(rows) == 7 and rows["least_privilege"]["judgment"].startswith("미흡")
-    assert rows["human_approval"]["mode"] == "자동" and "승인자에만" in rows["human_approval"]["judgment"]
+    assert len(rows) == 7 and rows["least_privilege"]["judgment"] == "명문 기준 미달"
+    assert rows["human_approval"]["mode"] == "자동" and "승인 의존" in rows["human_approval"]["judgment"]
     assert rows["audit_trail"]["type"] == "탐지" and rows["least_privilege"]["owner"]
 
 

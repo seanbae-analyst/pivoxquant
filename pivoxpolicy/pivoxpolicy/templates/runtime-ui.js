@@ -11,19 +11,19 @@
   var SCORE_KO = ["다루지 않음", "자율", "구속력", "구속력 + 에이전트 명시"];
   var LV_KO = ["없음", "사람·계정", "AI까지"];
   var KIND_KO = { read: "조회", write: "쓰기", send: "외부 전송", exec: "코드 실행", pay: "송금·결제" };
-  var AUD_KO = { decision: "판정", admin: "관리", auth: "인증", approval: "승인", kill_switch: "즉시 중단", redteam: "레드팀", cases: "공격 팀" };
+  var AUD_KO = { decision: "판정", admin: "관리", auth: "인증", approval: "승인", kill_switch: "즉시 중단", redteam: "원형 레드팀", cases: "시나리오 시험" };
   var OP_KO = { login: "로그인", register: "등록", update: "수정", status: "상태 변경", rotate_key: "키 회전", token: "토큰 발급", approve: "승인",
-                deny: "거부", redteam: "레드팀 실행", component_add: "구성요소 추가", component_delete: "구성요소 삭제", cases: "공격 팀 투입", matrix: "규제별 비교" };
-  function verdictLabel(kind, v) {
-    return v === "good" ? (kind === "attack" ? "막음" : "처리됨") : v === "held" ? "사람 승인에 기댐" : v === "defect" ? "결함(뚫림)" : v === "friction" ? "업무 마찰" : "해당 없음";
-  }
-  function verdictShort(kind, v) { return v === "good" ? (kind === "attack" ? "막음" : "처리") : v === "held" ? "승인" : v === "defect" ? "결함" : v === "friction" ? "마찰" : "·"; }
+                deny: "거부", redteam: "레드팀 실행", component_add: "구성요소 추가", component_delete: "구성요소 삭제", cases: "시나리오 시험 실행", matrix: "규제 기준별 비교", report: "진단 보고서", import_spec: "명세 가져오기" };
+  // 판정 이름은 서버의 terms(용어 단일 출처)를 쓴다 — 보고서 · 실험 결과와 같은 말
+  function benignKey(v, control) { return v === "good" ? "good" : v === "na" ? "na" : (control === "human_approval" ? "approval" : "overblock"); }
+  function verdictLabel(kind, v, control) { var T = meta.terms; return kind === "attack" ? (T.attack[v] || v) : T.benign[benignKey(v, control)]; }
+  function verdictShort(kind, v, control) { var T = meta.terms; return kind === "attack" ? (T.attack_short[v] || v) : T.benign_short[benignKey(v, control)]; }
   // 멈춘 곳 — 사람 승인에서 멈췄으면 '승인했을 때' 를 같이 말한다
   function stopText(r, kind) {
     if (!r.control) return "—";
     var t = ctlName[r.control] + " · " + r.stopped_at + "단계", ia = r.if_approved;
-    if (ia) t += ia.outcome === "blocked" ? " → 승인해도 " + ctlName[ia.control] + "에서 멈춤"
-      : (kind === "benign" ? " → 승인하면 처리" : " → 승인하면 뚫림");
+    if (ia) t += ia.outcome === "blocked" ? " → 승인 후에도 " + ctlName[ia.control] + "가 차단"
+      : (kind === "benign" ? " → 승인 시 처리" : " → 승인 시 미차단");
     return t;
   }
   function outcomeText(r) { return r.outcome === "blocked" && r.control === "human_approval" ? "승인 대기" : (OUT_KO[r.outcome] || r.outcome); }
@@ -155,7 +155,7 @@
     var out = clear($("in-out")), lab = {}, a = j.agent, pr = j.compliance, M = obMeta();
     Object.keys(M.profile || {}).forEach(function (k) { (M.profile[k].options || []).forEach(function (o) { lab[o.id] = o.label; }); });
     out.appendChild(el("p", { cls: "sum", text: a.name + " · 도구 " + j.tools.length + " · 만든 공격 케이스 " + j.cases.length +
-      " · 걸리는 조문 " + j.assessment.applicable + "(강제 " + j.assessment.binding + ", 설계 충돌 " + j.assessment.conflict + ")" }));
+      " · 걸리는 조문 " + j.assessment.applicable + "(강제 " + j.assessment.binding + ", 구성상 저촉 " + j.assessment.conflict + ")" }));
     if (j.warnings.length) {
       var w = el("div", { cls: "ob-conflict", role: "note" }, [el("b", { text: "확인할 것 " + j.warnings.length + "건" })]);
       j.warnings.forEach(function (x) { w.appendChild(el("p", { text: x })); });
@@ -334,16 +334,16 @@
     out.appendChild(el("div", { cls: "tblwrap" }, [t]));
   }
 
-  // ── 공격 팀 (현재 통제 그대로) ──
+  // ── 시나리오 시험 (현재 통제 그대로) ──
   $("d-cases").addEventListener("click", function () {
     var out = clear($("cases-out"));
-    out.appendChild(el("p", { cls: "fine", text: "공격 팀 투입 중…" }));
+    out.appendChild(el("p", { cls: "fine", text: "시나리오 시험 중…" }));
     api("POST", "/admin/api/agents/" + cur.id + "/cases", levelsDirty() ? { levels: cur.levels } : {}).then(function (j) { renderCases(j); loadAudit(); })
       .catch(function (err) { clear(out).appendChild(el("p", { cls: "err", text: err.message })); });
   });
   function renderCases(j) {
     var out = clear($("cases-out")), s = j.summary;
-    out.appendChild(el("p", { cls: "sum", text: "결함 " + s.defect + " · 사람 승인에 기댐 " + s.held + " · 업무 마찰 " + s.friction + " · 정상 " + s.good + " · 해당 없음 " + s.na }));
+    out.appendChild(el("p", { cls: "sum", text: "미차단 " + s.defect + " · 승인 의존 " + s.held + " · 자동 차단·정상 처리 " + s.good + " · 정상 업무 제약 " + s.friction + " · 공격면 없음 " + s.na }));
     if (j.preview) out.appendChild(el("p", { cls: "fine", text: "저장하지 않은 화면의 통제 수준으로 돌렸다. 에이전트에 반영하려면 저장을 누른다." }));
     var t = el("table", { cls: "rt-t" });
     t.appendChild(el("thead", null, [el("tr", null, ["케이스", "종류", "결과", "판정", "멈춘 곳", "단계"].map(function (h) { return el("th", { text: h }); }))]));
@@ -352,7 +352,7 @@
       tb.appendChild(el("tr", { cls: "v-" + r.verdict }, [el("td", { text: r.title }),
         el("td", { cls: "sub", text: r.kind === "attack" ? "공격" : "정상 업무" }),
         el("td", null, [el("span", { cls: "o " + (r.control === "human_approval" ? "held" : r.outcome), text: outcomeText(r) })]),
-        el("td", null, [el("span", { cls: "vd v-" + r.verdict, text: verdictLabel(r.kind, r.verdict) + (r.detected ? " · 탐지" : "") })]),
+        el("td", null, [el("span", { cls: "vd v-" + r.verdict, text: verdictLabel(r.kind, r.verdict, r.control) + (r.detected ? " · 탐지" : "") })]),
         el("td", { text: stopText(r, r.kind) }),
         el("td", null, [stepsDetails(r.if_approved ? r.if_approved.steps : r.steps)])]));
     });
@@ -373,7 +373,7 @@
       .catch(function (err) { clear(out).appendChild(el("p", { cls: "err", text: err.message })); });
   });
   var mxData = null;
-  var OB_SHORT = { "OB-binding_explicit": "적용 조문: 강제, 문언대로", "OB-binding_interpretive": "적용 조문: 강제, 해석 포함", "OB-guideline": "적용 조문: 가이드라인까지" };
+  var OB_SHORT = { "OB-binding_explicit": "적용 조문: 명문 기준", "OB-binding_interpretive": "적용 조문: 확장 해석 기준", "OB-guideline": "적용 조문: 자율규범 포함 기준" };
   function colLabel(p) { return p.preset === "current" ? (levelsDirty() ? "지금 화면 (저장 안 함)" : "지금 설정") : (OB_SHORT[p.preset] || p.label); }
   function renderMatrix(j) {
     mxData = j;
@@ -389,14 +389,14 @@
       var tr = el("tr", { cls: "k-" + c.kind }, [el("td", { cls: "cs" }, [el("b", { text: c.title }), el("span", { cls: "sub", text: c.kind === "attack" ? " 공격" : " 정상 업무" })])]);
       j.presets.forEach(function (p) {
         var cell = p.cells[c.id] || {}, v = cell.verdict || "na";
-        var b = el("button", { type: "button", cls: "mx-btn", "aria-label": c.title + ", " + colLabel(p) + ", " + verdictLabel(c.kind, v) + ". 해부 열기",
-                               title: cell.control ? stopText(cell, c.kind) : "" }, [el("span", { cls: "vd v-" + v, text: verdictShort(c.kind, v) })]);
+        var b = el("button", { type: "button", cls: "mx-btn", "aria-label": c.title + ", " + colLabel(p) + ", " + verdictLabel(c.kind, v, cell.control) + ". 상세 보기",
+                               title: cell.control ? stopText(cell, c.kind) : "" }, [el("span", { cls: "vd v-" + v, text: verdictShort(c.kind, v, cell.control) })]);
         b.addEventListener("click", function () { renderCellDetail(c, p, cell, b); });
         tr.appendChild(el("td", { cls: "mx v-" + v }, [b]));
       });
       tb.appendChild(tr);
     });
-    [["결함 합계", "defect"], ["사람 승인에 기댐", "held"], ["업무 마찰 합계", "friction"]].forEach(function (row) {
+    [["미차단 합계", "defect"], ["승인 의존 합계", "held"], ["정상 업무 제약 합계", "friction"]].forEach(function (row) {
       var tr = el("tr", { cls: "mx-sum" }, [el("td", { cls: "cs", text: row[0] })]);
       j.presets.forEach(function (p) { tr.appendChild(el("td", { cls: "mx", text: String(p.summary[row[1]]) })); });
       tb.appendChild(tr);
@@ -404,27 +404,12 @@
     t.appendChild(tb);
     out.appendChild(el("div", { cls: "tblwrap" }, [t]));
     out.appendChild(el("div", { id: "mx-detail", cls: "mx-det", hidden: "hidden", "aria-live": "polite" }));
-    out.appendChild(el("p", { cls: "fine", text: "칸을 누르면 그 결과를 해부한다. 어디서 멈췄는지, 통제 하나를 올려 막을 수 있는지, 그 관할의 규제 근거가 무엇인지 보여 준다. 공격이 통과하면 결함, 정상 업무가 막히면 업무 마찰이다. '승인'은 사람 승인에서만 멈춘 공격이다. 승인자가 요약에 속거나 지쳐서 승인하면 뚫린다(승인해도 뒤의 통제가 막으면 막음으로 센다). 샌드박스라 에이전트 상태는 바뀌지 않는다." }));
+    out.appendChild(el("p", { cls: "fine", text: "셀을 누르면 결과 상세를 연다. 어디서 멈췄는지, 단일 보완 통제가 무엇인지, 어떤 조문과 어떤 관계인지 보여 준다. 차단은 자동 차단, 승인은 승인 의존, 처리는 정상 처리, 대기는 승인 대기, 과잉은 과잉 차단이다. '승인'은 사람 승인에서만 멈춘 공격이다. 승인자가 요약에 속거나 지쳐서 승인하면 뚫린다(승인해도 뒤의 통제가 막으면 막음으로 센다). 샌드박스라 에이전트 상태는 바뀌지 않는다." }));
   }
 
 
 
   // ── 적용 조문 (조항 단위 의무, 증권부터) ──
-  var OB_ST = { met: "충족", partial: "사람·계정 층만", unmet: "미충족", offline: "런타임 밖", conflict: "설계 충돌" };
-  var LINK_KO = {
-    violation: "이 에이전트에 걸리는 강제 조문이 이 통제를 AI까지 명시해 요구한다. 위반 소지가 있다.",
-    interpretive: "걸리는 강제 조문은 사람·계정 층만 말한다. 에이전트 계정에도 미친다고 읽으면 위반 소지, 아니면 규제 공백이다.",
-    guideline: "자율 규범(가이드라인, 평가기준)만 이 통제를 요구한다. 위반은 아니지만 가이드라인 미이행이다.",
-    gap: "이 에이전트에 걸리는 조문 중 이 통제를 요구하는 것이 없다. 합법이지만 위험한 규제 공백이다."
-  };
-  var LINK_SHORT = { violation: "위반 소지", interpretive: "해석에 따라 위반 소지", guideline: "가이드라인 미이행", gap: "규제 공백" };
-  var STOP_KO = {
-    violation: "강제 조문이 문언대로 요구하는 차단이다.",
-    interpretive: "강제 조문은 사람·계정 층만 말한다. 이 차단은 그 조문이 에이전트에도 미친다고 읽을 때의 것이다.",
-    guideline: "자율 규범(가이드라인, 평가기준)이 요구하는 차단이다.",
-    gap: "이 차단을 요구하는 조문은 이 에이전트에 걸리지 않는다. 회사가 스스로 둔 통제다."
-  };
-  var STOP_SHORT = { violation: "강제 조문이 요구", interpretive: "해석에 따른 요구", guideline: "자율 규범이 요구", gap: "요구하는 조문 없음" };
   function obMeta() { return meta.obligations || { profile: {} }; }
   var obFormFor = null;
   function renderObForm() {
@@ -488,13 +473,13 @@
   function renderOb(j) {
     var out = clear($("ob-out")), s = j.summary, M = obMeta(), byId = {};
     j.applicable.forEach(function (r) { byId[r.id] = r; });
-    out.appendChild(el("p", { cls: "sum", text: "적용 조문 " + s.applicable + " (강제 " + s.binding + " · 자율 " + s.voluntary + " · 런타임 밖 " + s.offline + ") · 걸리지 않는 조문 " + s.not_applicable }));
-    out.appendChild(el("p", { cls: "fine", text: "지금 통제 기준: 충족 " + s.met + ", 사람·계정 층만 " + s.partial + ", 미충족 " + s.unmet + ", 런타임 밖 " + (s.offline - s.conflict) + ", 설계 충돌 " + s.conflict + ". 강제 조문 중 미충족이거나 사람·계정 층만인 것 " + s.unmet_binding + "개." }));
+    out.appendChild(el("p", { cls: "sum", text: "적용 조문 " + s.applicable + " (강제 " + s.binding + " · 자율 " + s.voluntary + " · 런타임 외 " + s.offline + ") · 걸리지 않는 조문 " + s.not_applicable }));
+    out.appendChild(el("p", { cls: "fine", text: "지금 통제 기준: 충족 " + s.met + ", 사람·계정 층만 충족 " + s.partial + ", 미충족 " + s.unmet + ", 런타임 외 " + (s.offline - s.conflict) + ", 구성상 저촉 " + s.conflict + ". 강제 조문 가운데 미충족이거나 사람·계정 층만 충족인 것 " + s.unmet_binding + "개." }));
     out.appendChild(el("p", { cls: "hi-line" }, [el("b", { text: "AI 기본법 고영향 AI: " + (j.high_impact.value ? "해당" : "해당 안 함") }), " " + j.high_impact.reason]));
-    // 설계 충돌 — 통제를 켜도 풀리지 않는다. 맨 위에 둔다
+    // 구성상 저촉 — 통제를 켜도 풀리지 않는다. 맨 위에 둔다
     var cf = j.applicable.filter(function (r) { return r.prohibits; });
     if (cf.length) {
-      var box = el("div", { cls: "ob-conflict", role: "note" }, [el("b", { text: "설계 충돌 " + cf.length + "건: 통제를 켜도 풀리지 않는다. 프로필(쓰는 모델 · 다루는 정보)을 바꾸거나 예외 사유를 갖춰야 한다." })]);
+      var box = el("div", { cls: "ob-conflict", role: "note" }, [el("b", { text: "구성상 저촉 " + cf.length + "건: 통제를 켜도 풀리지 않는다. 구성(쓰는 모델, 다루는 정보)을 바꾸거나 예외 사유를 갖춰야 한다." })]);
       cf.forEach(function (r) {
         box.appendChild(el("p", null, [obRef(r), " " + r.requires + (r.unless ? " 해소: " + r.unless : "")]));
       });
@@ -536,9 +521,9 @@
       if (r.note) det.appendChild(el("p", { cls: "fine", text: r.note }));
       if (r.unless) det.appendChild(el("p", { cls: "fine", text: "해소: " + r.unless }));
       if (r.effective) det.appendChild(el("p", { cls: "fine", text: "시행 · 개정: " + r.effective }));
-      var ctl = r.runtime ? ctlName[r.control] + " · " + (r.layer === "agent" ? "AI까지 명시" : r.extends === "direct" ? "행위 규율 (에이전트에도 문언대로)" : "사람·계정" + (r.extends ? " (에이전트는 해석)" : "")) : (r.category || "런타임 밖");
+      var ctl = r.runtime ? ctlName[r.control] + " · " + (r.layer === "agent" ? "AI 명시" : r.extends === "direct" ? "행위 규율" : r.extends ? "주체 확장 해석" : "사람·계정 한정") : (r.category || "런타임 외");
       tb2.appendChild(el("tr", { cls: "ob-" + r.status }, [el("td", null, [obRef(r), det]), el("td", { cls: r.binding ? "bind" : "sub", text: r.force_ko }),
-        el("td", { text: r.requires }), el("td", { cls: "sub", text: ctl }), el("td", null, [el("span", { cls: "ob-st " + r.status, text: OB_ST[r.status] || r.status })])]));
+        el("td", { text: r.requires }), el("td", { cls: "sub", text: ctl }), el("td", null, [el("span", { cls: "ob-st " + r.status, text: meta.terms.status[r.status] || r.status })])]));
     });
     t2.appendChild(tb2);
     out.appendChild(el("div", { cls: "tblwrap" }, [t2]));
@@ -553,8 +538,9 @@
   function linkBlock(link, obs) {
     var box = el("div", { cls: "basis" });
     var stop = link.basis === "stop";
-    box.appendChild(el("h6", { text: (stop ? "이 차단을 요구하는 조문: " + STOP_SHORT[link.kind] : "이 에이전트에 걸리는 조문: " + LINK_SHORT[link.kind]) }));
-    box.appendChild(el("p", { cls: "basis-h", text: stop ? STOP_KO[link.kind] : LINK_KO[link.kind] }));
+    var T = meta.terms;
+    box.appendChild(el("h6", { text: (stop ? "이 차단과 조문의 관계: " + T.stop[link.kind] : "이 결과와 조문의 관계: " + T.link[link.kind]) }));
+    box.appendChild(el("p", { cls: "basis-h", text: stop ? T.stop_long[link.kind] : T.link_long[link.kind] }));
     (link.obligations || []).forEach(function (id) {
       var r = obs[id]; if (!r) return;
       box.appendChild(el("p", { cls: "basis-doc" }, [el("span", { cls: "k", text: r.force_ko + (r.binding ? " · 강제" : " · 자율") }), obRef(r)]));
@@ -563,7 +549,7 @@
     return box;
   }
 
-  // ── 칸 해부: 멈춘 곳 · 최소 처방(같은 엔진으로 반사실 재실행) · 그 관할의 규제 근거 문서 ──
+  // ── 셀 상세: 멈춘 곳 · 단일 보완 통제(같은 엔진으로 반사실 재실행) · 조문과의 관계 · 관할 근거 ──
   function jurOf(presetId) { var j = String(presetId || "").split("-")[0]; return (meta.jurisdictions || {})[j] ? j : null; }
   function basisBlock(cid, j, thr) {
     var R = ((meta.regulation || {})[cid] || {})[j] || {}, an = R.analog || { score: 0 }, ag = R.agent || { score: 0 };
@@ -591,9 +577,9 @@
     var close = btn("닫기", "sm", function () { d.hidden = true; clear(d); if (opener) opener.focus(); });
     d.appendChild(el("div", { cls: "mx-det-h" }, [el("div", null, [el("span", { cls: "k", text: label }), el("h5", { text: c.title })]), close]));
     if (c.story) d.appendChild(el("p", { cls: "story", text: c.story }));
-    d.appendChild(el("p", { cls: "verdict-line" }, [el("span", { cls: "vd v-" + v, text: verdictLabel(c.kind, v) }), "  " + (cell.control ? stopText(cell, c.kind) :
-      v === "defect" ? "모든 단계가 허용됐다. 막은 통제가 없다." : v === "na" ? "이 에이전트에는 이 공격에 쓸 도구가 없다." : "그대로 처리됐다.")]));
-    // 이 규제의 통제 7개 수준 — 멈춘 통제 · 처방 통제를 표시
+    d.appendChild(el("p", { cls: "verdict-line" }, [el("span", { cls: "vd v-" + v, text: verdictLabel(c.kind, v, cell.control) }), "  " + (cell.control ? stopText(cell, c.kind) :
+      v === "defect" ? "모든 단계가 허용됐다. 차단한 통제가 없다." : v === "na" ? "이 에이전트에는 이 공격에 쓸 도구가 없다." : "그대로 처리됐다.")]));
+    // 이 기준의 통제 7개 수준 — 멈춘 통제 · 단일 보완 통제를 표시
     var fixes = cell.fixes || [], chips = el("div", { cls: "lv-chips" });
     meta.controls.forEach(function (k) {
       var lv = Number((p.levels || {})[k.id] || 0), cls = "chip lv" + lv + (k.id === cell.control ? " stop" : "") + (fixes.indexOf(k.id) >= 0 ? " fix" : "");
@@ -601,20 +587,20 @@
     });
     d.appendChild(chips);
     if (c.kind === "attack" && (v === "defect" || v === "held")) {
-      d.appendChild(el("h6", { text: "최소 처방" }));
+      d.appendChild(el("h6", { text: "단일 보완 통제" }));
       d.appendChild(el("p", { text: fixes.length
-        ? "통제 하나만 AI까지로 올리면 기계가 막는다: " + fixes.map(function (x) { return ctlName[x]; }).join(", ") + ". 같은 정책 엔진으로 다시 돌려 확인한 결과다."
-        : "통제 하나를 올려서는 막히지 않는다. 둘 이상을 함께 올려야 한다(예: 탐지와 즉시 중단은 짝이 맞아야 멈춘다)." }));
+        ? fixes.map(function (x) { return ctlName[x]; }).join(", ") + " 가운데 하나만 AI 수준으로 올려도 자동 차단으로 바뀐다. 같은 정책 엔진으로 다시 돌려 확인했다."
+        : "통제 하나를 올려서는 자동 차단되지 않는다. 둘 이상을 함께 올려야 한다(예: 이상 빈도 탐지와 즉시 중단)." }));
     }
     if (cell.link && mxData && mxData.obligations) d.appendChild(linkBlock(cell.link, mxData.obligations));
     var j = jurOf(p.preset), thr = /-2$/.test(p.preset) ? 2 : 1;
     var focus = fixes.length ? fixes : (cell.control ? [cell.control] : []);
     if (j) {
       d.appendChild(el("h6", { text: "관할 비교: 이 관할에서 왜 이렇게 됐나" }));
-      if (!focus.length) d.appendChild(el("p", { cls: "fine", text: "멈춘 통제가 없다. 이 케이스는 그대로 처리됐다." }));
+      if (!focus.length) d.appendChild(el("p", { cls: "fine", text: "멈춘 통제가 없다. 이 시나리오는 그대로 실행됐다." }));
       else focus.forEach(function (cid) { d.appendChild(basisBlock(cid, j, thr)); });
       d.appendChild(el("p", { cls: "fine", text: "관할 근거는 그 관할에서 이 통제를 가장 세게 다룬 문서 하나와 코딩 근거 인용이다." }));
-    } else if (!(mxData && mxData.obligations)) d.appendChild(el("p", { cls: "fine", text: "적용성 프로필을 넣으면 이 결과와 관련된 조문(위반 소지, 해석, 가이드라인, 공백)을 보여 준다." }));
+    } else if (!(mxData && mxData.obligations)) d.appendChild(el("p", { cls: "fine", text: "적용성 프로필을 넣으면 이 결과와 조문의 관계(명문 요구 미충족, 해석상 요구 미충족, 자율규범 미이행, 규율 공백)를 보여 준다." }));
     d.appendChild(el("p", { cls: "fine", text: "조문 대응과 분류는 변호사 검토 전 초안이다. 법률 자문이 아니다." }));
     d.scrollIntoView({ block: "nearest" });
     close.focus();
