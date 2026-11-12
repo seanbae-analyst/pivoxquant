@@ -153,9 +153,10 @@
     $("d-max").value = cur.limits.max_amount === null ? "" : cur.limits.max_amount;
     $("d-burst").value = cur.limits.max_high_risk_per_min;
     renderTools();
-    $("attack").hidden = false;
-    clear($("cases-out")); clear($("matrix-out")); say("cases-hint", ""); say("matrix-hint", "");
-    ["d-save", "d-redteam", "d-cases", "d-matrix", "d-apply-btn"].forEach(function (id) { $(id).disabled = dead; });
+    $("attack").hidden = false; $("oblig").hidden = false;
+    clear($("cases-out")); clear($("matrix-out")); clear($("ob-out")); say("cases-hint", ""); say("matrix-hint", ""); say("ob-msg", "");
+    renderObForm();
+    ["d-save", "d-redteam", "d-cases", "d-matrix", "d-apply-btn", "ob-run", "ob-save"].forEach(function (id) { $(id).disabled = dead; });
   }
   function levelsDirty() {
     var saved = (agents.filter(function (x) { return cur && x.id === cur.id; })[0] || {}).levels || {};
@@ -281,15 +282,21 @@
     say("matrix-hint", "");
     var out = clear($("matrix-out"));
     out.appendChild(el("p", { cls: "fine", text: "규제마다 돌리는 중…" }));
-    api("POST", "/admin/api/agents/" + cur.id + "/matrix", { presets: ids, current_levels: cur.levels }).then(function (j) { renderMatrix(j); loadAudit(); })
+    var body = { presets: ids, current_levels: cur.levels }, prof = readObForm();
+    if (prof.activities.length) body.profile = prof;
+    api("POST", "/admin/api/agents/" + cur.id + "/matrix", body).then(function (j) { renderMatrix(j); loadAudit(); })
       .catch(function (err) { clear(out).appendChild(el("p", { cls: "err", text: err.message })); });
   });
+  var mxData = null;
+  var OB_SHORT = { "OB-binding_explicit": "적용 조문: 강제, 명시만", "OB-binding_interpretive": "적용 조문: 강제, 해석 포함", "OB-guideline": "적용 조문: 가이드라인까지" };
+  function colLabel(p) { return p.preset === "current" ? (levelsDirty() ? "지금 화면 (저장 안 함)" : "지금 설정") : (OB_SHORT[p.preset] || p.label); }
   function renderMatrix(j) {
+    mxData = j;
     var out = clear($("matrix-out")), t = el("table", { cls: "mx-t" });
     var head = el("tr", null, [el("th", { cls: "cs", text: "케이스" })]);
     var dirty = levelsDirty();
     j.presets.forEach(function (p) {
-      head.appendChild(el("th", { cls: "pz" + (p.preset === "current" ? " cur" : ""), text: p.preset === "current" ? (dirty ? "지금 화면 (저장 안 함)" : "지금 설정") : p.label }));
+      head.appendChild(el("th", { cls: "pz" + (p.preset === "current" ? " cur" : "") + (OB_SHORT[p.preset] ? " ob" : ""), text: colLabel(p) }));
     });
     t.appendChild(el("thead", null, [head]));
     var tb = el("tbody");
@@ -297,7 +304,7 @@
       var tr = el("tr", { cls: "k-" + c.kind }, [el("td", { cls: "cs" }, [el("b", { text: c.title }), el("span", { cls: "sub", text: c.kind === "attack" ? " 공격" : " 정상 업무" })])]);
       j.presets.forEach(function (p) {
         var cell = p.cells[c.id] || {}, v = cell.verdict || "na";
-        var b = el("button", { type: "button", cls: "mx-btn", "aria-label": c.title + ", " + (p.preset === "current" ? "지금 설정" : p.label) + ", " + verdictLabel(c.kind, v) + ". 해부 열기",
+        var b = el("button", { type: "button", cls: "mx-btn", "aria-label": c.title + ", " + colLabel(p) + ", " + verdictLabel(c.kind, v) + ". 해부 열기",
                                title: cell.control ? stopText(cell, c.kind) : "" }, [el("span", { cls: "vd v-" + v, text: verdictShort(c.kind, v) })]);
         b.addEventListener("click", function () { renderCellDetail(c, p, cell, b); });
         tr.appendChild(el("td", { cls: "mx v-" + v }, [b]));
@@ -315,6 +322,142 @@
     out.appendChild(el("p", { cls: "fine", text: "칸을 누르면 그 결과를 해부한다. 어디서 멈췄는지, 통제 하나를 올려 막을 수 있는지, 그 관할의 규제 근거가 무엇인지 보여 준다. 공격이 통과하면 결함, 정상 업무가 막히면 업무 마찰이다. '승인'은 사람 승인에서만 멈춘 공격이다. 승인자가 요약에 속거나 지쳐서 승인하면 뚫린다(승인해도 뒤의 통제가 막으면 막음으로 센다). 샌드박스라 에이전트 상태는 바뀌지 않는다." }));
   }
 
+
+
+  // ── 적용 조문 (조항 단위 의무, 증권부터) ──
+  var OB_ST = { met: "충족", partial: "사람·계정 층만", unmet: "미충족", offline: "런타임 밖" };
+  var LINK_KO = {
+    violation: "이 에이전트에 걸리는 강제 조문이 이 통제를 AI까지 명시해 요구한다. 위반 소지가 있다.",
+    interpretive: "걸리는 강제 조문은 사람·계정 층만 말한다. 에이전트 계정에도 미친다고 읽으면 위반 소지, 아니면 규제 공백이다.",
+    guideline: "자율 규범(가이드라인, 평가기준)만 이 통제를 요구한다. 위반은 아니지만 가이드라인 미이행이다.",
+    gap: "이 에이전트에 걸리는 조문 중 이 통제를 요구하는 것이 없다. 합법이지만 위험한 규제 공백이다."
+  };
+  var LINK_SHORT = { violation: "위반 소지", interpretive: "해석에 따라 위반 소지", guideline: "가이드라인 미이행", gap: "규제 공백" };
+  function obMeta() { return meta.obligations || { profile: {} }; }
+  var obFormFor = null;
+  function renderObForm() {
+    // 같은 에이전트를 다시 그릴 때(통제 저장 뒤 등)는 저장하지 않은 선택을 지우지 않는다
+    var keep = obFormFor && cur && obFormFor === cur.id ? readObForm() : null;
+    var M = obMeta(), box = clear($("ob-form")), pv = keep || (cur && cur.compliance) || {};
+    obFormFor = cur ? cur.id : null;
+    $("ob-h").textContent = "적용 조문 (" + (M.label || "증권") + ")";
+    var w = $("ob-warn");
+    w.hidden = !!M.reviewed_by_counsel;
+    w.textContent = "변호사 검토 전 초안이다(기준일 " + (M.as_of || "") + "). 조문 대응 · 적용 조건 · 해석 여지는 이 도구의 판단이며 법률 자문이 아니다.";
+    Object.keys(M.profile || {}).forEach(function (key) {
+      var q = M.profile[key], row = el("div", { cls: "ob-q" }, [el("span", { cls: "sub", text: q.label })]), opts = el("div", { cls: "ob-opts" });
+      if (q.type === "bool") {
+        var id = "obq-" + key, inp = el("input", { type: "checkbox", id: id, "data-k": key });
+        inp.checked = pv[key] === true;
+        opts.appendChild(el("label", { cls: "rp-item", "for": id }, [inp, el("span", { text: "예" })]));
+      } else if (q.multi) {
+        (q.options || []).forEach(function (o) {
+          var id2 = "obq-" + key + "-" + o.id, i2 = el("input", { type: "checkbox", id: id2, value: o.id, "data-k": key });
+          i2.checked = (pv[key] || []).indexOf(o.id) >= 0;
+          opts.appendChild(el("label", { cls: "rp-item", "for": id2 }, [i2, el("span", { text: o.label })]));
+        });
+      } else {
+        opts.appendChild(seg("obq-" + key, (q.options || []).map(function (o) { return [o.id, o.label]; }), pv[key] || (q.options[0] || {}).id, function () {}));
+      }
+      row.appendChild(opts);
+      box.appendChild(row);
+    });
+  }
+  function readObForm() {
+    var M = obMeta(), out = {};
+    Object.keys(M.profile || {}).forEach(function (key) {
+      var q = M.profile[key];
+      if (q.type === "bool") { var b = $("obq-" + key); out[key] = !!(b && b.checked); }
+      else if (q.multi) out[key] = Array.prototype.slice.call(document.querySelectorAll('#ob-form input[data-k="' + key + '"]:checked')).map(function (i) { return i.value; });
+      else { var r = document.querySelector('#ob-form input[name="obq-' + key + '"]:checked'); out[key] = r ? r.value : (q.options[0] || {}).id; }
+    });
+    return out;
+  }
+  $("ob-run").addEventListener("click", function () {
+    var prof = readObForm(), out = clear($("ob-out"));
+    if (!prof.activities.length) { say("ob-msg", "에이전트가 하는 일을 하나 이상 고른다."); return; }
+    say("ob-msg", "");
+    out.appendChild(el("p", { cls: "fine", text: "조문을 고르는 중…" }));
+    var body = { profile: prof };
+    if (levelsDirty()) body.levels = cur.levels;
+    api("POST", "/admin/api/agents/" + cur.id + "/obligations", body).then(renderOb)
+      .catch(function (err) { clear(out).appendChild(el("p", { cls: "err", text: err.message })); });
+  });
+  $("ob-save").addEventListener("click", function () {
+    var prof = readObForm();
+    if (!prof.activities.length) { say("ob-msg", "에이전트가 하는 일을 하나 이상 고른다."); return; }
+    api("PATCH", "/admin/api/agents/" + cur.id, { compliance: prof }).then(function () { say("ob-msg", "프로필을 저장했다. 규제별 비교에 '적용 조문' 열이 붙는다."); return loadAgents(cur.id); })
+      .catch(function (err) { say("ob-msg", err.message); });
+  });
+  function obRef(r) {
+    var t = r.doc + " " + r.article;
+    return r.source ? el("a", { href: r.source, target: "_blank", rel: "noopener noreferrer", text: t }) : el("span", { text: t });
+  }
+  function renderOb(j) {
+    var out = clear($("ob-out")), s = j.summary, M = obMeta(), byId = {};
+    j.applicable.forEach(function (r) { byId[r.id] = r; });
+    out.appendChild(el("p", { cls: "sum", text: "적용 조문 " + s.applicable + " (강제 " + s.binding + " · 자율 " + s.voluntary + " · 런타임 밖 " + s.offline + ") · 걸리지 않는 조문 " + s.not_applicable }));
+    out.appendChild(el("p", { cls: "fine", text: "지금 통제 기준: 충족 " + s.met + ", 사람·계정 층만 " + s.partial + ", 미충족 " + s.unmet + ", 런타임 밖 " + s.offline + ". 강제 조문 중 미충족이거나 사람·계정 층만인 것 " + s.unmet_binding + "개." }));
+    out.appendChild(el("p", { cls: "hi-line" }, [el("b", { text: "AI 기본법 고영향 AI: " + (j.high_impact.value ? "해당" : "해당 안 함") }), " " + j.high_impact.reason]));
+    // 모드별 통제 수준
+    var t = el("table", { cls: "ob-lv" }), hr = el("tr", null, [el("th", { text: "통제" }), el("th", { text: "지금" })]);
+    M.modes.forEach(function (m) {
+      var bt = btn("통제에 넣기", "sm", function () {
+        meta.controls.forEach(function (c) { cur.levels[c.id] = Number(j.levels[m][c.id] || 0); });
+        renderControls(); say("d-saved", M.mode_ko[m] + " 수준을 통제에 넣었다. 저장을 누르면 반영된다.");
+      });
+      hr.appendChild(el("th", null, [el("span", { text: M.mode_ko[m] }), el("br"), bt]));
+    });
+    t.appendChild(el("thead", null, [hr]));
+    var tb = el("tbody");
+    meta.controls.forEach(function (c) {
+      var tr = el("tr", null, [el("td", { text: c.name }), el("td", { cls: "lvw", text: LV_KO[Number(cur.levels[c.id] || 0)] })]);
+      M.modes.forEach(function (m) {
+        var lv = Number(j.levels[m][c.id] || 0), ids = j.basis[m][c.id] || [], first = byId[ids[0]];
+        tr.appendChild(el("td", { cls: "lvw lv" + lv }, [el("span", { text: LV_KO[lv] }),
+          first ? el("span", { cls: "basis-art", text: first.article + (ids.length > 1 ? " 외 " + (ids.length - 1) : "") }) : null]));
+      });
+      tb.appendChild(tr);
+    });
+    t.appendChild(tb);
+    out.appendChild(el("div", { cls: "tblwrap" }, [t]));
+    // 적용 조문 표
+    out.appendChild(el("h5", { cls: "ob-h5", text: "걸리는 조문" }));
+    var t2 = el("table", { cls: "rt-t ob-t" });
+    t2.appendChild(el("thead", null, [el("tr", null, ["조문", "강제력", "요구", "통제", "지금 상태"].map(function (h) { return el("th", { text: h }); }))]));
+    var tb2 = el("tbody");
+    j.applicable.forEach(function (r) {
+      var det = el("details", null, [el("summary", { text: "원문" })]);
+      if (r.quote) det.appendChild(el("blockquote", { cls: "basis-q", text: r.quote }));
+      else det.appendChild(el("p", { cls: "fine", text: "원문 인용을 확인하지 못했다. 요구는 풀어 쓴 것이다." }));
+      det.appendChild(el("p", { cls: "fine", text: "인용 확인: " + ({ registry: "문서 코딩에서 원문 대조", primary: "법령 원문", secondary: "법무법인 · 언론 2차 자료", none: "없음" }[r.quote_verified] || r.quote_verified) +
+        (r.owner ? " · 흔히 맡는 책무: " + r.owner : "") + " · " + r.reason }));
+      if (r.note) det.appendChild(el("p", { cls: "fine", text: r.note }));
+      var ctl = r.runtime ? ctlName[r.control] + " · " + (r.layer === "agent" ? "AI까지 명시" : "사람·계정" + (r.extends ? " (에이전트는 해석)" : "")) : (r.category || "런타임 밖");
+      tb2.appendChild(el("tr", { cls: "ob-" + r.status }, [el("td", null, [obRef(r), det]), el("td", { cls: r.binding ? "bind" : "sub", text: r.force_ko }),
+        el("td", { text: r.requires }), el("td", { cls: "sub", text: ctl }), el("td", null, [el("span", { cls: "ob-st " + r.status, text: OB_ST[r.status] || r.status })])]));
+    });
+    t2.appendChild(tb2);
+    out.appendChild(el("div", { cls: "tblwrap" }, [t2]));
+    if (j.not_applicable.length) {
+      var na = el("details", { cls: "ob-na" }, [el("summary", { text: "걸리지 않는 조문 " + j.not_applicable.length + "개와 이유" })]);
+      var ul = el("ul");
+      j.not_applicable.forEach(function (r) { ul.appendChild(el("li", null, [obRef(r), " (" + r.force_ko + "): " + r.reason])); });
+      na.appendChild(ul);
+      out.appendChild(na);
+    }
+  }
+  function linkBlock(link, obs) {
+    var box = el("div", { cls: "basis" });
+    box.appendChild(el("h6", { text: "이 에이전트에 걸리는 조문: " + LINK_SHORT[link.kind] }));
+    box.appendChild(el("p", { cls: "basis-h", text: LINK_KO[link.kind] }));
+    (link.obligations || []).forEach(function (id) {
+      var r = obs[id]; if (!r) return;
+      box.appendChild(el("p", { cls: "basis-doc" }, [el("span", { cls: "k", text: r.force_ko + (r.binding ? " · 강제" : " · 자율") }), obRef(r)]));
+      if (r.quote) box.appendChild(el("blockquote", { cls: "basis-q", text: r.quote }));
+    });
+    return box;
+  }
 
   // ── 칸 해부: 멈춘 곳 · 최소 처방(같은 엔진으로 반사실 재실행) · 그 관할의 규제 근거 문서 ──
   function jurOf(presetId) { var j = String(presetId || "").split("-")[0]; return (meta.jurisdictions || {})[j] ? j : null; }
@@ -340,7 +483,7 @@
   }
   function renderCellDetail(c, p, cell, opener) {
     var d = $("mx-detail"); clear(d); d.hidden = false;
-    var label = p.preset === "current" ? (levelsDirty() ? "지금 화면 (저장 안 함)" : "지금 설정") : p.label, v = cell.verdict || "na";
+    var label = colLabel(p), v = cell.verdict || "na";
     var close = btn("닫기", "sm", function () { d.hidden = true; clear(d); if (opener) opener.focus(); });
     d.appendChild(el("div", { cls: "mx-det-h" }, [el("div", null, [el("span", { cls: "k", text: label }), el("h5", { text: c.title })]), close]));
     if (c.story) d.appendChild(el("p", { cls: "story", text: c.story }));
@@ -359,13 +502,16 @@
         ? "통제 하나만 AI까지로 올리면 기계가 막는다: " + fixes.map(function (x) { return ctlName[x]; }).join(", ") + ". 같은 정책 엔진으로 다시 돌려 확인한 결과다."
         : "통제 하나를 올려서는 막히지 않는다. 둘 이상을 함께 올려야 한다(예: 탐지와 즉시 중단은 짝이 맞아야 멈춘다)." }));
     }
+    if (cell.link && mxData && mxData.obligations) d.appendChild(linkBlock(cell.link, mxData.obligations));
     var j = jurOf(p.preset), thr = /-2$/.test(p.preset) ? 2 : 1;
     var focus = fixes.length ? fixes : (cell.control ? [cell.control] : []);
-    d.appendChild(el("h6", { text: "규제 근거: 이 관할에서 왜 이렇게 됐나" }));
-    if (!j) d.appendChild(el("p", { cls: "fine", text: "관할 프리셋이 아니라서(통제 없음 · 모두 AI까지 · 지금 설정) 근거 문서를 대지 않는다." }));
-    else if (!focus.length) d.appendChild(el("p", { cls: "fine", text: "멈춘 통제가 없다. 이 케이스는 그대로 처리됐다." }));
-    else focus.forEach(function (cid) { d.appendChild(basisBlock(cid, j, thr)); });
-    d.appendChild(el("p", { cls: "fine", text: "근거는 그 관할에서 이 통제를 가장 세게 다룬 문서 하나와 코딩 근거 인용이다. 법률 자문이 아니다." }));
+    if (j) {
+      d.appendChild(el("h6", { text: "관할 비교: 이 관할에서 왜 이렇게 됐나" }));
+      if (!focus.length) d.appendChild(el("p", { cls: "fine", text: "멈춘 통제가 없다. 이 케이스는 그대로 처리됐다." }));
+      else focus.forEach(function (cid) { d.appendChild(basisBlock(cid, j, thr)); });
+      d.appendChild(el("p", { cls: "fine", text: "관할 근거는 그 관할에서 이 통제를 가장 세게 다룬 문서 하나와 코딩 근거 인용이다." }));
+    } else if (!cell.link) d.appendChild(el("p", { cls: "fine", text: "적용성 프로필을 넣으면 이 결함과 관련된 조문(위반 소지 · 해석 · 가이드라인 · 공백)을 보여 준다." }));
+    d.appendChild(el("p", { cls: "fine", text: "조문 대응과 분류는 변호사 검토 전 초안이다. 법률 자문이 아니다." }));
     d.scrollIntoView({ block: "nearest" });
     close.focus();
   }

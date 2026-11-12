@@ -150,3 +150,29 @@ def test_agent_api_rejects_bad_input(srv):
     assert call(base, "POST", "/v1/decide", {"tool": "x"}, headers={"Authorization": "Bearer pvx_nope"})[0] == 401
     assert call(base, "GET", "/v1/decide")[0] == 405
     assert call(base, "GET", "/nope")[0] == 404
+
+
+def test_obligations_profile_and_matrix_columns(srv):
+    """적용성 프로필 → 적용 조문 · 미적용(이유) · 비교표의 '적용 조문' 열 · 결함과 조문 분류."""
+    base, _ = srv
+    h = login(base)
+    st, r, _ = call(base, "POST", "/admin/api/agents", {"name": "정산 에이전트", "owner": "재무팀", "profile": "trading",
+                                                        "env": {"tools": "pay", "untrusted_input": True}, "levels": ALL2}, headers=h)
+    aid = r["agent"]["id"]
+    assert call(base, "POST", f"/admin/api/agents/{aid}/obligations", {}, headers=h)[0] == 409          # 프로필 없음
+    settle = {"activities": ["transfer"], "data": ["personal"], "external_llm": "foreign_api"}
+    st, ob, _ = call(base, "POST", f"/admin/api/agents/{aid}/obligations", {"profile": settle}, headers=h)
+    assert st == 200 and ob["high_impact"]["value"] is False and ob["reviewed_by_counsel"] is False
+    assert "aibasic-34-1-4" in {x["id"] for x in ob["not_applicable"]}
+    assert ob["summary"]["unmet"] == 0                                              # 모든 통제를 AI까지 켠 에이전트
+    assert call(base, "POST", f"/admin/api/agents/{aid}/obligations", {"profile": {"activities": ["fly"]}}, headers=h)[0] == 400
+    # 저장 → 비교표에 적용 조문 열이 붙고, 결함 칸에 조문 분류가 달린다
+    assert call(base, "PATCH", f"/admin/api/agents/{aid}", {"compliance": settle}, headers=h)[0] == 200
+    st, mx, _ = call(base, "POST", f"/admin/api/agents/{aid}/matrix", {"presets": ["none"]}, headers=h)
+    ids = [p["preset"] for p in mx["presets"]]
+    assert ids == ["OB-binding_explicit", "OB-binding_interpretive", "OB-guideline", "none"]
+    explicit = mx["presets"][0]["cells"]
+    assert explicit["other-customer"]["verdict"] == "defect"
+    assert explicit["other-customer"]["link"]["kind"] == "interpretive"            # 제13조는 사람·계정 층 — 에이전트엔 해석
+    assert "efsr-13-1-1-access" in explicit["other-customer"]["link"]["obligations"]
+    assert mx["obligations"]["efsr-13-1-1-access"]["article"] == "제13조 제1항 제1호"

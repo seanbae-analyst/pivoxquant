@@ -12,6 +12,7 @@ import time
 from datetime import timedelta
 from typing import Any
 
+from .. import obligations as obligations_mod
 from . import policy
 from .store import Store, iso, now_utc
 
@@ -191,7 +192,23 @@ def _bearer(header: str | None) -> str:
 class Runtime:
     def __init__(self, store: Store):
         self.store = store
+        self.lib = obligations_mod.load_library("securities")     # 조항 단위 의무(증권부터)
         seed_components(store)
+
+    def clean_compliance(self, p: Any) -> dict[str, Any] | None:
+        """에이전트의 적용성 프로필(업권 · 하는 일 · 정보 · 모델 · 고영향 AI) — None 이면 지운다."""
+        if p is None:
+            return None
+        try:
+            return obligations_mod.clean_profile(self.lib, p)
+        except obligations_mod.ObligationError as e:
+            raise RuntimeError_(str(e)) from None
+
+    def assess(self, agent: dict[str, Any], profile: dict[str, Any] | None = None, levels: dict[str, int] | None = None) -> dict[str, Any]:
+        prof = profile if profile is not None else agent.get("compliance")
+        if not prof:
+            raise RuntimeError_("이 에이전트에는 적용성 프로필이 없다(업권 · 하는 일 · 정보 · 모델)", 409)
+        return obligations_mod.assess(self.lib, prof, levels if levels is not None else agent.get("levels") or {})
 
     # ── 등록부 ──
     def register(self, data: dict[str, Any], by: str = "admin") -> tuple[dict[str, Any], str]:
@@ -242,6 +259,9 @@ class Runtime:
                 raise RuntimeError_("delegates 는 에이전트 id 목록")
             a["delegates"] = d
             changed.append("delegates")
+        if "compliance" in patch:
+            a["compliance"] = self.clean_compliance(patch["compliance"])
+            changed.append("compliance")
         if "risk_tier" in patch and patch["risk_tier"] in ("low", "medium", "high"):
             a["risk_tier"] = patch["risk_tier"]
             changed.append("risk_tier")

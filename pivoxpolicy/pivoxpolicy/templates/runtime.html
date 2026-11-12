@@ -106,6 +106,15 @@
 </div>
 <div id="rt-out"></div>
 
+<div id="oblig" class="attack" hidden>
+<h4 id="ob-h">적용 조문</h4>
+<p class="fine">이 에이전트가 하는 일, 다루는 정보, 쓰는 모델을 고르면 걸리는 조문만 골라 통제 수준을 정한다. 관할 프리셋과 달리 적용 조건을 본다(예: AI 기본법 제34조는 고영향 AI에만 걸린다). 조문마다 원문 인용과 출처를 단다.</p>
+<p class="ob-warn" id="ob-warn" hidden></p>
+<div id="ob-form" class="ob-form"></div>
+<p class="row"><button type="button" class="btn btn-primary" id="ob-run">적용 조문 보기</button><button type="button" class="btn" id="ob-save">프로필 저장</button><span class="fine" id="ob-msg" aria-live="polite"></span></p>
+<div id="ob-out"></div>
+</div>
+
 <div id="attack" class="attack" hidden>
 <h4>공격 팀</h4>
 <p class="fine">공격 케이스 9개와 정상 업무 2개를 이 에이전트의 통제로 샌드박스에서 돌린다(저장하기 전이면 화면의 수준으로). 공격이 통과하면 <b>결함</b>, 사람 승인에서만 멈추면 <b>사람 승인에 기댐</b>, 정상 업무가 막히면 <b>업무 마찰</b>이다. 에이전트 상태는 바뀌지 않는다.</p>

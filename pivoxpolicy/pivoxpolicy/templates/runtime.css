@@ -167,3 +167,38 @@ tr.v-defect td:first-child{box-shadow:inset 2px 0 0 var(--pq-ivory)}
 .basis-doc a{color:var(--pq-ivory);text-decoration:underline;text-decoration-color:var(--pq-ivory-line-strong);text-underline-offset:3px}
 .basis-doc a:hover{color:var(--pq-bronze)}
 .basis-q{margin:6px 0 0 160px;padding:0 0 0 12px;border-left:2px solid var(--pq-bronze-line);font-size:12.5px;line-height:1.6;color:var(--pq-ivory-dim)}
+
+/* 적용 조문 */
+.ob-warn{margin:8px 0 0;padding:8px 12px;font-size:13px;color:var(--pq-ivory);border-left:2px solid var(--pq-bronze);background:var(--pq-bronze-wash);max-width:none}
+.ob-form{display:grid;gap:10px;margin:14px 0 4px}
+.ob-q{display:grid;grid-template-columns:150px minmax(0,1fr);gap:10px;align-items:start}
+.ob-q .sub{padding-top:5px}
+.ob-opts{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center}
+.ob-opts .seg span{white-space:nowrap}
+.hi-line{margin:6px 0 12px;font-size:13.5px;color:var(--pq-ivory-soft);max-width:none}
+.hi-line b{color:var(--pq-ivory)}
+.ob-lv{font-size:13px}
+.ob-lv th{vertical-align:bottom;font-size:12px;line-height:1.5}
+.ob-lv th .btn{margin-top:4px}
+.ob-lv td.lvw{white-space:nowrap}
+.ob-lv td.lv2 span:first-child{color:var(--pq-bronze);font-weight:600}
+.ob-lv td.lv0 span:first-child{color:var(--pq-ivory-dim)}
+.basis-art{display:block;font-size:11.5px;color:var(--pq-ivory-dim)}
+.ob-h5{margin:20px 0 6px;font-size:14px;font-weight:600}
+.ob-t td{vertical-align:top;font-size:13px}
+.ob-t td a{color:var(--pq-ivory);text-decoration:underline;text-decoration-color:var(--pq-ivory-line-strong);text-underline-offset:3px}
+.ob-t td.bind{color:var(--pq-ivory);font-weight:600;white-space:nowrap}
+.ob-t td.sub{white-space:nowrap}
+.ob-t details{margin-top:4px}
+.ob-t .basis-q{margin-left:0}
+.ob-st{font-weight:600;white-space:nowrap}
+.ob-st.met{color:var(--pq-bronze)}
+.ob-st.partial{color:var(--pq-bronze-light)}
+.ob-st.unmet{color:var(--pq-ivory)}
+.ob-st.offline{color:var(--pq-ivory-dim);font-weight:500}
+tr.ob-unmet td:first-child{box-shadow:inset 2px 0 0 var(--pq-ivory)}
+.ob-na{margin-top:12px}
+.ob-na ul{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--pq-ivory-soft)}
+.ob-na li{margin:4px 0}
+.mx-t th.pz.ob{color:var(--pq-bronze-light)}
+.mx-det .basis h6{margin:0 0 4px}

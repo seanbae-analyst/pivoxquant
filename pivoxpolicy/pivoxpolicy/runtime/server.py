@@ -28,6 +28,7 @@ from socketserver import ThreadingMixIn
 from typing import Any, Callable
 from wsgiref.simple_server import WSGIRequestHandler, WSGIServer, make_server
 
+from .. import obligations as obligations_mod
 from . import cases as cases_mod
 from . import redteam
 from .service import AuthError, PROFILE_TOOLS, Runtime, RuntimeError_, clean_levels
@@ -62,7 +63,14 @@ def _meta_payload() -> dict[str, Any]:
             "profile_tools": PROFILE_TOOLS, "scenarios": [{"id": s["id"], "title": s["title"]} for s in p["scenarios"]],
             "cases": [{k: c.get(k) for k in ("id", "kind", "title", "story", "scenario")} for c in cs],
             "matrix_default": ["none", "US-2", "EU-2", "KR-2", "all"], "kinds": ["read", "write", "send", "exec", "pay"],
-            "regulation": p["regulation"], "jurisdictions": p["jurisdictions"]}
+            "regulation": p["regulation"], "jurisdictions": p["jurisdictions"], "obligations": _obligations_meta()}
+
+
+def _obligations_meta() -> dict[str, Any]:
+    lib = obligations_mod.load_library("securities")
+    return {"sector": lib.get("sector"), "label": lib.get("label"), "reviewed_by_counsel": bool(lib.get("reviewed_by_counsel")),
+            "as_of": str(lib.get("as_of") or ""), "profile": lib.get("profile") or {}, "modes": list(obligations_mod.MODES),
+            "mode_ko": obligations_mod.MODE_KO, "force_ko": obligations_mod.FORCE_KO}
 
 
 class App:
@@ -90,6 +98,7 @@ class App:
             ("POST", re.compile(r"^/admin/api/agents/(agt_[a-z0-9]+)/redteam$"), self.a(self.redteam)),
             ("POST", re.compile(r"^/admin/api/agents/(agt_[a-z0-9]+)/cases$"), self.a(self.run_cases)),
             ("POST", re.compile(r"^/admin/api/agents/(agt_[a-z0-9]+)/matrix$"), self.a(self.run_matrix)),
+            ("POST", re.compile(r"^/admin/api/agents/(agt_[a-z0-9]+)/obligations$"), self.a(self.obligations)),
             ("GET", re.compile(r"^/admin/api/approvals$"), self.a(self.approvals)),
             ("POST", re.compile(r"^/admin/api/approvals/(apr_[0-9a-f]{16})$"), self.a(self.approve)),
             ("GET", re.compile(r"^/admin/api/audit$"), self.a(self.audit)), ("GET", re.compile(r"^/admin/api/audit/verify$"), self.a(self.verify)),
@@ -317,11 +326,33 @@ class App:
         chosen = [by_id[i] for i in dict.fromkeys(ids) if i in by_id][:10]
         if not chosen:
             raise HttpError(400, "알 수 없는 규제 프리셋")
+        # 적용성 프로필이 있으면(저장된 것 또는 화면의 미리보기) 관할 프리셋 앞에 '이 에이전트에 걸리는 조문' 열 세 개
+        prof = self.rt.clean_compliance(d["profile"]) if d.get("profile") is not None else a.get("compliance")
+        assessment = obligations_mod.assess(self.rt.lib, prof) if prof else None
+        if assessment:
+            chosen = [*obligations_mod.preset_columns(assessment), *chosen]
         if "current_levels" in d:
             chosen = [{"id": "current", "label": "지금 설정", "levels": clean_levels(d["current_levels"])}, *chosen]
         res = cases_mod.run_matrix(a, chosen, approved=self.rt.store.components())
+        if assessment:   # 결함마다 그 통제를 요구하는 적용 조문과 분류(위반 소지 · 해석 · 가이드라인 · 공백)
+            for col in res["presets"]:
+                for cell in col["cells"].values():
+                    if cell.get("fixes"):
+                        cell["link"] = obligations_mod.classify(assessment, cell["fixes"])
+            res["obligations"] = {r["id"]: {k: r.get(k) for k in ("doc", "article", "force_ko", "binding", "quote", "quote_verified",
+                                                                   "source", "requires", "control", "layer", "extends", "note")}
+                                  for r in assessment["applicable"]}
+            res["high_impact"] = assessment["high_impact"]
         self.rt.store.audit("cases", aid, {"op": "matrix", "presets": [p["preset"] for p in res["presets"]]})
         return self.json(sr, res)
+
+    def obligations(self, environ, sr, aid):
+        """적용 조문 · 미적용 조문(이유) · 모드별 통제 수준 · 지금 수준 기준 충족 여부. profile · levels 를 주면 저장 전 미리보기."""
+        a = self.rt.agent(aid)
+        d = self.obj(environ)
+        prof = self.rt.clean_compliance(d["profile"]) if d.get("profile") is not None else None
+        lv = clean_levels(d["levels"]) if "levels" in d else None
+        return self.json(sr, self.rt.assess(a, prof, lv))
 
     def approvals(self, environ, sr):
         qs = environ.get("QUERY_STRING", "")
