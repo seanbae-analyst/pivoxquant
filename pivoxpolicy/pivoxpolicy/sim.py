@@ -1,16 +1,16 @@
 """모의 테스트 — 통제를 켜고 끄며 AI 에이전트 공격을 다시 돌려 본다 (out/sim.html).
 
-두 가지를 계산한다. 이 파일이 기준 구현이고, 페이지의 templates/sim-engine.js 는 같은 규칙을 옮긴 것이다
-(tests/test_sim.py 가 node 로 둘의 결과를 대조한다).
+두 가지를 계산한다. 이 파일이 기준 구현이고, 페이지의 templates/sim-engine.js는 같은 규칙을 옮긴 것이다
+(tests/test_sim.py가 node로 둘의 결과를 대조한다).
 
-1. 시나리오 모의 테스트 — registry/sim_scenarios.yaml 의 공격 원형 하나를 단계별로 걷는다.
+1. 시나리오 모의 테스트 — registry/sim_scenarios.yaml의 공격 원형 하나를 단계별로 걷는다.
    단계마다 그 단계에서 끼어들 수 있는 통제(check)가 켜져 있는지 보고, 막힘 · 피해 축소 · 피해 발생을 낸다.
    원형과 단계는 저자 설계다(블라인드 코딩 아님).
 
 2. 실제 사건 다시 돌리기 — 사건 조정본(registry/incident_codings/consensus_*)이 '실패했다' 고 본 통제를 쓴다.
    반사실 가정: 그 사건에서 실패한 통제가 (그 층에서) 켜져 있었다면 사건이 막히거나 줄었을 것이다.
    막힘은 하한~상한으로 낸다 — 하한 = 실패한 통제가 모두 켜졌을 때, 상한 = 사전·사용 중 단계 통제가 하나라도 켜졌을 때.
-   실패한 통제가 하나도 판정되지 않은 사건은 '판단 근거 없음' 으로 따로 센다(막힌 것도 안 막힌 것도 아니다).
+   실패한 통제가 하나도 판정되지 않은 사건은 '판단 근거 없음'으로 따로 센다(막힌 것도 안 막힌 것도 아니다).
 
 3. 그 위에 얹는 두 가지 — OWASP Agentic Top 10 커버리지(항목마다 근거 원형의 결과를 모은 것, 자체 계산)와
    개선 조치(아직 AI 까지가 아닌 통제를 하나씩 올렸을 때 사건 막힘 · 원형 결과가 얼마나 바뀌는가).
@@ -38,7 +38,7 @@ EFFECTS = ("prevent", "limit", "detect", "contain")
 LAYERS = ("analog", "agent")
 REQUIREMENTS = ("untrusted_input", "open_components", "memory", "multi_agent")
 TOOLS = ("read", "write", "pay")
-LEVEL_KO = {0: "없음", 1: "사람·계정만", 2: "AI 까지"}
+LEVEL_KO = {0: "없음", 1: "사람·계정만", 2: "AI까지"}
 
 
 class SimError(ValueError):
@@ -67,10 +67,10 @@ def validate_scenarios(data: dict[str, Any], control_ids: set[str], incident_ids
                 problems.append(f"{sid}: 모르는 requires {r}")
         rt = s.get("requires_tools")
         if rt is not None and (not rt or any(t not in TOOLS for t in rt)):
-            problems.append(f"{sid}: requires_tools 는 {TOOLS} 중 하나 이상")
+            problems.append(f"{sid}: requires_tools는 {TOOLS} 중 하나 이상")
         imp = s.get("impact") or {}
         if not imp.get("fixed") and set((imp.get("by_tools") or {})) != set(TOOLS):
-            problems.append(f"{sid}: impact 는 fixed 또는 by_tools(read·write·pay 모두)")
+            problems.append(f"{sid}: impact는 fixed 또는 by_tools(read·write·pay 모두)")
         if not s.get("stages"):
             problems.append(f"{sid}: stages 없음")
         if not s.get("basis"):
@@ -81,16 +81,16 @@ def validate_scenarios(data: dict[str, Any], control_ids: set[str], incident_ids
                 if c.get("control") not in control_ids:
                     problems.append(f"{where}: 모르는 통제")
                 if c.get("layer") not in LAYERS:
-                    problems.append(f"{where}: layer 는 analog/agent")
+                    problems.append(f"{where}: layer는 analog/agent")
                 if c.get("effect") not in EFFECTS:
-                    problems.append(f"{where}: effect 는 {EFFECTS}")
+                    problems.append(f"{where}: effect는 {EFFECTS}")
                 if not c.get("why"):
                     problems.append(f"{where}: why 필요")
         for i in s.get("incidents") or []:
             if i not in incident_ids:
                 problems.append(f"{sid}: 모르는 사건 {i}")
             elif i in seen:
-                problems.append(f"{i}: {seen[i]} 와 {sid} 두 원형에 있음")
+                problems.append(f"{i}: {seen[i]}와 {sid} 두 원형에 있음")
             seen[i] = sid
     missing = sorted(incident_ids - set(seen))
     if missing:
@@ -99,7 +99,7 @@ def validate_scenarios(data: dict[str, Any], control_ids: set[str], incident_ids
     for s in data.get("scenarios") or []:
         for a in asi_of(s):
             if a not in known_asi:
-                problems.append(f"{s.get('id', '?')}: basis 의 {a} 가 owasp_asi 목록에 없음")
+                problems.append(f"{s.get('id', '?')}: basis의 {a}가 owasp_asi 목록에 없음")
     return problems
 
 
@@ -108,7 +108,7 @@ def validate_scenarios(data: dict[str, Any], control_ids: set[str], incident_ids
 def run_scenario(scn: dict[str, Any], env: dict[str, Any], levels: dict[str, int]) -> dict[str, Any]:
     """공격 원형 하나를 단계별로 걷는다.
     env = {tools: read|write|pay, untrusted_input: bool, ...}, levels = 통제 id → 0|1|2.
-    requires(환경 조건)나 requires_tools(필요한 도구 권한)가 맞지 않으면 공격면 없음 — missing 에 이유(exec_tools = 도구 권한).
+    requires(환경 조건)나 requires_tools(필요한 도구 권한)가 맞지 않으면 공격면 없음 — missing에 이유(exec_tools = 도구 권한).
     결과 outcome: no_surface(공격면 없음) · blocked(막힘) · reduced(피해 축소) · damage(피해 발생)."""
     missing = [r for r in scn.get("requires") or [] if not env.get(r)]
     if scn.get("requires_tools") and env.get("tools", "read") not in scn["requires_tools"]:
@@ -183,7 +183,7 @@ def replay(failures: dict[str, list[dict[str, str]]], levels: dict[str, int], st
 
 
 def best_next(failures, levels, stage_of, stated_only=False) -> list[tuple[str, int]]:
-    """아직 AI 까지 켜지지 않은 통제를 하나씩 2 로 올렸을 때 막힘 상한이 얼마나 느는가 — 큰 순."""
+    """아직 AI까지 켜지지 않은 통제를 하나씩 2로 올렸을 때 막힘 상한이 얼마나 느는가 — 큰 순."""
     base = replay(failures, levels, stage_of, stated_only)["blocked_hi"]
     out = []
     for c in sorted(levels):
@@ -201,13 +201,13 @@ ASI_STATUS = ("full", "partial", "gap", "na", "none")
 
 
 def asi_of(scn: dict[str, Any]) -> list[str]:
-    """원형 basis 에 적힌 OWASP ASI 번호들 (예: 'OWASP ASI04 Agentic Supply Chain' → ASI04)."""
+    """원형 basis에 적힌 OWASP ASI 번호들 (예: 'OWASP ASI04 Agentic Supply Chain' → ASI04)."""
     return sorted({a for b in scn.get("basis") or [] for a in ASI_RE.findall(str(b))})
 
 
 def asi_coverage(scenarios: list[dict[str, Any]], env: dict[str, Any], levels: dict[str, int],
                  catalog: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """OWASP ASI 항목마다 그 항목을 basis 로 둔 원형들의 결과를 모은다 — 자체 계산이고 OWASP 의 평가가 아니다.
+    """OWASP ASI 항목마다 그 항목을 basis로 둔 원형들의 결과를 모은다 — 자체 계산이고 OWASP의 평가가 아니다.
     full = 공격면이 있는 원형이 모두 막힘 · gap = 모두 피해 발생 · partial = 그 사이(축소 포함) ·
     na = 이 환경에서 모두 공격면 없음 · none = 그 항목을 근거로 둔 원형이 없다(이 테스트가 재지 않는다)."""
     out = []
@@ -230,8 +230,8 @@ def asi_coverage(scenarios: list[dict[str, Any]], env: dict[str, Any], levels: d
 
 def improvement_actions(scenarios: list[dict[str, Any]], env: dict[str, Any], failures: dict[str, list[dict[str, str]]],
                         levels: dict[str, int], stage_of: dict[str, str], stated_only: bool = False) -> list[dict[str, Any]]:
-    """아직 AI 까지가 아닌 통제마다 '그 통제 하나만 AI 까지 올리면' 의 효과.
-    inc_lo · inc_hi = 사건 막힘 하한 · 상한 증가(하한이 상한보다 더 늘 수 있다 — '막혔을 수도' 가 '막힘' 으로 굳는 경우),
+    """아직 AI 까지가 아닌 통제마다 '그 통제 하나만 AI까지 올리면'의 효과.
+    inc_lo · inc_hi = 사건 막힘 하한 · 상한 증가(하한이 상한보다 더 늘 수 있다 — '막혔을 수도'가 '막힘'으로 굳는 경우),
     scenarios = 결과가 바뀌는 원형(이 에이전트 환경에서).
     큰 순: 하한 증가(확실한 쪽) → 상한 증가 → 바뀌는 원형 수 → 통제 id. 점수·가중치는 매기지 않는다."""
     base_r = replay(failures, levels, stage_of, stated_only)
@@ -263,7 +263,7 @@ def presets(docs, controls, coding) -> list[dict[str, Any]]:
     from . import matrix as matrix_mod
     ms = matrix_mod.layer_matrices(docs, controls, coding)
     out = [{"id": "none", "label": "통제 없음", "levels": {c.id: 0 for c in controls}},
-           {"id": "all", "label": "모든 통제를 AI 까지", "levels": {c.id: 2 for c in controls}}]
+           {"id": "all", "label": "모든 통제를 AI까지", "levels": {c.id: 2 for c in controls}}]
     for j in ("KR", "US", "EU", "INTL"):
         for thr, suffix in ((2, "강제 규제만"), (1, "가이드라인까지")):
             if j == "INTL" and thr == 2:
@@ -279,7 +279,7 @@ def presets(docs, controls, coding) -> list[dict[str, Any]]:
 
 def regulation_basis(docs, controls, coding) -> dict[str, dict[str, Any]]:
     """통제 id → 관할 → {analog|agent: {score, doc, title, url, quote}} — 그 관할에서 가장 센 문서 하나와 근거 인용.
-    점수 0 이면 문서를 싣지 않는다(다루지 않음). AI 층은 자율 문서 중 에이전트를 명시한 것이 따로 있으면 agent_named 로."""
+    점수 0 이면 문서를 싣지 않는다(다루지 않음). AI 층은 자율 문서 중 에이전트를 명시한 것이 따로 있으면 agent_named로."""
     from . import matrix as matrix_mod
     ms = matrix_mod.layer_matrices(docs, controls, coding)
     items = coding.get("items") or {}
@@ -329,7 +329,7 @@ def load_cases(path: Path = CASES_PATH) -> list[dict[str, Any]]:
 
 
 def case_setup(case: dict[str, Any], presets_by_id: dict[str, Any], profiles_by_id: dict[str, Any]) -> tuple[dict[str, int], dict[str, Any]]:
-    """케이스 → (통제 수준, 에이전트 환경). 프리셋 위에 levels 를, 에이전트 종류 위에 env 를 덮는다."""
+    """케이스 → (통제 수준, 에이전트 환경). 프리셋 위에 levels를, 에이전트 종류 위에 env를 덮는다."""
     levels = dict(presets_by_id[case["preset"]]["levels"])
     levels.update({k: int(v) for k, v in (case.get("levels") or {}).items()})
     prof = profiles_by_id[case["profile"]]
@@ -355,7 +355,7 @@ def validate_cases(cases, scenarios_by_id, presets_by_id, profiles_by_id, contro
         if c.get("scenario") not in scenarios_by_id:
             problems.append(f"{cid}: 모르는 scenario {c.get('scenario')}")
         if c.get("expect") not in OUTCOMES:
-            problems.append(f"{cid}: expect 는 {OUTCOMES}")
+            problems.append(f"{cid}: expect는 {OUTCOMES}")
         for k, v in (c.get("levels") or {}).items():
             if k not in control_ids or v not in (0, 1, 2):
                 problems.append(f"{cid}: levels {k}={v}")
@@ -440,7 +440,7 @@ def _norm_url(u: str) -> str:
 
 
 def pending_regulations(items, docs, dismissed: set[str] | None = None, min_score: int = 5) -> list[dict[str, Any]]:
-    """피드 항목 중 '규제·가이드라인·표준' 이고 AI 에이전트·금융·통제와 닿는데 아직 레지스트리에 없는 것 — 점수순.
+    """피드 항목 중 '규제·가이드라인·표준'이고 AI 에이전트·금융·통제와 닿는데 아직 레지스트리에 없는 것 — 점수순.
     점수: 에이전트 +3 · 금융 +2 · 보안·통제 +2 · 규범 말(가이드라인·기준·AI Act) +1 · 발행 주체(1차) +1."""
     known = {_norm_url(d.url) for d in docs.values() if getattr(d, "url", None)}
     dismissed = {_norm_url(u) for u in (dismissed or set())}
@@ -466,7 +466,7 @@ def pending_regulations(items, docs, dismissed: set[str] | None = None, min_scor
             seen.add(link)
             out.append({"title": it.title, "link": it.link, "issuer": it.issuer, "jurisdiction": it.jurisdiction,
                         "published": (it.published or it.first_seen or "")[:10], "score": score, "why": why})
-    out.sort(key=lambda x: x["published"], reverse=True)       # 같은 점수 안에서는 최신 먼저 (sort 는 안정적)
+    out.sort(key=lambda x: x["published"], reverse=True)       # 같은 점수 안에서는 최신 먼저 (sort는 안정적)
     return sorted(out, key=lambda x: -x["score"])
 
 
@@ -572,7 +572,7 @@ def render_report(p: dict[str, Any]) -> str:
     asi = (p.get("owasp_asi") or {}).get("items") or []
     if asi:
         st_ko = {"full": "막음", "partial": "부분", "gap": "공백", "na": "해당 없음", "none": "원형 없음"}
-        lines += ["", "## OWASP Agentic Top 10 커버리지 — 같은 환경, 자체 계산(OWASP 의 평가 아님)", "",
+        lines += ["", "## OWASP Agentic Top 10 커버리지 — 같은 환경, 자체 계산(OWASP의 평가 아님)", "",
                   "막음 = 그 항목을 근거로 둔 원형이 모두 막힘 · 공백 = 모두 피해 발생 · 부분 = 그 사이 · 원형 없음 = 이 테스트가 재지 않는다.", "",
                   "| 프리셋 | " + " | ".join(f"{a['id']} {a['ko']}" for a in asi) + " |", "|---|" + "---|" * len(asi)]
         for pr in p["presets"]:
@@ -582,7 +582,7 @@ def render_report(p: dict[str, Any]) -> str:
     if kr:
         scn_ko = {s["id"]: s["title"].split(" →")[0] for s in p["scenarios"]}
         lines += ["", "## 개선 조치 — 한국 강제 규제만 지키는 회사, 같은 환경", "",
-                  "통제 하나를 AI 까지 올렸을 때의 효과(하나씩 따로 잰 값 — 더하면 안 된다). 점수·가중치는 매기지 않는다.", "",
+                  "통제 하나를 AI까지 올렸을 때의 효과(하나씩 따로 잰 값 — 더하면 안 된다). 점수·가중치는 매기지 않는다.", "",
                   "| 순위 | 통제 | 지금 | 막힘 하한 증가 | 막힘 상한 증가 | 결과가 바뀌는 원형 |", "|---|---|---|---|---|---|"]
         for k, a in enumerate(improvement_actions(p["scenarios"], env, fails, kr["levels"], stage_of), 1):
             ch = " · ".join(f"{scn_ko[x['id']]} {out_ko[x['from']]}→{out_ko[x['to']]}" for x in a["scenarios"]) or "—"
@@ -602,7 +602,7 @@ def _all_pending() -> list[dict[str, Any]]:
 
 def build(out_dir: Path = OUT_DIR, history_path: Path | None = HISTORY_PATH) -> list[Path]:
     """out/sim.html · sim-engine.js · sim-ui.js · sim-data.js · simulation.md · pending-regulations.md.
-    history_path 가 있으면 결과 지문이 바뀌었을 때 이력에 한 줄 덧붙이고, 이력 전체를 페이지에 싣는다."""
+    history_path가 있으면 결과 지문이 바뀌었을 때 이력에 한 줄 덧붙이고, 이력 전체를 페이지에 싣는다."""
     p = payload()
     if history_path is not None:
         update_history(history_entry(p, p["registry"]["doc_ids"]), history_path)

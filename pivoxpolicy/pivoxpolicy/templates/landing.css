@@ -1,99 +1,97 @@
-/* landing.css — 첫 화면(out/index.html). 토큰 · 뼈대는 tokens.css · base.css, 흐름도는 flow.css.
-   박스 장식 · 알약 · 글로우 · 그라디언트 · italic 없음, 빨강 · 초록 없음. 폰에서도 읽힌다(모의 테스트와 달리). */
+/* landing.css — 첫 화면(out/index.html). 연구 노트처럼: 머리말 → 요약과 그림 1 → 모의 테스트(그림 2·3) → 방법 표 → 한계.
+   섹션 제목은 왼쪽 칸(사이드헤드), 내용은 오른쪽. 상자는 그림에만 쓰고 나머지는 선과 여백으로 나눈다.
+   토큰 · 뼈대는 tokens.css · base.css, 흐름도는 flow.css. 알약 · 글로우 · 그라디언트 · 빨강/초록 없음. 폰에서도 읽힌다. */
 
-.wrap.land{max-width:1200px}
-.land-hero{padding-top:24px}
-.land-hero h1{font-size:clamp(30px,4vw,46px);max-width:22ch}
-.land-hero .lede{max-width:70ch}
-.land-hero .lede b{color:var(--pq-ivory);font-weight:600}
-.cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
-.land-hero .meta{font-size:13px;color:var(--pq-ivory-dim)}
-.sec-h>a{font-size:14px;color:var(--pq-bronze);white-space:nowrap}
+.wrap.land{max-width:1160px}
+main{gap:0}
 
-/* 숫자 다섯 — 칸 사이 선만 */
-.figs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border-top:1px solid var(--pq-ivory-line-strong);border-bottom:1px solid var(--pq-ivory-line-strong)}
-.figs>div{display:flex;flex-direction:column;gap:2px;padding:20px 18px 18px;min-width:0}
-.figs>div+div{box-shadow:inset 1px 0 0 var(--pq-ivory-line)}
-.figs .v{font-size:36px;font-weight:700;letter-spacing:-0.03em;line-height:1.1;color:var(--pq-bronze);font-variant-numeric:tabular-nums}
-.figs .v small{margin-left:3px;font-size:16px;font-weight:600;color:var(--pq-ivory-dim)}
-.figs .k{margin-top:6px;font-size:14px;font-weight:600;color:var(--pq-ivory)}
-.figs .h{font-size:12.5px;line-height:1.5;color:var(--pq-ivory-dim)}
+/* 머리말 */
+.masthead{padding:56px 0 48px;max-width:860px}
+.kicker{margin:0 0 18px;font-size:13px;color:var(--pq-ivory-dim);letter-spacing:0}
+.kicker time{color:var(--pq-ivory-soft)}
+.masthead h1{font-size:clamp(30px,4.2vw,48px);line-height:1.18;letter-spacing:-0.035em;max-width:18ch}
+.deck{margin:22px 0 0;font-size:18px;line-height:1.75;color:var(--pq-ivory-soft);max-width:60ch}
+.go{display:flex;flex-wrap:wrap;align-items:center;gap:12px 22px;margin:30px 0 0}
+.go .more{font-size:15px;color:var(--pq-ivory-soft);text-decoration:underline;text-decoration-color:var(--pq-ivory-line-strong);text-underline-offset:5px}
+.go .more:hover{color:var(--pq-ivory);text-decoration-color:var(--pq-bronze)}
 
-/* 발견 — 주장 넷 + 작은 매트릭스 */
-.find{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:40px;align-items:start}
-.claims{margin:0;padding:0;list-style:none;counter-reset:c;display:grid;gap:0}
-.claims li{counter-increment:c;position:relative;margin:0;padding:14px 0 14px 40px;border-top:1px solid var(--pq-ivory-line);font-size:15px;line-height:1.7;color:var(--pq-ivory-soft)}
-.claims li:first-child{border-top:0;padding-top:0}
-.claims li::before{content:counter(c);position:absolute;left:0;top:14px;width:26px;height:26px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--pq-bronze);box-shadow:inset 0 0 0 1px var(--pq-bronze-line)}
-.claims li:first-child::before{top:0}
-.claims b{color:var(--pq-ivory);font-weight:600}
-.mini-wrap{margin:0}
-.mini{width:100%;border-collapse:separate;border-spacing:2px;table-layout:fixed;font-size:12.5px}
+/* 사이드헤드 섹션 — 제목 왼쪽, 내용 오른쪽, 위에 선 하나 */
+.sh{display:grid;grid-template-columns:168px minmax(0,1fr);gap:0 40px;padding:36px 0 52px;border-top:1px solid var(--pq-ivory-line-strong)}
+.sh>h2{font-size:15px;font-weight:600;letter-spacing:-0.01em;color:var(--pq-ivory);padding-top:3px}
+.body{margin:0 0 26px;font-size:16px;line-height:1.8;color:var(--pq-ivory-soft);max-width:66ch}
+
+/* 요약 + 그림 1 */
+.lead-grid{display:grid;grid-template-columns:minmax(0,0.9fr) minmax(0,1.1fr);gap:44px;align-items:start}
+.summary p{margin:0 0 16px;font-size:16.5px;line-height:1.8;color:var(--pq-ivory-soft);max-width:none}
+.summary p:first-child{font-size:19px;line-height:1.65;color:var(--pq-ivory)}
+
+/* 그림 — 번호 붙은 캡션이 위에 */
+.fig{margin:0}
+.fig figcaption{margin:0 0 14px;font-size:13px;line-height:1.6;color:var(--pq-ivory-dim);max-width:62ch}
+.fig figcaption b{margin-right:6px;font-weight:700;color:var(--pq-ivory)}
+.fig.wide{margin-bottom:34px}
+.preview{display:grid;gap:18px}
+.key{display:flex;flex-wrap:wrap;gap:6px 16px;margin:10px 0 0;font-size:12px;color:var(--pq-ivory-dim)}
+.key span{display:inline-flex;align-items:center;gap:6px}
+.key i{display:inline-block;width:11px;height:11px;border-radius:2px}
+.key i.s2{background:var(--pq-bronze)}
+.key i.s1{background:var(--pq-bronze-line)}
+.key i.s0{box-shadow:inset 0 0 0 1px var(--pq-ivory-line-strong)}
+.note-s{margin:12px 0 0;font-size:12.5px;line-height:1.65;color:var(--pq-ivory-dim);max-width:70ch}
+
+/* 작은 매트릭스 */
+.mini{width:100%;border-collapse:separate;border-spacing:2px;table-layout:fixed;font-size:12px}
 .mini th,.mini td{border:0;padding:0}
-.mini thead th{padding:0 2px 6px;text-align:center;font-size:13px;font-weight:600;color:var(--pq-ivory);white-space:normal}
-.mini thead th small{display:block;font-size:11.5px;font-weight:500;color:var(--pq-ivory-dim)}
-.mini thead th:first-child{width:34%;text-align:left}
+.mini thead th{padding:0 2px 6px;text-align:center;font-size:12.5px;font-weight:600;color:var(--pq-ivory);white-space:normal}
+.mini thead th small{display:block;font-size:11px;font-weight:500;color:var(--pq-ivory-dim)}
+.mini thead th:first-child{width:32%;text-align:left}
 .mini tbody th{padding:0 8px 0 0;font-size:13px;font-weight:500;color:var(--pq-ivory-soft);text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mini td{height:30px;text-align:center;vertical-align:middle;border-radius:3px;font-weight:600;font-size:12px}
-.mini td.s0{color:var(--pq-ivory-faint);box-shadow:inset 0 0 0 1px var(--pq-ivory-line)}
+.mini td{height:28px;text-align:center;vertical-align:middle;border-radius:2px;font-weight:600}
+.mini td.s0{box-shadow:inset 0 0 0 1px var(--pq-ivory-line)}
 .mini td.s1{background:var(--pq-bronze-line);color:var(--pq-ivory)}
 .mini td.s2{background:var(--pq-bronze);color:var(--pq-ink)}
 .mini td.s3{background:var(--pq-ivory);color:var(--pq-ink)}
-.mini td.ai{position:relative}
-.mini-wrap figcaption,.preview figcaption{margin-top:10px;font-size:12.5px;line-height:1.6;color:var(--pq-ivory-dim)}
 
-/* 모의 테스트 미리보기 */
-.lead2{margin:0 0 18px;font-size:15.5px;line-height:1.75;color:var(--pq-ivory-soft);max-width:92ch}
-.preview{margin:0;display:grid;gap:18px}
-.sim-two{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:40px;margin-top:28px}
-.bars{display:grid;grid-template-columns:minmax(120px,auto) minmax(0,1fr) auto;align-items:center;gap:10px 12px;margin:0 0 10px}
+/* 그림 3 + 쓰는 법 */
+.sim-two{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:44px}
+.bars{display:grid;grid-template-columns:minmax(120px,auto) minmax(0,1fr) auto;align-items:center;gap:10px 12px;margin:0}
 .bars dt{font-size:13px;color:var(--pq-ivory-soft);white-space:nowrap}
 .bars dd{margin:0;min-width:0}
 .bars .n{font-size:13px;font-weight:600;color:var(--pq-ivory);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
-.track{position:relative;display:block;height:12px;border-radius:2px;background:var(--pq-ivory-line);overflow:hidden}
+.track{position:relative;display:block;height:10px;border-radius:1px;background:var(--pq-ivory-line);overflow:hidden}
 .track .hi,.track .lo{position:absolute;left:0;top:0;bottom:0}
 .track .hi{background:var(--pq-bronze-line)}
 .track .lo{background:var(--pq-bronze)}
-.uses ul{margin:0 0 16px;padding:0;list-style:none}
-.uses li{margin:0;padding:10px 0;border-top:1px solid var(--pq-ivory-line);font-size:14.5px;line-height:1.65;color:var(--pq-ivory-soft)}
-.uses li:first-child{border-top:0;padding-top:0}
-.uses b{color:var(--pq-ivory);font-weight:600}
+.uses h3{margin:0 0 12px;font-size:15px;font-weight:600}
+.uses p{margin:0 0 12px;font-size:15px;line-height:1.75;color:var(--pq-ivory-soft);max-width:none}
+.uses p:last-child{margin:20px 0 0}
 
-/* 만드는 법 — 흐름도(flow.css) 위에 설명 칸 */
-.pipe .fn .tag{color:var(--pq-bronze)}
-.pipe .fn .ft{font-size:15px}
-.pipe .fn .fi{margin-top:6px;font-size:12.5px;line-height:1.55;color:var(--pq-ivory-mid)}
-.pipe-note{margin-top:12px;max-width:none}
+/* 방법 표 */
+.method{font-size:14px}
+.method th,.method td{vertical-align:top;padding:12px 12px 12px 0}
+.method thead th{padding-top:0}
+.method tbody th{font-weight:600;color:var(--pq-ivory);white-space:nowrap}
+.method td{color:var(--pq-ivory-soft);line-height:1.6}
+.method .n{width:22px;color:var(--pq-ivory-dim);font-variant-numeric:tabular-nums}
+.method .who{white-space:nowrap;color:var(--pq-bronze)}
+.method .now{color:var(--pq-ivory-mid);font-size:13px}
 
-/* 들어가기 */
-.go{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-.go .card{display:flex;flex-direction:column;gap:6px;color:inherit;transition:border-color 150ms var(--pq-ease),background-color 150ms var(--pq-ease)}
-.go .card:hover{text-decoration:none;border-color:var(--pq-bronze-line);background:var(--pq-bronze-wash)}
-.go .card .k{font-size:13px;color:var(--pq-bronze);font-weight:600}
-.go .card .t{font-size:15.5px;font-weight:600;line-height:1.5;color:var(--pq-ivory)}
-.go .card .h{font-size:12.5px;color:var(--pq-ivory-dim)}
-.lim li{margin:6px 0}
+/* 한계 */
+.lim{margin:0;padding:0;list-style:none;max-width:76ch}
+.lim li{margin:0;padding:12px 0;border-top:1px solid var(--pq-ivory-line);font-size:14.5px;line-height:1.75;color:var(--pq-ivory-soft)}
+.lim li:first-child{border-top:0;padding-top:0}
 
 @media(max-width:980px){
-  .figs{grid-template-columns:repeat(3,minmax(0,1fr))}
-  .figs>div:nth-child(4){box-shadow:none}
-  .figs>div:nth-child(n+4){border-top:1px solid var(--pq-ivory-line)}
-  .find,.sim-two{grid-template-columns:minmax(0,1fr)}
+  .lead-grid,.sim-two{grid-template-columns:minmax(0,1fr)}
+  .sh{grid-template-columns:minmax(0,1fr);gap:14px}
 }
-@media(max-width:860px){
-  .pipe{grid-template-columns:minmax(0,1fr)!important}
-  .go{grid-template-columns:minmax(0,1fr)}
-}
-@media(max-width:560px){
-  .figs{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .figs>div{padding:16px 12px}
-  .figs>div:nth-child(n){box-shadow:none;border-top:1px solid var(--pq-ivory-line)}
-  .figs>div:nth-child(-n+2){border-top:0}
-  .figs>div:nth-child(2n){box-shadow:inset 1px 0 0 var(--pq-ivory-line)}
-  .figs .v{font-size:30px}
+@media(max-width:640px){
+  .masthead{padding:32px 0 32px}
+  .deck{font-size:16.5px}
+  .sh{padding:28px 0 36px}
+  .method .now,.method thead th:last-child{display:none}
   .mini tbody th{white-space:normal;font-size:12px}
-  .mini thead th:first-child{width:30%}
+  .mini thead th:first-child{width:28%}
   .bars{grid-template-columns:minmax(0,1fr) auto}
   .bars dt{grid-column:1/-1;margin-bottom:-6px}
 }

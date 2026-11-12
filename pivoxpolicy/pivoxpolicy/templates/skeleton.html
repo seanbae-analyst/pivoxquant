@@ -39,7 +39,7 @@
 
 <!-- 2. 지금 바뀐 것 — 최신 동향(규제 · 위협). 줄 목록: 날짜 | 분류 한 줄 · 제목 · 한 문장 -->
 <section id="now" aria-labelledby="h-now">
-<div class="sec-h"><h2 id="h-now"><a href="#now">지금 바뀐 것</a></h2><span>최신 동향 — 규제 · 위협 · 한국</span></div>
+<div class="sec-h"><h2 id="h-now"><a href="#now">지금 바뀐 것</a></h2><span>규제, 위협, 한국 소식</span></div>
 <ul class="rows">
 {{NOW}}
 <!-- 항목 틀: <li><time datetime="2026-11-10">11-10</time><div><div class="k">규제 · EU · AI Act</div><div class="t"><a href="…">제목</a></div><div class="s">무엇이 바뀌었나 한 문장.</div></div></li> -->
@@ -49,7 +49,7 @@
 
 <!-- 3. 사건 — AI 에이전트 관련 보안 사건·해킹 실태. 같은 줄 목록, 분류 줄에 종류(프롬프트 주입 · 권한 남용 · 공급망 …) -->
 <section id="incidents" aria-labelledby="h-incidents">
-<div class="sec-h"><h2 id="h-incidents"><a href="#incidents">사건</a></h2><span>공식 공지 · 보고서에 적힌 것만</span></div>
+<div class="sec-h"><h2 id="h-incidents"><a href="#incidents">사건</a></h2><span>공식 공지와 보고서에 적힌 것만</span></div>
 <ul class="rows">
 {{INCIDENTS}}
 </ul>
@@ -107,7 +107,7 @@
 
 <!-- 8. 문서 색인 — 표: 날짜 · 관할 · 기관 · 문서(원문 링크) · 종류 -->
 <section id="docs" aria-labelledby="h-docs">
-<div class="sec-h"><h2 id="h-docs"><a href="#docs">문서 색인</a></h2><span>{{DOCS_COUNT}}건 · 원문 링크</span></div>
+<div class="sec-h"><h2 id="h-docs"><a href="#docs">문서 색인</a></h2><span>{{DOCS_COUNT}}건, 원문 링크 포함</span></div>
 <div class="tblwrap">
 <table>
 {{DOCS}}
@@ -117,9 +117,9 @@
 <p class="src"><span>출처 기관 도메인의 원문만</span><span>기준일 <time datetime="{{DOCS_ASOF_ISO}}">{{DOCS_ASOF}}</time></span></p>
 </section>
 
-<!-- 9. 출처·방법 — 어디서 왔고 어떻게 확인했나, 이 숫자로 말할 수 없는 것. 긴 설명은 details 로 접는다 -->
+<!-- 9. 출처·방법 — 어디서 왔고 어떻게 확인했나, 이 숫자로 말할 수 없는 것. 긴 설명은 details로 접는다 -->
 <section id="method" aria-labelledby="h-method">
-<div class="sec-h"><h2 id="h-method"><a href="#method">출처 · 방법</a></h2><span>어디서 왔고, 어떻게 확인했나</span></div>
+<div class="sec-h"><h2 id="h-method"><a href="#method">출처와 방법</a></h2><span>어디서 왔고, 어떻게 확인했나</span></div>
 {{METHOD}}
 <!-- 틀: <p>…</p> <details><summary>소스 목록</summary><ul>…</ul></details> <details><summary>이 숫자로 말할 수 없는 것</summary><ul>…</ul></details> <p class="note">{{DISCLAIMER}}</p> -->
 <p class="src"><span>마지막 실행 <time datetime="{{BUILT_AT_ISO}}">{{BUILT_AT}}</time></span><span>{{CHECKS}}</span></p>
@@ -133,6 +133,6 @@
 </footer>
 
 </div>
-<!-- aria-current 를 보이는 섹션에 붙이는 작은 스크립트(IntersectionObserver)는 선택. 없어도 페이지는 완성이다 -->
+<!-- aria-current를 보이는 섹션에 붙이는 작은 스크립트(IntersectionObserver)는 선택. 없어도 페이지는 완성이다 -->
 </body>
 </html>

@@ -208,7 +208,7 @@ def test_site_two_layer_cells_mark_coder_differences_and_put_gaps_first():
     assert row.count("‡") == 1 and '3<span class="fine"> (1)</span>' in row
     gaps = site._gaps_section_v2(ma, mg, CONTROLS)
     assert gaps.index("즉시 중단 · 간극") < gaps.index("통제 1 · 인벤토리")   # 간극이 먼저
-    assert "AI·에이전트 층 0 — AI 를 대상으로 한 요구 없음 · 일반 통제 층 2" in gaps
+    assert "AI·에이전트 층 0 — AI를 대상으로 한 요구 없음 · 일반 통제 층 2" in gaps
 
 
 # ── 코드북 ──

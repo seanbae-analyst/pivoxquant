@@ -1,13 +1,13 @@
 /* sim-ui.js — 모의 테스트 화면(데스크톱). 계산은 sim-engine.js(PivoxSimEngine), 데이터는 sim-data.js(PIVOX_SIM).
-   글은 전부 textContent 로 넣는다(innerHTML 에 데이터를 넣지 않는다). 설정은 주소창 # 뒤에만 남긴다 — 저장·전송 없음.
-   CSV 는 이 브라우저에서 만들어 내려받는다(서버로 가지 않는다). */
+   글은 전부 textContent로 넣는다(innerHTML에 데이터를 넣지 않는다). 설정은 주소창 # 뒤에만 남긴다 — 저장·전송 없음.
+   CSV는 이 브라우저에서 만들어 내려받는다(서버로 가지 않는다). */
 (function () {
   "use strict";
   var D = window.PIVOX_SIM, E = window.PivoxSimEngine;
   if (!D || !E) return;
 
   var LAYER_KO = { analog: "사람·계정", agent: "AI 적용" };
-  var LEVEL_KO = ["없음", "사람·계정만", "AI 까지"];
+  var LEVEL_KO = ["없음", "사람·계정만", "AI까지"];
   var SCORE_KO = ["다루지 않음", "자율", "구속력", "구속력 + 에이전트 명시"];
   var REG_SHORT = ["—", "자율", "강제", "강제"];
   var STAGE_KO = { before: "배치 전", in_use: "사용 중", after: "사후" };
@@ -30,9 +30,9 @@
   var SHORT_OUT = { blocked: "막힘", reduced: "축소", damage: "발생", no_surface: "—" };
   var ASI_KO = { full: "막음", partial: "부분", gap: "공백", na: "해당 없음", none: "원형 없음" };
   var INC_ORDER = ["blocked", "blocked_maybe", "reduced", "unchanged", "unknown"];
-  var INC_WHY = { blocked: "이 사건에서 실패한 통제가 이 설정에서 모두 켜져 있다", blocked_maybe: "사전·사용 중 단계의 실패 통제 일부만 켜졌다 — 막혔을 수도",
-                  reduced: "사후 단계 통제만 켜졌다 — 피해를 줄였을 것", unchanged: "실패한 통제가 하나도 켜지지 않았다",
-                  unknown: "공개 자료에 피해 쪽 실패 통제가 없다 — 판단 근거 없음" };
+  var INC_WHY = { blocked: "이 사건에서 실패한 통제가 이 설정에서 모두 켜져 있다", blocked_maybe: "사전·사용 중 단계의 실패 통제가 일부만 켜졌다. 막혔을 수도 있다",
+                  reduced: "사후 단계 통제만 켜졌다. 피해를 줄였을 것이다", unchanged: "실패한 통제가 하나도 켜지지 않았다",
+                  unknown: "공개 자료에 피해 쪽 실패 통제가 나오지 않아 판단하지 않는다" };
   var DIAG_ST = [["", "모름"], ["none", "없음"], ["plan", "계획"], ["partial", "부분"], ["done", "구현"]];
   var DIAG_KO = {}; DIAG_ST.forEach(function (x) { DIAG_KO[x[0]] = x[1]; });
   var JUR = ["KR", "US", "EU", "INTL"], JUR3 = ["KR", "US", "EU"];
@@ -63,7 +63,7 @@
   };
   function snapshot() { return { levels: Object.assign({}, state.levels), env: Object.assign({}, state.env), profile: state.profile }; }
   function ref() { return state.base || state; }
-  // 케이스 → 설정 (sim.py case_setup 과 같은 규칙: 프리셋 위에 levels, 에이전트 종류 위에 env)
+  // 케이스 → 설정 (sim.py case_setup과 같은 규칙: 프리셋 위에 levels, 에이전트 종류 위에 env)
   function caseSetup(c) {
     var levels = Object.assign({}, presetById[c.preset].levels, c.levels || {});
     var env = Object.assign(envOf(profileById[c.profile]), c.env || {});
@@ -110,7 +110,7 @@
   function seg(container, name, options, current, onChange) {
     clear(container);
     options.forEach(function (o) {
-      var id = "r-" + name + "-" + String(o[0]);      // 같은 id 로 다시 그려서 키보드 포커스를 되돌린다
+      var id = "r-" + name + "-" + String(o[0]);      // 같은 id로 다시 그려서 키보드 포커스를 되돌린다
       var inp = el("input", { type: "radio", name: name, id: id, value: String(o[0]) });
       if (String(o[0]) === String(current)) inp.checked = true;
       inp.addEventListener("change", function () { onChange(o[0]); });
@@ -236,16 +236,16 @@
     $("preset").value = state.preset;
     var by = [[], [], []];
     CIDS.forEach(function (c) { by[state.levels[c]].push(cname(c)); });
-    $("preset-hint").textContent = "AI 까지 " + by[2].length + "개" + (by[2].length && by[2].length < 7 ? " (" + by[2].join(" · ") + ")" : "") +
+    $("preset-hint").textContent = "AI까지 " + by[2].length + "개" + (by[2].length && by[2].length < 7 ? " (" + by[2].join(" · ") + ")" : "") +
       " · 사람·계정만 " + by[1].length + "개 · 없음 " + by[0].length + "개";
   }
   function regBlock(cid) {
     var R = (D.regulation || {})[cid] || {}, box = el("div", { cls: "reg" });
-    box.appendChild(el("p", { text: "관할별로 가장 센 문서 — 사람·계정 층 / AI 적용 층" }));
+    box.appendChild(el("p", { text: "관할별로 가장 센 문서 (사람·계정 층 / AI 적용 층)" }));
     var ul = el("ul");
     JUR.forEach(function (j) {
       var r = R[j]; if (!r) return;
-      var li = el("li", null, [el("b", { text: (D.jurisdictions || {})[j] || j }), " — "]);
+      var li = el("li", null, [el("b", { text: (D.jurisdictions || {})[j] || j }), " "]);
       ["analog", "agent"].forEach(function (layer, k) {
         var x = r[layer] || { score: 0 };
         if (k) li.appendChild(document.createTextNode(" / "));
@@ -270,7 +270,7 @@
         [c.num + ". " + c.name, el("small", { text: STAGE_KO[c.stage] || "" })]);
       btn.addEventListener("click", function () { state.open[c.id] = !state.open[c.id]; renderControls(); $("nm-" + c.id).focus(); });
       var g = el("div", { cls: "seg", role: "radiogroup", "aria-label": c.name + " 적용 범위" });
-      seg(g, "lv-" + c.id, [[0, "없음"], [1, "사람·계정", h.analog], [2, "AI 까지", h.agent]], state.levels[c.id], function (v) {
+      seg(g, "lv-" + c.id, [[0, "없음"], [1, "사람·계정", h.analog], [2, "AI까지", h.agent]], state.levels[c.id], function (v) {
         state.levels[c.id] = Number(v); state.preset = matchPreset(); update();
       });
       var changed = !!state.base && state.base.levels[c.id] !== state.levels[c.id];
@@ -278,7 +278,7 @@
       if (changed) row.appendChild(el("div", { cls: "was-l", text: "기준 " + LEVEL_KO[state.base.levels[c.id]] + " → 변경안 " + LEVEL_KO[state.levels[c.id]] }));
       if (open) {
         row.appendChild(el("div", { cls: "more", id: mid }, [
-          el("dl", null, [el("dt", { text: "사람·계정" }), el("dd", { text: h.analog || "" }), el("dt", { text: "AI 까지" }), el("dd", { text: h.agent || "" })]),
+          el("dl", null, [el("dt", { text: "사람·계정" }), el("dd", { text: h.analog || "" }), el("dt", { text: "AI까지" }), el("dd", { text: h.agent || "" })]),
           regBlock(c.id)
         ]));
       }
@@ -307,12 +307,12 @@
     CIDS.forEach(function (c) { if (B.levels[c] !== state.levels[c]) ch.push(cname(c) + " " + LEVEL_KO[B.levels[c]] + " → " + LEVEL_KO[state.levels[c]]); });
     ENV_KEYS.forEach(function (k) { if (B.env[k] !== state.env[k]) ch.push(ENV_NAME[k] + " " + optLabel(k, B.env[k]) + " → " + optLabel(k, state.env[k])); });
     b.className = "cmpbar on";
-    b.appendChild(el("div", { cls: "k", text: "변경안 비교 중 — 기준: " + cfgLabel(B) }));
+    b.appendChild(el("div", { cls: "k", text: "변경안을 비교하는 중. 기준은 " + cfgLabel(B) }));
     if (!ch.length) {
-      b.appendChild(el("p", { cls: "t", text: "아직 바꾼 것이 없다. 왼쪽에서 통제·환경을 바꾸거나 ③ 개선 조치에서 '변경안에 넣기'." }));
+      b.appendChild(el("p", { cls: "t", text: "아직 바꾼 것이 없다. 왼쪽에서 통제나 환경을 바꾸거나, 개선 조치 표에서 '변경안에 넣기'를 누른다." }));
       return;
     }
-    b.appendChild(el("p", { cls: "t", text: "바꾼 것 " + ch.length + "개 — " + ch.join(" · ") }));
+    b.appendChild(el("p", { cls: "t", text: "바꾼 것 " + ch.length + "개: " + ch.join(", ") }));
     var rb = scnResults(B.levels, B.env), rn = scnResults(state.levels, state.env), moved = [];
     D.scenarios.forEach(function (s) { if (rb[s.id].outcome !== rn[s.id].outcome) moved.push(short(s) + " " + SHORT_OUT[rb[s.id].outcome] + "→" + SHORT_OUT[rn[s.id].outcome]); });
     var pb = E.replay(failures, B.levels, stageOf, state.statedOnly), pn = E.replay(failures, state.levels, stageOf, state.statedOnly);
@@ -340,13 +340,13 @@
     var rows = [{ label: "통제 없음", levels: presetById.none.levels, env: state.env }];
     if (state.base) rows.push({ label: "기준", levels: state.base.levels, env: state.base.env, base: true });
     rows.push({ label: state.base ? "변경안" : "지금", levels: state.levels, env: state.env, cur: true });
-    rows.push({ label: "모두 AI 까지", levels: presetById.all.levels, env: state.env });
+    rows.push({ label: "모두 AI까지", levels: presetById.all.levels, env: state.env });
     return rows;
   }
   function renderBand() {
     var box = clear($("band")), cfgs = bandConfigs();
     var prof = profileById[state.profile];
-    $("pos-env").textContent = "에이전트 환경 — " + (prof ? prof.label : "직접 설정");
+    $("pos-env").textContent = "에이전트: " + (prof ? prof.label : "직접 설정한 환경");
     $("pos-env").title = envSummary(state.env);
 
     // ① 원형
@@ -359,7 +359,7 @@
       return { label: c.label, cur: c.cur, n: "막힘 " + t.blocked + " · 발생 " + t.damage,
                viz: strip(items, function (x) { return x.o; }, c.label + ": 막힘 " + t.blocked + ", 축소 " + t.reduced + ", 발생 " + t.damage + ", 공격면 없음 " + t.no_surface) };
     });
-    box.appendChild(kpi("① 공격 원형 " + nS + "개 — 막힘", [String(now.blocked), " / 공격면 있는 " + (nS - now.no_surface) + "개"],
+    box.appendChild(kpi("공격 원형 " + nS + "개 중 막힘", [String(now.blocked), " / 공격면 있는 " + (nS - now.no_surface) + "개"],
       "피해 축소 " + now.reduced + " · 피해 발생 " + now.damage + " · 공격면 없음 " + now.no_surface, rows1,
       bt ? "기준 " + bt.blocked + " → " + sign(now.blocked - bt.blocked) + " · 발생 " + sign(now.damage - bt.damage) : ""));
 
@@ -380,8 +380,8 @@
       tr.appendChild(hi); tr.appendChild(lo);
       return { label: c.label, cur: c.cur, n: rangeText(r) + "건", viz: tr };
     });
-    box.appendChild(kpi("② 실제 사건 — 막혔을 사건", [rangeText(rn), " / 판단할 수 있는 " + judged + "건"],
-      "진한 막대 = 하한(실패한 통제가 모두 켜짐) · 옅은 막대 = 상한", rows2,
+    box.appendChild(kpi("막혔을 실제 사건", [rangeText(rn), " / 판단할 수 있는 " + judged + "건"],
+      "진한 막대가 하한(실패한 통제가 모두 켜진 경우), 옅은 막대까지가 상한", rows2,
       rbz ? "기준 " + rangeText(rbz) + " → 하한 " + sign(rn.blocked_lo - rbz.blocked_lo) + " · 상한 " + sign(rn.blocked_hi - rbz.blocked_hi) : ""));
 
     // ④ OWASP
@@ -394,32 +394,32 @@
       return { label: c.label, cur: c.cur, n: "막음 " + t.full + " · 공백 " + t.gap,
                viz: strip(items, function (x) { return "a-" + x.o; }, c.label + ": 막음 " + t.full + ", 부분 " + t.partial + ", 공백 " + t.gap) };
     });
-    box.appendChild(kpi("④ OWASP Agentic Top 10 — 막음", [String(an.full), " / 잰 항목 " + (ASI.length - an.none - an.na) + "개"],
-      "부분 " + an.partial + " · 공백 " + an.gap + " · 해당 없음 " + an.na + " · 원형 없음 " + an.none + " — 자체 계산", rows3,
+    box.appendChild(kpi("OWASP 10개 항목 중 막음", [String(an.full), " / 잰 항목 " + (ASI.length - an.none - an.na) + "개"],
+      "부분 " + an.partial + " · 공백 " + an.gap + " · 해당 없음 " + an.na + " · 원형 없음 " + an.none + " (자체 계산)", rows3,
       ab ? "기준 " + ab.full + " → " + sign(an.full - ab.full) + " · 공백 " + sign(an.gap - ab.gap) : ""));
 
     var lg = clear($("legend"));
     [["blocked", "막힘 · 막음"], ["reduced", "피해 축소 · 부분"], ["damage", "피해 발생 · 공백"], ["no_surface", "공격면 없음 · 해당 없음 · 원형 없음"]].forEach(function (x) {
       lg.appendChild(el("span", null, [el("i", { cls: x[0] }), x[1]]));
     });
-    lg.appendChild(el("span", { cls: "dim", text: "'통제 없음' · '모두 AI 까지' 줄도 지금 에이전트 환경으로 계산한다." }));
+    lg.appendChild(el("span", { cls: "dim", text: "'통제 없음'과 '모두 AI까지' 줄도 지금 에이전트 환경으로 계산했다." }));
   }
 
   // ── ① 원형 한눈에 + 단계 ──
   function whereText(r) {
-    if (r.outcome === "no_surface") return "이 환경에서 성립하지 않음 — " + r.missing.map(function (x) { return REQ_KO[x]; }).join(", ");
+    if (r.outcome === "no_surface") return "이 환경에서는 성립하지 않는다: " + r.missing.map(function (x) { return REQ_KO[x]; }).join(", ");
     if (r.outcome === "blocked") return r.stage + "단계 · " + cname(r.steps[r.stage - 1].blocked_by);
     if (r.outcome === "reduced") {
       var w = r.limited_by.map(cname);
       if (r.contained === "early") w.push("탐지 후 " + cname("kill_switch"));
-      return w.join(" · ") + " — " + r.impact;
+      return "줄인 통제: " + w.join(", ") + ". 남은 피해: " + r.impact;
     }
     return r.impact + (r.contained === "late" ? " (멈출 수단은 있으나 늦게)" : "");
   }
   function renderOverview() {
     var t = clear($("ov")), rb = state.base ? scnResults(state.base.levels, state.base.env) : null;
     t.appendChild(el("thead", null, [el("tr", null, [el("th", { "aria-label": "선택" }), el("th", { text: "공격 원형" }),
-      el("th", { text: state.base ? "변경안에서" : "이 설정에서" }), el("th", { text: "어디서 · 무엇이" }), el("th", { text: "근거" })])]));
+      el("th", { text: state.base ? "변경안에서" : "이 설정에서" }), el("th", { text: "막힌 곳 또는 피해" }), el("th", { text: "근거" })])]));
     var tb = el("tbody");
     D.scenarios.forEach(function (s) {
       var r = E.runScenario(s, state.env, state.levels), id = "ov-" + s.id;
@@ -455,13 +455,13 @@
       s.stages.forEach(function (st, idx) {
         var step = r.steps[idx], cls = "stage" + (!step ? " after" : step.blocked_by ? " blocked" : " passed");
         var ck = el("ul", { cls: "ck" });
-        if (!step) ck.appendChild(el("li", { text: "이 단계까지 오지 않았다 — 앞에서 막혔다" }));
+        if (!step) ck.appendChild(el("li", { text: "앞 단계에서 막혀 여기까지 오지 않았다" }));
         (st.checks || []).forEach(function (c, j) {
           var on = step ? step.checks[j].on : E.covers(Number(state.levels[c.control] || 0), c.layer);
           var lv = Number(state.levels[c.control] || 0);
           var verdict = on ? EFFECT_ON[c.effect] + (c.effect === "contain" && r.contained === "late" ? " (알아챌 기록이 없어 늦게)" : "")
-                           : "꺼짐 — 지금 " + LEVEL_KO[lv];
-          ck.appendChild(el("li", { cls: on ? "on" : "" }, [el("b", { text: cname(c.control) + " · " + LAYER_KO[c.layer] }), " — " + verdict, el("span", { cls: "why", text: c.why })]));
+                           : "꺼짐 (지금 " + LEVEL_KO[lv] + ")";
+          ck.appendChild(el("li", { cls: on ? "on" : "" }, [el("b", { text: cname(c.control) + " · " + LAYER_KO[c.layer] }), ": " + verdict, el("span", { cls: "why", text: c.why })]));
         });
         if (!(st.checks || []).length) ck.appendChild(el("li", { text: "이 단계에서 끼어드는 통제 없음" }));
         var li = el("li", { cls: cls + (animate && !reduceMotion ? " pending" : "") }, [
@@ -472,13 +472,13 @@
       });
     }
     var v, p;
-    if (r.outcome === "blocked") { v = "막힘 — " + r.stage + "단계, " + cname(r.steps[r.stage - 1].blocked_by); p = "공격이 끝까지 가지 못했다. 막지 못했다면: " + r.impact + "."; }
+    if (r.outcome === "blocked") { v = r.stage + "단계에서 막힘 (" + cname(r.steps[r.stage - 1].blocked_by) + ")"; p = "공격이 끝까지 가지 못했다. 막지 못했다면: " + r.impact + "."; }
     else if (r.outcome === "reduced") {
       var why = [];
       if (r.limited_by.length) why.push(r.limited_by.map(cname).join(" · ") + "(이)가 닿는 범위를 줄였다");
       if (r.contained === "early") why.push((r.detected_at ? r.detected_at + "단계에서 알아채고 " : "") + "멈췄다");
-      v = "피해 축소 — " + r.impact; p = "공격은 끝까지 갔지만 " + why.join(", ") + ".";
-    } else if (r.outcome === "damage") { v = "피해 발생 — " + r.impact; p = r.contained === "late" ? "멈출 수단은 있었지만 알아챌 기록이 없어 늦게 멈췄다." : "끼어든 통제가 없었다."; }
+      v = "피해 축소: " + r.impact; p = "공격은 끝까지 갔지만 " + why.join(", ") + ".";
+    } else if (r.outcome === "damage") { v = "피해 발생: " + r.impact; p = r.contained === "late" ? "멈출 수단은 있었지만 알아챌 기록이 없어 늦게 멈췄다." : "끼어든 통제가 없었다."; }
     else { v = "공격면 없음"; p = "이 원형은 지금 환경에서 성립하지 않는다."; }
     var show = function () { out.appendChild(el("div", { cls: "k", text: "결과 · " + short(s) })); out.appendChild(el("div", { cls: "v " + r.outcome, text: v })); out.appendChild(el("p", { text: p })); };
     if (animate && !reduceMotion) {
@@ -500,17 +500,17 @@
     var r = E.runScenario(s, env, levels), row = el("div", { cls: "flow-row" });
     var req = s.requires || [];
     var head = el("div", { cls: "flow-top" }, [label ? el("span", { cls: "flow-l", text: label }) : null,
-      el("span", { cls: "entry", text: req.length || s.requires_tools ? "진입 조건 — 에이전트가 " + req.map(function (x) { return ENTRY_KO[x]; })
-        .concat(s.requires_tools ? ["도구 권한 " + s.requires_tools.map(function (t) { return optLabel("tools", t); }).join(" 또는 ") + " 을 가진다"] : []).join(" · ")
-        : "진입 조건 없음 — 어느 에이전트에서나 시작될 수 있다" })]);
+      el("span", { cls: "entry", text: req.length || s.requires_tools ? "진입 조건: 에이전트가 " + req.map(function (x) { return ENTRY_KO[x]; })
+        .concat(s.requires_tools ? ["도구 권한 " + s.requires_tools.map(function (t) { return optLabel("tools", t); }).join(" 또는 ") + "을 가진다"] : []).join(" · ")
+        : "진입 조건 없음. 어느 에이전트에서나 시작될 수 있다" })]);
     row.appendChild(head);
     if (r.outcome === "no_surface") {
       row.appendChild(el("div", { cls: "flow-none" }, [el("b", { text: "시작되지 않음" }),
-        " — 지금 환경에서 에이전트가 " + r.missing.map(function (x) { return REQ_KO[x]; }).join(", ") + ". 공격 흐름이 없다."]));
+        ". 지금 환경에서 에이전트가 " + r.missing.map(function (x) { return REQ_KO[x]; }).join(", ") + ". 공격 흐름이 없다."]));
       return row;
     }
     var states = flowStates(s, r);
-    var ol = el("ol", { cls: "flow", "aria-label": (label ? label + " — " : "") + short(s) + " 공격 흐름" });
+    var ol = el("ol", { cls: "flow", "aria-label": (label ? label + ", " : "") + short(s) + " 공격 흐름" });
     ol.style.gridTemplateColumns = "repeat(" + s.stages.length + ", minmax(0,1fr)) 176px";
     s.stages.forEach(function (st, idx) {
       var step = r.steps[idx], stt = states[idx], on = [];
@@ -535,7 +535,7 @@
       el("div", { cls: "fh" }, [el("span", { cls: "tag", text: "결과" })]),
       el("div", { cls: "ft", text: RESULT_KO[r.outcome] + (r.outcome === "blocked" ? " · " + r.stage + "단계" : "") }),
       el("p", { cls: "fi", text: r.outcome === "blocked" ? "막지 못했다면: " + r.impact :
-        r.outcome === "reduced" ? "줄인 통제: " + whereText(r).split(" — ")[0] + " · 남은 피해: " + r.impact :
+        r.outcome === "reduced" ? "줄인 통제: " + r.limited_by.map(cname).concat(r.contained === "early" ? ["탐지 후 " + cname("kill_switch")] : []).join(", ") + ". 남은 피해: " + r.impact :
         r.impact + (r.contained === "late" ? " · 멈출 수단은 있었지만 늦게" : "") })]));
     row.appendChild(ol);
     return row;
@@ -559,7 +559,7 @@
   }
 
   function renderCases(s) {
-    $("scn-cases-h").textContent = s.incidents.length ? "이 원형의 근거 사건 " + s.incidents.length + "건" : "이 원형의 근거 — " + (s.basis || []).join(" · ");
+    $("scn-cases-h").textContent = s.incidents.length ? "이 원형의 근거 사건 " + s.incidents.length + "건" : "이 원형의 근거: " + (s.basis || []).join(", ");
     var ul = clear($("scn-list"));
     s.incidents.map(function (id) { return incById[id]; }).filter(Boolean).sort(function (a, b) { return a.date < b.date ? 1 : -1; }).forEach(function (i) {
       ul.appendChild(el("li", null, [el("time", { text: i.date }), el("div", null, [
@@ -575,7 +575,7 @@
     var cols = [presetById.none].concat(mid, [presetById.all]).map(function (p) {
       var parts = p.label.split(" — ");
       return { id: p.id, label: p.label, top: p.id === "none" ? "통제" : p.id === "all" ? "모두" : parts[0].replace("국제 권고", "국제"),
-               sub: p.id === "none" ? "없음" : p.id === "all" ? "AI 까지" : (parts[1] || "").replace(" 규제만", "").replace("가이드라인까지", "가이드"),
+               sub: p.id === "none" ? "없음" : p.id === "all" ? "AI까지" : (parts[1] || "").replace(" 규제만", "").replace("가이드라인까지", "가이드"),
                levels: p.levels, env: state.env, preset: true };
     });
     if (state.base) cols.push({ id: "_base", label: "기준", top: "기준", sub: "고정", levels: state.base.levels, env: state.base.env, base: true });
@@ -656,16 +656,16 @@
     items.forEach(function (it) {
       var ar = rank[it.cid], tail = el("div", { cls: "tr-a" });
       if (ar) {
-        tail.appendChild(document.createTextNode("③ 개선 조치 " + ar.n + "순위 — 사건 막힘 하한 " + sign(ar.a.inc_lo) + " · 상한 " + sign(ar.a.inc_hi) + " "));
+        tail.appendChild(document.createTextNode("개선 조치 " + ar.n + "순위. 사건 막힘 하한 " + sign(ar.a.inc_lo) + " · 상한 " + sign(ar.a.inc_hi) + " "));
         if (state.levels[it.cid] < 2) tail.appendChild(button("변경안에 넣기", "sm", function () {
           if (!state.base) state.base = snapshot();
           state.levels[it.cid] = 2; state.preset = matchPreset(); pendingFocus = "drawer-x"; update();
         }));
         else tail.appendChild(el("span", { cls: "in", text: "변경안에 있음" }));
-      } else tail.appendChild(document.createTextNode((state.base ? "기준" : "지금 설정") + "에서 이미 AI 까지 — 개선 조치 목록에 없다"));
+      } else tail.appendChild(document.createTextNode((state.base ? "기준" : "지금 설정") + "에서 이미 AI까지 켜져 있어 개선 조치 목록에 없다"));
       box.appendChild(el("div", { cls: "tr-item" + (it.on ? " on" : "") }, [
         el("div", { cls: "tr-c" }, [el("i"), el("b", { text: cname(it.cid) + " · " + LAYER_KO[it.layer] }),
-          " — " + (it.on ? "켜짐" : "꺼짐") + " (" + LEVEL_KO[it.lv] + ")" + (it.extra ? " · " + it.extra : "")]),
+          ": " + (it.on ? "켜짐" : "꺼짐") + " (" + LEVEL_KO[it.lv] + ")" + (it.extra ? " · " + it.extra : "")]),
         regList(it.cid, it.layer), tail]));
     });
     return box;
@@ -693,9 +693,9 @@
     var items = i.fails.map(function (f) {
       var lv = Number(state.levels[f.control] || 0);
       return { cid: f.control, layer: f.layer, lv: lv, on: E.covers(lv, f.layer),
-               extra: (f.level === "stated" ? "원문이 적은 실패" : "원문 사실에서 추론") + (state.statedOnly && f.level !== "stated" ? " — 지금 기준에선 빠짐" : "") };
+               extra: (f.level === "stated" ? "원문이 적은 실패" : "원문 사실에서 추론") + (state.statedOnly && f.level !== "stated" ? " (지금 기준에서는 빠짐)" : "") };
     });
-    body.appendChild(traceBlock("추적 — 실패한 통제 → 규제 근거 → 개선 조치", items));
+    body.appendChild(traceBlock("실패한 통제와 규제 근거", items));
   }
   function renderCellDrawer(d) {
     var col = heatCols().filter(function (c) { return c.id === d.col; })[0], s = scnById[d.sid];
@@ -709,7 +709,7 @@
       el("dt", { text: "에이전트" }), el("dd", { text: envSummary(col.env) }),
       el("dt", { text: "근거" }), el("dd", { text: (s.incidents.length ? "실제 사건 " + s.incidents.length + "건 · " : "") + (s.basis || []).join(" · ") })
     ]));
-    body.appendChild(el("div", { cls: "res" }, [el("div", { cls: "v " + r.outcome, text: RESULT_KO[r.outcome] + (r.outcome === "blocked" ? " — " + r.stage + "단계" : "") }),
+    body.appendChild(el("div", { cls: "res" }, [el("div", { cls: "v " + r.outcome, text: RESULT_KO[r.outcome] + (r.outcome === "blocked" ? ", " + r.stage + "단계" : "") }),
       el("p", { text: whereText(r) })]));
     body.appendChild(el("h3", { cls: "h3", text: "단계별 결정 기록" }));
     var ol = el("ol", { cls: "log" });
@@ -720,9 +720,9 @@
       s.stages.forEach(function (st, idx) {
         var step = r.steps[idx], dec, cls;
         if (!step) { dec = "도달 안 함"; cls = "skip"; }
-        else if (step.blocked_by) { dec = "차단 — " + cname(step.blocked_by); cls = "block"; }
+        else if (step.blocked_by) { dec = cname(step.blocked_by) + "에서 차단"; cls = "block"; }
         else {
-          var on = step.checks.filter(function (c) { return c.on; }).map(function (c) { return DECISION[c.effect] + " — " + cname(c.control); });
+          var on = step.checks.filter(function (c) { return c.on; }).map(function (c) { return cname(c.control) + " " + DECISION[c.effect]; });
           dec = on.length ? on.join(" · ") : "통과"; cls = on.length ? "act" : "pass";
         }
         var ck = el("ul");
@@ -746,7 +746,7 @@
         items.push({ cid: c.control, layer: c.layer, lv: lv, on: E.covers(lv, c.layer), extra: DECISION[c.effect] + " 자리" });
       });
     });
-    body.appendChild(traceBlock("추적 — 이 원형의 통제 → 규제 근거 → 개선 조치", items));
+    body.appendChild(traceBlock("이 원형에 끼어드는 통제와 규제 근거", items));
     var acts = el("div", { cls: "drawer-acts" });
     acts.appendChild(button("①에서 흐름 따라 보기", "", function () {
       state.scenario = s.id; closeDrawer(); update(); renderFlow(true); renderWalk(true);
@@ -841,7 +841,7 @@
     var sN = stack(scns.map(function (s) { return s.incidents.length; }));
     var oN = stack(outs.map(function (o) { return outN[o]; }));
     var svg = sv("svg", { viewBox: "0 0 " + W + " " + H, width: String(W), height: String(H), role: "img",
-      "aria-label": "사건 " + total + "건이 공격 원형을 거쳐 이 설정의 결과로 — " + outs.map(function (o) { return OUT_KO[o] + " " + outN[o] + "건"; }).join(", ") });
+      "aria-label": "사건 " + total + "건이 공격 원형을 거쳐 이 설정에서 끝난 결과: " + outs.map(function (o) { return OUT_KO[o] + " " + outN[o] + "건"; }).join(", ") });
     var gL = sv("g"), gN = sv("g"), gT = sv("g");
     var off0 = n0.y, tOff = {};
     outs.forEach(function (o, j) { tOff[o] = oN[j].y; });
@@ -859,7 +859,7 @@
         gL.appendChild(p1);
         sOff += hh; tOff[o] += hh;
       });
-      var g = sv("g", { "class": "sc", tabindex: "0", role: "button", "aria-label": short(s) + " " + s.incidents.length + "건 — ①에서 공격 흐름 보기" });
+      var g = sv("g", { "class": "sc", tabindex: "0", role: "button", "aria-label": short(s) + " " + s.incidents.length + "건, 공격 흐름 보기" });
       g.appendChild(sv("rect", { x: x1, y: sy, width: NW, height: Math.max(h, 1), "class": "nd" }));
       var t = sv("text", { x: x1 + NW + 8, y: sy + h / 2, "class": "lb", "dominant-baseline": "middle" });
       t.appendChild(sv("tspan", {}, short(s) + " "));
@@ -879,7 +879,7 @@
     if (yrs.length) gT.appendChild(sv("text", { x: x0 - 10, y: H / 2 + 10, "class": "lb end sub", "text-anchor": "end" }, yrs[0] + "~" + yrs[yrs.length - 1] + " 공개"));
     outs.forEach(function (o, j) {
       var y = oN[j].y, h = oN[j].h;
-      var g = sv("g", { "class": "oc", tabindex: "0", role: "button", "aria-label": OUT_KO[o] + " " + outN[o] + "건 — 사건별 결과 표 열기" });
+      var g = sv("g", { "class": "oc", tabindex: "0", role: "button", "aria-label": OUT_KO[o] + " " + outN[o] + "건, 사건별 결과 표 열기" });
       g.appendChild(sv("rect", { x: x2, y: y, width: NW, height: Math.max(h, 1), "class": "nd o-" + o }));
       var t = sv("text", { x: x2 + NW + 8, y: y + h / 2, "class": "lb", "dominant-baseline": "middle" });
       t.appendChild(sv("tspan", {}, OUT_KO[o] + " "));
@@ -912,11 +912,11 @@
   }
   function renderActions() {
     var acts = actions(), t = clear($("acts"));
-    $("acts-note").textContent = (state.base ? "기준" : "지금 설정") + "에서 통제 하나만 AI 까지 올렸을 때의 효과다. 하나씩 따로 잰 값이라 더하면 안 된다 — " +
-      "합친 효과는 '변경안에 넣기' 를 눌러 위 숫자에서 본다. 순서: 사건 막힘 하한 증가 → 상한 증가 → 결과가 바뀌는 원형 수(점수·가중치 없음). " +
-      "규제 칸은 그 통제의 AI 층을 관할마다 가장 세게 다룬 문서 — 강제(구속력) · 자율 · —(다루지 않음). CSV 에는 관할별 근거 문서와 빈 담당 · 기한 · 상태 칸이 들어간다.";
+    $("acts-note").textContent = (state.base ? "기준" : "지금 설정") + "에서 통제 하나만 AI까지 올렸을 때의 효과다. 하나씩 따로 잰 값이라 더하면 안 된다. " +
+      "여러 개를 합친 효과는 '변경안에 넣기'로 넣은 뒤 위 숫자에서 본다. 정렬은 사건 막힘 하한이 많이 느는 순서이고, 같으면 상한, 그다음 바뀌는 원형 수로 정한다. 점수나 가중치는 쓰지 않는다. " +
+      "규제 칸은 관할마다 그 통제의 AI 층을 가장 세게 다룬 문서가 강제인지 자율인지 보여 준다. CSV에는 관할별 근거 문서와 비어 있는 담당·기한·상태 칸이 들어간다.";
     t.appendChild(el("thead", null, [el("tr", null, [el("th", { cls: "num", text: "순위" }), el("th", { text: "조치" }), el("th", { text: "단계" }),
-      el("th", { text: "사건 막힘" }), el("th", { text: "결과가 바뀌는 원형" }), el("th", { text: "규제 — AI 층" }), el("th", { text: "변경안" })])]));
+      el("th", { text: "사건 막힘" }), el("th", { text: "결과가 바뀌는 원형" }), el("th", { text: "규제 (AI 층)" }), el("th", { text: "변경안" })])]));
     var tb = el("tbody");
     if (!acts.length) tb.appendChild(el("tr", null, [el("td", { colspan: "7", text: "모든 통제가 이미 AI 까지다." })]));
     acts.forEach(function (a, k) {
@@ -929,10 +929,10 @@
       var rg = el("td", { cls: "reg" });
       JUR3.forEach(function (j) {
         var g = regOf(a.control, j).agent || { score: 0 }, an = regOf(a.control, j).analog || { score: 0 }, jn = (D.jurisdictions || {})[j] || j;
-        rg.appendChild(el("span", { title: jn + " — 사람·계정 층 " + SCORE_KO[an.score] + " / AI 층 " + SCORE_KO[g.score] + (g.title ? " · " + g.title : "") },
+        rg.appendChild(el("span", { title: jn + ": 사람·계정 층 " + SCORE_KO[an.score] + " / AI 층 " + SCORE_KO[g.score] + (g.title ? " · " + g.title : "") },
           [jn + " ", el("b", { cls: g.score >= 2 ? "must" : "", text: REG_SHORT[g.score] })]));
       });
-      var act = el("td", { cls: "act" }, [el("b", { text: (c.num ? c.num + ". " : "") + cname(a.control) + " — " + LEVEL_KO[a.from] + " → AI 까지" }),
+      var act = el("td", { cls: "act" }, [el("b", { text: (c.num ? c.num + ". " : "") + cname(a.control) + ", " + LEVEL_KO[a.from] + " → AI까지" }),
         el("div", { cls: "fine", text: (c.help || {}).agent || "" })]);
       var cell = el("td", { cls: "prop" });
       if (inProp) {
@@ -953,7 +953,7 @@
   }
   function csvRows() {
     var acts = actions(), R = ref(), prof = profileById[R.profile] || profileById[profileOf(R.env)];
-    var head = ["순위", "통제", "조치 (AI 까지)", "단계", "지금", "목표", "사건 막힘 하한 증가", "사건 막힘 상한 증가", "결과가 바뀌는 원형"];
+    var head = ["순위", "통제", "조치 (AI까지)", "단계", "지금", "목표", "사건 막힘 하한 증가", "사건 막힘 상한 증가", "결과가 바뀌는 원형"];
     JUR3.forEach(function (j) { var n = (D.jurisdictions || {})[j] || j; head.push(n + " 사람·계정 층", n + " AI 층", n + " 근거 문서"); });
     head.push("변경안에 포함", "자가 진단 사람·계정", "자가 진단 AI", "진단 메모", "담당", "기한", "상태", "메모", "기준 설정", "에이전트 환경", "설정 링크", "만든 날", "출처");
     var rows = [head];
@@ -968,8 +968,8 @@
       var dg = state.diag[a.control] || {};
       row.push(state.base && state.levels[a.control] >= 2 ? "예" : "", dg.analog || dg.agent ? DIAG_KO[dg.analog || ""] : "", dg.analog || dg.agent ? DIAG_KO[dg.agent || ""] : "",
         dg.note || "", "", "", "", "",
-        (presetById[presetOf(R.levels)] || { label: "직접 설정" }).label, (prof ? prof.label + " — " : "") + envSummary(R.env),
-        location.href, today(), "PivoxPolicy 모의 테스트 — 자체 계산, 법률 자문 아님");
+        (presetById[presetOf(R.levels)] || { label: "직접 설정" }).label, (prof ? prof.label + ": " : "") + envSummary(R.env),
+        location.href, today(), "PivoxPolicy 모의 테스트. 자체 계산이며 법률 자문이 아님");
       rows.push(row);
     });
     return rows;
@@ -982,7 +982,7 @@
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
     var msg = $("csv-msg");
-    msg.textContent = "내려받았다 — 조치 " + (rows.length - 1) + "개, 담당·기한·상태는 빈칸";
+    msg.textContent = "내려받았다. 조치 " + (rows.length - 1) + "개, 담당·기한·상태는 비어 있다";
     setTimeout(function () { msg.textContent = ""; }, 4000);
   }
 
@@ -994,7 +994,7 @@
     var hr = el("tr", null, [el("th", { text: "항목" })]);
     if (bc) hr.appendChild(el("th", { text: "기준" }));
     hr.appendChild(el("th", { text: bc ? "변경안" : "이 설정에서" }));
-    hr.appendChild(el("th", { text: "근거 원형 — 결과 (누르면 ①에서 고른다)" }));
+    hr.appendChild(el("th", { text: "근거 원형과 결과 (누르면 위 표에서 고른다)" }));
     t.appendChild(el("thead", null, [hr]));
     var tb = el("tbody");
     cov.forEach(function (c, i) {
@@ -1003,7 +1003,7 @@
       if (bc) tr.appendChild(el("td", null, [el("span", { cls: "asi-st " + bc[i].status, text: ASI_KO[bc[i].status] })]));
       tr.appendChild(el("td", null, [el("span", { cls: "asi-st " + c.status, text: ASI_KO[c.status] })]));
       var sc = el("td", { cls: "sc" });
-      if (!c.scenarios.length) sc.appendChild(el("span", { cls: "dim", text: "이 항목을 근거로 둔 원형이 없다 — 이 테스트는 재지 않는다" }));
+      if (!c.scenarios.length) sc.appendChild(el("span", { cls: "dim", text: "이 항목을 근거로 둔 원형이 없어 재지 않는다" }));
       c.scenarios.forEach(function (x) {
         var sb = el("button", { type: "button", cls: "lnk", text: short(scnById[x.id]) });
         sb.addEventListener("click", function () {
@@ -1018,8 +1018,8 @@
     });
     t.appendChild(tb);
     var note = clear($("asi-note"));
-    note.appendChild(document.createTextNode("자체 계산이다 — OWASP 의 평가·인증이 아니다. 막음 = 그 항목을 근거로 둔 원형이 이 환경에서 모두 막힘 · 공백 = 모두 피해 발생 · " +
-      "부분 = 그 사이(축소 포함) · 해당 없음 = 이 환경에서 공격면 없음 · 원형 없음 = 재지 않음. 항목 제목은 "));
+    note.appendChild(document.createTextNode("자체 계산이며 OWASP의 평가나 인증이 아니다. 그 항목을 근거로 둔 원형이 이 환경에서 모두 막히면 막음, 모두 피해가 나면 공백, " +
+      "그 사이면 부분이다. 공격면이 없으면 해당 없음, 근거 원형이 없으면 원형 없음으로 둔다. 항목 제목은 "));
     note.appendChild(link((D.owasp_asi || {}).source, "OWASP Top 10 for Agentic Applications (2025-12-09 발표)"));
     note.appendChild(document.createTextNode(" 그대로."));
   }
@@ -1050,7 +1050,7 @@
       cs.appendChild(el("label", { "for": id, cls: "chk" }, [inp, " " + c.num + ". " + c.name]));
     });
     var P = (D.pending || {}).top || [], cand = el("select", { id: "wi-cand", "aria-label": "근거로 삼을 반영 대기 후보" });
-    cand.appendChild(el("option", { value: "", text: "— 이름 없는 새 문서 —" }));
+    cand.appendChild(el("option", { value: "", text: "이름 없는 새 문서" }));
     P.forEach(function (x, i) { cand.appendChild(el("option", { value: String(i), text: x.jurisdiction + " · " + x.title.slice(0, 70) })); });
     cand.addEventListener("change", function () {
       WI.cand = cand.value;
@@ -1070,7 +1070,7 @@
     var out = clear($("wi-out")), picked = CIDS.filter(function (c) { return WI.ctl[c]; });
     if (!picked.length) { out.appendChild(el("p", { cls: "fine", text: "요구하는 통제를 하나 이상 고르면, 그 관할의 프리셋을 다시 계산해 지금 에이전트 환경에서 무엇이 바뀌는지 보인다." })); return; }
     var x = ((D.pending || {}).top || [])[Number(WI.cand)], who = WI.cand !== "" && x ? "'" + x.title + "' 문서" : "새 문서";
-    out.appendChild(el("p", { cls: "wi-say" }, [el("b", { text: "가정" }), " — " + who + "가 이렇게 요구한다고 친다: 관할 " + ((D.jurisdictions || {})[WI.j] || WI.j) +
+    out.appendChild(el("p", { cls: "wi-say" }, [el("b", { text: "가정." }), " " + who + "가 이렇게 요구한다고 친다. 관할 " + ((D.jurisdictions || {})[WI.j] || WI.j) +
       " · 통제 " + picked.map(cname).join(", ") + " · " + (WI.layer === "agent" ? "AI 에이전트에 적용" : "사람·계정에만") + " · " + (WI.strength === 2 ? "구속력" : "자율") +
       ". 실제 반영은 문서 등록 · 두 팀 코딩 · 조정 뒤다."]));
     var t = el("table", { cls: "wi-t" });
@@ -1098,10 +1098,10 @@
     });
     t.appendChild(tb);
     out.appendChild(el("div", { cls: "tblwrap" }, [t]));
-    if (!any) out.appendChild(el("p", { cls: "fine", text: "바뀌는 것이 없다 — 그 관할 프리셋이 이미 그 수준이다(자율 문서는 '강제 규제만' 프리셋을 바꾸지 않는다)." }));
+    if (!any) out.appendChild(el("p", { cls: "fine", text: "바뀌는 것이 없다. 그 관할 프리셋이 이미 그 수준이다(자율 문서는 '강제 규제만' 프리셋을 바꾸지 않는다)." }));
   }
 
-  // ── ⑥ 자가 진단 + 근거 메모 — 이 브라우저 안에만. JSON 으로 내보내고 불러온다 ──
+  // ── ⑥ 자가 진단 + 근거 메모 — 이 브라우저 안에만. JSON으로 내보내고 불러온다 ──
   var diagDirty = false;
   function hasDiag() { return CIDS.some(function (c) { var d = state.diag[c]; return d && (d.analog || d.agent || d.note); }); }
   function renderDiagTable() {
@@ -1131,7 +1131,7 @@
   function renderDiagSum() {
     var n = {}; DIAG_ST.forEach(function (x) { n[x[0]] = 0; });
     CIDS.forEach(function (c) { n[(state.diag[c] || {}).agent || ""] += 1; });
-    $("diag-sum").textContent = "AI 층 — 구현 " + n.done + " · 부분 " + n.partial + " · 계획 " + n.plan + " · 없음 " + n.none + " · 모름 " + n[""];
+    $("diag-sum").textContent = "AI 층: 구현 " + n.done + " · 부분 " + n.partial + " · 계획 " + n.plan + " · 없음 " + n.none + " · 모름 " + n[""];
     CIDS.forEach(function (c) { var x = $("diag-lv-" + c); if (x) x.textContent = LEVEL_KO[state.levels[c]]; });
   }
   function diagLevels() {
@@ -1154,15 +1154,15 @@
       statuses: DIAG_KO, include_partial: $("diag-partial").checked, agent: { profile: state.profile, env: state.env }, controls: ctl
     }, null, 2) + "\n");
     diagDirty = false;
-    diagMsg("내려받았다 — 이 파일에만 남는다");
+    diagMsg("내려받았다. 진단은 이 파일에만 남는다");
   }
   function importDiag(file) {
     if (!file) return;
-    if (file.size > 200000) { diagMsg("파일이 너무 크다(200KB 까지)"); return; }
+    if (file.size > 200000) { diagMsg("파일이 너무 크다(200KB까지)"); return; }
     var rd = new FileReader();
     rd.onload = function () {
       var j;
-      try { j = JSON.parse(String(rd.result)); } catch (e) { diagMsg("JSON 을 읽지 못했다"); return; }
+      try { j = JSON.parse(String(rd.result)); } catch (e) { diagMsg("JSON을 읽지 못했다"); return; }
       if (!j || j.format !== "pivoxpolicy-self-assessment" || typeof j.controls !== "object") { diagMsg("PivoxPolicy 자가 진단 파일이 아니다"); return; }
       var n = 0;
       CIDS.forEach(function (c) {
@@ -1173,7 +1173,7 @@
       });
       if (j.include_partial === true || j.include_partial === false) $("diag-partial").checked = j.include_partial;
       diagDirty = false; renderDiagTable();
-      diagMsg("불러왔다 — 통제 " + n + "개. '진단을 설정에 반영' 을 누르면 왼쪽 설정이 바뀐다");
+      diagMsg("통제 " + n + "개를 불러왔다. '진단을 설정에 반영'을 누르면 왼쪽 설정이 바뀐다");
     };
     rd.onerror = function () { diagMsg("파일을 읽지 못했다"); };
     rd.readAsText(file);
@@ -1185,25 +1185,25 @@
     var prof = profileById[state.profile], acts = E.improvementActions(D.scenarios, state.env, failures, state.levels, stageOf, state.statedOnly), rank = {};
     acts.forEach(function (a, k) { rank[a.control] = { n: k + 1, a: a }; });
     var q = function (v) { return JSON.stringify(String(v === undefined || v === null ? "" : v)); };
-    var L = ["# AI 에이전트 내부통제 정책 초안 — " + (prof ? prof.label : "직접 설정한 에이전트"), "",
+    var L = ["# AI 에이전트 내부통제 정책 초안: " + (prof ? prof.label : "직접 설정한 에이전트"), "",
       "> **검토용 초안이다.** PivoxPolicy 모의 테스트에서 만든 뼈대이고, 형식은 이 도구 자체 형식이다(특정 집행 도구의 스키마가 아니다).",
       "> 법률 자문이 아니며 그대로 운영에 넣지 않는다. 규제 근거는 관할마다 그 통제를 가장 세게 다룬 문서 하나다.", "",
       "- 만든 날: " + today(),
-      "- 에이전트: " + (prof ? prof.label + " — " : "") + envSummary(state.env),
-      "- 통제 수준: " + ((presetById[state.preset] || {}).label || "직접 설정") + (state.base ? " (변경안 — 기준: " + cfgLabel(state.base) + ")" : ""),
+      "- 에이전트: " + (prof ? prof.label + ", " : "") + envSummary(state.env),
+      "- 통제 수준: " + ((presetById[state.preset] || {}).label || "직접 설정") + (state.base ? " (변경안. 기준은 " + cfgLabel(state.base) + ")" : ""),
       "- 설정 링크: " + location.href, "", "## 통제별 요구", ""];
-    var Y = ["pivoxpolicy_policy_draft: 1", "generated: " + q(today()), "note: " + q("검토용 초안 — 자체 형식, 특정 도구 스키마 아님, 법률 자문 아님"),
+    var Y = ["pivoxpolicy_policy_draft: 1", "generated: " + q(today()), "note: " + q("검토용 초안. 이 도구의 자체 형식이며 특정 도구의 스키마도, 법률 자문도 아님"),
       "agent:", "  type: " + q(prof ? prof.label : "custom"), "  tools: " + q(state.env.tools),
       "  reads_untrusted_input: " + !!state.env.untrusted_input, "  imports_external_components: " + !!state.env.open_components,
       "  long_term_memory: " + !!state.env.memory, "  multi_agent: " + !!state.env.multi_agent, "controls:"];
     D.controls.forEach(function (c) {
       var lv = Number(state.levels[c.id] || 0), h = c.help || {}, d = state.diag[c.id] || {}, rk = rank[c.id];
-      L.push("### " + c.num + ". " + c.name + " — " + LEVEL_KO[lv], "");
+      L.push("### " + c.num + ". " + c.name + " (" + LEVEL_KO[lv] + ")", "");
       if (lv >= 1) L.push("- 사람·계정: " + mdText(h.analog));
       if (lv >= 2) L.push("- AI 에이전트: " + mdText(h.agent));
       if (lv === 0) L.push("- 이 설정에서는 적용하지 않는다.");
-      if (rk) L.push("- 다음 단계(AI 까지): " + mdText(h.agent) + " — 개선 조치 " + rk.n + "순위, 사건 막힘 하한 " + sign(rk.a.inc_lo) + " · 상한 " + sign(rk.a.inc_hi));
-      if (d.analog || d.agent || d.note) L.push("- 자가 진단: 사람·계정 " + DIAG_KO[d.analog || ""] + " · AI " + DIAG_KO[d.agent || ""] + (d.note ? " — " + mdText(d.note) : ""));
+      if (rk) L.push("- 다음 단계(AI까지): " + mdText(h.agent) + " (개선 조치 " + rk.n + "순위, 사건 막힘 하한 " + sign(rk.a.inc_lo) + " · 상한 " + sign(rk.a.inc_hi) + ")");
+      if (d.analog || d.agent || d.note) L.push("- 자가 진단: 사람·계정 " + DIAG_KO[d.analog || ""] + " · AI " + DIAG_KO[d.agent || ""] + (d.note ? ". 메모: " + mdText(d.note) : ""));
       L.push("- 규제 근거:");
       Y.push("  - id: " + q(c.id), "    name: " + q(c.name), "    apply_to: " + q(["none", "human", "human_and_ai"][lv]) + "   # none | human | human_and_ai",
         "    requirement_human: " + q(lv >= 1 ? h.analog : ""), "    requirement_ai: " + q(lv >= 2 ? h.agent : ""),
@@ -1218,18 +1218,18 @@
           if (x.doc) Y.push("      - {jurisdiction: " + q(j) + ", layer: " + q(layer === "agent" ? "ai" : "human") + ", strength: " + q(SCORE_KO[x.score]) +
             ", doc: " + q(x.title) + ", url: " + q(x.url) + "}");
         });
-        L.push("  - " + jn + " — " + parts.join(" / "));
+        L.push("  - " + jn + ": " + parts.join(" / "));
       });
       L.push("- 담당: ", "- 검토 기한: ", "");
     });
-    L.push("## 기계가 읽는 뼈대 (YAML — 자체 형식)", "", "```yaml");
+    L.push("## 기계가 읽는 뼈대 (YAML, 자체 형식)", "", "```yaml");
     return L.concat(Y, ["```", ""]).join("\n");
   }
 
   // ── 데모 케이스 ──
   function renderCasePicker() {
     var s = clear($("case"));
-    s.appendChild(el("option", { value: "", text: "— 케이스 없이 직접 설정 —" }));
+    s.appendChild(el("option", { value: "", text: "케이스 없이 직접 설정" }));
     CASES.forEach(function (c, i) { s.appendChild(el("option", { value: c.id, text: (i + 1) + ". " + c.title })); });
     $("case-count").textContent = CASES.length + "개";
   }
@@ -1250,11 +1250,11 @@
     b.appendChild(el("p", { cls: "s", text: c.story }));
     b.appendChild(el("dl", { cls: "grid" }, [
       el("dt", { text: "공격 원형" }), el("dd", { text: scnById[c.scenario].title }),
-      el("dt", { text: "이 케이스의 결과" }), el("dd", null, [el("span", { cls: "r " + r.outcome, text: RESULT_KO[r.outcome] + (r.outcome === "blocked" ? " (" + r.stage + "단계)" : "") }), " — " + r.impact]),
+      el("dt", { text: "이 케이스의 결과" }), el("dd", null, [el("span", { cls: "r " + r.outcome, text: RESULT_KO[r.outcome] + (r.outcome === "blocked" ? " (" + r.stage + "단계)" : "") }), ", " + r.impact]),
       el("dt", { text: "볼 것" }), el("dd", { text: c.lesson })
     ]));
     if (r.outcome !== c.expect) {
-      b.appendChild(el("p", { cls: "warn", text: "규제 데이터가 바뀌어 결과가 케이스 작성 때(" + RESULT_KO[c.expect] + ")와 다르다 — 위 설명은 업데이트 전 기준이다." }));
+      b.appendChild(el("p", { cls: "warn", text: "규제 데이터가 바뀌어 결과가 케이스 작성 때(" + RESULT_KO[c.expect] + ")와 다르다. 위 설명은 업데이트 전 기준이다." }));
     }
   }
   function stepCase(d) {
@@ -1277,14 +1277,14 @@
       if (prev) {
         Object.keys(h.presets).forEach(function (pid) {
           var a = prev.presets[pid], z = h.presets[pid];
-          if (a && (a[0] !== z[0] || a[1] !== z[1])) ul.appendChild(el("li", null, [(labels[pid] || pid) + " — 막혔을 사건 " + a[0] + "~" + a[1] + " → ", el("b", { text: z[0] + "~" + z[1] })]));
+          if (a && (a[0] !== z[0] || a[1] !== z[1])) ul.appendChild(el("li", null, [(labels[pid] || pid) + ": 막혔을 사건 " + a[0] + "~" + a[1] + " → ", el("b", { text: z[0] + "~" + z[1] })]));
           var sa = (prev.scenarios || {})[pid] || {}, sz = (h.scenarios || {})[pid] || {};
           Object.keys(sz).forEach(function (sid) {
             if (sa[sid] && sa[sid] !== sz[sid] && scnById[sid]) ul.appendChild(el("li", null, [(labels[pid] || pid) + " · " + short(scnById[sid]) + ": " + RESULT_KO[sa[sid]] + " → ", el("b", { text: RESULT_KO[sz[sid]] })]));
           });
         });
         if (!ul.childNodes.length) ul.appendChild(el("li", { text: "결과가 바뀐 프리셋 없음" }));
-      } else ul.appendChild(el("li", { text: "기준 — 문서 " + h.docs.length + "건" }));
+      } else ul.appendChild(el("li", { text: "기준점. 문서 " + h.docs.length + "건" }));
       ol.appendChild(el("li", null, [el("div", { cls: "h" }, [el("time", { text: h.at }), el("span", { cls: "l", text: h.label })]), ul]));
     });
     var P = D.pending || { count: 0, top: [] }, pu = clear($("pend"));
@@ -1341,13 +1341,13 @@
   $("policy-md").addEventListener("click", function () {
     writeHash();
     download("pivoxpolicy-policy-draft_" + today() + ".md", "text/markdown;charset=utf-8", policyDraft());
-    var m = $("csv-msg"); m.textContent = "정책 초안을 내려받았다 — 검토용 뼈대"; setTimeout(function () { m.textContent = ""; }, 4000);
+    var m = $("csv-msg"); m.textContent = "정책 초안을 내려받았다. 검토용 뼈대다"; setTimeout(function () { m.textContent = ""; }, 4000);
   });
   $("diag-apply").addEventListener("click", function () {
     var lv = diagLevels(), n = [0, 0, 0];
     CIDS.forEach(function (c) { n[lv[c]] += 1; });
     state.levels = lv; state.preset = matchPreset(); update();
-    diagMsg("반영했다 — AI 까지 " + n[2] + " · 사람·계정만 " + n[1] + " · 없음 " + n[0] + (state.base ? " (변경안에)" : ""));
+    diagMsg("반영했다. AI까지 " + n[2] + " · 사람·계정만 " + n[1] + " · 없음 " + n[0] + (state.base ? " (변경안에)" : ""));
   });
   $("diag-export").addEventListener("click", exportDiag);
   $("diag-file").addEventListener("change", function (e) { importDiag(e.target.files && e.target.files[0]); e.target.value = ""; });

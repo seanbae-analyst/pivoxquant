@@ -2,7 +2,7 @@
 
 숫자는 전부 빌드할 때 레지스트리에서 다시 계산한다(문서 · 사건 · κ · 간극 · 모의 테스트) — 손으로 적은 숫자가 없다.
 대시보드는 out/dashboard.html(site.py), 모의 테스트는 out/sim.html(sim.py). 자바스크립트 없음.
-추천·조언과 '안전합니다' 같은 단정은 쓰지 않는다 — '증거 수준' · '반사실 계산' 으로 말한다(제목의 '안전한가' 는 연구 질문).
+추천·조언과 '안전합니다' 같은 단정은 쓰지 않는다 — '증거 수준' · '반사실 계산'으로 말한다(제목의 '안전한가'는 연구 질문).
 """
 
 from __future__ import annotations
@@ -18,12 +18,12 @@ from .registry import OUT_DIR, SNAPSHOT_DIR
 TEMPLATES = Path(__file__).resolve().parent / "templates"
 JUR3 = ("KR", "US", "EU")
 JUR_KO = {"KR": "한국", "US": "미국", "EU": "EU", "INTL": "국제 권고"}
-SCORE_SHORT = {0: "—", 1: "자율", 2: "구속", 3: "명시"}
+SCORE_SHORT = {0: "", 1: "자율", 2: "구속", 3: "명시"}
 SCORE_KO = {0: "다루지 않음", 1: "자율", 2: "구속력", 3: "구속력 + 에이전트 명시"}
 LAYER_KO = {"analog": "사람·계정", "agent": "AI 적용"}
 RESULT_KO = {"blocked": "막힘", "reduced": "피해 축소", "damage": "피해 발생", "no_surface": "공격면 없음"}
 DECISION = {"prevent": "차단", "limit": "범위 제한", "detect": "기록·탐지", "contain": "멈춤·회수"}
-LEVEL_KO = {0: "없음", 1: "사람·계정만", 2: "AI 까지"}
+LEVEL_KO = {0: "없음", 1: "사람·계정만", 2: "AI까지"}
 # 미리보기 — 실제 사건이 있는 원형 하나를 두 프리셋으로. 없으면 첫 원형.
 PREVIEW_SCENARIO, PREVIEW_PROFILE, PREVIEW_PRESETS = "ai_credentials", "support", ("KR-2", "all")
 
@@ -113,7 +113,7 @@ def _k(x: float | None) -> str:
 
 def _mini_matrix(f: dict[str, Any]) -> str:
     head = "<thead><tr><th scope=\"col\">통제</th>" + "".join(
-        f'<th scope="col" colspan="2">{_e(JUR_KO[j])}<small>사람 · AI</small></th>' for j in JUR3) + "</tr></thead>"
+        f'<th scope="col" colspan="2">{_e(JUR_KO[j])}<small>직원 / AI</small></th>' for j in JUR3) + "</tr></thead>"
     rows = []
     for c in f["controls"]:
         tds = [f'<th scope="row">{c.num}. {_e(c.name_ko)}</th>']
@@ -127,7 +127,7 @@ def _mini_matrix(f: dict[str, Any]) -> str:
 
 
 def _flow_row(scn: dict[str, Any], levels: dict[str, int], env: dict[str, Any], label: str, names: dict[str, str]) -> str:
-    """sim-ui.js 의 flowRow 와 같은 마크업 — 서버에서 한 번 그린다(랜딩은 스크립트가 없다)."""
+    """sim-ui.js의 flowRow와 같은 마크업 — 서버에서 한 번 그린다(랜딩은 스크립트가 없다)."""
     from . import sim as sim_mod
     r = sim_mod.run_scenario(scn, env, levels)
     out = [f'<div class="flow-row"><div class="flow-top"><span class="flow-l">{_e(label)}</span></div>']
@@ -176,8 +176,9 @@ def _preview(f: dict[str, Any]) -> tuple[str, str]:
     rows = "".join(_flow_row(s, f["presets"][pid]["levels"], env, f["presets"][pid]["label"], names)
                    for pid in PREVIEW_PRESETS if pid in f["presets"])
     title = s["title"].split(" →")[0]
-    cap = (f"{_e(title)} — {_e(prof['label'])}, " +
-           (f"실제 사건 {len(s['incidents'])}건이 이 경로였다." if s["incidents"] else "위협 목록(" + _e(" · ".join(s.get("basis") or [])) + ")에서 온 원형."))
+    why = (f"실제 사건 {len(s['incidents'])}건이 이 경로였다" if s["incidents"]
+           else "위협 목록 " + _e(", ".join(s.get("basis") or [])) + "에서 가져온 원형이다")
+    cap = f"'{_e(title)}' 원형을 {_e(prof['label'])}에 대고 두 번 돌린 결과({why})."
     return rows, cap
 
 
@@ -194,19 +195,22 @@ def _bars(f: dict[str, Any]) -> str:
     return '<dl class="bars">' + "".join(rows) + "</dl>"
 
 
-def _pipeline(f: dict[str, Any]) -> str:
+def _method(f: dict[str, Any]) -> str:
+    """방법 — 단계 · 하는 일 · 누가 · 지금 규모. 숫자는 레지스트리에서."""
     dk, nk = f["doc_k"], f["inc_k"]
-    steps = [
-        ("수집", "자동", f"발행 주체 피드 {f['n_feeds']}곳(규제기관 · 표준 · 위협 보고) — 지금까지 {f['n_items']}건"),
-        ("후보", "자동", f"AI·에이전트와 닿는 새 규제·가이드라인을 점수로 골라 '반영 대기' — 지금 {f['n_pending']}건"),
-        ("문서", "사람", f"사람이 레지스트리에 올린다 — 문서 {f['n_docs']}건(규범 문서 {f['n_norm']}건), 원문 스냅숏 고정"),
-        ("코딩", "AI 두 팀 + 조정", f"서로 보지 않는 두 팀이 7통제 × 두 층으로 판정 — 문서 κ 사람·계정 {_k(dk.get('analog'))} · AI {_k(dk.get('agent'))}, 사건 κ {_k(nk)}"),
-        ("매트릭스", "계산", f"관할 × 통제 × 두 층 — 간극 {sum(f['gaps'][j] for j in JUR3)}칸"),
-        ("모의 테스트", "계산", f"공격 원형 {f['n_scn']}개 · 실제 사건 {f['n_inc']}건 반사실 — 결과가 바뀌면 이력({len(f['hist'])}줄)과 데모 경고"),
+    rows = [
+        ("수집", "규제기관, 표준기구, 보안 회사의 공개 피드를 읽는다.", "자동", f"피드 {f['n_feeds']}곳, 항목 {f['n_items']}건"),
+        ("후보", "AI 에이전트와 관련된 새 규제와 가이드라인을 점수로 골라 둔다.", "자동", f"반영 대기 {f['n_pending']}건"),
+        ("등록", "후보 중 연구에 넣을 문서를 고르고 원문을 고정한다.", "사람", f"문서 {f['n_docs']}건(규범 문서 {f['n_norm']}건)"),
+        ("판정", "서로 결과를 보지 않는 두 팀이 통제 7개를 직원·계정과 AI 두 층으로 판정하고, 갈린 칸만 조정한다.", "AI 코더 두 팀",
+         f"κ 문서 {_k(dk.get('analog'))}(직원·계정), {_k(dk.get('agent'))}(AI) / 사건 {_k(nk)}"),
+        ("매트릭스", "관할마다 통제별로 가장 센 문서의 수준을 모은다.", "계산", f"간극 {sum(f['gaps'][j] for j in JUR3)}칸"),
+        ("모의 테스트", "공격 원형을 단계별로 돌리고, 공개 사건을 반사실로 다시 계산한다.", "계산", f"원형 {f['n_scn']}개, 사건 {f['n_inc']}건, 이력 {len(f['hist'])}줄"),
     ]
-    lis = "".join(f'<li class="fn pass"><div class="fh"><span class="no">{k}</span><span class="tag">{_e(who)}</span></div>'
-                  f'<div class="ft">{_e(t)}</div><p class="fi">{_e(d)}</p></li>' for k, (t, who, d) in enumerate(steps, 1))
-    return f'<ol class="flow pipe" style="grid-template-columns:repeat({len(steps)}, minmax(0,1fr))" aria-label="이 연구가 만들어지는 흐름">{lis}</ol>'
+    body = "".join(f'<tr><td class="n">{k}</td><th scope="row">{_e(t)}</th><td>{_e(d)}</td><td class="who">{_e(w)}</td><td class="now">{_e(x)}</td></tr>'
+                   for k, (t, d, w, x) in enumerate(rows, 1))
+    return ('<table class="method"><thead><tr><th scope="col" class="n"></th><th scope="col">단계</th><th scope="col">하는 일</th>'
+            '<th scope="col">누가</th><th scope="col">지금</th></tr></thead><tbody>' + body + "</tbody></table>")
 
 
 def build(out_dir: Path = OUT_DIR, snapshot_dir: Path = SNAPSHOT_DIR, now: datetime | None = None) -> Path:
@@ -214,8 +218,8 @@ def build(out_dir: Path = OUT_DIR, snapshot_dir: Path = SNAPSHOT_DIR, now: datet
     now = now or datetime.now(timezone.utc)
     ctl = {c.id: c for c in f["controls"]}
     top = sorted(f["fails_by_ctl"].items(), key=lambda kv: -kv[1]["total"])
-    top_txt = (f"{ctl[top[0][0]].name_ko} {top[0][1]['total']}건" + (f", {ctl[top[1][0]].name_ko} {top[1][1]['total']}건" if len(top) > 1 else "")
-               if top and top[0][1]["total"] else "—")
+    top_txt = (f"{ctl[top[0][0]].name_ko}({top[0][1]['total']}건)" + (f"과 {ctl[top[1][0]].name_ko}({top[1][1]['total']}건)" if len(top) > 1 else "")
+               if top and top[0][1]["total"] else "확인되지 않았다")
     gaps = f["gaps"]
     r = f["replays"]
 
@@ -228,14 +232,14 @@ def build(out_dir: Path = OUT_DIR, snapshot_dir: Path = SNAPSHOT_DIR, now: datet
     preview, preview_cap = _preview(f)
     repl = {
         "TOKENS_CSS": _tpl("tokens.css"), "BASE_CSS": _tpl("base.css"), "FLOW_CSS": _tpl("flow.css"), "LANDING_CSS": _tpl("landing.css"),
-        "BUILT_AT_ISO": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "BUILT_AT": now.strftime("%Y-%m-%d"),
+        "BUILT_AT_ISO": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "BUILT_AT": f"{now.year}년 {now.month}월 {now.day}일",
         "N_DOCS": str(f["n_docs"]), "N_NORM": str(f["n_norm"]), "N_INC": str(f["n_inc"]), "JUDGED": str(f["judged"]),
         "N_SCN": str(f["n_scn"]), "N_CASES": str(f["n_cases"]), "N_PROFILES": str(f["n_profiles"]),
         "CELLS3": str(f["cells3"]), "A2": str(f["a2"]), "G2": str(f["g2"]), "G3": str(f["g3"]),
         "GAPS": str(sum(gaps[j] for j in JUR3)), "GAPS_KR": str(gaps["KR"]), "GAPS_US": str(gaps["US"]), "GAPS_EU": str(gaps["EU"]),
         "INC_K": _k(f["inc_k"]), "TOP_FAILS": _e(top_txt),
         "R_KR": rng("KR-2"), "R_US": rng("US-2"), "R_EU": rng("EU-2"), "R_ALL": rng("all"),
-        "MINI": _mini_matrix(f), "PREVIEW": preview, "PREVIEW_CAP": preview_cap, "BARS": _bars(f), "PIPELINE": _pipeline(f),
+        "MINI": _mini_matrix(f), "PREVIEW": preview, "PREVIEW_CAP": preview_cap, "BARS": _bars(f), "METHOD": _method(f),
     }
     page = _tpl("landing.html")
     page = re.sub(r"<!--.*?-->", "", page, flags=re.S)

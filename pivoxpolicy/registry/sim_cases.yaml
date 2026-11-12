@@ -1,9 +1,9 @@
-# 모의 테스트 데모 케이스 (2026-11-12) — out/sim.html 의 '데모 케이스' 에서 고른다. 회사는 모두 가상이다(A·B·C·D…).
+# 모의 테스트 데모 케이스 (2026-11-12) — out/sim.html의 '데모 케이스'에서 고른다. 회사는 모두 가상이다(A·B·C·D…).
 #
 # 케이스 = 규제 프리셋(preset) 위에 통제 덮어쓰기(levels) + 에이전트 종류(profile) 위에 환경 덮어쓰기(env) + 공격 원형(scenario).
-# expect = 이 케이스를 쓸 때의 결과. **규제 레지스트리가 바뀌어 계산 결과가 expect 와 달라지면** 페이지가 그 케이스에 경고를 띄우고
-# tests/test_sim.py 가 실패한다 — 그때 story · lesson 을 새 결과에 맞게 고치고 expect 를 바꾼다(규제 업데이트를 데모에 반영하는 자리).
-# 두 개씩 짝(같은 회사, 한 가지만 다름)으로 두어 '무엇이 결과를 바꾸는지' 를 보여 준다.
+# expect = 이 케이스를 쓸 때의 결과. **규제 레지스트리가 바뀌어 계산 결과가 expect와 달라지면** 페이지가 그 케이스에 경고를 띄우고
+# tests/test_sim.py가 실패한다 — 그때 story · lesson을 새 결과에 맞게 고치고 expect를 바꾼다(규제 업데이트를 데모에 반영하는 자리).
+# 두 개씩 짝(같은 회사, 한 가지만 다름)으로 두어 '무엇이 결과를 바꾸는지'를 보여 준다.
 
 cases:
   # ── 1. 같은 공격, 관할에 따라 ───────────────────────────────────────
@@ -25,10 +25,10 @@ cases:
     profile: trading
     scenario: prompt_injection
     expect: damage
-    lesson: 미국 강제 규제(NYDFS Part 500)는 사람·계정 통제를 요구하지만 AI 에 적용한 요구는 없다 — 에이전트가 숨은 지시대로 송금해도 끼어드는 통제가 없다.
+    lesson: 미국 강제 규제(NYDFS Part 500)는 사람·계정 통제를 요구하지만 AI에 적용한 요구는 없다 — 에이전트가 숨은 지시대로 송금해도 끼어드는 통제가 없다.
 
   - id: us-broker-approval
-    title: 증권사 B — 사람 승인 하나만 AI 까지 켰을 때
+    title: 증권사 B — 사람 승인 하나만 AI까지 켰을 때
     org: 증권사 B (가상)
     story: 같은 회사가 '송금·주문은 사람 승인 후 실행' 하나만 에이전트에 적용했다.
     preset: US-2
@@ -36,7 +36,7 @@ cases:
     profile: trading
     scenario: prompt_injection
     expect: blocked
-    lesson: 통제 하나를 에이전트에 적용하자 결과가 뒤집힌다 — 간극은 '규정이 없다' 가 아니라 '사람에게만 걸려 있다' 다.
+    lesson: 통제 하나를 에이전트에 적용하자 결과가 뒤집힌다 — 간극은 '규정이 없다'가 아니라 '사람에게만 걸려 있다' 다.
 
   # ── 2. 사람 승인만으로 충분한가 ─────────────────────────────────────
   - id: approval-fatigue
@@ -53,7 +53,7 @@ cases:
   - id: approval-with-limits
     title: 증권사 B — 승인 + 도구에 박힌 한도
     org: 증권사 B (가상)
-    story: 금액·받는 계좌·횟수 한도를 에이전트 도구 자체에 걸었다(최소 권한을 AI 까지).
+    story: 금액·받는 계좌·횟수 한도를 에이전트 도구 자체에 걸었다(최소 권한을 AI까지).
     preset: US-2
     levels: {human_approval: 2, least_privilege: 2}
     profile: trading
@@ -75,12 +75,12 @@ cases:
   - id: fintech-coding-eu
     title: 핀테크 C — EU 강제 규제만(DORA)
     org: 핀테크 C (가상)
-    story: 같은 회사가 EU 에서 영업해 DORA 를 지킨다. DORA 는 AI 를 언급하지 않는다.
+    story: 같은 회사가 EU에서 영업해 DORA를 지킨다. DORA는 AI를 언급하지 않는다.
     preset: EU-2
     profile: coding
     scenario: supply_chain
     expect: blocked
-    lesson: DORA 의 변경 승인(사람·계정 층)이 새 버전 도입을 1단계에서 막는다 — AI 전용 규정이 없어도 일반 통제가 공급망 경로를 끊는 예.
+    lesson: DORA의 변경 승인(사람·계정 층)이 새 버전 도입을 1단계에서 막는다 — AI 전용 규정이 없어도 일반 통제가 공급망 경로를 끊는 예.
 
   # ── 4. 설계로 공격면 없애기 ─────────────────────────────────────────
   - id: insurer-internal
@@ -93,7 +93,7 @@ cases:
     expect: no_surface
     lesson: 외부 입력을 읽지 않게 설계하면 이 공격면 자체가 없다 — 통제보다 앞서는 건 무엇을 읽게 하느냐다.
 
-  # ── 5. 공격자가 AI 를 쓸 때 — 일반 통제가 싸운다 ──────────────────────
+  # ── 5. 공격자가 AI를 쓸 때 — 일반 통제가 싸운다 ──────────────────────
   - id: ai-attacker-kr
     title: 보험사 D — 공격자가 AI 에이전트로 침투 · 한국 강제 규제만
     org: 보험사 D (가상)
@@ -102,7 +102,7 @@ cases:
     profile: internal
     scenario: ai_attacker
     expect: blocked
-    lesson: 공격자가 AI 를 써도 막는 건 일반 통제다 — 개인별 인증·계정 관리(전자금융감독규정 제13조)가 위조 계정을 2단계에서 막는다.
+    lesson: 공격자가 AI를 써도 막는 건 일반 통제다 — 개인별 인증·계정 관리(전자금융감독규정 제13조)가 위조 계정을 2단계에서 막는다.
 
   - id: ai-attacker-eu
     title: 보험사 D — 같은 공격 · EU 강제 규제만
@@ -112,18 +112,18 @@ cases:
     profile: internal
     scenario: ai_attacker
     expect: reduced
-    lesson: 이 레지스트리 코딩으로는 DORA 가 개인별 고유 식별자를 요구하지 않는다 — 침투는 되고, 자산 목록·최소 권한·탐지가 범위만 줄인다.
+    lesson: 이 레지스트리 코딩으로는 DORA가 개인별 고유 식별자를 요구하지 않는다 — 침투는 되고, 자산 목록·최소 권한·탐지가 범위만 줄인다.
 
   # ── 6. 막을 수 없는 것 ──────────────────────────────────────────────
   - id: vendor-token-all
-    title: 시중은행 A — 연동 업체가 뚫렸다 · 모든 통제를 AI 까지
+    title: 시중은행 A — 연동 업체가 뚫렸다 · 모든 통제를 AI까지
     org: 시중은행 A (가상)
     story: 에이전트가 쓰는 업무 연동 플랫폼이 침해돼 연동 토큰이 털렸다. 은행은 7개 통제를 모두 에이전트까지 갖췄다.
     preset: all
     profile: workflow
     scenario: ai_credentials
     expect: reduced
-    lesson: 업체가 뚫리면 내 통제로는 막을 수 없다 — 다 켜도 '피해 축소' 가 최선이고, 연동별 자격증명·최소 권한·빠른 폐기가 그 크기를 정한다.
+    lesson: 업체가 뚫리면 내 통제로는 막을 수 없다 — 다 켜도 '피해 축소'가 최선이고, 연동별 자격증명·최소 권한·빠른 폐기가 그 크기를 정한다.
 
   # ── 7. 멀티 에이전트 ────────────────────────────────────────────────
   - id: multi-agent-us
@@ -183,7 +183,7 @@ cases:
   - id: support-cross-customer-fixed
     title: 시중은행 A — 조회 범위를 세션 고객으로 묶었을 때
     org: 시중은행 A (가상)
-    story: 에이전트 조회 도구를 인증된 고객 한 명 범위로 제한했다(최소 권한을 AI 까지).
+    story: 에이전트 조회 도구를 인증된 고객 한 명 범위로 제한했다(최소 권한을 AI까지).
     preset: KR-2
     levels: {least_privilege: 2}
     profile: support
@@ -258,7 +258,7 @@ cases:
   - id: code-us-strict
     title: 핀테크 C — 코딩 에이전트가 이슈 속 스크립트를 실행 · 미국 강제 규제만
     org: 핀테크 C (가상)
-    story: 저장소 이슈를 읽고 재현 스크립트를 만들어 돌려 보는 사내 코딩 에이전트. 이슈 본문에 '이 명령으로 확인해 달라' 는 지시가 섞여 있다.
+    story: 저장소 이슈를 읽고 재현 스크립트를 만들어 돌려 보는 사내 코딩 에이전트. 이슈 본문에 '이 명령으로 확인해 달라'는 지시가 섞여 있다.
     preset: US-2
     profile: coding
     scenario: code_execution
@@ -266,7 +266,7 @@ cases:
     lesson: 강제 규제는 사람의 서버 접근을 묶지만 에이전트가 만든 코드의 실행은 묶지 않는다 — 실행·탈출·지속까지 끼어드는 통제가 없다.
 
   - id: code-us-sandbox
-    title: 핀테크 C — 같은 에이전트, 격리 실행(최소 권한)만 AI 까지
+    title: 핀테크 C — 같은 에이전트, 격리 실행(최소 권한)만 AI까지
     org: 핀테크 C (가상)
     story: 같은 회사가 '외부 입력이 섞인 작업의 코드는 네트워크·파일이 막힌 격리 환경에서만 실행' 하나를 에이전트에 적용했다.
     preset: US-2

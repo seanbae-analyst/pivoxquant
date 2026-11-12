@@ -7,6 +7,7 @@ body{min-width:1200px}
 .wrap.wide{max-width:1400px;padding:0 40px 72px}
 .dim{color:var(--pq-ivory-dim);font-weight:400}
 .hero.compact h1{font-size:30px}
+.hero.compact{padding-top:8px}
 .hero.compact .lede{font-size:15.5px;max-width:92ch}
 main{gap:32px}
 
@@ -175,8 +176,11 @@ body.comparing .cmp-grp .lab{color:var(--pq-bronze)}
 tr.chg>td{background:var(--pq-bronze-wash)}
 
 /* ── 한눈에: KPI 3개 (통제 없음 → 기준 → 지금/변경안 → 모두 AI 까지) ── */
-.band{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
-.kpi{min-width:0;padding:18px 20px 16px;border-radius:var(--pq-radius-card);background:var(--pq-card-veil);border:1px solid var(--pq-ivory-line)}
+.band{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;border-top:1px solid var(--pq-ivory-line-strong);border-bottom:1px solid var(--pq-ivory-line)}
+.kpi{min-width:0;padding:18px 24px 18px}
+.kpi+.kpi{box-shadow:inset 1px 0 0 var(--pq-ivory-line)}
+.kpi:first-child{padding-left:0}
+.kpi:last-child{padding-right:0}
 .kpi .k{font-size:13px;color:var(--pq-ivory-dim)}
 .kpi .v{margin-top:4px;font-size:32px;font-weight:700;letter-spacing:-0.03em;line-height:1.15;color:var(--pq-bronze);font-variant-numeric:tabular-nums}
 .kpi .v small{margin-left:6px;font-size:14px;font-weight:500;letter-spacing:0;color:var(--pq-ivory-dim)}

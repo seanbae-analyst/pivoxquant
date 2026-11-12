@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>PivoxPolicy — AI 에이전트 시대의 금융 내부통제</title>
-<meta name="description" content="규제 32건을 7개 통제 × 두 층(사람·계정 / AI)으로 재고, 실제 사건 45건으로 다시 돌려 보는 정책 연구 도구." />
+<meta name="description" content="한국·미국·EU 규제 32건을 직원·계정과 AI 에이전트 두 갈래로 다시 판정하고, 공개된 AI 에이전트 사건 45건에 비춰 본 정책 연구." />
 <meta name="theme-color" content="#050505" />
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
@@ -268,102 +268,100 @@ footer.site .links{display:flex;flex-wrap:wrap;gap:4px 16px}
   .flow-h,.flow-top{flex-wrap:wrap}
 }
 
-/* landing.css — 첫 화면(out/index.html). 토큰 · 뼈대는 tokens.css · base.css, 흐름도는 flow.css.
-   박스 장식 · 알약 · 글로우 · 그라디언트 · italic 없음, 빨강 · 초록 없음. 폰에서도 읽힌다(모의 테스트와 달리). */
+/* landing.css — 첫 화면(out/index.html). 연구 노트처럼: 머리말 → 요약과 그림 1 → 모의 테스트(그림 2·3) → 방법 표 → 한계.
+   섹션 제목은 왼쪽 칸(사이드헤드), 내용은 오른쪽. 상자는 그림에만 쓰고 나머지는 선과 여백으로 나눈다.
+   토큰 · 뼈대는 tokens.css · base.css, 흐름도는 flow.css. 알약 · 글로우 · 그라디언트 · 빨강/초록 없음. 폰에서도 읽힌다. */
 
-.wrap.land{max-width:1200px}
-.land-hero{padding-top:24px}
-.land-hero h1{font-size:clamp(30px,4vw,46px);max-width:22ch}
-.land-hero .lede{max-width:70ch}
-.land-hero .lede b{color:var(--pq-ivory);font-weight:600}
-.cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
-.land-hero .meta{font-size:13px;color:var(--pq-ivory-dim)}
-.sec-h>a{font-size:14px;color:var(--pq-bronze);white-space:nowrap}
+.wrap.land{max-width:1160px}
+main{gap:0}
 
-/* 숫자 다섯 — 칸 사이 선만 */
-.figs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border-top:1px solid var(--pq-ivory-line-strong);border-bottom:1px solid var(--pq-ivory-line-strong)}
-.figs>div{display:flex;flex-direction:column;gap:2px;padding:20px 18px 18px;min-width:0}
-.figs>div+div{box-shadow:inset 1px 0 0 var(--pq-ivory-line)}
-.figs .v{font-size:36px;font-weight:700;letter-spacing:-0.03em;line-height:1.1;color:var(--pq-bronze);font-variant-numeric:tabular-nums}
-.figs .v small{margin-left:3px;font-size:16px;font-weight:600;color:var(--pq-ivory-dim)}
-.figs .k{margin-top:6px;font-size:14px;font-weight:600;color:var(--pq-ivory)}
-.figs .h{font-size:12.5px;line-height:1.5;color:var(--pq-ivory-dim)}
+/* 머리말 */
+.masthead{padding:56px 0 48px;max-width:860px}
+.kicker{margin:0 0 18px;font-size:13px;color:var(--pq-ivory-dim);letter-spacing:0}
+.kicker time{color:var(--pq-ivory-soft)}
+.masthead h1{font-size:clamp(30px,4.2vw,48px);line-height:1.18;letter-spacing:-0.035em;max-width:18ch}
+.deck{margin:22px 0 0;font-size:18px;line-height:1.75;color:var(--pq-ivory-soft);max-width:60ch}
+.go{display:flex;flex-wrap:wrap;align-items:center;gap:12px 22px;margin:30px 0 0}
+.go .more{font-size:15px;color:var(--pq-ivory-soft);text-decoration:underline;text-decoration-color:var(--pq-ivory-line-strong);text-underline-offset:5px}
+.go .more:hover{color:var(--pq-ivory);text-decoration-color:var(--pq-bronze)}
 
-/* 발견 — 주장 넷 + 작은 매트릭스 */
-.find{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:40px;align-items:start}
-.claims{margin:0;padding:0;list-style:none;counter-reset:c;display:grid;gap:0}
-.claims li{counter-increment:c;position:relative;margin:0;padding:14px 0 14px 40px;border-top:1px solid var(--pq-ivory-line);font-size:15px;line-height:1.7;color:var(--pq-ivory-soft)}
-.claims li:first-child{border-top:0;padding-top:0}
-.claims li::before{content:counter(c);position:absolute;left:0;top:14px;width:26px;height:26px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--pq-bronze);box-shadow:inset 0 0 0 1px var(--pq-bronze-line)}
-.claims li:first-child::before{top:0}
-.claims b{color:var(--pq-ivory);font-weight:600}
-.mini-wrap{margin:0}
-.mini{width:100%;border-collapse:separate;border-spacing:2px;table-layout:fixed;font-size:12.5px}
+/* 사이드헤드 섹션 — 제목 왼쪽, 내용 오른쪽, 위에 선 하나 */
+.sh{display:grid;grid-template-columns:168px minmax(0,1fr);gap:0 40px;padding:36px 0 52px;border-top:1px solid var(--pq-ivory-line-strong)}
+.sh>h2{font-size:15px;font-weight:600;letter-spacing:-0.01em;color:var(--pq-ivory);padding-top:3px}
+.body{margin:0 0 26px;font-size:16px;line-height:1.8;color:var(--pq-ivory-soft);max-width:66ch}
+
+/* 요약 + 그림 1 */
+.lead-grid{display:grid;grid-template-columns:minmax(0,0.9fr) minmax(0,1.1fr);gap:44px;align-items:start}
+.summary p{margin:0 0 16px;font-size:16.5px;line-height:1.8;color:var(--pq-ivory-soft);max-width:none}
+.summary p:first-child{font-size:19px;line-height:1.65;color:var(--pq-ivory)}
+
+/* 그림 — 번호 붙은 캡션이 위에 */
+.fig{margin:0}
+.fig figcaption{margin:0 0 14px;font-size:13px;line-height:1.6;color:var(--pq-ivory-dim);max-width:62ch}
+.fig figcaption b{margin-right:6px;font-weight:700;color:var(--pq-ivory)}
+.fig.wide{margin-bottom:34px}
+.preview{display:grid;gap:18px}
+.key{display:flex;flex-wrap:wrap;gap:6px 16px;margin:10px 0 0;font-size:12px;color:var(--pq-ivory-dim)}
+.key span{display:inline-flex;align-items:center;gap:6px}
+.key i{display:inline-block;width:11px;height:11px;border-radius:2px}
+.key i.s2{background:var(--pq-bronze)}
+.key i.s1{background:var(--pq-bronze-line)}
+.key i.s0{box-shadow:inset 0 0 0 1px var(--pq-ivory-line-strong)}
+.note-s{margin:12px 0 0;font-size:12.5px;line-height:1.65;color:var(--pq-ivory-dim);max-width:70ch}
+
+/* 작은 매트릭스 */
+.mini{width:100%;border-collapse:separate;border-spacing:2px;table-layout:fixed;font-size:12px}
 .mini th,.mini td{border:0;padding:0}
-.mini thead th{padding:0 2px 6px;text-align:center;font-size:13px;font-weight:600;color:var(--pq-ivory);white-space:normal}
-.mini thead th small{display:block;font-size:11.5px;font-weight:500;color:var(--pq-ivory-dim)}
-.mini thead th:first-child{width:34%;text-align:left}
+.mini thead th{padding:0 2px 6px;text-align:center;font-size:12.5px;font-weight:600;color:var(--pq-ivory);white-space:normal}
+.mini thead th small{display:block;font-size:11px;font-weight:500;color:var(--pq-ivory-dim)}
+.mini thead th:first-child{width:32%;text-align:left}
 .mini tbody th{padding:0 8px 0 0;font-size:13px;font-weight:500;color:var(--pq-ivory-soft);text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mini td{height:30px;text-align:center;vertical-align:middle;border-radius:3px;font-weight:600;font-size:12px}
-.mini td.s0{color:var(--pq-ivory-faint);box-shadow:inset 0 0 0 1px var(--pq-ivory-line)}
+.mini td{height:28px;text-align:center;vertical-align:middle;border-radius:2px;font-weight:600}
+.mini td.s0{box-shadow:inset 0 0 0 1px var(--pq-ivory-line)}
 .mini td.s1{background:var(--pq-bronze-line);color:var(--pq-ivory)}
 .mini td.s2{background:var(--pq-bronze);color:var(--pq-ink)}
 .mini td.s3{background:var(--pq-ivory);color:var(--pq-ink)}
-.mini td.ai{position:relative}
-.mini-wrap figcaption,.preview figcaption{margin-top:10px;font-size:12.5px;line-height:1.6;color:var(--pq-ivory-dim)}
 
-/* 모의 테스트 미리보기 */
-.lead2{margin:0 0 18px;font-size:15.5px;line-height:1.75;color:var(--pq-ivory-soft);max-width:92ch}
-.preview{margin:0;display:grid;gap:18px}
-.sim-two{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:40px;margin-top:28px}
-.bars{display:grid;grid-template-columns:minmax(120px,auto) minmax(0,1fr) auto;align-items:center;gap:10px 12px;margin:0 0 10px}
+/* 그림 3 + 쓰는 법 */
+.sim-two{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:44px}
+.bars{display:grid;grid-template-columns:minmax(120px,auto) minmax(0,1fr) auto;align-items:center;gap:10px 12px;margin:0}
 .bars dt{font-size:13px;color:var(--pq-ivory-soft);white-space:nowrap}
 .bars dd{margin:0;min-width:0}
 .bars .n{font-size:13px;font-weight:600;color:var(--pq-ivory);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
-.track{position:relative;display:block;height:12px;border-radius:2px;background:var(--pq-ivory-line);overflow:hidden}
+.track{position:relative;display:block;height:10px;border-radius:1px;background:var(--pq-ivory-line);overflow:hidden}
 .track .hi,.track .lo{position:absolute;left:0;top:0;bottom:0}
 .track .hi{background:var(--pq-bronze-line)}
 .track .lo{background:var(--pq-bronze)}
-.uses ul{margin:0 0 16px;padding:0;list-style:none}
-.uses li{margin:0;padding:10px 0;border-top:1px solid var(--pq-ivory-line);font-size:14.5px;line-height:1.65;color:var(--pq-ivory-soft)}
-.uses li:first-child{border-top:0;padding-top:0}
-.uses b{color:var(--pq-ivory);font-weight:600}
+.uses h3{margin:0 0 12px;font-size:15px;font-weight:600}
+.uses p{margin:0 0 12px;font-size:15px;line-height:1.75;color:var(--pq-ivory-soft);max-width:none}
+.uses p:last-child{margin:20px 0 0}
 
-/* 만드는 법 — 흐름도(flow.css) 위에 설명 칸 */
-.pipe .fn .tag{color:var(--pq-bronze)}
-.pipe .fn .ft{font-size:15px}
-.pipe .fn .fi{margin-top:6px;font-size:12.5px;line-height:1.55;color:var(--pq-ivory-mid)}
-.pipe-note{margin-top:12px;max-width:none}
+/* 방법 표 */
+.method{font-size:14px}
+.method th,.method td{vertical-align:top;padding:12px 12px 12px 0}
+.method thead th{padding-top:0}
+.method tbody th{font-weight:600;color:var(--pq-ivory);white-space:nowrap}
+.method td{color:var(--pq-ivory-soft);line-height:1.6}
+.method .n{width:22px;color:var(--pq-ivory-dim);font-variant-numeric:tabular-nums}
+.method .who{white-space:nowrap;color:var(--pq-bronze)}
+.method .now{color:var(--pq-ivory-mid);font-size:13px}
 
-/* 들어가기 */
-.go{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-.go .card{display:flex;flex-direction:column;gap:6px;color:inherit;transition:border-color 150ms var(--pq-ease),background-color 150ms var(--pq-ease)}
-.go .card:hover{text-decoration:none;border-color:var(--pq-bronze-line);background:var(--pq-bronze-wash)}
-.go .card .k{font-size:13px;color:var(--pq-bronze);font-weight:600}
-.go .card .t{font-size:15.5px;font-weight:600;line-height:1.5;color:var(--pq-ivory)}
-.go .card .h{font-size:12.5px;color:var(--pq-ivory-dim)}
-.lim li{margin:6px 0}
+/* 한계 */
+.lim{margin:0;padding:0;list-style:none;max-width:76ch}
+.lim li{margin:0;padding:12px 0;border-top:1px solid var(--pq-ivory-line);font-size:14.5px;line-height:1.75;color:var(--pq-ivory-soft)}
+.lim li:first-child{border-top:0;padding-top:0}
 
 @media(max-width:980px){
-  .figs{grid-template-columns:repeat(3,minmax(0,1fr))}
-  .figs>div:nth-child(4){box-shadow:none}
-  .figs>div:nth-child(n+4){border-top:1px solid var(--pq-ivory-line)}
-  .find,.sim-two{grid-template-columns:minmax(0,1fr)}
+  .lead-grid,.sim-two{grid-template-columns:minmax(0,1fr)}
+  .sh{grid-template-columns:minmax(0,1fr);gap:14px}
 }
-@media(max-width:860px){
-  .pipe{grid-template-columns:minmax(0,1fr)!important}
-  .go{grid-template-columns:minmax(0,1fr)}
-}
-@media(max-width:560px){
-  .figs{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .figs>div{padding:16px 12px}
-  .figs>div:nth-child(n){box-shadow:none;border-top:1px solid var(--pq-ivory-line)}
-  .figs>div:nth-child(-n+2){border-top:0}
-  .figs>div:nth-child(2n){box-shadow:inset 1px 0 0 var(--pq-ivory-line)}
-  .figs .v{font-size:30px}
+@media(max-width:640px){
+  .masthead{padding:32px 0 32px}
+  .deck{font-size:16.5px}
+  .sh{padding:28px 0 36px}
+  .method .now,.method thead th:last-child{display:none}
   .mini tbody th{white-space:normal;font-size:12px}
-  .mini thead th:first-child{width:30%}
+  .mini thead th:first-child{width:28%}
   .bars{grid-template-columns:minmax(0,1fr) auto}
   .bars dt{grid-column:1/-1;margin-bottom:-6px}
 }
@@ -377,109 +375,83 @@ footer.site .links{display:flex;flex-wrap:wrap;gap:4px 16px}
 <header class="topbar">
 <a class="brand" href="./" aria-label="PivoxPolicy 홈">Pivox<span class="b">Policy</span></a>
 <nav class="nav" aria-label="페이지">
-<a href="#finding">발견</a><a href="#sim">모의 테스트</a><a href="#how">만드는 법</a><a href="dashboard.html">대시보드</a>
+<a href="sim.html">모의 테스트</a><a href="dashboard.html">대시보드</a><a href="#method">방법</a>
 </nav>
 </header>
 
 <main id="main">
 
-
-<header class="hero land-hero" id="top">
-<span class="eyebrow">정책 연구 · AI 에이전트 금융 내부통제</span>
+<header class="masthead" id="top">
+<p class="kicker">연구 노트 <time datetime="2026-11-12T09:07:45Z">2026년 11월 12일</time> 기준</p>
 <h1>AI 에이전트 시대, 금융회사 내부통제는 안전한가</h1>
-<p class="lede">규제가 요구하는 통제를 <b>사람·계정</b>에 대한 것과 <b>AI 에이전트</b>에 대한 것으로 나눠 재고, 실제 사건으로 그 통제가 있었다면 어땠을지 다시 돌려 본다. 규제 32건 · 통제 7개 · 실제 사건 45건.</p>
-<div class="cta">
-<a class="btn btn-primary" href="sim.html">모의 테스트 열기</a>
-<a class="btn" href="dashboard.html">대시보드 보기</a>
-</div>
-<p class="meta"><time datetime="2026-11-12T08:33:12Z">2026-11-12</time> 레지스트리 기준 · 숫자는 빌드할 때마다 다시 계산 · 법률 자문이 아니다</p>
+<p class="deck">규제가 요구하는 통제를 두 갈래로 나눠 읽었다. 직원과 계정에 거는 통제가 하나, 같은 통제를 AI 에이전트에 거는 것이 또 하나다. 한국과 미국, EU의 문서 32건을 이렇게 다시 판정하고, 공개된 AI 에이전트 사건 45건에 비춰 봤다.</p>
+<p class="go"><a class="btn btn-primary" href="sim.html">모의 테스트 열기</a><a class="more" href="dashboard.html">대시보드에서 문서와 조문 보기</a></p>
 </header>
 
-
-<section class="figs" aria-label="한눈에">
-<div><span class="v">32</span><span class="k">규제·가이드라인 문서</span><span class="h">규범 문서 23건 · 한국 · 미국 · EU · 국제</span></div>
-<div><span class="v">45</span><span class="k">AI 에이전트 실제 사건</span><span class="h">실패한 통제가 확인된 것 25건</span></div>
-<div><span class="v">0.96</span><span class="k">사건 판정 일치도 κ</span><span class="h">서로 보지 않은 코더 두 팀</span></div>
-<div><span class="v">16<small>칸</small></span><span class="k">간극</span><span class="h">사람에겐 구속력, AI 에겐 없음</span></div>
-<div><span class="v">0<small>칸</small></span><span class="k">에이전트를 이름 붙인 구속력 요구</span><span class="h">관할 4 × 통제 7 중</span></div>
-</section>
-
-
-<section id="finding" aria-labelledby="h-find">
-<div class="sec-h"><h2 id="h-find">발견 — 사람에겐 묶여 있고, AI 에겐 풀려 있다</h2><span>조정본 매트릭스 · 2026-11-12</span></div>
-<div class="find">
-<ol class="claims">
-<li><b>사람·계정 층은 이미 구속력이 있다.</b> 한국 · 미국 · EU 의 21칸(관할 3 × 통제 7) 중 19칸을 구속력 있는 문서가 요구한다.</li>
-<li><b>같은 통제를 AI 에 적용하라는 구속력 요구는 3칸뿐이다.</b> 에이전트를 이름으로 명시한 구속력 문서는 0칸 — 나머지는 가이드라인(자율)이거나 다루지 않는다.</li>
-<li><b>간극 16칸</b> — 한국 6 · 미국 6 · EU 4. 사람·계정에는 구속력 있는 요구가 있는데, 같은 통제를 AI 에 적용하라는 구속력 요구는 없는 칸이다.</li>
-<li><b>실제 사건에서 가장 자주 실패한 통제</b>는 최소 권한 19건, 사람 승인 16건 (사건 45건 조정본).</li>
-</ol>
-<figure class="mini-wrap">
-<table class="mini"><thead><tr><th scope="col">통제</th><th scope="col" colspan="2">한국<small>사람 · AI</small></th><th scope="col" colspan="2">미국<small>사람 · AI</small></th><th scope="col" colspan="2">EU<small>사람 · AI</small></th></tr></thead><tbody><tr><th scope="row">1. 인벤토리</th><td class="s2" title="한국 · 사람·계정 층 — 구속력">구속</td><td class="s1 ai" title="한국 · AI 적용 층 — 자율">자율</td><td class="s2" title="미국 · 사람·계정 층 — 구속력">구속</td><td class="s1 ai" title="미국 · AI 적용 층 — 자율">자율</td><td class="s2" title="EU · 사람·계정 층 — 구속력">구속</td><td class="s0 ai" title="EU · AI 적용 층 — 다루지 않음">—</td></tr><tr><th scope="row">2. 공급자 관리</th><td class="s2" title="한국 · 사람·계정 층 — 구속력">구속</td><td class="s1 ai" title="한국 · AI 적용 층 — 자율">자율</td><td class="s2" title="미국 · 사람·계정 층 — 구속력">구속</td><td class="s1 ai" title="미국 · AI 적용 층 — 자율">자율</td><td class="s2" title="EU · 사람·계정 층 — 구속력">구속</td><td class="s0 ai" title="EU · AI 적용 층 — 다루지 않음">—</td></tr><tr><th scope="row">3. 고유 식별자</th><td class="s2" title="한국 · 사람·계정 층 — 구속력">구속</td><td class="s0 ai" title="한국 · AI 적용 층 — 다루지 않음">—</td><td class="s1" title="미국 · 사람·계정 층 — 자율">자율</td><td class="s1 ai" title="미국 · AI 적용 층 — 자율">자율</td><td class="s0" title="EU · 사람·계정 층 — 다루지 않음">—</td><td class="s0 ai" title="EU · AI 적용 층 — 다루지 않음">—</td></tr><tr><th scope="row">4. 최소 권한</th><td class="s2" title="한국 · 사람·계정 층 — 구속력">구속</td><td class="s1 ai" title="한국 · AI 적용 층 — 자율">자율</td><td class="s2" title="미국 · 사람·계정 층 — 구속력">구속</td><td class="s1 ai" title="미국 · AI 적용 층 — 자율">자율</td><td class="s2" title="EU · 사람·계정 층 — 구속력">구속</td><td class="s0 ai" title="EU · AI 적용 층 — 다루지 않음">—</td></tr><tr><th scope="row">5. 사람 승인</th><td class="s2" title="한국 · 사람·계정 층 — 구속력">구속</td><td class="s2 ai" title="한국 · AI 적용 층 — 구속력">구속</td><td class="s2" title="미국 · 사람·계정 층 — 구속력">구속</td><td class="s1 ai" title="미국 · AI 적용 층 — 자율">자율</td><td class="s2" title="EU · 사람·계정 층 — 구속력">구속</td><td class="s2 ai" title="EU · AI 적용 층 — 구속력">구속</td></tr><tr><th scope="row">6. 감사 기록</th><td class="s2" title="한국 · 사람·계정 층 — 구속력">구속</td><td class="s1 ai" title="한국 · AI 적용 층 — 자율">자율</td><td class="s2" title="미국 · 사람·계정 층 — 구속력">구속</td><td class="s1 ai" title="미국 · AI 적용 층 — 자율">자율</td><td class="s2" title="EU · 사람·계정 층 — 구속력">구속</td><td class="s0 ai" title="EU · AI 적용 층 — 다루지 않음">—</td></tr><tr><th scope="row">7. 즉시 중단</th><td class="s2" title="한국 · 사람·계정 층 — 구속력">구속</td><td class="s1 ai" title="한국 · AI 적용 층 — 자율">자율</td><td class="s2" title="미국 · 사람·계정 층 — 구속력">구속</td><td class="s1 ai" title="미국 · AI 적용 층 — 자율">자율</td><td class="s2" title="EU · 사람·계정 층 — 구속력">구속</td><td class="s2 ai" title="EU · AI 적용 층 — 구속력">구속</td></tr></tbody></table>
-<figcaption>칸 = 그 관할에서 그 통제를 요구하는 가장 센 문서. 구속 = 구속력 · 자율 = 가이드라인 · 명시 = 구속력 + 에이전트 명시 · — = 다루지 않음. 각 관할의 왼쪽이 사람·계정 층, 오른쪽이 AI 적용 층.</figcaption>
+<section class="sh lead" id="finding" aria-labelledby="h-sum">
+<h2 id="h-sum">요약</h2>
+<div class="lead-grid">
+<div class="summary">
+<p>세 관할 모두 직원과 계정에 대해서는 이미 구속력 있는 요구를 갖고 있다. 관할 3곳에 통제 7개, 모두 21칸 가운데 19칸이 그렇다.</p>
+<p>같은 통제를 AI 에이전트에도 적용하라고 구속력 있게 요구하는 칸은 3칸뿐이다. 에이전트를 직접 언급하는 구속력 문서는 아직 없고(0칸), 나머지는 가이드라인이거나 아예 다루지 않는다.</p>
+<p>이 차이가 나는 칸이 16개다. 한국 6개, 미국 6개, EU 4개. 공개 사건에서 가장 자주 실패한 통제는 최소 권한(19건)과 사람 승인(16건)였다.</p>
+</div>
+<figure class="fig">
+<figcaption><b>그림 1</b> 관할마다 가장 센 문서가 요구하는 수준. 관할별 왼쪽 칸은 직원·계정, 오른쪽 칸은 AI 에이전트.</figcaption>
+<table class="mini"><thead><tr><th scope="col">통제</th><th scope="col" colspan="2">한국<small>직원 / AI</small></th><th scope="col" colspan="2">미국<small>직원 / AI</small></th><th scope="col" colspan="2">EU<small>직원 / AI</small></th></tr></thead><tbody><tr><th scope="row">1. 인벤토리</th><td class="s2" title="한국 · 사람·계정 층 — 구속력">구속</td><td class="s1 ai" title="한국 · AI 적용 층 — 자율">자율</td><td class="s2" title="미국 · 사람·계정 층 — 구속력">구속</td><td class="s1 ai" title="미국 · AI 적용 층 — 자율">자율</td><td class="s2" title="EU · 사람·계정 층 — 구속력">구속</td><td class="s0 ai" title="EU · AI 적용 층 — 다루지 않음"></td></tr><tr><th scope="row">2. 공급자 관리</th><td class="s2" title="한국 · 사람·계정 층 — 구속력">구속</td><td class="s1 ai" title="한국 · AI 적용 층 — 자율">자율</td><td class="s2" title="미국 · 사람·계정 층 — 구속력">구속</td><td class="s1 ai" title="미국 · AI 적용 층 — 자율">자율</td><td class="s2" title="EU · 사람·계정 층 — 구속력">구속</td><td class="s0 ai" title="EU · AI 적용 층 — 다루지 않음"></td></tr><tr><th scope="row">3. 고유 식별자</th><td class="s2" title="한국 · 사람·계정 층 — 구속력">구속</td><td class="s0 ai" title="한국 · AI 적용 층 — 다루지 않음"></td><td class="s1" title="미국 · 사람·계정 층 — 자율">자율</td><td class="s1 ai" title="미국 · AI 적용 층 — 자율">자율</td><td class="s0" title="EU · 사람·계정 층 — 다루지 않음"></td><td class="s0 ai" title="EU · AI 적용 층 — 다루지 않음"></td></tr><tr><th scope="row">4. 최소 권한</th><td class="s2" title="한국 · 사람·계정 층 — 구속력">구속</td><td class="s1 ai" title="한국 · AI 적용 층 — 자율">자율</td><td class="s2" title="미국 · 사람·계정 층 — 구속력">구속</td><td class="s1 ai" title="미국 · AI 적용 층 — 자율">자율</td><td class="s2" title="EU · 사람·계정 층 — 구속력">구속</td><td class="s0 ai" title="EU · AI 적용 층 — 다루지 않음"></td></tr><tr><th scope="row">5. 사람 승인</th><td class="s2" title="한국 · 사람·계정 층 — 구속력">구속</td><td class="s2 ai" title="한국 · AI 적용 층 — 구속력">구속</td><td class="s2" title="미국 · 사람·계정 층 — 구속력">구속</td><td class="s1 ai" title="미국 · AI 적용 층 — 자율">자율</td><td class="s2" title="EU · 사람·계정 층 — 구속력">구속</td><td class="s2 ai" title="EU · AI 적용 층 — 구속력">구속</td></tr><tr><th scope="row">6. 감사 기록</th><td class="s2" title="한국 · 사람·계정 층 — 구속력">구속</td><td class="s1 ai" title="한국 · AI 적용 층 — 자율">자율</td><td class="s2" title="미국 · 사람·계정 층 — 구속력">구속</td><td class="s1 ai" title="미국 · AI 적용 층 — 자율">자율</td><td class="s2" title="EU · 사람·계정 층 — 구속력">구속</td><td class="s0 ai" title="EU · AI 적용 층 — 다루지 않음"></td></tr><tr><th scope="row">7. 즉시 중단</th><td class="s2" title="한국 · 사람·계정 층 — 구속력">구속</td><td class="s1 ai" title="한국 · AI 적용 층 — 자율">자율</td><td class="s2" title="미국 · 사람·계정 층 — 구속력">구속</td><td class="s1 ai" title="미국 · AI 적용 층 — 자율">자율</td><td class="s2" title="EU · 사람·계정 층 — 구속력">구속</td><td class="s2 ai" title="EU · AI 적용 층 — 구속력">구속</td></tr></tbody></table>
+<p class="key"><span><i class="s2"></i>구속력</span><span><i class="s1"></i>가이드라인</span><span><i class="s0"></i>다루지 않음</span></p>
 </figure>
 </div>
 </section>
 
-
-<section id="sim" aria-labelledby="h-sim">
-<div class="sec-h"><h2 id="h-sim">모의 테스트 — 통제를 켜고 끄며 공격을 다시 돌린다</h2><a href="sim.html">열기 →</a></div>
-<p class="lead2">회사의 통제 수준과 에이전트 환경을 고르면, 공격 원형 12개가 단계마다 어느 통제 앞에서 멈추는지와 실제 사건 45건이 그 설정이었다면 어떻게 끝났을지가 바로 계산된다. 가상 회사 데모 케이스 25개 · 에이전트 종류 8개 · 관할 프리셋 · 사건 흐름 · 사건→통제→조문 추적 · 개선 조치 CSV · 변경안 비교 · 새 규제 가정해 보기 · OWASP Agentic Top 10 커버리지 · 자가 진단 · 정책 초안.</p>
-<figure class="preview">
-<div class="flow-row"><div class="flow-top"><span class="flow-l">한국 — 강제 규제만</span></div><ol class="flow" style="grid-template-columns:repeat(4, minmax(0,1fr)) 176px" aria-label="한국 — 강제 규제만 — 공격 흐름"><li class="fn pass"><div class="fh"><span class="no">1</span><span class="tag">통과</span></div><div class="ft">업체·연동이 뚫리거나 AI 인프라가 노출된다</div><ul class="gates"><li class="off" title="인벤토리 · AI 적용 — 에이전트·AI 엔드포인트 목록이 있어 열린 채 잊힌 것이 없다"><i></i><span class="g">인벤토리 AI</span><span class="e">꺼짐</span></li><li class="off" title="공급자 관리 · AI 적용 — 연동 업체와 사고 통지 계약이 있어 침해를 빨리 듣는다"><i></i><span class="g">공급자 관리 AI</span><span class="e">꺼짐</span></li></ul></li><li class="fn pass"><div class="fh"><span class="no">2</span><span class="tag">통과</span></div><div class="ft">훔친 토큰으로 접근한다</div><ul class="gates"><li class="off" title="고유 식별자 · AI 적용 — 연동·에이전트마다 자격증명이 달라 하나가 털려도 그 범위뿐이다"><i></i><span class="g">고유 식별자 AI</span><span class="e">꺼짐</span></li><li class="off" title="최소 권한 · AI 적용 — 연동 권한이 최소라 대량 조회가 안 된다"><i></i><span class="g">최소 권한 AI</span><span class="e">꺼짐</span></li></ul></li><li class="fn pass"><div class="fh"><span class="no">3</span><span class="tag">통과</span></div><div class="ft">대량 조회</div><ul class="gates"><li class="off" title="감사 기록 · AI 적용 — 연동별 호출 기록으로 이상을 본다"><i></i><span class="g">감사 기록 AI</span><span class="e">꺼짐</span></li></ul></li><li class="fn pass"><div class="fh"><span class="no">4</span><span class="tag">통과</span></div><div class="ft">토큰 폐기</div><ul class="gates"><li class="off" title="즉시 중단 · AI 적용 — 해당 연동·에이전트 자격증명을 즉시 폐기한다"><i></i><span class="g">즉시 중단 AI</span><span class="e">꺼짐</span></li></ul></li><li class="fn end damage"><div class="fh"><span class="tag">결과</span></div><div class="ft">피해 발생</div><p class="fi">연동된 데이터 대량 조회·AI 자원 도용</p></li></ol></div><div class="flow-row"><div class="flow-top"><span class="flow-l">모든 통제를 AI 까지</span></div><ol class="flow" style="grid-template-columns:repeat(4, minmax(0,1fr)) 176px" aria-label="모든 통제를 AI 까지 — 공격 흐름"><li class="fn touch"><div class="fh"><span class="no">1</span><span class="tag">범위 제한 · 기록·탐지</span></div><div class="ft">업체·연동이 뚫리거나 AI 인프라가 노출된다</div><ul class="gates"><li class="on limit" title="인벤토리 · AI 적용 — 에이전트·AI 엔드포인트 목록이 있어 열린 채 잊힌 것이 없다"><i></i><span class="g">인벤토리 AI</span><span class="e">범위 제한</span></li><li class="on detect" title="공급자 관리 · AI 적용 — 연동 업체와 사고 통지 계약이 있어 침해를 빨리 듣는다"><i></i><span class="g">공급자 관리 AI</span><span class="e">기록·탐지</span></li></ul></li><li class="fn touch"><div class="fh"><span class="no">2</span><span class="tag">범위 제한 · 범위 제한</span></div><div class="ft">훔친 토큰으로 접근한다</div><ul class="gates"><li class="on limit" title="고유 식별자 · AI 적용 — 연동·에이전트마다 자격증명이 달라 하나가 털려도 그 범위뿐이다"><i></i><span class="g">고유 식별자 AI</span><span class="e">범위 제한</span></li><li class="on limit" title="최소 권한 · AI 적용 — 연동 권한이 최소라 대량 조회가 안 된다"><i></i><span class="g">최소 권한 AI</span><span class="e">범위 제한</span></li></ul></li><li class="fn touch"><div class="fh"><span class="no">3</span><span class="tag">기록·탐지</span></div><div class="ft">대량 조회</div><ul class="gates"><li class="on detect" title="감사 기록 · AI 적용 — 연동별 호출 기록으로 이상을 본다"><i></i><span class="g">감사 기록 AI</span><span class="e">기록·탐지</span></li></ul></li><li class="fn touch"><div class="fh"><span class="no">4</span><span class="tag">멈춤·회수</span></div><div class="ft">토큰 폐기</div><ul class="gates"><li class="on contain" title="즉시 중단 · AI 적용 — 해당 연동·에이전트 자격증명을 즉시 폐기한다"><i></i><span class="g">즉시 중단 AI</span><span class="e">멈춤·회수</span></li></ul></li><li class="fn end reduced"><div class="fh"><span class="tag">결과</span></div><div class="ft">피해 축소</div><p class="fi">연동된 데이터 대량 조회·AI 자원 도용</p></li></ol></div>
-<figcaption>AI 연동·자격증명 탈취 — 고객 상담 에이전트, 실제 사건 7건이 이 경로였다. 위 = 한국 강제 규제만 지키는 회사, 아래 = 모든 통제를 AI 까지. 원형·단계는 저자 설계다.</figcaption>
+<section class="sh" id="sim" aria-labelledby="h-sim">
+<h2 id="h-sim">모의 테스트</h2>
+<div>
+<p class="body">회사의 통제 수준과 에이전트 환경을 고르면 두 가지가 바로 계산된다. 공격 원형 12개가 단계마다 어떤 통제 앞에서 멈추는지, 그리고 공개 사건 45건이 그 설정이었다면 어떻게 끝났을지. 가상 회사 데모 케이스 25개가 들어 있어 발표 중에 넘겨 가며 쓸 수 있다.</p>
+<figure class="fig wide">
+<figcaption><b>그림 2</b> 'AI 연동·자격증명 탈취' 원형을 고객 상담 에이전트에 대고 두 번 돌린 결과(실제 사건 7건이 이 경로였다). 위는 한국의 강제 규제만 지킨 경우, 아래는 모든 통제를 AI까지 켠 경우다. 원형과 단계는 저자가 설계했다.</figcaption>
+<div class="preview"><div class="flow-row"><div class="flow-top"><span class="flow-l">한국 — 강제 규제만</span></div><ol class="flow" style="grid-template-columns:repeat(4, minmax(0,1fr)) 176px" aria-label="한국 — 강제 규제만 — 공격 흐름"><li class="fn pass"><div class="fh"><span class="no">1</span><span class="tag">통과</span></div><div class="ft">업체·연동이 뚫리거나 AI 인프라가 노출된다</div><ul class="gates"><li class="off" title="인벤토리 · AI 적용 — 에이전트·AI 엔드포인트 목록이 있어 열린 채 잊힌 것이 없다"><i></i><span class="g">인벤토리 AI</span><span class="e">꺼짐</span></li><li class="off" title="공급자 관리 · AI 적용 — 연동 업체와 사고 통지 계약이 있어 침해를 빨리 듣는다"><i></i><span class="g">공급자 관리 AI</span><span class="e">꺼짐</span></li></ul></li><li class="fn pass"><div class="fh"><span class="no">2</span><span class="tag">통과</span></div><div class="ft">훔친 토큰으로 접근한다</div><ul class="gates"><li class="off" title="고유 식별자 · AI 적용 — 연동·에이전트마다 자격증명이 달라 하나가 털려도 그 범위뿐이다"><i></i><span class="g">고유 식별자 AI</span><span class="e">꺼짐</span></li><li class="off" title="최소 권한 · AI 적용 — 연동 권한이 최소라 대량 조회가 안 된다"><i></i><span class="g">최소 권한 AI</span><span class="e">꺼짐</span></li></ul></li><li class="fn pass"><div class="fh"><span class="no">3</span><span class="tag">통과</span></div><div class="ft">대량 조회</div><ul class="gates"><li class="off" title="감사 기록 · AI 적용 — 연동별 호출 기록으로 이상을 본다"><i></i><span class="g">감사 기록 AI</span><span class="e">꺼짐</span></li></ul></li><li class="fn pass"><div class="fh"><span class="no">4</span><span class="tag">통과</span></div><div class="ft">토큰 폐기</div><ul class="gates"><li class="off" title="즉시 중단 · AI 적용 — 해당 연동·에이전트 자격증명을 즉시 폐기한다"><i></i><span class="g">즉시 중단 AI</span><span class="e">꺼짐</span></li></ul></li><li class="fn end damage"><div class="fh"><span class="tag">결과</span></div><div class="ft">피해 발생</div><p class="fi">연동된 데이터 대량 조회·AI 자원 도용</p></li></ol></div><div class="flow-row"><div class="flow-top"><span class="flow-l">모든 통제를 AI까지</span></div><ol class="flow" style="grid-template-columns:repeat(4, minmax(0,1fr)) 176px" aria-label="모든 통제를 AI까지 — 공격 흐름"><li class="fn touch"><div class="fh"><span class="no">1</span><span class="tag">범위 제한 · 기록·탐지</span></div><div class="ft">업체·연동이 뚫리거나 AI 인프라가 노출된다</div><ul class="gates"><li class="on limit" title="인벤토리 · AI 적용 — 에이전트·AI 엔드포인트 목록이 있어 열린 채 잊힌 것이 없다"><i></i><span class="g">인벤토리 AI</span><span class="e">범위 제한</span></li><li class="on detect" title="공급자 관리 · AI 적용 — 연동 업체와 사고 통지 계약이 있어 침해를 빨리 듣는다"><i></i><span class="g">공급자 관리 AI</span><span class="e">기록·탐지</span></li></ul></li><li class="fn touch"><div class="fh"><span class="no">2</span><span class="tag">범위 제한 · 범위 제한</span></div><div class="ft">훔친 토큰으로 접근한다</div><ul class="gates"><li class="on limit" title="고유 식별자 · AI 적용 — 연동·에이전트마다 자격증명이 달라 하나가 털려도 그 범위뿐이다"><i></i><span class="g">고유 식별자 AI</span><span class="e">범위 제한</span></li><li class="on limit" title="최소 권한 · AI 적용 — 연동 권한이 최소라 대량 조회가 안 된다"><i></i><span class="g">최소 권한 AI</span><span class="e">범위 제한</span></li></ul></li><li class="fn touch"><div class="fh"><span class="no">3</span><span class="tag">기록·탐지</span></div><div class="ft">대량 조회</div><ul class="gates"><li class="on detect" title="감사 기록 · AI 적용 — 연동별 호출 기록으로 이상을 본다"><i></i><span class="g">감사 기록 AI</span><span class="e">기록·탐지</span></li></ul></li><li class="fn touch"><div class="fh"><span class="no">4</span><span class="tag">멈춤·회수</span></div><div class="ft">토큰 폐기</div><ul class="gates"><li class="on contain" title="즉시 중단 · AI 적용 — 해당 연동·에이전트 자격증명을 즉시 폐기한다"><i></i><span class="g">즉시 중단 AI</span><span class="e">멈춤·회수</span></li></ul></li><li class="fn end reduced"><div class="fh"><span class="tag">결과</span></div><div class="ft">피해 축소</div><p class="fi">연동된 데이터 대량 조회·AI 자원 도용</p></li></ol></div></div>
 </figure>
 <div class="sim-two">
-<div>
-<h3 class="h3">실제 사건 — 그 설정이었다면 막혔을 사건 (판단할 수 있는 25건 중)</h3>
-<dl class="bars"><dt>통제 없음</dt><dd><span class="track" role="img" aria-label="막혔을 사건 0 / 25"><span class="hi" style="width:0.0%"></span><span class="lo" style="width:0.0%"></span></span></dd><dd class="n">0건</dd><dt>한국 — 강제 규제만</dt><dd><span class="track" role="img" aria-label="막혔을 사건 5~21 / 25"><span class="hi" style="width:84.0%"></span><span class="lo" style="width:20.0%"></span></span></dd><dd class="n">5~21건</dd><dt>미국 — 강제 규제만</dt><dd><span class="track" role="img" aria-label="막혔을 사건 3~7 / 25"><span class="hi" style="width:28.0%"></span><span class="lo" style="width:12.0%"></span></span></dd><dd class="n">3~7건</dd><dt>EU — 강제 규제만</dt><dd><span class="track" role="img" aria-label="막혔을 사건 4~19 / 25"><span class="hi" style="width:76.0%"></span><span class="lo" style="width:16.0%"></span></span></dd><dd class="n">4~19건</dd><dt>모든 통제를 AI 까지</dt><dd><span class="track" role="img" aria-label="막혔을 사건 25 / 25"><span class="hi" style="width:100.0%"></span><span class="lo" style="width:100.0%"></span></span></dd><dd class="n">25건</dd></dl>
-<p class="fine">반사실 계산이지 예측이 아니다. 진한 막대 = 하한(그 사건에서 실패한 통제가 모두 켜짐), 옅은 막대 = 상한(사전·사용 중 통제가 하나라도 켜짐).</p>
-</div>
+<figure class="fig">
+<figcaption><b>그림 3</b> 같은 설정이었다면 막혔을 사건 수. 공개 자료로 판단할 수 있는 25건 기준이다.</figcaption>
+<dl class="bars"><dt>통제 없음</dt><dd><span class="track" role="img" aria-label="막혔을 사건 0 / 25"><span class="hi" style="width:0.0%"></span><span class="lo" style="width:0.0%"></span></span></dd><dd class="n">0건</dd><dt>한국 — 강제 규제만</dt><dd><span class="track" role="img" aria-label="막혔을 사건 5~21 / 25"><span class="hi" style="width:84.0%"></span><span class="lo" style="width:20.0%"></span></span></dd><dd class="n">5~21건</dd><dt>미국 — 강제 규제만</dt><dd><span class="track" role="img" aria-label="막혔을 사건 3~7 / 25"><span class="hi" style="width:28.0%"></span><span class="lo" style="width:12.0%"></span></span></dd><dd class="n">3~7건</dd><dt>EU — 강제 규제만</dt><dd><span class="track" role="img" aria-label="막혔을 사건 4~19 / 25"><span class="hi" style="width:76.0%"></span><span class="lo" style="width:16.0%"></span></span></dd><dd class="n">4~19건</dd><dt>모든 통제를 AI까지</dt><dd><span class="track" role="img" aria-label="막혔을 사건 25 / 25"><span class="hi" style="width:100.0%"></span><span class="lo" style="width:100.0%"></span></span></dd><dd class="n">25건</dd></dl>
+<p class="note-s">진한 막대는 그 사건에서 실패한 통제가 모두 켜진 경우만 센 하한이고, 옅은 막대까지가 상한이다. 예측이 아니라 반사실 계산이다.</p>
+</figure>
 <div class="uses">
-<h3 class="h3">이렇게 쓴다</h3>
-<ul>
-<li><b>발표·학회</b> — 데모 케이스를 ← → 로 넘기며, 한 가지만 다른 두 회사가 왜 다르게 끝나는지</li>
-<li><b>보안 담당자</b> — 우리 회사 통제와 에이전트를 넣고, 통제 하나씩 AI 까지 올렸을 때의 효과를 CSV 로</li>
-<li><b>정책</b> — 관할 프리셋끼리, 새 규제가 들어오면 결과가 어떻게 바뀌는지 이력으로</li>
-</ul>
+<h3>어떻게 쓰나</h3>
+<p>발표할 때는 데모 케이스를 화살표 키로 넘기면 된다. 대부분 한 가지 조건만 다른 두 회사를 짝지어 놓았다.</p>
+<p>보안 담당자라면 자기 회사의 통제와 에이전트를 넣어 보고, 통제를 하나씩 AI까지 올렸을 때 무엇이 달라지는지 확인한 뒤 CSV로 가져가면 된다.</p>
+<p>정책 쪽에서는 관할 프리셋을 서로 비교하거나, 아직 반영되지 않은 새 규제가 들어온다고 가정해 볼 수 있다.</p>
 <p><a class="btn btn-primary" href="sim.html">모의 테스트 열기</a></p>
 </div>
 </div>
-</section>
-
-
-<section id="how" aria-labelledby="h-how">
-<div class="sec-h"><h2 id="h-how">만드는 법 — 수집에서 모의 테스트까지</h2><span>무엇이 자동이고 무엇이 사람인지</span></div>
-<ol class="flow pipe" style="grid-template-columns:repeat(6, minmax(0,1fr))" aria-label="이 연구가 만들어지는 흐름"><li class="fn pass"><div class="fh"><span class="no">1</span><span class="tag">자동</span></div><div class="ft">수집</div><p class="fi">발행 주체 피드 79곳(규제기관 · 표준 · 위협 보고) — 지금까지 916건</p></li><li class="fn pass"><div class="fh"><span class="no">2</span><span class="tag">자동</span></div><div class="ft">후보</div><p class="fi">AI·에이전트와 닿는 새 규제·가이드라인을 점수로 골라 &#x27;반영 대기&#x27; — 지금 16건</p></li><li class="fn pass"><div class="fh"><span class="no">3</span><span class="tag">사람</span></div><div class="ft">문서</div><p class="fi">사람이 레지스트리에 올린다 — 문서 32건(규범 문서 23건), 원문 스냅숏 고정</p></li><li class="fn pass"><div class="fh"><span class="no">4</span><span class="tag">AI 두 팀 + 조정</span></div><div class="ft">코딩</div><p class="fi">서로 보지 않는 두 팀이 7통제 × 두 층으로 판정 — 문서 κ 사람·계정 0.92 · AI 1.00, 사건 κ 0.96</p></li><li class="fn pass"><div class="fh"><span class="no">5</span><span class="tag">계산</span></div><div class="ft">매트릭스</div><p class="fi">관할 × 통제 × 두 층 — 간극 16칸</p></li><li class="fn pass"><div class="fh"><span class="no">6</span><span class="tag">계산</span></div><div class="ft">모의 테스트</div><p class="fi">공격 원형 12개 · 실제 사건 45건 반사실 — 결과가 바뀌면 이력(2줄)과 데모 경고</p></li></ol>
-<p class="fine pipe-note">규제가 새로 들어오거나 판정이 바뀌면 ⑤ · ⑥ 이 다시 계산되고, 결과가 달라진 때만 이력이 남는다. 판정은 AI 코더 두 팀과 조정 — 사람 코더 검증은 아직이다.</p>
-</section>
-
-
-<section id="go" aria-labelledby="h-go">
-<div class="sec-h"><h2 id="h-go">어디로 갈까</h2></div>
-<div class="go">
-<a class="card" href="sim.html"><span class="k">모의 테스트</span><span class="t">통제 · 에이전트를 바꾸며 공격 흐름과 실제 사건을 다시 돌린다</span><span class="h">데스크톱 화면 기준</span></a>
-<a class="card" href="dashboard.html#matrix"><span class="k">대시보드 · 매트릭스</span><span class="t">관할 × 통제 × 두 층, 칸마다 근거 문서와 조문</span><span class="h">동향 · 사건 · 공백 · 연표 · 문서</span></a>
-<a class="card" href="dashboard.html#method"><span class="k">출처 · 방법</span><span class="t">코드북 · κ · 조정 · 이 숫자로 말할 수 없는 것</span><span class="h">발행 주체 원문에서</span></a>
 </div>
 </section>
 
+<section class="sh" id="method" aria-labelledby="h-method">
+<h2 id="h-method">방법</h2>
+<div>
+<div class="tblwrap"><table class="method"><thead><tr><th scope="col" class="n"></th><th scope="col">단계</th><th scope="col">하는 일</th><th scope="col">누가</th><th scope="col">지금</th></tr></thead><tbody><tr><td class="n">1</td><th scope="row">수집</th><td>규제기관, 표준기구, 보안 회사의 공개 피드를 읽는다.</td><td class="who">자동</td><td class="now">피드 79곳, 항목 916건</td></tr><tr><td class="n">2</td><th scope="row">후보</th><td>AI 에이전트와 관련된 새 규제와 가이드라인을 점수로 골라 둔다.</td><td class="who">자동</td><td class="now">반영 대기 16건</td></tr><tr><td class="n">3</td><th scope="row">등록</th><td>후보 중 연구에 넣을 문서를 고르고 원문을 고정한다.</td><td class="who">사람</td><td class="now">문서 32건(규범 문서 23건)</td></tr><tr><td class="n">4</td><th scope="row">판정</th><td>서로 결과를 보지 않는 두 팀이 통제 7개를 직원·계정과 AI 두 층으로 판정하고, 갈린 칸만 조정한다.</td><td class="who">AI 코더 두 팀</td><td class="now">κ 문서 0.92(직원·계정), 1.00(AI) / 사건 0.96</td></tr><tr><td class="n">5</td><th scope="row">매트릭스</th><td>관할마다 통제별로 가장 센 문서의 수준을 모은다.</td><td class="who">계산</td><td class="now">간극 16칸</td></tr><tr><td class="n">6</td><th scope="row">모의 테스트</th><td>공격 원형을 단계별로 돌리고, 공개 사건을 반사실로 다시 계산한다.</td><td class="who">계산</td><td class="now">원형 12개, 사건 45건, 이력 2줄</td></tr></tbody></table></div>
+<p class="note-s">규제가 새로 들어오거나 판정이 바뀌면 매트릭스와 모의 테스트를 다시 계산하고, 결과가 달라졌을 때만 이력에 남긴다. 코드북과 판정 기록, 일치도 계산은 <a href="dashboard.html#method">대시보드</a>에 있다.</p>
+</div>
+</section>
 
-<section id="limits" aria-labelledby="h-lim">
-<div class="sec-h"><h2 id="h-lim">이 연구가 말할 수 없는 것</h2></div>
-<ul class="fine lim">
-<li>법률 자문이 아니다. 공개된 문서·사건 자료로 '무엇이 요구되는가' 와 '공개 증거 수준' 을 잰다 — 회사가 실제로 통제를 갖췄는지는 모른다.</li>
-<li>코더는 같은 계열의 AI 두 팀이다. κ 는 같은 코드북을 두 번 독립 적용했을 때의 재현성이지 정확성이 아니다. 사람 코더 검증은 아직이다.</li>
-<li>모의 테스트의 사건 결과는 반사실 계산이다. 실패한 통제가 공개 자료에 없는 사건은 '판단 근거 없음' 으로 따로 센다.</li>
-<li>공격 원형 · 단계 · 데모 케이스(가상 회사)는 저자 설계다. 규제 프리셋은 적용 대상(예: 고영향 AI 만)을 따지지 않는다.</li>
+<section class="sh" id="limits" aria-labelledby="h-lim">
+<h2 id="h-lim">한계</h2>
+<ul class="lim">
+<li>법률 자문이 아니다. 공개된 문서와 사건 자료로 무엇이 요구되는지, 그리고 공개된 증거가 어느 수준인지를 잴 뿐이다. 회사가 실제로 통제를 갖췄는지는 알 수 없다.</li>
+<li>판정은 같은 계열의 AI 코더 두 팀이 했다. 일치도(κ)는 같은 규칙을 두 번 독립으로 적용했을 때 얼마나 같게 나오는지를 보여 줄 뿐, 판정이 맞다는 뜻은 아니다. 사람 코더의 검증은 아직 거치지 않았다.</li>
+<li>모의 테스트의 사건 결과는 반사실 계산이다. 실패한 통제가 공개 자료에 나오지 않는 사건은 판단하지 않고 따로 센다.</li>
+<li>공격 원형과 단계, 데모 케이스는 저자가 설계했다. 규제 프리셋은 적용 대상(예: 고영향 AI에만 걸리는 의무)을 따지지 않는다.</li>
 </ul>
 </section>
 
 </main>
 
 <footer class="site">
-<span>PivoxPolicy · 정책 연구 — 법률 자문이 아니다.</span>
-<span class="links"><a href="sim.html">모의 테스트</a><a href="dashboard.html">대시보드</a><a href="./simulation.md">프리셋별 표</a><a href="offline/pivoxpolicy-sim.html" download>모의 테스트 파일로 받기(오프라인)</a></span>
+<span>PivoxPolicy 정책 연구. 법률 자문이 아니다.</span>
+<span class="links"><a href="sim.html">모의 테스트</a><a href="dashboard.html">대시보드</a><a href="./simulation.md">프리셋별 표</a><a href="offline/pivoxpolicy-sim.html" download>오프라인 파일 받기</a></span>
 </footer>
 
 </div>

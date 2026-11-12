@@ -1,4 +1,4 @@
-# 모의 테스트 시나리오 원형 (2026-11-12) — out/sim.html 이 읽는다.
+# 모의 테스트 시나리오 원형 (2026-11-12) — out/sim.html이 읽는다.
 #
 # 사건 45건(registry/incidents.yaml)을 공격 경로가 닮은 것끼리 5개 원형으로 묶고, 원형마다 공격 단계와
 # 그 단계에서 7통제 중 무엇이 끼어들 수 있는지를 적었다. **이 묶음과 단계는 저자 설계다** — 코더 두 팀이 판정한
@@ -15,7 +15,7 @@
 #   memory: 대화·문서를 장기 메모리·검색 저장소(RAG)에 쌓아 나중에 다시 쓴다
 #   multi_agent: 다른 에이전트에게 일을 맡기거나 받는다
 # requires_tools: 이 원형에 필요한 도구 권한(read/write/pay 중) — 에이전트 도구 권한이 여기에 없으면 '공격면 없음'
-# basis: 원형의 근거 — 실제 사건(incidents)이 없으면 위협 목록(OWASP Agentic Top 10 등)을 적는다. 사건 0건 원형은 페이지에 '사건 없음' 으로 보인다
+# basis: 원형의 근거 — 실제 사건(incidents)이 없으면 위협 목록(OWASP Agentic Top 10 등)을 적는다. 사건 0건 원형은 페이지에 '사건 없음'으로 보인다
 # impact: 피해가 났을 때의 결과 — tools(에이전트 도구 권한)에 따라 다르면 by_tools, 아니면 fixed
 codebook_note: "저자 설계 — 블라인드 코딩 아님"
 
@@ -105,7 +105,7 @@ scenarios:
   - id: ai_attacker
     basis: ["실제 사건 — 공격자 쪽 AI"]
     title: 공격자가 AI 에이전트로 침투 → 피해자는 일반 시스템
-    summary: 공격자가 AI 에이전트로 정찰·침투·확산을 자동화한다. 피해 조직 쪽에는 AI 가 없을 수도 있다 — AI 적용 통제는 여기서 쓸모가 없다.
+    summary: 공격자가 AI 에이전트로 정찰·침투·확산을 자동화한다. 피해 조직 쪽에는 AI가 없을 수도 있다 — AI 적용 통제는 여기서 쓸모가 없다.
     requires: []
     impact:
       fixed: 고객 정보·내부 데이터 유출
@@ -255,7 +255,7 @@ scenarios:
     summary: 사람 승인이 있어도, 하루 수십 건 승인 요청 속에 무해해 보이게 꾸민 위험 행위가 섞인다.
     requires: [untrusted_input]
     impact:
-      by_tools: {read: 승인된 '조회' 로 대량 유출, write: 승인된 '정상 작업' 으로 악성 변경, pay: 승인된 송금}
+      by_tools: {read: 승인된 '조회'로 대량 유출, write: 승인된 '정상 작업'으로 악성 변경, pay: 승인된 송금}
     stages:
       - title: 공격자 지시가 에이전트 작업에 섞인다
         desc: 외부 입력에 숨은 지시.
@@ -348,7 +348,7 @@ scenarios:
           - {control: kill_switch, layer: agent, effect: contain, why: 문제 응답 패턴을 즉시 막는다}
     incidents: []
 
-# 통제 수준의 실무 뜻 — 설정 패널에서 통제 이름을 누르면 보인다(저자 작성, controls.yaml 의 판정 기준을 실무 문장으로 줄인 것)
+# 통제 수준의 실무 뜻 — 설정 패널에서 통제 이름을 누르면 보인다(저자 작성, controls.yaml의 판정 기준을 실무 문장으로 줄인 것)
 control_help:
   inventory: {analog: "자산·계정·시스템 목록과 책임자를 유지한다", agent: "에이전트·모델·API 키·연결 도구(MCP 서버 등)까지 목록에 올리고 책임자를 정한다"}
   vendors: {analog: "위탁·클라우드 업체를 실사하고 계약에 감사권·사고 통지를 넣는다", agent: "외부 모델·플러그인·패키지·스킬의 출처와 서명을 확인하고, AI 업체와 취약점·사고 통지를 계약한다"}
@@ -370,8 +370,8 @@ agent_profiles:
   - {id: loan, label: 대출 심사 보조 에이전트, tools: read, untrusted_input: true, open_components: false, memory: false, multi_agent: false}
 
 # OWASP Top 10 for Agentic Applications (2026판, 2025-12-09 발표 — 제목은 아래 출처 원문 그대로, 2026-11-12 확인).
-# 원형 basis 의 'OWASP ASIxx' 가 이 목록을 가리킨다. 페이지의 커버리지 표는 그 원형들의 결과로 계산한다 —
-# 자체 계산이고 OWASP 의 평가·인증이 아니다. 원형이 없는 항목은 '원형 없음'(이 테스트가 재지 않는다)으로 보인다.
+# 원형 basis의 'OWASP ASIxx'가 이 목록을 가리킨다. 페이지의 커버리지 표는 그 원형들의 결과로 계산한다 —
+# 자체 계산이고 OWASP의 평가·인증이 아니다. 원형이 없는 항목은 '원형 없음'(이 테스트가 재지 않는다)으로 보인다.
 owasp_asi:
   source: "https://genai.owasp.org/2025/12/09/owasp-top-10-for-agentic-applications-the-benchmark-for-agentic-security-in-the-age-of-autonomous-ai/"
   items:
