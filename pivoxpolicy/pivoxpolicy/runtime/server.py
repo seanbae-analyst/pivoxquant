@@ -99,6 +99,9 @@ class App:
             ("POST", re.compile(r"^/admin/api/agents/(agt_[a-z0-9]+)/cases$"), self.a(self.run_cases)),
             ("POST", re.compile(r"^/admin/api/agents/(agt_[a-z0-9]+)/matrix$"), self.a(self.run_matrix)),
             ("POST", re.compile(r"^/admin/api/agents/(agt_[a-z0-9]+)/obligations$"), self.a(self.obligations)),
+            ("POST", re.compile(r"^/admin/api/intake/preview$"), self.a(self.intake_preview)),
+            ("GET", re.compile(r"^/admin/api/intake/example$"), self.a(self.intake_example)),
+            ("POST", re.compile(r"^/admin/api/intake/register$"), self.a(self.intake_register)),
             ("GET", re.compile(r"^/admin/api/approvals$"), self.a(self.approvals)),
             ("POST", re.compile(r"^/admin/api/approvals/(apr_[0-9a-f]{16})$"), self.a(self.approve)),
             ("GET", re.compile(r"^/admin/api/audit$"), self.a(self.audit)), ("GET", re.compile(r"^/admin/api/audit/verify$"), self.a(self.verify)),
@@ -309,7 +312,7 @@ class App:
         preview = "levels" in d
         if preview:
             a = cases_mod.with_levels(a, clean_levels(d["levels"]))
-        res = cases_mod.run_cases(a, approved=self.rt.store.components())
+        res = cases_mod.run_cases(a, a.get("cases") or None, approved=self.rt.store.components())
         res["preview"] = preview
         self.rt.store.audit("cases", aid, {"op": "cases", "summary": res["summary"], "preview": preview})
         return self.json(sr, res)
@@ -333,7 +336,7 @@ class App:
             chosen = [*obligations_mod.preset_columns(assessment), *chosen]
         if "current_levels" in d:
             chosen = [{"id": "current", "label": "지금 설정", "levels": clean_levels(d["current_levels"])}, *chosen]
-        res = cases_mod.run_matrix(a, chosen, approved=self.rt.store.components())
+        res = cases_mod.run_matrix(a, chosen, a.get("cases") or None, approved=self.rt.store.components())
         if assessment:   # 결함마다 그 통제를 요구하는 적용 조문과 분류(위반 소지 · 해석 · 가이드라인 · 공백)
             for col in res["presets"]:
                 for cell in col["cells"].values():
@@ -355,6 +358,37 @@ class App:
         prof = self.rt.clean_compliance(d["profile"]) if d.get("profile") is not None else None
         lv = clean_levels(d["levels"]) if "levels" in d else None
         return self.json(sr, self.rt.assess(a, prof, lv))
+
+    def _spec_body(self, environ) -> tuple[Any, dict[str, Any] | None]:
+        d = self.obj(environ)
+        src = d.get("spec_text") if isinstance(d.get("spec_text"), str) else d.get("spec")
+        if src is None:
+            raise HttpError(400, "spec_text(YAML · JSON 글) 또는 spec(객체)이 필요하다")
+        ov = d.get("overrides")
+        if ov is not None and not isinstance(ov, dict):
+            raise HttpError(400, "overrides 는 객체")
+        return src, ov
+
+    def intake_example(self, environ, sr):
+        p = Path(__file__).resolve().parents[2] / "examples" / "agent_spec_order.yaml"
+        return self.json(sr, {"spec_text": p.read_text(encoding="utf-8") if p.exists() else ""})
+
+    def intake_preview(self, environ, sr):
+        """명세 → 추정(도구 종류 · 근거 · 확신도, 프로필, 경고, 만들 케이스). 등록하지 않는다."""
+        from .. import intake
+        src, ov = self._spec_body(environ)
+        try:
+            r = intake.build(src, ov)
+        except intake.IntakeError as e:
+            raise HttpError(400, str(e)) from None
+        r.pop("system_prompt", None)                # 시스템 프롬프트는 돌려주지도 남기지도 않는다
+        r["assessment"] = obligations_mod.assess(self.rt.lib, r["compliance"], r["agent"]["levels"])["summary"]
+        return self.json(sr, r)
+
+    def intake_register(self, environ, sr):
+        src, ov = self._spec_body(environ)
+        agent, secret, r = self.rt.import_spec(src, ov)
+        return self.json(sr, {"agent": self._with_keys(agent), "api_key": secret, "warnings": r["warnings"], "cases": len(r["cases"])}, 201)
 
     def approvals(self, environ, sr):
         qs = environ.get("QUERY_STRING", "")

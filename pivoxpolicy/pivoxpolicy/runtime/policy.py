@@ -159,16 +159,19 @@ def decide(agent: dict[str, Any], req: dict[str, Any], ctx: dict[str, Any] | Non
         if untrusted and high:
             chk("least_privilege", "block", "외부 입력 + 고위험 도구")
             return out("deny", "least_privilege", "외부 입력이 섞인 작업에서는 고위험 도구를 쓸 수 없다")
+        # 도구마다 고객 · 금액 인자 이름이 다르다(client_id, notional …) — 등록부의 customer_arg · amount_arg 를 쓴다
+        carg = (tool or {}).get("customer_arg") or "customer"
+        aarg = (tool or {}).get("amount_arg") or "amount"
         cust = (req.get("context") or {}).get("customer")
-        if args.get("customer") and not cust:
+        if args.get(carg) and not cust:
             chk("least_privilege", "block", "응대 고객 미상")
             return out("deny", "least_privilege", "지금 응대 중인 고객을 밝히지 않은 채 고객 데이터를 요청했다")
-        if cust and args.get("customer") and args["customer"] != cust:
+        if cust and args.get(carg) and args[carg] != cust:
             chk("least_privilege", "block", "다른 고객의 데이터")
             return out("deny", "least_privilege", "지금 응대 중인 고객이 아닌 다른 고객의 데이터를 요청했다")
         mx = limits.get("max_amount")
-        amt = args.get("amount")
-        if "amount" in args and not _amount_ok(amt):
+        amt = args.get(aarg)
+        if aarg in args and not _amount_ok(amt):
             chk("least_privilege", "block", "금액 형식")
             return out("deny", "least_privilege", "금액은 0 이상의 숫자여야 한다(문자열 · 음수 · NaN 은 한도를 비켜 간다)")
         if mx is not None and amt is not None and amt > mx:

@@ -49,7 +49,7 @@
 </header>
 
 <section id="agents" aria-labelledby="h-agents">
-<div class="sec-h"><h2 id="h-agents">에이전트</h2><button type="button" class="btn sm" id="new-agent">새로 등록</button></div>
+<div class="sec-h"><h2 id="h-agents">에이전트</h2><span class="row"><button type="button" class="btn sm" id="new-intake">명세서로 등록</button><button type="button" class="btn sm" id="new-agent">새로 등록</button></span></div>
 <div class="tblwrap"><table id="agent-t"></table></div>
 
 <div id="reg" class="panel-box" hidden>
@@ -64,6 +64,16 @@
 <span></span><div class="row"><button type="submit" class="btn btn-primary">등록하고 키 받기</button><button type="button" class="btn" id="reg-cancel">닫기</button></div>
 </form>
 <p class="err" id="reg-err" aria-live="polite"></p>
+</div>
+
+<div id="intake" class="panel-box" hidden>
+<h3 class="h3">명세서로 등록</h3>
+<p class="fine">회사 코드에 이미 있는 도구 정의를 그대로 붙여 넣는다(Anthropic, OpenAI 함수, MCP tools/list 형식, 섞어도 된다). 도구마다 종류를 추정해 근거와 확신도를 보여 주고, 그 에이전트의 실제 도구로 공격 케이스를 만든다. 추정은 등록 전에 고칠 수 있다.</p>
+<label for="in-text" class="sub">명세 (YAML 또는 JSON)</label>
+<textarea id="in-text" class="in-text" rows="14" spellcheck="false" placeholder="pivoxpolicy_agent_spec: 1&#10;agent: {name: ..., owner: ..., model: {deployment: foreign_api}}&#10;controls: {inventory: 1, ...}&#10;tools: [...]"></textarea>
+<p class="row"><button type="button" class="btn sm" id="in-example">예시 명세 넣기</button><button type="button" class="btn btn-primary" id="in-preview">미리보기</button><button type="button" class="btn" id="in-register" disabled>등록하고 키 받기</button><button type="button" class="btn sm" id="in-close">닫기</button></p>
+<p class="err" id="in-err" aria-live="polite"></p>
+<div id="in-out"></div>
 </div>
 
 <div id="key-box" class="key-box" hidden role="alert">

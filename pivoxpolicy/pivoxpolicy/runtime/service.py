@@ -19,7 +19,8 @@ from .store import Store, iso, now_utc
 CONTROL_IDS = policy.CONTROL_ORDER
 TOOLS_LEVELS = ("read", "write", "pay")
 ENV_FLAGS = ("untrusted_input", "open_components", "memory", "multi_agent")
-NAME_RX = re.compile(r"^[a-z0-9][a-z0-9_.\-]{0,39}$")
+NAME_RX = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.\-]{0,63}$")      # Anthropic · OpenAI · MCP 도구 이름 규칙과 맞춤
+ARG_RX = re.compile(r"^[A-Za-z_][A-Za-z0-9_.\-]{0,63}$")
 ID_RX = re.compile(r"^agt_[a-z0-9]{6,24}$")
 
 
@@ -101,12 +102,18 @@ def clean_tools(tools: Any) -> list[dict[str, Any]]:
     for t in tools:
         if not isinstance(t, dict):
             raise RuntimeError_("도구는 {name, kind, component}")
-        name = _str(t.get("name"), "도구 이름", 40, True)
+        name = _str(t.get("name"), "도구 이름", 64, True)
         if not NAME_RX.match(name) or name in seen:
-            raise RuntimeError_(f"도구 이름 '{name}' — 영문 소문자·숫자·_.- 40자, 중복 없이")
+            raise RuntimeError_(f"도구 이름 '{name}' — 영문·숫자·_.- 64자, 중복 없이")
         if t.get("kind") not in policy.KINDS:
             raise RuntimeError_(f"도구 kind 는 {policy.KINDS}")
         item: dict[str, Any] = {"name": name, "kind": t["kind"]}
+        for k in ("amount_arg", "customer_arg"):        # 한도 · 고객 범위 검사가 볼 인자 이름(없으면 amount · customer)
+            v = t.get(k)
+            if v:
+                if not isinstance(v, str) or not ARG_RX.match(v):
+                    raise RuntimeError_(f"{k} 는 인자 이름(영문 64자)")
+                item[k] = v
         c = t.get("component")
         if c:
             if not isinstance(c, dict):
@@ -204,6 +211,35 @@ class Runtime:
         except obligations_mod.ObligationError as e:
             raise RuntimeError_(str(e)) from None
 
+    def clean_cases(self, cs: Any) -> list[dict[str, Any]] | None:
+        if cs is None:
+            return None
+        from .. import sim
+        from . import cases as cases_mod
+        if not isinstance(cs, list) or len(cs) > 40 or len(policy.canonical(cs)) > 48_000:
+            raise RuntimeError_("cases 는 40개 · 48KB 이하 목록")
+        probs = cases_mod.validate_cases(cs, {x["id"] for x in sim.load_scenarios()["scenarios"]})
+        if probs:
+            raise RuntimeError_("케이스 오류: " + "; ".join(probs[:3]))
+        return cs
+
+    def import_spec(self, src: Any, overrides: dict[str, Any] | None = None, by: str = "admin") -> tuple[dict[str, Any], str, dict[str, Any]]:
+        """명세 → 등록 · 프로필 · 케이스 · 구성요소 승인 목록. (에이전트, 키, 미리보기) 를 돌려준다."""
+        from .. import intake
+        try:
+            r = intake.build(src, overrides)
+        except intake.IntakeError as e:
+            raise RuntimeError_(str(e)) from None
+        agent, secret = self.register(r["agent"], by=by)
+        for c in r["components"]:                # 명세에 적힌(지문을 고정했다면 지문까지) 구성요소를 승인 목록에 올린다
+            self.store.put_component(c["name"], c["version"], c.get("sha256"), f"명세에서 가져옴: {agent['name']}"[:120])
+        meta = {"imported_at": iso(now_utc()), "tools": r["tools"], "warnings": r["warnings"], "skipped": r["skipped"],
+                "profile_why": r["profile_why"], "components": r["components"]}
+        agent = self.update(agent["id"], {"compliance": r["compliance"], "cases": r["cases"], "intake": meta}, by=by)
+        self.store.audit("admin", agent["id"], {"op": "import_spec", "by": by, "tools": len(r["tools"]), "cases": len(r["cases"]),
+                                                "warnings": len(r["warnings"])})
+        return agent, secret, r
+
     def assess(self, agent: dict[str, Any], profile: dict[str, Any] | None = None, levels: dict[str, int] | None = None) -> dict[str, Any]:
         prof = profile if profile is not None else agent.get("compliance")
         if not prof:
@@ -262,6 +298,15 @@ class Runtime:
         if "compliance" in patch:
             a["compliance"] = self.clean_compliance(patch["compliance"])
             changed.append("compliance")
+        if "cases" in patch:                       # 이 에이전트의 도구로 만든 공격 케이스(명세 가져오기)
+            a["cases"] = self.clean_cases(patch["cases"])
+            changed.append("cases")
+        if "intake" in patch:                      # 가져온 명세의 추정 · 경고(보고서용). 시스템 프롬프트는 남기지 않는다
+            v = patch["intake"]
+            if v is not None and (not isinstance(v, dict) or len(policy.canonical(v)) > 32_000):
+                raise RuntimeError_("intake 는 32KB 이하 객체")
+            a["intake"] = v
+            changed.append("intake")
         if "risk_tier" in patch and patch["risk_tier"] in ("low", "medium", "high"):
             a["risk_tier"] = patch["risk_tier"]
             changed.append("risk_tier")

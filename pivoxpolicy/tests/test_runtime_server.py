@@ -176,3 +176,25 @@ def test_obligations_profile_and_matrix_columns(srv):
     assert explicit["other-customer"]["link"]["kind"] == "interpretive"            # 제13조는 사람·계정 층 — 에이전트엔 해석
     assert "efsr-13-1-1-access" in explicit["other-customer"]["link"]["obligations"]
     assert mx["obligations"]["efsr-13-1-1-access"]["article"] == "제13조 제1항 제1호"
+
+
+def test_intake_preview_and_register(srv):
+    """명세 붙여 넣기 → 미리보기(추정 · 경고 · 케이스) → 등록(키 · 프로필 · 케이스 · 구성요소 승인) → 공격 팀이 그 케이스로 돈다."""
+    from pathlib import Path
+    base, _ = srv
+    h = login(base)
+    spec = (Path(__file__).resolve().parents[1] / "examples" / "agent_spec_order.yaml").read_text(encoding="utf-8")
+    st, pv, _ = call(base, "POST", "/admin/api/intake/preview", {"spec_text": spec}, headers=h)
+    assert st == 200 and "system_prompt" not in pv and len(pv["cases"]) >= 10
+    assert {t["name"]: t["kind"] for t in pv["tools"]}["place_order"] == "pay" and pv["assessment"]["applicable"] > 20
+    assert call(base, "POST", "/admin/api/intake/preview", {"spec_text": "tools: 3"}, headers=h)[0] == 400
+    assert call(base, "POST", "/admin/api/intake/preview", {}, headers=h)[0] == 400
+    st, r, _ = call(base, "POST", "/admin/api/intake/register", {"spec_text": spec, "overrides": {"kinds": {"get_quote": "read"}}}, headers=h)
+    assert st == 201 and r["api_key"].startswith("pvx_")
+    a = r["agent"]
+    assert a["compliance"]["activities"] == ["order", "transfer", "customer_service"] and len(a["cases"]) == len(pv["cases"])
+    assert {t["name"]: t.get("amount_arg") for t in a["tools"]}["place_order"] == "notional_krw"
+    st, comps, _ = call(base, "GET", "/admin/api/components", headers=h)
+    assert any(c["name"] == "broker-gw" and c["sha256"] for c in comps["components"])
+    st, cs, _ = call(base, "POST", f"/admin/api/agents/{a['id']}/cases", {}, headers=h)
+    assert st == 200 and all(x["id"].startswith("gen-") for x in cs["results"])

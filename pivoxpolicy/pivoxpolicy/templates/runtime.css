@@ -208,3 +208,18 @@ tr.ob-unmet td:first-child{box-shadow:inset 2px 0 0 var(--pq-ivory)}
 .ob-conflict a{color:var(--pq-ivory);text-decoration:underline;text-decoration-color:var(--pq-ivory-line-strong);text-underline-offset:3px}
 .ob-st.conflict{color:var(--pq-ivory);text-decoration:underline;text-underline-offset:3px}
 tr.ob-conflict td:first-child{box-shadow:inset 2px 0 0 var(--pq-ivory)}
+
+/* 명세서로 등록 */
+.in-text{width:100%;margin:6px 0 4px;padding:10px 12px;font:12.5px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--pq-ivory);
+  background:var(--pq-onyx);border:1px solid var(--pq-ivory-line-strong);border-radius:var(--pq-radius-ctl);resize:vertical}
+.in-text:focus-visible{outline:2px solid var(--pq-bronze);outline-offset:1px}
+.in-t td{vertical-align:top;font-size:13px}
+.in-t select{height:30px;font-size:13px}
+.in-t tr.conf-low td{background:var(--pq-bronze-wash)}
+.in-t td.conf{white-space:nowrap}
+.in-t tr.conf-low td.conf{color:var(--pq-ivory);font-weight:600}
+.in-kv{grid-template-columns:120px minmax(0,1fr)}
+.in-kv dd{font-weight:500}
+.in-cases{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--pq-ivory-soft);columns:2;column-gap:32px}
+.in-cases li{margin:3px 0;break-inside:avoid}
+.in-cases b{color:var(--pq-ivory-dim);font-weight:600;margin-right:4px}

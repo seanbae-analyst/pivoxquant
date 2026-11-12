@@ -119,6 +119,80 @@
   });
   $("key-hide").addEventListener("click", function () { $("key-val").textContent = ""; $("key-box").hidden = true; $("key-copy").textContent = "복사"; });
 
+
+  // ── 명세서로 등록 (도구 정의 → 추정 → 고치기 → 등록) ──
+  var CONF_KO = { high: "높음", medium: "보통", low: "낮음" }, FMT_KO = { anthropic: "Anthropic", openai: "OpenAI", mcp: "MCP" };
+  var inPrev = null;
+  $("new-intake").addEventListener("click", function () { $("intake").hidden = false; $("reg").hidden = true; $("in-text").focus(); });
+  $("in-close").addEventListener("click", function () { $("intake").hidden = true; });
+  $("in-example").addEventListener("click", function () {
+    api("GET", "/admin/api/intake/example").then(function (j) { $("in-text").value = j.spec_text; inPrev = null; $("in-register").disabled = true; clear($("in-out")); });
+  });
+  $("in-text").addEventListener("input", function () { inPrev = null; $("in-register").disabled = true; });
+  function inOverrides() {
+    var ov = { kinds: {} };
+    Array.prototype.slice.call(document.querySelectorAll("#in-out select[data-tool]")).forEach(function (sel) {
+      if (sel.value !== sel.getAttribute("data-inferred")) ov.kinds[sel.getAttribute("data-tool")] = sel.value;
+    });
+    return ov;
+  }
+  function inPreview() {
+    say("in-err", "");
+    var out = clear($("in-out"));
+    out.appendChild(el("p", { cls: "fine", text: "명세를 읽는 중…" }));
+    return api("POST", "/admin/api/intake/preview", { spec_text: $("in-text").value, overrides: inOverrides() }).then(function (j) {
+      inPrev = j; renderIntake(j); $("in-register").disabled = false;
+    }).catch(function (err) { clear(out); say("in-err", err.message); $("in-register").disabled = true; });
+  }
+  $("in-preview").addEventListener("click", inPreview);
+  $("in-register").addEventListener("click", function () {
+    say("in-err", "");
+    api("POST", "/admin/api/intake/register", { spec_text: $("in-text").value, overrides: inOverrides() }).then(function (j) {
+      $("intake").hidden = true; clear($("in-out")); showKey(j.api_key); return loadAgents(j.agent.id);
+    }).catch(function (err) { say("in-err", err.message); });
+  });
+  function renderIntake(j) {
+    var out = clear($("in-out")), lab = {}, a = j.agent, pr = j.compliance, M = obMeta();
+    Object.keys(M.profile || {}).forEach(function (k) { (M.profile[k].options || []).forEach(function (o) { lab[o.id] = o.label; }); });
+    out.appendChild(el("p", { cls: "sum", text: a.name + " · 도구 " + j.tools.length + " · 만든 공격 케이스 " + j.cases.length +
+      " · 걸리는 조문 " + j.assessment.applicable + "(강제 " + j.assessment.binding + ", 설계 충돌 " + j.assessment.conflict + ")" }));
+    if (j.warnings.length) {
+      var w = el("div", { cls: "ob-conflict", role: "note" }, [el("b", { text: "확인할 것 " + j.warnings.length + "건" })]);
+      j.warnings.forEach(function (x) { w.appendChild(el("p", { text: x })); });
+      out.appendChild(w);
+    }
+    var t = el("table", { cls: "rt-t in-t" });
+    t.appendChild(el("thead", null, [el("tr", null, ["도구", "형식", "종류(고칠 수 있음)", "근거", "확신도", "금액 인자", "고객 인자", "외부 글"].map(function (h) { return el("th", { text: h }); }))]));
+    var tb = el("tbody");
+    j.tools.forEach(function (x) {
+      var sel = el("select", { "data-tool": x.name, "data-inferred": x.why === "사람이 고침" ? "" : x.kind, "aria-label": x.name + " 종류" });
+      meta.kinds.forEach(function (k) { sel.appendChild(el("option", { value: k, text: KIND_KO[k] })); });
+      sel.value = x.kind;
+      tb.appendChild(el("tr", { cls: "conf-" + x.confidence }, [el("td", null, [el("b", { cls: "mono", text: x.name }), el("span", { cls: "basis-art", text: x.description })]),
+        el("td", { cls: "sub", text: FMT_KO[x.format] || x.format }), el("td", null, [sel]), el("td", { text: x.why }),
+        el("td", { cls: "conf", text: CONF_KO[x.confidence] || x.confidence }), el("td", { cls: "mono", text: x.amount_arg || "—" }),
+        el("td", { cls: "mono", text: x.customer_arg || "—" }), el("td", { text: x.external ? "읽는다" : "—" })]));
+    });
+    t.appendChild(tb);
+    out.appendChild(el("div", { cls: "tblwrap" }, [t]));
+    var dl = el("dl", { cls: "kv in-kv" });
+    [["하는 일", pr.activities.map(function (x) { return lab[x] || x; }).join(", ")], ["다루는 정보", pr.data.map(function (x) { return lab[x] || x; }).join(", ") || "없음"],
+     ["쓰는 모델", lab[pr.external_llm] || pr.external_llm], ["일반투자자", pr.retail ? "상대한다" : "아니다"], ["자동화된 결정", pr.automated_decision ? "한다" : "아니다"],
+     ["도구 권한", TOOLS.filter(function (x) { return x[0] === a.env.tools; }).map(function (x) { return x[1]; })[0] || a.env.tools],
+     ["외부 입력", a.env.untrusted_input ? "읽는다" : "읽지 않는다"], ["지금 통제", meta.controls.map(function (c) { return c.name + " " + LV_KO[a.levels[c.id] || 0]; }).join(", ")]]
+      .forEach(function (r) { dl.appendChild(el("dt", { text: r[0] })); dl.appendChild(el("dd", { text: r[1] })); });
+    out.appendChild(el("h5", { cls: "ob-h5", text: "추정한 프로필" }));
+    out.appendChild(dl);
+    out.appendChild(el("h5", { cls: "ob-h5", text: "이 에이전트의 도구로 만든 공격 케이스 " + j.cases.length + "개" }));
+    out.appendChild(el("ul", { cls: "in-cases" }, j.cases.map(function (c) { return el("li", null, [el("b", { text: c.kind === "attack" ? "공격" : "정상 업무" }), " " + c.title]); })));
+    if (j.skipped.length) out.appendChild(el("details", { cls: "ob-na" }, [el("summary", { text: "만들지 않은 원형 " + j.skipped.length + "개와 이유" }),
+      el("ul", null, j.skipped.map(function (x) { return el("li", { text: x }); }))]));
+    out.appendChild(el("p", { cls: "fine", text: "종류를 고쳤으면 미리보기를 다시 누르면 케이스가 다시 만들어진다. 등록하면 명세의 구성요소(이름, 버전, 지문)를 승인 목록에 올린다." }));
+    Array.prototype.slice.call(out.querySelectorAll("select[data-tool]")).forEach(function (sel) {
+      sel.addEventListener("change", function () { $("in-register").disabled = false; });
+    });
+  }
+
   // ── 상세 ──
   function seg(name, opts, curv, onChange) {
     var g = el("div", { cls: "seg", role: "radiogroup" });
