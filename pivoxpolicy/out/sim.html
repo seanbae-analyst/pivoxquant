@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=1280" />
 <title>PivoxPolicy 모의 테스트</title>
-<meta name="description" content="통제를 켜고 끄며 AI 에이전트 공격 원형 11개와 실제 사건 45건을 다시 돌려 본다." />
+<meta name="description" content="통제를 켜고 끄며 AI 에이전트 공격 원형 12개와 실제 사건 45건을 다시 돌려 본다." />
 <meta name="theme-color" content="#050505" />
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
@@ -411,7 +411,7 @@ select:hover{border-color:rgba(245,240,232,0.26)}
 .h3{margin:20px 0 10px}
 #cmp td.num b{color:var(--pq-bronze)}
 #cmp tr.cur td{background:var(--pq-bronze-wash)}
-#per td:nth-child(3),#per td:nth-child(4){white-space:nowrap}
+#per td:nth-child(4),#per td:nth-child(5){white-space:nowrap}
 .lim li{margin:6px 0}
 .lim b{color:var(--pq-ivory)}
 
@@ -568,6 +568,81 @@ tr.chg>td{background:var(--pq-bronze-wash)}
 #asi-note{margin-top:10px;max-width:none}
 #cmp tr.base td{color:var(--pq-ivory-soft)}
 
+/* ── 공용 작은 것 ── */
+.btn.sm{height:30px;padding:0 10px;font-size:12.5px}
+.chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--pq-ivory-soft);cursor:pointer}
+.chk input{accent-color:var(--pq-bronze);margin:0}
+.vh{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);border:0}
+label.btn:has(+ .vh:focus-visible){outline:2px solid var(--pq-ivory);outline-offset:2px}
+
+/* ── ② 사건 흐름 (Sankey) — 띠 색 = 결과, 칸 = 원형 ── */
+.sk-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-top:22px}
+.sk-h .h3{margin:0 0 8px}
+.sankey svg{display:block;width:100%;height:auto;overflow:visible}
+.sankey .lk{transition:fill-opacity 120ms var(--pq-ease)}
+.sankey .lk:hover{fill-opacity:0.9}
+.sankey .l0{fill:var(--pq-ivory);fill-opacity:0.11}
+.sankey .lk.o-blocked{fill:var(--pq-bronze);fill-opacity:0.62}
+.sankey .lk.o-blocked_maybe{fill:var(--pq-bronze);fill-opacity:0.3}
+.sankey .lk.o-reduced{fill:var(--pq-bronze-deep);fill-opacity:0.55}
+.sankey .lk.o-unchanged{fill:var(--pq-ivory);fill-opacity:0.32}
+.sankey .lk.o-unknown{fill:var(--pq-ivory);fill-opacity:0.06;stroke:var(--pq-ivory-faint);stroke-width:0.6;stroke-dasharray:3 3}
+.sankey .nd{fill:var(--pq-ivory-mid)}
+.sankey .nd.o-blocked{fill:var(--pq-bronze)}
+.sankey .nd.o-blocked_maybe{fill:var(--pq-bronze);fill-opacity:0.55}
+.sankey .nd.o-reduced{fill:var(--pq-bronze-deep)}
+.sankey .nd.o-unchanged{fill:var(--pq-ivory)}
+.sankey .nd.o-unknown{fill:none;stroke:var(--pq-ivory-dim);stroke-dasharray:3 2}
+.sankey .lb{fill:var(--pq-ivory);font-size:12.5px;font-weight:600;paint-order:stroke;stroke:var(--pq-ink);stroke-width:4px;stroke-linejoin:round}
+.sankey .lb .c,.sankey .lb.sub{fill:var(--pq-ivory-dim);font-weight:500}
+.sankey .lb.sub{font-size:11.5px}
+.sankey .sc,.sankey .oc{cursor:pointer}
+.sankey .sc:hover .lb,.sankey .oc:hover .lb{fill:var(--pq-bronze)}
+.sankey .sc:focus,.sankey .oc:focus{outline:none}
+.sankey .sc:focus-visible rect,.sankey .oc:focus-visible rect{stroke:var(--pq-ivory);stroke-width:2}
+#per td:first-child{width:1%}
+
+/* ── 서랍: 추적 사슬 ── */
+.trace{margin-top:18px}
+.trace .h3{margin:0 0 8px}
+.tr-item{padding:10px 0;border-top:1px solid var(--pq-ivory-line);font-size:12.5px}
+.tr-c{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;color:var(--pq-ivory-dim)}
+.tr-c i{display:inline-block;width:9px;height:9px;border-radius:2px;box-shadow:inset 0 0 0 1px var(--pq-ivory-dim);flex:none;align-self:center}
+.tr-c b{color:var(--pq-ivory);font-weight:600}
+.tr-item.on .tr-c i{background:var(--pq-bronze);box-shadow:none}
+.tr-reg{list-style:none;margin:4px 0 0 15px;padding:0}
+.tr-reg li{margin:1px 0;color:var(--pq-ivory-dim)}
+.tr-reg b{color:var(--pq-ivory-soft);font-weight:600}
+.tr-a{margin:6px 0 0 15px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:var(--pq-ivory-soft)}
+.tr-a .in{font-weight:600;color:var(--pq-bronze)}
+
+/* ── ⑤ 가정해 보기 ── */
+.whatif{padding:16px 18px;border-radius:var(--pq-radius-card);background:var(--pq-card-veil);box-shadow:inset 0 0 0 1px var(--pq-ivory-line)}
+.wi-form{display:grid;gap:10px}
+.wi-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px}
+.wi-row>.sub{min-width:92px}
+.wi-row select{width:auto;min-width:120px;height:34px}
+#wi-cand{max-width:640px;width:100%}
+.wi-ctl{display:flex;flex-wrap:wrap;gap:6px 16px}
+.wi-out{margin-top:14px;padding-top:12px;border-top:1px solid var(--pq-ivory-line)}
+.wi-say{margin:0 0 8px;font-size:13.5px;color:var(--pq-ivory-soft);max-width:none}
+.wi-say b{color:var(--pq-bronze)}
+.wi-t td b{color:var(--pq-bronze)}
+.wi-t tr.zero td{color:var(--pq-ivory-dim)}
+
+/* ── ⑥ 자가 진단 ── */
+.diag-note{max-width:none;margin:0 0 10px}
+.diag-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin-bottom:12px}
+.diag-tools .btn{height:36px;font-size:13.5px;padding:0 14px}
+#diag-t select{width:auto;min-width:92px;height:34px;font-size:13px}
+#diag-t td.memo{width:46%}
+#diag-t input[type=text]{width:100%;height:34px;padding:0 10px;font:inherit;font-size:13px;color:var(--pq-ivory);background:var(--pq-onyx);
+  border:1px solid var(--pq-ivory-line-strong);border-radius:var(--pq-radius-ctl)}
+#diag-t input[type=text]::placeholder{color:var(--pq-ivory-faint)}
+#diag-t input[type=text]:focus,#diag-t select:focus{outline:2px solid var(--pq-bronze);outline-offset:1px}
+#diag-t td.lv{white-space:nowrap;color:var(--pq-ivory-dim);font-size:13px}
+#diag-t th[scope=row]{font-weight:600;color:var(--pq-ivory);white-space:nowrap}
+
 /* ── 인쇄 · PDF: 밝은 바탕, 설정은 고른 값만, 단계 펼침 ── */
 @media print{
   @page{size:A4 landscape;margin:12mm}
@@ -577,7 +652,9 @@ tr.chg>td{background:var(--pq-bronze-wash)}
   body{min-width:0;background:#fff;color:#111}
   .wrap.wide{max-width:none;padding:0}
   .topbar .nav,.skip,.actions,.run,footer.site .links,#scn-cases,details:not([open]),.cases-grp,#updates,
-  .drawer,.cmp-ctl,.acts-tools,#acts th:last-child,#acts td.prop,.heat-h .fine,.lnk-hint{display:none!important}
+  .drawer,.cmp-ctl,.acts-tools,#acts th:last-child,#acts td.prop,.heat-h .fine,.lnk-hint,.diag-tools,.wi-form,#per td:first-child,#per th:first-child,
+  .wi-t td:last-child,.wi-t th:last-child{display:none!important}
+  .sankey svg{max-height:120mm}
   .hc,.strip i,.track,.track span,.legend i,.seg input:checked+span{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .hc{height:26px;font-size:11px}
   .hc.damage{background:#f3f3f3}
@@ -614,7 +691,7 @@ tr.chg>td{background:var(--pq-bronze-wash)}
 <header class="hero compact" id="top">
 <span class="eyebrow">모의 테스트 · AI 에이전트 내부통제</span>
 <h1>통제를 켜고 끄며, 공격을 다시 돌려 본다</h1>
-<p class="lede">회사의 통제와 에이전트 환경을 맞추면 공격 원형 11개와 실제 사건 45건이 그 설정에서 어떻게 끝나는지 바로 보인다. '변경안 만들기' 로 지금 설정을 기준으로 고정하면, 바꾼 만큼의 차이가 모든 숫자 옆에 붙는다.</p>
+<p class="lede">회사의 통제와 에이전트 환경을 맞추면 공격 원형 12개와 실제 사건 45건이 그 설정에서 어떻게 끝나는지 바로 보인다. '변경안 만들기' 로 지금 설정을 기준으로 고정하면, 바꾼 만큼의 차이가 모든 숫자 옆에 붙는다.</p>
 <noscript><p class="note">이 페이지는 자바스크립트로 계산한다. 같은 결과의 표는 <a href="./simulation.md">simulation.md</a>.</p></noscript>
 </header>
 
@@ -679,7 +756,7 @@ tr.chg>td{background:var(--pq-bronze-wash)}
 </section>
 
 <section id="scenario" aria-labelledby="h-scn">
-<div class="sec-h"><h2 id="h-scn">① 공격 원형 11개 — 지금 설정에서</h2><span>행을 고르면 아래에 그 원형의 공격 흐름</span></div>
+<div class="sec-h"><h2 id="h-scn">① 공격 원형 12개 — 지금 설정에서</h2><span>행을 고르면 아래에 그 원형의 공격 흐름</span></div>
 <div class="tblwrap"><table class="ov" id="ov"></table></div>
 <div class="flow-h"><h3 class="h3" id="h-flow">공격 흐름 — <span id="flow-name"></span></h3><span class="fine flow-key"><i class="k-on"></i>켜진 통제 <i class="k-off"></i>꺼진 통제 · 통제에 마우스를 올리면 그 단계에 있는 이유</span></div>
 <div class="flow-wrap" id="flow"></div>
@@ -698,13 +775,15 @@ tr.chg>td{background:var(--pq-bronze-wash)}
 <div class="sec-h"><h2 id="h-rep">② 실제 사건 45건 다시 돌리기</h2><span class="seg" role="radiogroup" aria-label="판정 기준" id="basis"></span></div>
 <div class="cards four" id="rep-cards"></div>
 <p class="fine" id="rep-explain"></p>
+<div class="sk-h"><h3 class="h3" id="h-sk">사건 45건의 흐름 — 원형을 거쳐 이 설정의 결과로</h3><span class="fine" id="sk-note"></span></div>
+<div class="sankey" id="sankey"></div>
 <h3 class="h3">프리셋끼리 비교</h3>
 <div class="tblwrap"><table id="cmp"></table></div>
-<details><summary>사건별 결과</summary><div class="tblwrap"><table id="per"></table></div></details>
+<details id="per-d"><summary>사건별 결과 — '추적' 을 누르면 사건 → 실패한 통제 → 규제 조문 → 개선 조치</summary><div class="tblwrap"><table id="per"></table></div></details>
 </section>
 
 <section id="actions" aria-labelledby="h-act">
-<div class="sec-h"><h2 id="h-act">③ 개선 조치 — 통제 하나를 AI 까지 올리면</h2><span class="acts-tools"><button type="button" class="btn" id="acts-csv">CSV 내보내기</button><span class="fine" id="csv-msg" aria-live="polite"></span></span></div>
+<div class="sec-h"><h2 id="h-act">③ 개선 조치 — 통제 하나를 AI 까지 올리면</h2><span class="acts-tools"><button type="button" class="btn" id="acts-csv">CSV 내보내기</button><button type="button" class="btn" id="policy-md">정책 초안 (.md)</button><span class="fine" id="csv-msg" aria-live="polite"></span></span></div>
 <p class="fine" id="acts-note"></p>
 <div class="tblwrap"><table id="acts"></table></div>
 </section>
@@ -723,6 +802,22 @@ tr.chg>td{background:var(--pq-bronze-wash)}
 <div><h3 class="h3">반영 대기 — 자동 수집에서 찾은 새 규제·가이드라인 후보 <span class="dim" id="pend-n"></span></h3><ul class="rows" id="pend"></ul>
 <p class="fine">사람이 문서로 올릴지 정한다 → 두 팀 블라인드 코딩 → 조정 → 다시 빌드. 전체 목록 <a href="./pending-regulations.md">pending-regulations.md</a>.</p></div>
 </div>
+<h3 class="h3" id="h-wi">가정해 보기 — 새 규제가 이 통제를 요구한다면</h3>
+<div class="whatif" id="whatif" role="group" aria-labelledby="h-wi"></div>
+</section>
+
+<section id="diag" aria-labelledby="h-diag">
+<div class="sec-h"><h2 id="h-diag">⑥ 자가 진단 — 우리 회사는 지금</h2><span id="diag-sum"></span></div>
+<p class="fine diag-note">통제마다 사람·계정 층과 AI 층의 상태, 근거를 한 줄씩 적는다. 이 브라우저 안에만 있고 어디로도 보내지 않는다 — 남기려면 JSON 으로 내보내고, 다음에 불러온다. '설정에 반영' 은 구현된 것만 켠다(AI 층 구현 = AI 까지, 사람·계정 층 구현 = 사람·계정만).</p>
+<div class="diag-tools">
+<button type="button" class="btn btn-primary" id="diag-apply">진단을 설정에 반영</button>
+<label class="chk"><input type="checkbox" id="diag-partial" /> 부분 구현도 켜진 것으로</label>
+<button type="button" class="btn" id="diag-export">JSON 내보내기</button>
+<label class="btn" for="diag-file">JSON 불러오기</label><input type="file" id="diag-file" accept="application/json,.json" class="vh" />
+<button type="button" class="btn" id="diag-clear">비우기</button>
+<span class="fine" id="diag-msg" aria-live="polite"></span>
+</div>
+<div class="tblwrap"><table id="diag-t"></table></div>
 </section>
 
 <section id="limits" aria-labelledby="h-lim">
@@ -730,11 +825,13 @@ tr.chg>td{background:var(--pq-bronze-wash)}
 <ul class="fine lim">
 <li><b>예측이 아니라 반사실 연습이다.</b> ②는 "그 사건에서 실패했다고 판정된 통제가 켜져 있었다면" 을 가정한다. 통제가 있어도 뚫릴 수 있고, 다른 경로가 있었을 수 있다 — 그래서 막힘을 하한~상한으로 낸다.</li>
 <li><b>판단 근거 없음</b> 은 공개 자료가 피해 쪽 통제를 적지 않은 사건이다(대부분 공격자가 AI 를 쓴 사건). 막혔다는 뜻도, 못 막았다는 뜻도 아니다.</li>
-<li>사건 판정은 서로 보지 않은 AI 코더 두 팀(κ 0.96)과 조정을 거쳤다. ①의 공격 원형·단계·통제 배치, 통제의 실무 뜻, 데모 케이스(가상 회사)는 저자 설계로, 블라인드 코딩을 거치지 않았다. 원형 6개는 실제 사건이 아니라 OWASP Agentic Top 10 같은 위협 목록에서 왔다('사건 없음' 표시).</li>
-<li><b>④ OWASP 커버리지는 자체 계산이다.</b> 그 항목을 근거로 둔 원형들의 결과를 모았을 뿐, OWASP 의 평가·인증이 아니다. 원형이 없는 항목(예: 코드 실행)은 재지 않는다.</li>
+<li>사건 판정은 서로 보지 않은 AI 코더 두 팀(κ 0.96)과 조정을 거쳤다. ①의 공격 원형·단계·통제 배치, 통제의 실무 뜻, 데모 케이스(가상 회사)는 저자 설계로, 블라인드 코딩을 거치지 않았다. 실제 사건이 없는 원형은 OWASP Agentic Top 10 같은 위협 목록에서 왔다('사건 없음' 표시).</li>
+<li><b>④ OWASP 커버리지는 자체 계산이다.</b> 그 항목을 근거로 둔 원형들의 결과를 모았을 뿐, OWASP 의 평가·인증이 아니다. 원형이 없는 항목은 재지 않는다(지금은 ASI01~10 모두 근거 원형이 있다).</li>
 <li><b>③ 개선 조치의 효과는 하나씩 따로 잰 값이다.</b> 둘을 더하면 겹치는 사건이 두 번 세어진다 — 합친 효과는 변경안에 넣어 위 숫자로 본다. 비용·난이도는 따지지 않는다.</li>
 <li>규제 프리셋은 문서가 요구하는 통제를 이 에이전트에 모두 적용했다고 가정한다. 적용 대상(예: AI 기본법의 사람 관리·감독은 고영향 AI 만)은 따지지 않는다.</li>
-<li>이 페이지는 아무것도 저장하거나 보내지 않는다. 설정은 주소창의 # 뒤에만 있고, CSV 는 이 브라우저에서 만들어 내려받는다.</li>
+<li><b>⑤ 가정해 보기는 가정이다.</b> 새 문서가 통제를 요구한다고 치고 프리셋을 다시 계산할 뿐, 실제 반영은 문서 등록 · 두 팀 코딩 · 조정을 거친다.</li>
+<li><b>정책 초안은 검토용 뼈대다.</b> 형식은 이 도구 자체 형식이고 특정 집행 도구의 스키마가 아니다 — 그대로 운영에 넣지 않는다.</li>
+<li>이 페이지는 아무것도 저장하거나 보내지 않는다. 설정은 주소창의 # 뒤에만 있고, CSV · 정책 초안 · 자가 진단 JSON 은 이 브라우저에서 만들어 내려받는다. 자가 진단은 새로 고치면 사라진다.</li>
 </ul>
 </section>
 

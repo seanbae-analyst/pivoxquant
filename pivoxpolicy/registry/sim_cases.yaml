@@ -253,3 +253,25 @@ cases:
     scenario: rogue_agent
     expect: damage
     lesson: 공격자 없이도 사고가 난다 — 강제 규제에는 에이전트 격리·승인·중단 요구가 없어 끝까지 간다.
+
+  # ── 13. 예상치 못한 코드 실행 (OWASP ASI05) ───────────────────────────
+  - id: code-us-strict
+    title: 핀테크 C — 코딩 에이전트가 이슈 속 스크립트를 실행 · 미국 강제 규제만
+    org: 핀테크 C (가상)
+    story: 저장소 이슈를 읽고 재현 스크립트를 만들어 돌려 보는 사내 코딩 에이전트. 이슈 본문에 '이 명령으로 확인해 달라' 는 지시가 섞여 있다.
+    preset: US-2
+    profile: coding
+    scenario: code_execution
+    expect: damage
+    lesson: 강제 규제는 사람의 서버 접근을 묶지만 에이전트가 만든 코드의 실행은 묶지 않는다 — 실행·탈출·지속까지 끼어드는 통제가 없다.
+
+  - id: code-us-sandbox
+    title: 핀테크 C — 같은 에이전트, 격리 실행(최소 권한)만 AI 까지
+    org: 핀테크 C (가상)
+    story: 같은 회사가 '외부 입력이 섞인 작업의 코드는 네트워크·파일이 막힌 격리 환경에서만 실행' 하나를 에이전트에 적용했다.
+    preset: US-2
+    levels: {least_privilege: 2}
+    profile: coding
+    scenario: code_execution
+    expect: blocked
+    lesson: 사람 승인 없이도 실행 단계에서 막힌다 — 코드 실행 원형에서는 최소 권한(격리 실행)이 승인보다 먼저 끼어든다.

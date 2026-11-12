@@ -10,6 +10,7 @@
 
   function runScenario(scn, env, levels) {
     var missing = (scn.requires || []).filter(function (r) { return !env[r]; });
+    if (scn.requires_tools && scn.requires_tools.indexOf(env.tools || "read") < 0) missing.push("exec_tools");
     var imp = scn.impact || {};
     var impact = imp.fixed || ((imp.by_tools || {})[env.tools || "read"] || "");
     var steps = [];

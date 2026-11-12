@@ -115,13 +115,15 @@
 <div class="sec-h"><h2 id="h-rep">② 실제 사건 {{N_INCIDENTS}}건 다시 돌리기</h2><span class="seg" role="radiogroup" aria-label="판정 기준" id="basis"></span></div>
 <div class="cards four" id="rep-cards"></div>
 <p class="fine" id="rep-explain"></p>
+<div class="sk-h"><h3 class="h3" id="h-sk">사건 {{N_INCIDENTS}}건의 흐름 — 원형을 거쳐 이 설정의 결과로</h3><span class="fine" id="sk-note"></span></div>
+<div class="sankey" id="sankey"></div>
 <h3 class="h3">프리셋끼리 비교</h3>
 <div class="tblwrap"><table id="cmp"></table></div>
-<details><summary>사건별 결과</summary><div class="tblwrap"><table id="per"></table></div></details>
+<details id="per-d"><summary>사건별 결과 — '추적' 을 누르면 사건 → 실패한 통제 → 규제 조문 → 개선 조치</summary><div class="tblwrap"><table id="per"></table></div></details>
 </section>
 
 <section id="actions" aria-labelledby="h-act">
-<div class="sec-h"><h2 id="h-act">③ 개선 조치 — 통제 하나를 AI 까지 올리면</h2><span class="acts-tools"><button type="button" class="btn" id="acts-csv">CSV 내보내기</button><span class="fine" id="csv-msg" aria-live="polite"></span></span></div>
+<div class="sec-h"><h2 id="h-act">③ 개선 조치 — 통제 하나를 AI 까지 올리면</h2><span class="acts-tools"><button type="button" class="btn" id="acts-csv">CSV 내보내기</button><button type="button" class="btn" id="policy-md">정책 초안 (.md)</button><span class="fine" id="csv-msg" aria-live="polite"></span></span></div>
 <p class="fine" id="acts-note"></p>
 <div class="tblwrap"><table id="acts"></table></div>
 </section>
@@ -140,6 +142,22 @@
 <div><h3 class="h3">반영 대기 — 자동 수집에서 찾은 새 규제·가이드라인 후보 <span class="dim" id="pend-n"></span></h3><ul class="rows" id="pend"></ul>
 <p class="fine">사람이 문서로 올릴지 정한다 → 두 팀 블라인드 코딩 → 조정 → 다시 빌드. 전체 목록 <a href="./pending-regulations.md">pending-regulations.md</a>.</p></div>
 </div>
+<h3 class="h3" id="h-wi">가정해 보기 — 새 규제가 이 통제를 요구한다면</h3>
+<div class="whatif" id="whatif" role="group" aria-labelledby="h-wi"></div>
+</section>
+
+<section id="diag" aria-labelledby="h-diag">
+<div class="sec-h"><h2 id="h-diag">⑥ 자가 진단 — 우리 회사는 지금</h2><span id="diag-sum"></span></div>
+<p class="fine diag-note">통제마다 사람·계정 층과 AI 층의 상태, 근거를 한 줄씩 적는다. 이 브라우저 안에만 있고 어디로도 보내지 않는다 — 남기려면 JSON 으로 내보내고, 다음에 불러온다. '설정에 반영' 은 구현된 것만 켠다(AI 층 구현 = AI 까지, 사람·계정 층 구현 = 사람·계정만).</p>
+<div class="diag-tools">
+<button type="button" class="btn btn-primary" id="diag-apply">진단을 설정에 반영</button>
+<label class="chk"><input type="checkbox" id="diag-partial" /> 부분 구현도 켜진 것으로</label>
+<button type="button" class="btn" id="diag-export">JSON 내보내기</button>
+<label class="btn" for="diag-file">JSON 불러오기</label><input type="file" id="diag-file" accept="application/json,.json" class="vh" />
+<button type="button" class="btn" id="diag-clear">비우기</button>
+<span class="fine" id="diag-msg" aria-live="polite"></span>
+</div>
+<div class="tblwrap"><table id="diag-t"></table></div>
 </section>
 
 <section id="limits" aria-labelledby="h-lim">
@@ -147,11 +165,13 @@
 <ul class="fine lim">
 <li><b>예측이 아니라 반사실 연습이다.</b> ②는 "그 사건에서 실패했다고 판정된 통제가 켜져 있었다면" 을 가정한다. 통제가 있어도 뚫릴 수 있고, 다른 경로가 있었을 수 있다 — 그래서 막힘을 하한~상한으로 낸다.</li>
 <li><b>판단 근거 없음</b> 은 공개 자료가 피해 쪽 통제를 적지 않은 사건이다(대부분 공격자가 AI 를 쓴 사건). 막혔다는 뜻도, 못 막았다는 뜻도 아니다.</li>
-<li>사건 판정은 서로 보지 않은 AI 코더 두 팀(κ 0.96)과 조정을 거쳤다. ①의 공격 원형·단계·통제 배치, 통제의 실무 뜻, 데모 케이스(가상 회사)는 저자 설계로, 블라인드 코딩을 거치지 않았다. 원형 6개는 실제 사건이 아니라 OWASP Agentic Top 10 같은 위협 목록에서 왔다('사건 없음' 표시).</li>
-<li><b>④ OWASP 커버리지는 자체 계산이다.</b> 그 항목을 근거로 둔 원형들의 결과를 모았을 뿐, OWASP 의 평가·인증이 아니다. 원형이 없는 항목(예: 코드 실행)은 재지 않는다.</li>
+<li>사건 판정은 서로 보지 않은 AI 코더 두 팀(κ 0.96)과 조정을 거쳤다. ①의 공격 원형·단계·통제 배치, 통제의 실무 뜻, 데모 케이스(가상 회사)는 저자 설계로, 블라인드 코딩을 거치지 않았다. 실제 사건이 없는 원형은 OWASP Agentic Top 10 같은 위협 목록에서 왔다('사건 없음' 표시).</li>
+<li><b>④ OWASP 커버리지는 자체 계산이다.</b> 그 항목을 근거로 둔 원형들의 결과를 모았을 뿐, OWASP 의 평가·인증이 아니다. 원형이 없는 항목은 재지 않는다(지금은 ASI01~10 모두 근거 원형이 있다).</li>
 <li><b>③ 개선 조치의 효과는 하나씩 따로 잰 값이다.</b> 둘을 더하면 겹치는 사건이 두 번 세어진다 — 합친 효과는 변경안에 넣어 위 숫자로 본다. 비용·난이도는 따지지 않는다.</li>
 <li>규제 프리셋은 문서가 요구하는 통제를 이 에이전트에 모두 적용했다고 가정한다. 적용 대상(예: AI 기본법의 사람 관리·감독은 고영향 AI 만)은 따지지 않는다.</li>
-<li>이 페이지는 아무것도 저장하거나 보내지 않는다. 설정은 주소창의 # 뒤에만 있고, CSV 는 이 브라우저에서 만들어 내려받는다.</li>
+<li><b>⑤ 가정해 보기는 가정이다.</b> 새 문서가 통제를 요구한다고 치고 프리셋을 다시 계산할 뿐, 실제 반영은 문서 등록 · 두 팀 코딩 · 조정을 거친다.</li>
+<li><b>정책 초안은 검토용 뼈대다.</b> 형식은 이 도구 자체 형식이고 특정 집행 도구의 스키마가 아니다 — 그대로 운영에 넣지 않는다.</li>
+<li>이 페이지는 아무것도 저장하거나 보내지 않는다. 설정은 주소창의 # 뒤에만 있고, CSV · 정책 초안 · 자가 진단 JSON 은 이 브라우저에서 만들어 내려받는다. 자가 진단은 새로 고치면 사라진다.</li>
 </ul>
 </section>
 

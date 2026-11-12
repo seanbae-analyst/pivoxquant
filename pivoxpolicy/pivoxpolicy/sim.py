@@ -65,6 +65,9 @@ def validate_scenarios(data: dict[str, Any], control_ids: set[str], incident_ids
         for r in s.get("requires") or []:
             if r not in REQUIREMENTS:
                 problems.append(f"{sid}: 모르는 requires {r}")
+        rt = s.get("requires_tools")
+        if rt is not None and (not rt or any(t not in TOOLS for t in rt)):
+            problems.append(f"{sid}: requires_tools 는 {TOOLS} 중 하나 이상")
         imp = s.get("impact") or {}
         if not imp.get("fixed") and set((imp.get("by_tools") or {})) != set(TOOLS):
             problems.append(f"{sid}: impact 는 fixed 또는 by_tools(read·write·pay 모두)")
@@ -104,9 +107,12 @@ def validate_scenarios(data: dict[str, Any], control_ids: set[str], incident_ids
 
 def run_scenario(scn: dict[str, Any], env: dict[str, Any], levels: dict[str, int]) -> dict[str, Any]:
     """공격 원형 하나를 단계별로 걷는다.
-    env = {tools: read|write|pay, untrusted_input: bool, open_components: bool}, levels = 통제 id → 0|1|2.
+    env = {tools: read|write|pay, untrusted_input: bool, ...}, levels = 통제 id → 0|1|2.
+    requires(환경 조건)나 requires_tools(필요한 도구 권한)가 맞지 않으면 공격면 없음 — missing 에 이유(exec_tools = 도구 권한).
     결과 outcome: no_surface(공격면 없음) · blocked(막힘) · reduced(피해 축소) · damage(피해 발생)."""
     missing = [r for r in scn.get("requires") or [] if not env.get(r)]
+    if scn.get("requires_tools") and env.get("tools", "read") not in scn["requires_tools"]:
+        missing.append("exec_tools")          # 이 원형에 필요한 도구 권한(예: 코드 실행 = 쓰기·실행 이상)이 없다
     imp = scn.get("impact") or {}
     impact = imp.get("fixed") or (imp.get("by_tools") or {}).get(env.get("tools", "read"), "")
     steps: list[dict[str, Any]] = []

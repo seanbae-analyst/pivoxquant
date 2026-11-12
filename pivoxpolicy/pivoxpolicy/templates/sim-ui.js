@@ -17,7 +17,8 @@
                    memory: "장기 메모리를 쓴다", multi_agent: "다른 에이전트와 일을 주고받는다" };
   var TOOLS = [["read", "조회만"], ["write", "쓰기·실행"], ["pay", "송금·결제"]];
   var REQ_KO = { untrusted_input: "외부 입력을 읽지 않는다", open_components: "외부 구성요소를 들이지 않는다",
-                 memory: "장기 메모리를 쓰지 않는다", multi_agent: "다른 에이전트와 일을 주고받지 않는다" };
+                 memory: "장기 메모리를 쓰지 않는다", multi_agent: "다른 에이전트와 일을 주고받지 않는다",
+                 exec_tools: "코드를 실행할 도구 권한(쓰기·실행 이상)이 없다" };
   var ENV_KEYS = ["tools", "untrusted_input", "open_components", "memory", "multi_agent"];
   var FLAG_KEYS = ["untrusted_input", "open_components", "memory", "multi_agent"];
   var ENV_NAME = { tools: "도구 권한", untrusted_input: "외부 입력", open_components: "외부 구성요소", memory: "장기 메모리", multi_agent: "멀티 에이전트" };
@@ -28,6 +29,12 @@
   var RESULT_KO = { blocked: "막힘", reduced: "피해 축소", damage: "피해 발생", no_surface: "공격면 없음" };
   var SHORT_OUT = { blocked: "막힘", reduced: "축소", damage: "발생", no_surface: "—" };
   var ASI_KO = { full: "막음", partial: "부분", gap: "공백", na: "해당 없음", none: "원형 없음" };
+  var INC_ORDER = ["blocked", "blocked_maybe", "reduced", "unchanged", "unknown"];
+  var INC_WHY = { blocked: "이 사건에서 실패한 통제가 이 설정에서 모두 켜져 있다", blocked_maybe: "사전·사용 중 단계의 실패 통제 일부만 켜졌다 — 막혔을 수도",
+                  reduced: "사후 단계 통제만 켜졌다 — 피해를 줄였을 것", unchanged: "실패한 통제가 하나도 켜지지 않았다",
+                  unknown: "공개 자료에 피해 쪽 실패 통제가 없다 — 판단 근거 없음" };
+  var DIAG_ST = [["", "모름"], ["none", "없음"], ["plan", "계획"], ["partial", "부분"], ["done", "구현"]];
+  var DIAG_KO = {}; DIAG_ST.forEach(function (x) { DIAG_KO[x[0]] = x[1]; });
   var JUR = ["KR", "US", "EU", "INTL"], JUR3 = ["KR", "US", "EU"];
 
   var ctlById = {}, stageOf = {}, failures = {}, presetById = {}, profileById = {}, scnById = {}, incById = {};
@@ -51,7 +58,8 @@
     profile: "trading", env: envOf(profileById.trading) || { tools: "pay", untrusted_input: true, open_components: false },
     statedOnly: false, scenario: D.scenarios[0].id, open: {}, kase: null,
     base: null,      // 비교 중이면 고정된 기준 {levels, env, profile} — 왼쪽 설정은 변경안이 된다
-    drawer: null     // 히트맵 칸 {sid, col}
+    drawer: null,    // 서랍 — {kind: "cell", sid, col} 히트맵 칸 · {kind: "inc", iid} 사건 추적
+    diag: {}         // 자가 진단 — 통제 id → {analog, agent, note}. 주소창에도 안 남긴다(메모가 길고 민감할 수 있다)
   };
   function snapshot() { return { levels: Object.assign({}, state.levels), env: Object.assign({}, state.env), profile: state.profile }; }
   function ref() { return state.base || state; }
@@ -492,7 +500,9 @@
     var r = E.runScenario(s, env, levels), row = el("div", { cls: "flow-row" });
     var req = s.requires || [];
     var head = el("div", { cls: "flow-top" }, [label ? el("span", { cls: "flow-l", text: label }) : null,
-      el("span", { cls: "entry", text: req.length ? "진입 조건 — 에이전트가 " + req.map(function (x) { return ENTRY_KO[x]; }).join(" · ") : "진입 조건 없음 — 어느 에이전트에서나 시작될 수 있다" })]);
+      el("span", { cls: "entry", text: req.length || s.requires_tools ? "진입 조건 — 에이전트가 " + req.map(function (x) { return ENTRY_KO[x]; })
+        .concat(s.requires_tools ? ["도구 권한 " + s.requires_tools.map(function (t) { return optLabel("tools", t); }).join(" 또는 ") + " 을 가진다"] : []).join(" · ")
+        : "진입 조건 없음 — 어느 에이전트에서나 시작될 수 있다" })]);
     row.appendChild(head);
     if (r.outcome === "no_surface") {
       row.appendChild(el("div", { cls: "flow-none" }, [el("b", { text: "시작되지 않음" }),
@@ -606,9 +616,11 @@
     t.appendChild(tb);
   }
   var drawerFrom = null;
-  function openDrawer(sid, colId) {
-    if (!state.drawer) drawerFrom = "hc-" + sid + "-" + colId;
-    state.drawer = { sid: sid, col: colId };
+  function openDrawer(sid, colId) { openPanel({ kind: "cell", sid: sid, col: colId }, "hc-" + sid + "-" + colId); }
+  function openIncDrawer(iid) { openPanel({ kind: "inc", iid: iid }, "tr-" + iid); }
+  function openPanel(d, from) {
+    if (!state.drawer) drawerFrom = from;
+    state.drawer = d;
     renderHeat(); renderDrawer();
     $("drawer").hidden = false;
     document.body.classList.add("drawer-open");
@@ -616,13 +628,76 @@
   }
   function closeDrawer() {
     if (!state.drawer) return;
-    var back = "hc-" + state.drawer.sid + "-" + state.drawer.col;
+    var d = state.drawer, back = d.kind === "inc" ? "tr-" + d.iid : "hc-" + d.sid + "-" + d.col;
     state.drawer = null; $("drawer").hidden = true; document.body.classList.remove("drawer-open"); renderHeat();
     var f = $(back) || $(drawerFrom);
     if (f) f.focus();
   }
   function renderDrawer() {
     var d = state.drawer; if (!d) return;
+    if (d.kind === "inc") renderIncDrawer(d); else renderCellDrawer(d);
+  }
+  // 추적 — 통제(층) → 관할별 그 층의 가장 센 문서 → ③ 개선 조치의 순위
+  function regList(cid, layer) {
+    var ul = el("ul", { cls: "tr-reg" });
+    JUR.forEach(function (j) {
+      var x = regOf(cid, j)[layer] || { score: 0 };
+      var li = el("li", null, [el("b", { text: (D.jurisdictions || {})[j] || j }), " " + SCORE_KO[x.score]]);
+      if (x.doc) { li.appendChild(document.createTextNode(" · ")); li.appendChild(link(x.url, x.title)); }
+      ul.appendChild(li);
+    });
+    return ul;
+  }
+  function traceBlock(title, items) {
+    var acts = actions(), rank = {};
+    acts.forEach(function (a, k) { rank[a.control] = { n: k + 1, a: a }; });
+    var box = el("div", { cls: "trace" }, [el("h3", { cls: "h3", text: title })]);
+    if (!items.length) box.appendChild(el("p", { cls: "fine", text: "이어 볼 통제가 없다." }));
+    items.forEach(function (it) {
+      var ar = rank[it.cid], tail = el("div", { cls: "tr-a" });
+      if (ar) {
+        tail.appendChild(document.createTextNode("③ 개선 조치 " + ar.n + "순위 — 사건 막힘 하한 " + sign(ar.a.inc_lo) + " · 상한 " + sign(ar.a.inc_hi) + " "));
+        if (state.levels[it.cid] < 2) tail.appendChild(button("변경안에 넣기", "sm", function () {
+          if (!state.base) state.base = snapshot();
+          state.levels[it.cid] = 2; state.preset = matchPreset(); pendingFocus = "drawer-x"; update();
+        }));
+        else tail.appendChild(el("span", { cls: "in", text: "변경안에 있음" }));
+      } else tail.appendChild(document.createTextNode((state.base ? "기준" : "지금 설정") + "에서 이미 AI 까지 — 개선 조치 목록에 없다"));
+      box.appendChild(el("div", { cls: "tr-item" + (it.on ? " on" : "") }, [
+        el("div", { cls: "tr-c" }, [el("i"), el("b", { text: cname(it.cid) + " · " + LAYER_KO[it.layer] }),
+          " — " + (it.on ? "켜짐" : "꺼짐") + " (" + LEVEL_KO[it.lv] + ")" + (it.extra ? " · " + it.extra : "")]),
+        regList(it.cid, it.layer), tail]));
+    });
+    return box;
+  }
+  function renderIncDrawer(d) {
+    var i = incById[d.iid];
+    if (!i) { closeDrawer(); return; }
+    var body = clear($("drawer-body")), s = scnById[i.scenario];
+    var r = E.replay(failures, state.levels, stageOf, state.statedOnly), out = r.per[i.id];
+    $("drawer-k").textContent = "사건 추적 · " + i.date;
+    $("drawer-h").textContent = i.title;
+    var sb = s ? el("button", { type: "button", cls: "lnk", text: short(s) }) : null;
+    if (sb) sb.addEventListener("click", function () {
+      state.scenario = s.id; closeDrawer(); update(); renderFlow(true);
+      var o = $("h-flow"); if (o.scrollIntoView) o.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+    });
+    body.appendChild(el("dl", { cls: "meta" }, [
+      el("dt", { text: "출처" }), el("dd", null, [link(i.url, "원문")]),
+      el("dt", { text: "공격 원형" }), el("dd", null, [sb || "—"]),
+      el("dt", { text: "판정" }), el("dd", { text: "두 팀 블라인드 코딩 → 조정본 · 실패 통제 " + i.fails.length + "개" })
+    ]));
+    var vcls = { blocked: "blocked", blocked_maybe: "reduced", reduced: "reduced", unchanged: "damage", unknown: "no_surface" }[out];
+    body.appendChild(el("div", { cls: "res" }, [el("div", { cls: "v " + vcls, text: OUT_KO[out] + (state.base ? " (변경안)" : "") }),
+      el("p", { text: INC_WHY[out] + (state.statedOnly ? " · 원문이 적은 실패만 센다" : "") })]));
+    var items = i.fails.map(function (f) {
+      var lv = Number(state.levels[f.control] || 0);
+      return { cid: f.control, layer: f.layer, lv: lv, on: E.covers(lv, f.layer),
+               extra: (f.level === "stated" ? "원문이 적은 실패" : "원문 사실에서 추론") + (state.statedOnly && f.level !== "stated" ? " — 지금 기준에선 빠짐" : "") };
+    });
+    body.appendChild(traceBlock("추적 — 실패한 통제 → 규제 근거 → 개선 조치", items));
+  }
+  function renderCellDrawer(d) {
     var col = heatCols().filter(function (c) { return c.id === d.col; })[0], s = scnById[d.sid];
     if (!col || !s) { closeDrawer(); return; }
     var r = E.runScenario(s, col.env, col.levels), body = clear($("drawer-body"));
@@ -662,6 +737,16 @@
       });
     }
     body.appendChild(ol);
+    var seen = {}, items = [];
+    s.stages.forEach(function (st) {
+      (st.checks || []).forEach(function (c) {
+        var k = c.control + "|" + c.layer, lv = Number(col.levels[c.control] || 0);
+        if (seen[k]) return;
+        seen[k] = 1;
+        items.push({ cid: c.control, layer: c.layer, lv: lv, on: E.covers(lv, c.layer), extra: DECISION[c.effect] + " 자리" });
+      });
+    });
+    body.appendChild(traceBlock("추적 — 이 원형의 통제 → 규제 근거 → 개선 조치", items));
     var acts = el("div", { cls: "drawer-acts" });
     acts.appendChild(button("①에서 흐름 따라 보기", "", function () {
       state.scenario = s.id; closeDrawer(); update(); renderFlow(true); renderWalk(true);
@@ -670,7 +755,7 @@
     }));
     if (col.preset) {
       acts.appendChild(button("이 프리셋을 " + (state.base ? "변경안" : "왼쪽 설정") + "에 불러오기", "", function () {
-        state.levels = Object.assign({}, col.levels); state.preset = col.id; state.drawer = { sid: s.id, col: "_now" };
+        state.levels = Object.assign({}, col.levels); state.preset = col.id; state.drawer = { kind: "cell", sid: s.id, col: "_now" };
         pendingFocus = "drawer-x"; update();
       }));
     }
@@ -709,16 +794,106 @@
     });
     t.appendChild(tb);
     var pt = clear($("per"));
-    pt.appendChild(el("thead", null, [el("tr", null, [el("th", { text: "사건" }), el("th", { text: "실패 판정" }), el("th", { text: "결과" }), el("th", { text: "날짜" })])]));
+    pt.appendChild(el("thead", null, [el("tr", null, [el("th", { "aria-label": "추적" }), el("th", { text: "사건" }), el("th", { text: "실패 판정" }), el("th", { text: "결과" }), el("th", { text: "날짜" })])]));
     var pb = el("tbody"), order = { blocked: 0, blocked_maybe: 1, reduced: 2, unchanged: 3, unknown: 4 };
     D.incidents.slice().sort(function (a, z) { return order[r.per[a.id]] - order[r.per[z.id]] || (a.date < z.date ? 1 : -1); }).forEach(function (i) {
       var fs = state.statedOnly ? i.fails.filter(function (f) { return f.level === "stated"; }) : i.fails;
       var moved = !!b && b.per[i.id] !== r.per[i.id];
-      pb.appendChild(el("tr", { cls: moved ? "chg" : "" }, [el("td", null, [link(i.url, i.title)]),
+      var tb2 = el("button", { type: "button", id: "tr-" + i.id, cls: "btn sm", text: "추적", "aria-label": i.title + " 추적" });
+      tb2.addEventListener("click", function () { openIncDrawer(i.id); });
+      pb.appendChild(el("tr", { cls: moved ? "chg" : "" }, [el("td", null, [tb2]), el("td", null, [link(i.url, i.title)]),
         el("td", { text: fs.length ? fs.map(function (f) { return cname(f.control) + "(" + LAYER_KO[f.layer] + ")"; }).join(" · ") : "—" }),
         el("td", null, [moved ? el("span", { cls: "was", text: "기준 " + OUT_KO[b.per[i.id]] + " →" }) : null, OUT_KO[r.per[i.id]]]), el("td", { text: i.date })]));
     });
     pt.appendChild(pb);
+    renderSankey(r, b);
+  }
+
+  // ── ② 사건 흐름: 사건 → 원형 → 이 설정의 결과 (SVG — 글은 textContent) ──
+  var SVGNS = "http://www.w3.org/2000/svg";
+  function sv(tag, attrs, text) {
+    var n = document.createElementNS(SVGNS, tag);
+    Object.keys(attrs || {}).forEach(function (k) { n.setAttribute(k, attrs[k]); });
+    if (text !== undefined) n.textContent = text;
+    return n;
+  }
+  function bandPath(x0, y0a, y0b, x1, y1a, y1b) {
+    var m = (x0 + x1) / 2, f = function (v) { return Math.round(v * 10) / 10; };
+    return "M" + f(x0) + "," + f(y0a) + "C" + f(m) + "," + f(y0a) + " " + f(m) + "," + f(y1a) + " " + f(x1) + "," + f(y1a) +
+      "L" + f(x1) + "," + f(y1b) + "C" + f(m) + "," + f(y1b) + " " + f(m) + "," + f(y0b) + " " + f(x0) + "," + f(y0b) + "Z";
+  }
+  function renderSankey(r, b) {
+    var box = clear($("sankey"));
+    var W = Math.max(680, Math.round(box.clientWidth || 852)), H = 380, NW = 12, gap = 12;
+    var scns = D.scenarios.filter(function (s) { return D.incidents.some(function (i) { return i.scenario === s.id; }); });
+    var total = D.incidents.length, flows = {}, outN = {};
+    INC_ORDER.forEach(function (o) { outN[o] = 0; });
+    scns.forEach(function (s) { flows[s.id] = {}; INC_ORDER.forEach(function (o) { flows[s.id][o] = 0; }); });
+    D.incidents.forEach(function (i) { if (flows[i.scenario]) { flows[i.scenario][r.per[i.id]] += 1; outN[r.per[i.id]] += 1; } });
+    var outs = INC_ORDER.filter(function (o) { return outN[o] > 0; });
+    var k = (H - 16 - gap * (Math.max(scns.length, outs.length) - 1)) / total;
+    var x0 = 108, x2 = W - 196, x1 = Math.round((x0 + x2) / 2);
+    function stack(counts) {
+      var tot = counts.reduce(function (a, c) { return a + c * k; }, 0) + gap * (counts.length - 1), y = (H - tot) / 2;
+      return counts.map(function (c) { var o = { y: y, h: c * k }; y += c * k + gap; return o; });
+    }
+    var n0 = { y: (H - total * k) / 2, h: total * k };
+    var sN = stack(scns.map(function (s) { return s.incidents.length; }));
+    var oN = stack(outs.map(function (o) { return outN[o]; }));
+    var svg = sv("svg", { viewBox: "0 0 " + W + " " + H, width: String(W), height: String(H), role: "img",
+      "aria-label": "사건 " + total + "건이 공격 원형을 거쳐 이 설정의 결과로 — " + outs.map(function (o) { return OUT_KO[o] + " " + outN[o] + "건"; }).join(", ") });
+    var gL = sv("g"), gN = sv("g"), gT = sv("g");
+    var off0 = n0.y, tOff = {};
+    outs.forEach(function (o, j) { tOff[o] = oN[j].y; });
+    scns.forEach(function (s, i) {
+      var h = s.incidents.length * k, sy = sN[i].y;
+      var p0 = sv("path", { d: bandPath(x0 + NW, off0, off0 + h, x1, sy, sy + h), "class": "lk l0" });
+      p0.appendChild(sv("title", {}, "사건 → " + short(s) + " " + s.incidents.length + "건"));
+      gL.appendChild(p0);
+      off0 += h;
+      var sOff = sy;
+      outs.forEach(function (o) {
+        var c = flows[s.id][o]; if (!c) return;
+        var hh = c * k, p1 = sv("path", { d: bandPath(x1 + NW, sOff, sOff + hh, x2, tOff[o], tOff[o] + hh), "class": "lk o-" + o });
+        p1.appendChild(sv("title", {}, short(s) + " → " + OUT_KO[o] + " " + c + "건"));
+        gL.appendChild(p1);
+        sOff += hh; tOff[o] += hh;
+      });
+      var g = sv("g", { "class": "sc", tabindex: "0", role: "button", "aria-label": short(s) + " " + s.incidents.length + "건 — ①에서 공격 흐름 보기" });
+      g.appendChild(sv("rect", { x: x1, y: sy, width: NW, height: Math.max(h, 1), "class": "nd" }));
+      var t = sv("text", { x: x1 + NW + 8, y: sy + h / 2, "class": "lb", "dominant-baseline": "middle" });
+      t.appendChild(sv("tspan", {}, short(s) + " "));
+      t.appendChild(sv("tspan", { "class": "c" }, String(s.incidents.length)));
+      g.appendChild(t);
+      var go = function () {
+        state.scenario = s.id; update(); renderFlow(true);
+        var o = $("h-flow"); if (o.scrollIntoView) o.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+      };
+      g.addEventListener("click", go);
+      g.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
+      gN.appendChild(g);
+    });
+    gN.appendChild(sv("rect", { x: x0, y: n0.y, width: NW, height: n0.h, "class": "nd" }));
+    gT.appendChild(sv("text", { x: x0 - 10, y: H / 2 - 9, "class": "lb end", "text-anchor": "end" }, "사건 " + total + "건"));
+    var yrs = D.incidents.map(function (i) { return String(i.date || "").slice(0, 4); }).filter(Boolean).sort();
+    if (yrs.length) gT.appendChild(sv("text", { x: x0 - 10, y: H / 2 + 10, "class": "lb end sub", "text-anchor": "end" }, yrs[0] + "~" + yrs[yrs.length - 1] + " 공개"));
+    outs.forEach(function (o, j) {
+      var y = oN[j].y, h = oN[j].h;
+      var g = sv("g", { "class": "oc", tabindex: "0", role: "button", "aria-label": OUT_KO[o] + " " + outN[o] + "건 — 사건별 결과 표 열기" });
+      g.appendChild(sv("rect", { x: x2, y: y, width: NW, height: Math.max(h, 1), "class": "nd o-" + o }));
+      var t = sv("text", { x: x2 + NW + 8, y: y + h / 2, "class": "lb", "dominant-baseline": "middle" });
+      t.appendChild(sv("tspan", {}, OUT_KO[o] + " "));
+      t.appendChild(sv("tspan", { "class": "c" }, outN[o] + "건"));
+      g.appendChild(t);
+      var open = function () { var dd = $("per-d"); dd.open = true; if (dd.scrollIntoView) dd.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" }); };
+      g.addEventListener("click", open);
+      g.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } });
+      gN.appendChild(g);
+    });
+    svg.appendChild(gL); svg.appendChild(gN); svg.appendChild(gT);
+    box.appendChild(svg);
+    var moved = b ? D.incidents.filter(function (i) { return b.per[i.id] !== r.per[i.id]; }).length : 0;
+    $("sk-note").textContent = (state.base ? "변경안 기준 · 기준에서 결과가 바뀐 사건 " + moved + "건 · " : "") + "띠를 가리키면 건수 · 원형을 누르면 ①의 흐름도로";
   }
 
   // ── ③ 개선 조치 ──
@@ -780,7 +955,7 @@
     var acts = actions(), R = ref(), prof = profileById[R.profile] || profileById[profileOf(R.env)];
     var head = ["순위", "통제", "조치 (AI 까지)", "단계", "지금", "목표", "사건 막힘 하한 증가", "사건 막힘 상한 증가", "결과가 바뀌는 원형"];
     JUR3.forEach(function (j) { var n = (D.jurisdictions || {})[j] || j; head.push(n + " 사람·계정 층", n + " AI 층", n + " 근거 문서"); });
-    head.push("변경안에 포함", "담당", "기한", "상태", "메모", "기준 설정", "에이전트 환경", "설정 링크", "만든 날", "출처");
+    head.push("변경안에 포함", "자가 진단 사람·계정", "자가 진단 AI", "진단 메모", "담당", "기한", "상태", "메모", "기준 설정", "에이전트 환경", "설정 링크", "만든 날", "출처");
     var rows = [head];
     acts.forEach(function (a, k) {
       var c = ctlById[a.control] || {};
@@ -790,7 +965,9 @@
         var g = regOf(a.control, j).agent || { score: 0 }, an = regOf(a.control, j).analog || { score: 0 }, top = g.doc ? g : an;
         row.push(SCORE_KO[an.score], SCORE_KO[g.score], top.title ? top.title + (top.url ? " " + top.url : "") : "");
       });
-      row.push(state.base && state.levels[a.control] >= 2 ? "예" : "", "", "", "", "",
+      var dg = state.diag[a.control] || {};
+      row.push(state.base && state.levels[a.control] >= 2 ? "예" : "", dg.analog || dg.agent ? DIAG_KO[dg.analog || ""] : "", dg.analog || dg.agent ? DIAG_KO[dg.agent || ""] : "",
+        dg.note || "", "", "", "", "",
         (presetById[presetOf(R.levels)] || { label: "직접 설정" }).label, (prof ? prof.label + " — " : "") + envSummary(R.env),
         location.href, today(), "PivoxPolicy 모의 테스트 — 자체 계산, 법률 자문 아님");
       rows.push(row);
@@ -845,6 +1022,208 @@
       "부분 = 그 사이(축소 포함) · 해당 없음 = 이 환경에서 공격면 없음 · 원형 없음 = 재지 않음. 항목 제목은 "));
     note.appendChild(link((D.owasp_asi || {}).source, "OWASP Top 10 for Agentic Applications (2025-12-09 발표)"));
     note.appendChild(document.createTextNode(" 그대로."));
+  }
+
+  // ── ⑤ 가정해 보기: 새 문서가 통제를 요구한다면 → 관할 프리셋 다시 계산 (가정일 뿐, 실제 반영은 코딩 후) ──
+  var WI = { j: "KR", strength: 2, layer: "agent", ctl: {}, cand: "" };
+  function wiLevels(p, thr) {
+    var lv = Object.assign({}, p.levels);
+    if (WI.strength < thr) return lv;               // 자율 문서는 '강제 규제만' 프리셋에 들지 않는다
+    CIDS.forEach(function (c) { if (WI.ctl[c]) lv[c] = WI.layer === "agent" ? 2 : Math.max(lv[c], 1); });
+    return lv;
+  }
+  function renderWhatIfForm() {
+    var box = clear($("whatif")), f = el("div", { cls: "wi-form" });
+    var js = el("select", { id: "wi-j", "aria-label": "관할" });
+    JUR.forEach(function (j) { js.appendChild(el("option", { value: j, text: (D.jurisdictions || {})[j] || j })); });
+    js.value = WI.j;
+    js.addEventListener("change", function () { WI.j = js.value; renderWhatIf(); });
+    var st = el("div", { cls: "seg", role: "radiogroup", "aria-label": "문서의 힘" });
+    seg(st, "wi-s", [[2, "구속력 (법령·감독규정)"], [1, "자율 (가이드라인)"]], WI.strength, function (v) { WI.strength = Number(v); renderWhatIf(); });
+    var ly = el("div", { cls: "seg", role: "radiogroup", "aria-label": "어느 층" });
+    seg(ly, "wi-l", [["agent", "AI 에이전트에 적용"], ["analog", "사람·계정에만"]], WI.layer, function (v) { WI.layer = v; renderWhatIf(); });
+    var cs = el("div", { cls: "wi-ctl", role: "group", "aria-label": "요구하는 통제" });
+    D.controls.forEach(function (c) {
+      var id = "wi-c-" + c.id, inp = el("input", { type: "checkbox", id: id });
+      inp.checked = !!WI.ctl[c.id];
+      inp.addEventListener("change", function () { WI.ctl[c.id] = inp.checked; renderWhatIf(); });
+      cs.appendChild(el("label", { "for": id, cls: "chk" }, [inp, " " + c.num + ". " + c.name]));
+    });
+    var P = (D.pending || {}).top || [], cand = el("select", { id: "wi-cand", "aria-label": "근거로 삼을 반영 대기 후보" });
+    cand.appendChild(el("option", { value: "", text: "— 이름 없는 새 문서 —" }));
+    P.forEach(function (x, i) { cand.appendChild(el("option", { value: String(i), text: x.jurisdiction + " · " + x.title.slice(0, 70) })); });
+    cand.addEventListener("change", function () {
+      WI.cand = cand.value;
+      var x = P[Number(cand.value)];
+      if (x && JUR.indexOf(x.jurisdiction) >= 0) { WI.j = x.jurisdiction; js.value = x.jurisdiction; }
+      renderWhatIf();
+    });
+    f.appendChild(el("div", { cls: "wi-row" }, [el("span", { cls: "sub", text: "어떤 문서" }), cand]));
+    f.appendChild(el("div", { cls: "wi-row" }, [el("span", { cls: "sub", text: "관할" }), js]));
+    f.appendChild(el("div", { cls: "wi-row" }, [el("span", { cls: "sub", text: "문서의 힘" }), st]));
+    f.appendChild(el("div", { cls: "wi-row" }, [el("span", { cls: "sub", text: "적용 대상" }), ly]));
+    f.appendChild(el("div", { cls: "wi-row" }, [el("span", { cls: "sub", text: "요구하는 통제" }), cs]));
+    box.appendChild(f);
+    box.appendChild(el("div", { cls: "wi-out", id: "wi-out", "aria-live": "polite" }));
+  }
+  function renderWhatIf() {
+    var out = clear($("wi-out")), picked = CIDS.filter(function (c) { return WI.ctl[c]; });
+    if (!picked.length) { out.appendChild(el("p", { cls: "fine", text: "요구하는 통제를 하나 이상 고르면, 그 관할의 프리셋을 다시 계산해 지금 에이전트 환경에서 무엇이 바뀌는지 보인다." })); return; }
+    var x = ((D.pending || {}).top || [])[Number(WI.cand)], who = WI.cand !== "" && x ? "'" + x.title + "' 문서" : "새 문서";
+    out.appendChild(el("p", { cls: "wi-say" }, [el("b", { text: "가정" }), " — " + who + "가 이렇게 요구한다고 친다: 관할 " + ((D.jurisdictions || {})[WI.j] || WI.j) +
+      " · 통제 " + picked.map(cname).join(", ") + " · " + (WI.layer === "agent" ? "AI 에이전트에 적용" : "사람·계정에만") + " · " + (WI.strength === 2 ? "구속력" : "자율") +
+      ". 실제 반영은 문서 등록 · 두 팀 코딩 · 조정 뒤다."]));
+    var t = el("table", { cls: "wi-t" });
+    t.appendChild(el("thead", null, [el("tr", null, [el("th", { text: "프리셋" }), el("th", { text: "사건 막힘" }), el("th", { text: "결과가 바뀌는 원형 (지금 환경)" }),
+      el("th", { text: "OWASP 막음" }), el("th", { "aria-label": "비교" })])]));
+    var tb = el("tbody"), any = false;
+    [2, 1].forEach(function (thr) {
+      var p = presetById[WI.j + "-" + thr];
+      if (!p) return;
+      var after = wiLevels(p, thr), same = CIDS.every(function (c) { return after[c] === p.levels[c]; });
+      var r0 = E.replay(failures, p.levels, stageOf, state.statedOnly), r1 = E.replay(failures, after, stageOf, state.statedOnly);
+      var s0 = scnResults(p.levels, state.env), s1 = scnResults(after, state.env), moved = [];
+      D.scenarios.forEach(function (s) { if (s0[s.id].outcome !== s1[s.id].outcome) moved.push(short(s) + " " + SHORT_OUT[s0[s.id].outcome] + "→" + SHORT_OUT[s1[s.id].outcome]); });
+      var a0 = asiTally(E.asiCoverage(D.scenarios, state.env, p.levels, ASI)).full, a1 = asiTally(E.asiCoverage(D.scenarios, state.env, after, ASI)).full;
+      var cmp = same ? el("span", { cls: "dim", text: "이미 그 수준" }) : button("변경안으로 비교", "sm", function () {
+        state.base = { levels: Object.assign({}, p.levels), env: Object.assign({}, state.env), profile: state.profile };
+        state.levels = after; state.preset = matchPreset(); state.kase = null; update();
+        var b = $("posture"); if (b.scrollIntoView) b.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+      });
+      if (!same) any = true;
+      tb.appendChild(el("tr", { cls: same ? "zero" : "" }, [el("td", { text: p.label }),
+        el("td", null, [rangeText(r0) + " → ", el("b", { text: rangeText(r1) })]),
+        el("td", { text: moved.length ? moved.join(" · ") : "—" }),
+        el("td", null, [a0 + " → ", el("b", { text: String(a1) })]), el("td", null, [cmp])]));
+    });
+    t.appendChild(tb);
+    out.appendChild(el("div", { cls: "tblwrap" }, [t]));
+    if (!any) out.appendChild(el("p", { cls: "fine", text: "바뀌는 것이 없다 — 그 관할 프리셋이 이미 그 수준이다(자율 문서는 '강제 규제만' 프리셋을 바꾸지 않는다)." }));
+  }
+
+  // ── ⑥ 자가 진단 + 근거 메모 — 이 브라우저 안에만. JSON 으로 내보내고 불러온다 ──
+  var diagDirty = false;
+  function hasDiag() { return CIDS.some(function (c) { var d = state.diag[c]; return d && (d.analog || d.agent || d.note); }); }
+  function renderDiagTable() {
+    var t = clear($("diag-t"));
+    t.appendChild(el("thead", null, [el("tr", null, [el("th", { text: "통제" }), el("th", { text: "사람·계정 층" }), el("th", { text: "AI 층" }),
+      el("th", { text: "근거 메모 (300자)" }), el("th", { text: "지금 설정" })])]));
+    var tb = el("tbody");
+    D.controls.forEach(function (c) {
+      var d = state.diag[c.id] || (state.diag[c.id] = { analog: "", agent: "", note: "" });
+      function sel(layer) {
+        var x = el("select", { id: "diag-" + layer + "-" + c.id, "aria-label": c.name + " " + LAYER_KO[layer] + " 층 상태" });
+        DIAG_ST.forEach(function (o) { x.appendChild(el("option", { value: o[0], text: o[1] })); });
+        x.value = d[layer] || "";
+        x.addEventListener("change", function () { d[layer] = x.value; diagDirty = true; renderDiagSum(); });
+        return x;
+      }
+      var note = el("input", { type: "text", id: "diag-n-" + c.id, maxlength: "300", "aria-label": c.name + " 근거 메모",
+        placeholder: ((c.help || {}).agent || "").slice(0, 28) + "…" });
+      note.value = d.note || "";
+      note.addEventListener("input", function () { d.note = note.value.slice(0, 300); diagDirty = true; });
+      tb.appendChild(el("tr", null, [el("th", { scope: "row", text: c.num + ". " + c.name }), el("td", null, [sel("analog")]), el("td", null, [sel("agent")]),
+        el("td", { cls: "memo" }, [note]), el("td", { cls: "lv", id: "diag-lv-" + c.id })]));
+    });
+    t.appendChild(tb);
+    renderDiagSum();
+  }
+  function renderDiagSum() {
+    var n = {}; DIAG_ST.forEach(function (x) { n[x[0]] = 0; });
+    CIDS.forEach(function (c) { n[(state.diag[c] || {}).agent || ""] += 1; });
+    $("diag-sum").textContent = "AI 층 — 구현 " + n.done + " · 부분 " + n.partial + " · 계획 " + n.plan + " · 없음 " + n.none + " · 모름 " + n[""];
+    CIDS.forEach(function (c) { var x = $("diag-lv-" + c); if (x) x.textContent = LEVEL_KO[state.levels[c]]; });
+  }
+  function diagLevels() {
+    var partial = $("diag-partial").checked, ok = function (v) { return v === "done" || (partial && v === "partial"); }, lv = {};
+    CIDS.forEach(function (c) { var d = state.diag[c] || {}; lv[c] = ok(d.agent) ? 2 : ok(d.analog) ? 1 : 0; });
+    return lv;
+  }
+  function diagMsg(t) { var m = $("diag-msg"); m.textContent = t; setTimeout(function () { if (m.textContent === t) m.textContent = ""; }, 5000); }
+  function download(name, type, text) {
+    var url = URL.createObjectURL(new Blob([text], { type: type }));
+    var a = el("a", { href: url, download: name });
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+  }
+  function exportDiag() {
+    var ctl = {};
+    D.controls.forEach(function (c) { var d = state.diag[c.id] || {}; ctl[c.id] = { name: c.name, analog: d.analog || "", agent: d.agent || "", note: d.note || "" }; });
+    download("pivoxpolicy-self-assessment_" + today() + ".json", "application/json", JSON.stringify({
+      format: "pivoxpolicy-self-assessment", version: 1, exported_at: new Date().toISOString(),
+      statuses: DIAG_KO, include_partial: $("diag-partial").checked, agent: { profile: state.profile, env: state.env }, controls: ctl
+    }, null, 2) + "\n");
+    diagDirty = false;
+    diagMsg("내려받았다 — 이 파일에만 남는다");
+  }
+  function importDiag(file) {
+    if (!file) return;
+    if (file.size > 200000) { diagMsg("파일이 너무 크다(200KB 까지)"); return; }
+    var rd = new FileReader();
+    rd.onload = function () {
+      var j;
+      try { j = JSON.parse(String(rd.result)); } catch (e) { diagMsg("JSON 을 읽지 못했다"); return; }
+      if (!j || j.format !== "pivoxpolicy-self-assessment" || typeof j.controls !== "object") { diagMsg("PivoxPolicy 자가 진단 파일이 아니다"); return; }
+      var n = 0;
+      CIDS.forEach(function (c) {
+        var x = j.controls[c]; if (!x || typeof x !== "object") return;
+        var okS = function (v) { return typeof v === "string" && DIAG_KO.hasOwnProperty(v) ? v : ""; };
+        state.diag[c] = { analog: okS(x.analog), agent: okS(x.agent), note: typeof x.note === "string" ? x.note.slice(0, 300) : "" };
+        n += 1;
+      });
+      if (j.include_partial === true || j.include_partial === false) $("diag-partial").checked = j.include_partial;
+      diagDirty = false; renderDiagTable();
+      diagMsg("불러왔다 — 통제 " + n + "개. '진단을 설정에 반영' 을 누르면 왼쪽 설정이 바뀐다");
+    };
+    rd.onerror = function () { diagMsg("파일을 읽지 못했다"); };
+    rd.readAsText(file);
+  }
+
+  // ── 정책 초안 (.md + YAML 뼈대) — 검토용, 자체 형식 ──
+  function mdText(t) { return String(t || "").replace(/[\[\]]/g, "").replace(/\s+/g, " ").trim(); }
+  function policyDraft() {
+    var prof = profileById[state.profile], acts = E.improvementActions(D.scenarios, state.env, failures, state.levels, stageOf, state.statedOnly), rank = {};
+    acts.forEach(function (a, k) { rank[a.control] = { n: k + 1, a: a }; });
+    var q = function (v) { return JSON.stringify(String(v === undefined || v === null ? "" : v)); };
+    var L = ["# AI 에이전트 내부통제 정책 초안 — " + (prof ? prof.label : "직접 설정한 에이전트"), "",
+      "> **검토용 초안이다.** PivoxPolicy 모의 테스트에서 만든 뼈대이고, 형식은 이 도구 자체 형식이다(특정 집행 도구의 스키마가 아니다).",
+      "> 법률 자문이 아니며 그대로 운영에 넣지 않는다. 규제 근거는 관할마다 그 통제를 가장 세게 다룬 문서 하나다.", "",
+      "- 만든 날: " + today(),
+      "- 에이전트: " + (prof ? prof.label + " — " : "") + envSummary(state.env),
+      "- 통제 수준: " + ((presetById[state.preset] || {}).label || "직접 설정") + (state.base ? " (변경안 — 기준: " + cfgLabel(state.base) + ")" : ""),
+      "- 설정 링크: " + location.href, "", "## 통제별 요구", ""];
+    var Y = ["pivoxpolicy_policy_draft: 1", "generated: " + q(today()), "note: " + q("검토용 초안 — 자체 형식, 특정 도구 스키마 아님, 법률 자문 아님"),
+      "agent:", "  type: " + q(prof ? prof.label : "custom"), "  tools: " + q(state.env.tools),
+      "  reads_untrusted_input: " + !!state.env.untrusted_input, "  imports_external_components: " + !!state.env.open_components,
+      "  long_term_memory: " + !!state.env.memory, "  multi_agent: " + !!state.env.multi_agent, "controls:"];
+    D.controls.forEach(function (c) {
+      var lv = Number(state.levels[c.id] || 0), h = c.help || {}, d = state.diag[c.id] || {}, rk = rank[c.id];
+      L.push("### " + c.num + ". " + c.name + " — " + LEVEL_KO[lv], "");
+      if (lv >= 1) L.push("- 사람·계정: " + mdText(h.analog));
+      if (lv >= 2) L.push("- AI 에이전트: " + mdText(h.agent));
+      if (lv === 0) L.push("- 이 설정에서는 적용하지 않는다.");
+      if (rk) L.push("- 다음 단계(AI 까지): " + mdText(h.agent) + " — 개선 조치 " + rk.n + "순위, 사건 막힘 하한 " + sign(rk.a.inc_lo) + " · 상한 " + sign(rk.a.inc_hi));
+      if (d.analog || d.agent || d.note) L.push("- 자가 진단: 사람·계정 " + DIAG_KO[d.analog || ""] + " · AI " + DIAG_KO[d.agent || ""] + (d.note ? " — " + mdText(d.note) : ""));
+      L.push("- 규제 근거:");
+      Y.push("  - id: " + q(c.id), "    name: " + q(c.name), "    apply_to: " + q(["none", "human", "human_and_ai"][lv]) + "   # none | human | human_and_ai",
+        "    requirement_human: " + q(lv >= 1 ? h.analog : ""), "    requirement_ai: " + q(lv >= 2 ? h.agent : ""),
+        "    owner: \"\"", "    review_by: \"\"");
+      if (d.analog || d.agent || d.note) Y.push("    self_assessment: {human: " + q(DIAG_KO[d.analog || ""]) + ", ai: " + q(DIAG_KO[d.agent || ""]) + ", note: " + q(d.note || "") + "}");
+      Y.push("    basis:");
+      JUR.forEach(function (j) {
+        var R = regOf(c.id, j), jn = (D.jurisdictions || {})[j] || j, parts = [];
+        ["analog", "agent"].forEach(function (layer) {
+          var x = R[layer] || { score: 0 };
+          parts.push(LAYER_KO[layer] + " " + SCORE_KO[x.score] + (x.doc ? " [" + mdText(x.title) + "](" + x.url + ")" : ""));
+          if (x.doc) Y.push("      - {jurisdiction: " + q(j) + ", layer: " + q(layer === "agent" ? "ai" : "human") + ", strength: " + q(SCORE_KO[x.score]) +
+            ", doc: " + q(x.title) + ", url: " + q(x.url) + "}");
+        });
+        L.push("  - " + jn + " — " + parts.join(" / "));
+      });
+      L.push("- 담당: ", "- 검토 기한: ", "");
+    });
+    L.push("## 기계가 읽는 뼈대 (YAML — 자체 형식)", "", "```yaml");
+    return L.concat(Y, ["```", ""]).join("\n");
   }
 
   // ── 데모 케이스 ──
@@ -924,7 +1303,7 @@
     var fid = pendingFocus || (document.activeElement && document.activeElement.id);
     pendingFocus = null;
     renderCompareCtl(); renderPresetHint(); renderControls(); renderEnv(); renderCaseBanner(); renderCompareBar(); renderBand();
-    renderOverview(); renderFlow(false); renderWalk(false); renderHeat(); renderReplay(); renderActions(); renderAsi();
+    renderOverview(); renderFlow(false); renderWalk(false); renderHeat(); renderReplay(); renderActions(); renderAsi(); renderWhatIf(); renderDiagSum();
     if (state.drawer) renderDrawer();
     writeHash();
     var f = fid && $(fid);
@@ -959,6 +1338,26 @@
     if (f.scrollIntoView) f.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
   });
   $("acts-csv").addEventListener("click", exportCSV);
+  $("policy-md").addEventListener("click", function () {
+    writeHash();
+    download("pivoxpolicy-policy-draft_" + today() + ".md", "text/markdown;charset=utf-8", policyDraft());
+    var m = $("csv-msg"); m.textContent = "정책 초안을 내려받았다 — 검토용 뼈대"; setTimeout(function () { m.textContent = ""; }, 4000);
+  });
+  $("diag-apply").addEventListener("click", function () {
+    var lv = diagLevels(), n = [0, 0, 0];
+    CIDS.forEach(function (c) { n[lv[c]] += 1; });
+    state.levels = lv; state.preset = matchPreset(); update();
+    diagMsg("반영했다 — AI 까지 " + n[2] + " · 사람·계정만 " + n[1] + " · 없음 " + n[0] + (state.base ? " (변경안에)" : ""));
+  });
+  $("diag-export").addEventListener("click", exportDiag);
+  $("diag-file").addEventListener("change", function (e) { importDiag(e.target.files && e.target.files[0]); e.target.value = ""; });
+  $("diag-clear").addEventListener("click", function () {
+    if (hasDiag() && !window.confirm("자가 진단을 모두 지운다. 내보내지 않은 내용은 사라진다.")) return;
+    state.diag = {}; diagDirty = false; renderDiagTable(); diagMsg("비웠다");
+  });
+  window.addEventListener("beforeunload", function (e) { if (diagDirty && hasDiag()) { e.preventDefault(); e.returnValue = ""; } });
+  var rsz = null;
+  window.addEventListener("resize", function () { clearTimeout(rsz); rsz = setTimeout(function () { renderReplay(); }, 150); });
   $("print").addEventListener("click", function () { window.print(); });
   $("copy").addEventListener("click", function () {
     writeHash();
@@ -970,5 +1369,5 @@
 
   readHash();
   if (state.kase && !/[&#]l=/.test(location.hash)) applyCase(state.kase);   // 케이스 링크만 있으면 케이스 설정으로
-  renderPresetSelect(); renderCasePicker(); renderUpdates(); update();
+  renderPresetSelect(); renderCasePicker(); renderUpdates(); renderWhatIfForm(); renderDiagTable(); update();
 })();

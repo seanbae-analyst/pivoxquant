@@ -141,7 +141,7 @@ select:hover{border-color:rgba(245,240,232,0.26)}
 .h3{margin:20px 0 10px}
 #cmp td.num b{color:var(--pq-bronze)}
 #cmp tr.cur td{background:var(--pq-bronze-wash)}
-#per td:nth-child(3),#per td:nth-child(4){white-space:nowrap}
+#per td:nth-child(4),#per td:nth-child(5){white-space:nowrap}
 .lim li{margin:6px 0}
 .lim b{color:var(--pq-ivory)}
 
@@ -298,6 +298,81 @@ tr.chg>td{background:var(--pq-bronze-wash)}
 #asi-note{margin-top:10px;max-width:none}
 #cmp tr.base td{color:var(--pq-ivory-soft)}
 
+/* ── 공용 작은 것 ── */
+.btn.sm{height:30px;padding:0 10px;font-size:12.5px}
+.chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--pq-ivory-soft);cursor:pointer}
+.chk input{accent-color:var(--pq-bronze);margin:0}
+.vh{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);border:0}
+label.btn:has(+ .vh:focus-visible){outline:2px solid var(--pq-ivory);outline-offset:2px}
+
+/* ── ② 사건 흐름 (Sankey) — 띠 색 = 결과, 칸 = 원형 ── */
+.sk-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-top:22px}
+.sk-h .h3{margin:0 0 8px}
+.sankey svg{display:block;width:100%;height:auto;overflow:visible}
+.sankey .lk{transition:fill-opacity 120ms var(--pq-ease)}
+.sankey .lk:hover{fill-opacity:0.9}
+.sankey .l0{fill:var(--pq-ivory);fill-opacity:0.11}
+.sankey .lk.o-blocked{fill:var(--pq-bronze);fill-opacity:0.62}
+.sankey .lk.o-blocked_maybe{fill:var(--pq-bronze);fill-opacity:0.3}
+.sankey .lk.o-reduced{fill:var(--pq-bronze-deep);fill-opacity:0.55}
+.sankey .lk.o-unchanged{fill:var(--pq-ivory);fill-opacity:0.32}
+.sankey .lk.o-unknown{fill:var(--pq-ivory);fill-opacity:0.06;stroke:var(--pq-ivory-faint);stroke-width:0.6;stroke-dasharray:3 3}
+.sankey .nd{fill:var(--pq-ivory-mid)}
+.sankey .nd.o-blocked{fill:var(--pq-bronze)}
+.sankey .nd.o-blocked_maybe{fill:var(--pq-bronze);fill-opacity:0.55}
+.sankey .nd.o-reduced{fill:var(--pq-bronze-deep)}
+.sankey .nd.o-unchanged{fill:var(--pq-ivory)}
+.sankey .nd.o-unknown{fill:none;stroke:var(--pq-ivory-dim);stroke-dasharray:3 2}
+.sankey .lb{fill:var(--pq-ivory);font-size:12.5px;font-weight:600;paint-order:stroke;stroke:var(--pq-ink);stroke-width:4px;stroke-linejoin:round}
+.sankey .lb .c,.sankey .lb.sub{fill:var(--pq-ivory-dim);font-weight:500}
+.sankey .lb.sub{font-size:11.5px}
+.sankey .sc,.sankey .oc{cursor:pointer}
+.sankey .sc:hover .lb,.sankey .oc:hover .lb{fill:var(--pq-bronze)}
+.sankey .sc:focus,.sankey .oc:focus{outline:none}
+.sankey .sc:focus-visible rect,.sankey .oc:focus-visible rect{stroke:var(--pq-ivory);stroke-width:2}
+#per td:first-child{width:1%}
+
+/* ── 서랍: 추적 사슬 ── */
+.trace{margin-top:18px}
+.trace .h3{margin:0 0 8px}
+.tr-item{padding:10px 0;border-top:1px solid var(--pq-ivory-line);font-size:12.5px}
+.tr-c{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;color:var(--pq-ivory-dim)}
+.tr-c i{display:inline-block;width:9px;height:9px;border-radius:2px;box-shadow:inset 0 0 0 1px var(--pq-ivory-dim);flex:none;align-self:center}
+.tr-c b{color:var(--pq-ivory);font-weight:600}
+.tr-item.on .tr-c i{background:var(--pq-bronze);box-shadow:none}
+.tr-reg{list-style:none;margin:4px 0 0 15px;padding:0}
+.tr-reg li{margin:1px 0;color:var(--pq-ivory-dim)}
+.tr-reg b{color:var(--pq-ivory-soft);font-weight:600}
+.tr-a{margin:6px 0 0 15px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:var(--pq-ivory-soft)}
+.tr-a .in{font-weight:600;color:var(--pq-bronze)}
+
+/* ── ⑤ 가정해 보기 ── */
+.whatif{padding:16px 18px;border-radius:var(--pq-radius-card);background:var(--pq-card-veil);box-shadow:inset 0 0 0 1px var(--pq-ivory-line)}
+.wi-form{display:grid;gap:10px}
+.wi-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px}
+.wi-row>.sub{min-width:92px}
+.wi-row select{width:auto;min-width:120px;height:34px}
+#wi-cand{max-width:640px;width:100%}
+.wi-ctl{display:flex;flex-wrap:wrap;gap:6px 16px}
+.wi-out{margin-top:14px;padding-top:12px;border-top:1px solid var(--pq-ivory-line)}
+.wi-say{margin:0 0 8px;font-size:13.5px;color:var(--pq-ivory-soft);max-width:none}
+.wi-say b{color:var(--pq-bronze)}
+.wi-t td b{color:var(--pq-bronze)}
+.wi-t tr.zero td{color:var(--pq-ivory-dim)}
+
+/* ── ⑥ 자가 진단 ── */
+.diag-note{max-width:none;margin:0 0 10px}
+.diag-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin-bottom:12px}
+.diag-tools .btn{height:36px;font-size:13.5px;padding:0 14px}
+#diag-t select{width:auto;min-width:92px;height:34px;font-size:13px}
+#diag-t td.memo{width:46%}
+#diag-t input[type=text]{width:100%;height:34px;padding:0 10px;font:inherit;font-size:13px;color:var(--pq-ivory);background:var(--pq-onyx);
+  border:1px solid var(--pq-ivory-line-strong);border-radius:var(--pq-radius-ctl)}
+#diag-t input[type=text]::placeholder{color:var(--pq-ivory-faint)}
+#diag-t input[type=text]:focus,#diag-t select:focus{outline:2px solid var(--pq-bronze);outline-offset:1px}
+#diag-t td.lv{white-space:nowrap;color:var(--pq-ivory-dim);font-size:13px}
+#diag-t th[scope=row]{font-weight:600;color:var(--pq-ivory);white-space:nowrap}
+
 /* ── 인쇄 · PDF: 밝은 바탕, 설정은 고른 값만, 단계 펼침 ── */
 @media print{
   @page{size:A4 landscape;margin:12mm}
@@ -307,7 +382,9 @@ tr.chg>td{background:var(--pq-bronze-wash)}
   body{min-width:0;background:#fff;color:#111}
   .wrap.wide{max-width:none;padding:0}
   .topbar .nav,.skip,.actions,.run,footer.site .links,#scn-cases,details:not([open]),.cases-grp,#updates,
-  .drawer,.cmp-ctl,.acts-tools,#acts th:last-child,#acts td.prop,.heat-h .fine,.lnk-hint{display:none!important}
+  .drawer,.cmp-ctl,.acts-tools,#acts th:last-child,#acts td.prop,.heat-h .fine,.lnk-hint,.diag-tools,.wi-form,#per td:first-child,#per th:first-child,
+  .wi-t td:last-child,.wi-t th:last-child{display:none!important}
+  .sankey svg{max-height:120mm}
   .hc,.strip i,.track,.track span,.legend i,.seg input:checked+span{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .hc{height:26px;font-size:11px}
   .hc.damage{background:#f3f3f3}

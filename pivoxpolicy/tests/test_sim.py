@@ -51,6 +51,16 @@ def test_scenario_outcomes():
     assert (r["outcome"], r["contained"]) == ("damage", "late")
 
 
+def test_requires_tools_gates_the_attack_surface():
+    """코드 실행처럼 도구 권한이 있어야 성립하는 원형 — 조회만 하는 에이전트에는 공격면이 없다."""
+    scn = dict(SCN, requires=[], requires_tools=["write", "pay"])
+    r = sim.run_scenario(scn, dict(ENV, tools="read"), lv())
+    assert (r["outcome"], r["missing"]) == ("no_surface", ["exec_tools"])
+    assert sim.run_scenario(scn, dict(ENV, tools="write"), lv())["outcome"] == "damage"
+    bad = {"scenarios": [dict(scn, id="x", basis=["b"], incidents=[], requires_tools=["root"])]}
+    assert any("requires_tools" in p for p in sim.validate_scenarios(bad, set(CIDS), set()))
+
+
 def test_replay_bounds_and_unknown():
     f = [{"control": "least_privilege", "layer": "agent", "level": "stated"},
          {"control": "kill_switch", "layer": "analog", "level": "inferred"}]
@@ -90,7 +100,7 @@ def test_build_writes_page(tmp_path):
     assert len(sim.load_history(tmp_path / "h.jsonl")) == 1
     html = (tmp_path / "sim.html").read_text(encoding="utf-8")
     assert "{{" not in html and "<script>" not in html     # CSP script-src 'self' — 인라인 스크립트 없음
-    for part in ('id="band"', 'id="flow"', 'id="heat"', 'id="drawer"', 'id="acts"', 'id="acts-csv"', 'id="asi"', 'id="cmp-ctl"'):
+    for part in ('id="band"', 'id="flow"', 'id="sankey"', 'id="whatif"', 'id="diag-t"', 'id="policy-md"', 'id="heat"', 'id="drawer"', 'id="acts"', 'id="acts-csv"', 'id="asi"', 'id="cmp-ctl"'):
         assert part in html, part                            # 한눈에 · 히트맵 + 서랍 · 개선 조치 + CSV · OWASP · 변경안 비교
     md = (tmp_path / "simulation.md").read_text(encoding="utf-8")
     assert "## OWASP Agentic Top 10 커버리지" in md and "## 개선 조치" in md
@@ -241,7 +251,7 @@ def test_registry_asi_catalog():
     items = data["owasp_asi"]["items"]
     assert [x["id"] for x in items] == [f"ASI{k:02d}" for k in range(1, 11)] and all(x["name"] and x["ko"] for x in items)
     used = {a for s in data["scenarios"] for a in sim.asi_of(s)}
-    assert used == {x["id"] for x in items} - {"ASI05"}      # 코드 실행(ASI05) 원형은 아직 없다 — 페이지에 '원형 없음'
+    assert used == {x["id"] for x in items}                   # ASI01~10 모두 근거 원형이 있다(ASI05 = code_execution)
     bad = dict(data, scenarios=[dict(data["scenarios"][0], basis=["OWASP ASI42 Imaginary"])])
     assert any("ASI42" in x for x in sim.validate_scenarios(bad, set(CIDS), set()))
 
