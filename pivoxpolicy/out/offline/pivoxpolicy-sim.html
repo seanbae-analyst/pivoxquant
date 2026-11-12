@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8" />
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-jSiSKssOxX1h7877n0BZ5WkcP5/x7Y1dFLeNHpUoSLY=' 'sha256-lvtx5m7uFN8ZpG86+TkHXVC7JbSEm53zDpkGmb/VoPk=' 'sha256-SBTZSQWQkgZvVlZtOaXsC2q6lk0ecuFUSYIUvKBOoMI='; style-src 'unsafe-inline' https://cdn.jsdelivr.net; font-src https://cdn.jsdelivr.net data:; img-src data:; base-uri 'none'; form-action 'none'" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-jSiSKssOxX1h7877n0BZ5WkcP5/x7Y1dFLeNHpUoSLY=' 'sha256-lvtx5m7uFN8ZpG86+TkHXVC7JbSEm53zDpkGmb/VoPk=' 'sha256-SBTZSQWQkgZvVlZtOaXsC2q6lk0ecuFUSYIUvKBOoMI=' 'sha256-AQtFX513IKKKCibGbSBFy0bUjWJeXJnyFe9pTYEHEmo='; style-src 'unsafe-inline' https://cdn.jsdelivr.net; font-src https://cdn.jsdelivr.net data:; img-src data:; base-uri 'none'; form-action 'none'" />
 <meta name="viewport" content="width=1280" />
 <title>PivoxPolicy 모의 테스트</title>
 <meta name="description" content="통제를 켜고 끄며 AI 에이전트 공격 원형 12개와 실제 사건 45건을 다시 돌려 본다." />
@@ -43,6 +43,7 @@
   --pq-ease: cubic-bezier(0.2, 0.75, 0.2, 1);
 
   --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
+  --font-wordmark: "Playfair Display", Georgia, serif;   /* 표지 워드마크만 — PivoxMap globals.css 와 같다 */
   --font-code: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;   /* kbd · code 만 */
 
   --pq-radius-card: 14px;
@@ -55,7 +56,7 @@
 
 *,*::before,*::after{box-sizing:border-box}
 html{color-scheme:dark;accent-color:var(--pq-bronze);-webkit-text-size-adjust:100%}
-body{margin:0;min-height:100vh;background:var(--pq-ink);color:var(--pq-ivory);font-family:var(--font-sans);font-size:15px;line-height:1.6;
+body{margin:0;min-height:100vh;background:var(--pq-ink);color:var(--pq-ivory);font-family:var(--font-sans);font-size:16px;line-height:1.6;
   -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-feature-settings:"ss05";
   word-break:keep-all;overflow-wrap:break-word;text-wrap:pretty}   /* keep-all = 어절 단위 줄바꿈. anywhere 가 아니라 break-word — 칸이 한 글자씩 세로로 눌리지 않게 */
 ::selection{background:rgba(184,149,106,0.35)}
@@ -72,14 +73,14 @@ main>*,section>*{min-width:0}   /* 넓은 표가 칸(그리드 항목)을 넓혀
 
 /* ── 글 ── */
 h1,h2,h3{margin:0;font-family:var(--font-sans);font-style:normal;text-wrap:balance}
-h1{font-size:clamp(28px,3.2vw,36px);font-weight:700;letter-spacing:-0.03em;line-height:1.2}   /* 머리말은 포스터가 아니라 신문 제호 크기 */
-h2{font-size:20px;font-weight:650;letter-spacing:-0.02em;line-height:1.3}
-h3{font-size:16px;font-weight:600;letter-spacing:-0.01em;line-height:1.4}
+h1{font-size:clamp(2.1rem,4vw,3.25rem);font-weight:700;letter-spacing:-0.03em;line-height:1.2}   /* PivoxMap .pq-h1 그대로(2026-11-12) */
+h2{font-size:clamp(1.45rem,2.5vw,2rem);font-weight:650;letter-spacing:-0.025em;line-height:1.32}   /* PivoxMap .pq-h2 그대로 */
+h3{font-size:17px;font-weight:600;letter-spacing:-0.01em;line-height:1.4}
 p{margin:0;color:var(--pq-ivory-soft);max-width:72ch}
 p+p{margin-top:10px}
-.lede{font-size:17px;line-height:1.75;letter-spacing:-0.01em;color:var(--pq-ivory-soft);max-width:64ch}
-.eyebrow{font-size:13px;letter-spacing:0.01em;color:var(--pq-bronze);font-weight:500}   /* pivoxmap .pq-eyebrow 그대로 — 대문자·넓은 자간 없음 */
-.meta,.fine{font-size:13px;line-height:1.6;color:var(--pq-ivory-dim)}
+.lede{font-size:18px;line-height:1.75;letter-spacing:-0.01em;color:var(--pq-ivory-soft);max-width:64ch}
+.eyebrow{font-size:14px;letter-spacing:0.01em;color:var(--pq-bronze);font-weight:500}   /* pivoxmap .pq-eyebrow 그대로 — 대문자·넓은 자간 없음 */
+.meta,.fine{font-size:14px;line-height:1.6;color:var(--pq-ivory-dim)}
 b,strong{font-weight:600;color:var(--pq-ivory)}
 a{color:var(--pq-bronze);text-decoration:none}
 a:hover{text-decoration:underline;text-underline-offset:3px}
@@ -92,10 +93,10 @@ code{padding:1px 6px;border:1px solid var(--pq-ivory-line);border-radius:var(--p
 
 /* ── 머리 띠: 이름 + 메뉴 한 줄 (pivoxdata ui.css .topbar/.brand/.nav) ── */
 .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;height:64px}
-.brand{display:inline-flex;align-items:center;flex-shrink:0;white-space:nowrap;font-size:18px;font-weight:700;letter-spacing:-0.02em;color:var(--pq-ivory)}
+.brand{display:inline-flex;align-items:center;flex-shrink:0;white-space:nowrap;font-size:19px;font-weight:700;letter-spacing:-0.02em;color:var(--pq-ivory)}
 .brand:hover{text-decoration:none}
 .brand .b{color:var(--pq-bronze)}   /* 'Pivox' 아이보리 + 접미 브론즈 — 세 제품 공통 워드마크 */
-.nav{display:flex;align-items:center;gap:4px;margin-left:auto;font-size:14px}
+.nav{display:flex;align-items:center;gap:4px;margin-left:auto;font-size:15px}
 .nav a{color:var(--pq-ivory-dim);padding:7px 11px;border-radius:var(--pq-radius-ctl);white-space:nowrap;transition:color 150ms,background-color 150ms}
 .nav a:hover{color:var(--pq-ivory);background:var(--pq-card-veil-strong);text-decoration:none}
 .nav a[aria-current]{color:var(--pq-ivory)}
@@ -106,7 +107,7 @@ code{padding:1px 6px;border:1px solid var(--pq-ivory-line);border-radius:var(--p
   /* 폰: 메뉴가 둘째 줄에 한 줄로, 넘치면 옆으로 민다(거터 밖까지). 아래 탭 바 없음 */
   .nav{flex:1 0 100%;gap:0;margin:0 -16px;padding:0 12px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
   .nav::-webkit-scrollbar{display:none}
-  .nav a{display:inline-flex;align-items:center;min-height:44px;padding:0 10px;font-size:14.5px;border-radius:0}
+  .nav a{display:inline-flex;align-items:center;min-height:44px;padding:0 10px;font-size:15.5px;border-radius:0}
   .nav a[aria-current]{box-shadow:inset 0 -2px 0 var(--pq-bronze)}
 }
 
@@ -120,8 +121,8 @@ section{scroll-margin-top:16px}
 .sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:0 0 14px}
 .sec-h h2 a{color:inherit}
 .sec-h h2 a:hover{text-decoration:underline;text-underline-offset:4px}
-.sec-h span{font-size:13px;color:var(--pq-ivory-dim);text-align:right}
-.src{display:flex;flex-wrap:wrap;gap:2px 10px;margin:16px 0 0;max-width:none;font-size:13px;line-height:1.6;color:var(--pq-ivory-dim)}
+.sec-h span{font-size:14px;color:var(--pq-ivory-dim);text-align:right}
+.src{display:flex;flex-wrap:wrap;gap:2px 10px;margin:16px 0 0;max-width:none;font-size:14px;line-height:1.6;color:var(--pq-ivory-dim)}
 /* 항목 사이는 '·' 대신 1px 헤어라인 — 줄이 바뀌어도 구분자가 줄 머리에 남지 않는다 (pivoxdata ui.css .r-k) */
 .src>*:not(:last-child)::after{content:"";display:inline-block;width:1px;height:10px;margin-left:10px;background:var(--pq-ivory-line-strong);vertical-align:-1px}
 .src a{color:var(--pq-ivory-dim);text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--pq-ivory-line-strong)}
@@ -130,15 +131,15 @@ section{scroll-margin-top:16px}
 /* ── 카드: 14px · veil 바탕 · 헤어라인 테두리. 꼭 필요한 곳(평가 프로필 숫자 칸)에만 — 목록은 카드로 감싸지 않는다 ── */
 .card{background:var(--pq-card-veil);border:1px solid var(--pq-ivory-line);border-radius:var(--pq-radius-card);padding:18px 20px;min-width:0}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
-.card .k{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--pq-ivory-dim)}
-.card .v{margin-top:6px;font-size:28px;font-weight:700;letter-spacing:-0.03em;line-height:1.15;font-variant-numeric:tabular-nums}
-.card .h{margin-top:2px;font-size:13px;color:var(--pq-ivory-dim)}
+.card .k{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--pq-ivory-dim)}
+.card .v{margin-top:6px;font-size:30px;font-weight:700;letter-spacing:-0.03em;line-height:1.15;font-variant-numeric:tabular-nums}
+.card .h{margin-top:2px;font-size:14px;color:var(--pq-ivory-dim)}
 
 /* ── 표: 헤더 행 헤어라인(한 단 진한 0.16), 본문 행 헤어라인 0.08, 숫자 tabular, 행 hover 는 card-veil ── */
 .tblwrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
-table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+table{width:100%;border-collapse:collapse;font-size:15px;font-variant-numeric:tabular-nums}
 th,td{padding:10px 12px;text-align:left;vertical-align:top;overflow-wrap:break-word}
-th{font-size:13px;font-weight:600;letter-spacing:0.01em;color:var(--pq-ivory-dim);white-space:nowrap;border-bottom:1px solid var(--pq-ivory-line-strong)}
+th{font-size:14px;font-weight:600;letter-spacing:0.01em;color:var(--pq-ivory-dim);white-space:nowrap;border-bottom:1px solid var(--pq-ivory-line-strong)}
 td{border-bottom:1px solid var(--pq-ivory-line)}
 tbody tr:last-child td{border-bottom:0}
 tbody tr:hover{background:var(--pq-card-veil)}
@@ -148,34 +149,34 @@ td time{white-space:nowrap}
 .matrix th:first-child,.matrix td:first-child{min-width:160px}
 .matrix th:not(:first-child),.matrix td:not(:first-child){text-align:center;min-width:64px}
 .matrix td:not(:first-child){font-weight:600}
-.legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin:10px 0 0;max-width:none;font-size:13px;color:var(--pq-ivory-dim)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin:10px 0 0;max-width:none;font-size:14px;color:var(--pq-ivory-dim)}
 .legend i{display:inline-block;width:14px;height:14px;border-radius:3px;margin-right:7px;vertical-align:-2px}
 .legend i.h-x{outline-offset:-1px}
 
 /* ── 줄 목록: 사건 · 지금 바뀐 것 · 연표 · 공백 — 박스 없이 헤어라인, 날짜 열 + 내용 열 (pivoxdata .events/.case) ── */
 .rows{list-style:none;margin:0;padding:0;border-top:1px solid var(--pq-ivory-line-strong)}
 .rows>li{display:grid;grid-template-columns:96px minmax(0,1fr);gap:4px 14px;margin:0;padding:12px 0;border-bottom:1px solid var(--pq-ivory-line)}
-.rows time,.rows .d{font-size:13px;color:var(--pq-ivory-dim);white-space:nowrap;padding-top:2px}
+.rows time,.rows .d{font-size:14px;color:var(--pq-ivory-dim);white-space:nowrap;padding-top:2px}
 .rows .t{font-weight:600;color:var(--pq-ivory)}
 .rows .t a{color:inherit}
-.rows .s{margin-top:2px;font-size:14px;line-height:1.6;color:var(--pq-ivory-mid);max-width:72ch}
-.rows .k{font-size:13px;color:var(--pq-ivory-dim)}   /* 분류(관할 · 통제 · 종류) 한 줄 — 칩 아님 */
+.rows .s{margin-top:2px;font-size:15px;line-height:1.6;color:var(--pq-ivory-mid);max-width:72ch}
+.rows .k{font-size:14px;color:var(--pq-ivory-dim)}   /* 분류(관할 · 통제 · 종류) 한 줄 — 칩 아님 */
 @media(max-width:560px){.rows>li{grid-template-columns:1fr;gap:2px}}
 
 /* ── 상태 글자: live / stale / error 는 색 글자(+점)뿐. 바탕·테두리·알약 없음 ── */
-.st{font-size:13px;font-weight:600;white-space:nowrap}
+.st{font-size:14px;font-weight:600;white-space:nowrap}
 .st::before{content:"";display:inline-block;width:6px;height:6px;border-radius:1px;background:currentColor;margin-right:6px;vertical-align:1px}
 .st-live{color:var(--pq-live)}
 .st-stale{color:var(--pq-stale)}
 .st-error{color:var(--pq-error)}
 
 /* ── 안내 칸: 네 변 테두리(한쪽 막대 아님). 범위·한계 설명 같은 읽을거리 ── */
-.note{padding:12px 16px;border-radius:var(--pq-radius-ctl);background:var(--pq-card-veil);box-shadow:inset 0 0 0 1px var(--pq-ivory-line);font-size:13px;line-height:1.65;color:var(--pq-ivory-dim);max-width:none}
+.note{padding:12px 16px;border-radius:var(--pq-radius-ctl);background:var(--pq-card-veil);box-shadow:inset 0 0 0 1px var(--pq-ivory-line);font-size:14px;line-height:1.65;color:var(--pq-ivory-dim);max-width:none}
 .note-bronze{background:var(--pq-bronze-wash);box-shadow:inset 0 0 0 1px var(--pq-bronze-line);color:var(--pq-ivory-soft)}
 .note b{color:var(--pq-bronze);font-weight:600}
 
 /* ── 버튼: 꼭 필요한 곳(파일 받기)에만 — pivoxmap .pq-btn/.pq-btn-line/.pq-btn-md 리듬 ── */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:42px;padding:0 16px;font:inherit;font-size:15px;font-weight:500;letter-spacing:0.01em;
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:42px;padding:0 16px;font:inherit;font-size:16px;font-weight:500;letter-spacing:0.01em;
   border-radius:var(--pq-radius-ctl);white-space:nowrap;cursor:pointer;border:1px solid var(--pq-ivory-line-strong);color:var(--pq-ivory);background:transparent;
   transition:background-color 220ms var(--pq-ease),color 220ms var(--pq-ease),border-color 220ms var(--pq-ease)}
 .btn:hover{background:var(--pq-card-veil-strong);border-color:rgba(245,240,232,0.26);text-decoration:none}
@@ -186,14 +187,14 @@ td time{white-space:nowrap}
 /* ── 접기: 방법 · 긴 목록 (pivoxmap details.pq-faq — 헤어라인 위아래, 브론즈 '+') ── */
 details{border-top:1px solid var(--pq-ivory-line)}
 details:last-of-type{border-bottom:1px solid var(--pq-ivory-line)}
-summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 0;font-size:15px;font-weight:600;color:var(--pq-ivory)}
+summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 0;font-size:16px;font-weight:600;color:var(--pq-ivory)}
 summary::-webkit-details-marker{display:none}
 summary::after{content:"+";flex:none;width:1em;line-height:1;text-align:center;color:var(--pq-bronze);transition:transform 250ms}
 details[open] summary::after{transform:rotate(45deg)}
 details>:not(summary){padding-bottom:16px}
 
 /* ── 바닥 (pivoxdata ui.css footer.site) ── */
-footer.site{margin-top:72px;padding:22px 0 8px;border-top:1px solid var(--pq-ivory-line);display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center;justify-content:space-between;font-size:13px;color:var(--pq-ivory-dim)}
+footer.site{margin-top:72px;padding:22px 0 8px;border-top:1px solid var(--pq-ivory-line);display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center;justify-content:space-between;font-size:14px;color:var(--pq-ivory-dim)}
 footer.site a{color:var(--pq-ivory-dim)}
 footer.site a:hover{color:var(--pq-ivory)}
 footer.site .links{display:flex;flex-wrap:wrap;gap:4px 16px}
@@ -215,9 +216,9 @@ footer.site .links{display:flex;flex-wrap:wrap;gap:4px 16px}
 .flow-key i.k-off{box-shadow:inset 0 0 0 1px var(--pq-ivory-dim)}
 .flow-wrap{display:grid;gap:18px}
 .flow-top{display:flex;align-items:baseline;gap:12px;margin-bottom:8px}
-.flow-l{font-size:13px;font-weight:700;color:var(--pq-bronze)}
-.entry{font-size:12.5px;color:var(--pq-ivory-dim)}
-.flow-none{padding:14px 16px;border-radius:var(--pq-radius-ctl);box-shadow:inset 0 0 0 1px var(--pq-ivory-line);font-size:13.5px;color:var(--pq-ivory-mid)}
+.flow-l{font-size:14px;font-weight:700;color:var(--pq-bronze)}
+.entry{font-size:14px;color:var(--pq-ivory-dim)}
+.flow-none{padding:14px 16px;border-radius:var(--pq-radius-ctl);box-shadow:inset 0 0 0 1px var(--pq-ivory-line);font-size:14px;color:var(--pq-ivory-mid)}
 .flow-none b{color:var(--pq-ivory)}
 .flow{display:grid;gap:0 30px;list-style:none;margin:0;padding:0;align-items:stretch}
 .fn{position:relative;min-width:0;margin:0;padding:12px 12px 10px;border-radius:var(--pq-radius-ctl);background:var(--pq-card-veil);
@@ -228,11 +229,11 @@ footer.site .links{display:flex;flex-wrap:wrap;gap:4px 16px}
 .fn.after::after,.fn.end.blocked::after{border-left-color:var(--pq-ivory-line-strong)}
 .fh{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:24px}
 .fn .no{display:inline-flex;align-items:center;justify-content:center;flex:none;width:24px;height:24px;border-radius:6px;
-  border:1px solid var(--pq-ivory-line-strong);font-size:12px;font-weight:600;color:var(--pq-ivory);font-variant-numeric:tabular-nums}
-.fn .tag{font-size:12px;font-weight:600;color:var(--pq-ivory-dim);text-align:right}
-.fn .ft{margin-top:8px;font-size:13.5px;font-weight:600;line-height:1.4;color:var(--pq-ivory)}
+  border:1px solid var(--pq-ivory-line-strong);font-size:13.5px;font-weight:600;color:var(--pq-ivory);font-variant-numeric:tabular-nums}
+.fn .tag{font-size:13.5px;font-weight:600;color:var(--pq-ivory-dim);text-align:right}
+.fn .ft{margin-top:8px;font-size:14px;font-weight:600;line-height:1.4;color:var(--pq-ivory)}
 .gates{list-style:none;margin:10px 0 0;padding:8px 0 0;border-top:1px solid var(--pq-ivory-line);display:grid;gap:4px}
-.gates li{display:grid;grid-template-columns:10px minmax(0,1fr) auto;align-items:baseline;gap:6px;margin:0;font-size:12px;color:var(--pq-ivory-dim);cursor:help}
+.gates li{display:grid;grid-template-columns:10px minmax(0,1fr) auto;align-items:baseline;gap:6px;margin:0;font-size:13.5px;color:var(--pq-ivory-dim);cursor:help}
 .gates li i{display:block;width:9px;height:9px;border-radius:2px;box-shadow:inset 0 0 0 1px var(--pq-ivory-dim);align-self:center}
 .gates li.on{color:var(--pq-ivory)}
 .gates li.on i{background:var(--pq-bronze);box-shadow:none}
@@ -245,14 +246,14 @@ footer.site .links{display:flex;flex-wrap:wrap;gap:4px 16px}
 .fn.touch .tag{color:var(--pq-bronze-light)}
 .fn.pass .tag{color:var(--pq-ivory-mid)}
 .fn.after{opacity:0.4;background:transparent;box-shadow:inset 0 0 0 1px var(--pq-ivory-line)}
-.fn.end .ft{font-size:16px;font-weight:700}
-.fn.end .fi{margin-top:6px;font-size:12.5px;line-height:1.5;color:var(--pq-ivory-soft)}
+.fn.end .ft{font-size:17px;font-weight:700}
+.fn.end .fi{margin-top:6px;font-size:14px;line-height:1.5;color:var(--pq-ivory-soft)}
 .fn.end.blocked{box-shadow:inset 0 0 0 1px var(--pq-bronze-line)}
 .fn.end.blocked .ft{color:var(--pq-bronze)}
 .fn.end.blocked .fi{color:var(--pq-ivory-dim)}
 .fn.end.reduced .ft{color:var(--pq-bronze-light)}
 .fn.end.damage{box-shadow:inset 0 0 0 2px rgba(245,240,232,0.55)}
-.fn.chg .fh::after{content:"바뀜";margin-left:6px;font-size:11px;font-weight:600;color:var(--pq-ivory)}
+.fn.chg .fh::after{content:"바뀜";margin-left:6px;font-size:12.5px;font-weight:600;color:var(--pq-ivory)}
 .fn.chg{outline:1px solid var(--pq-ivory-mid);outline-offset:3px}
 @media(prefers-reduced-motion:no-preference){
   .fn{transition:opacity 320ms var(--pq-ease),transform 320ms var(--pq-ease)}
@@ -277,9 +278,9 @@ footer.site .links{display:flex;flex-wrap:wrap;gap:4px 16px}
 body{min-width:1200px}
 .wrap.wide{max-width:1400px;padding:0 40px 72px}
 .dim{color:var(--pq-ivory-dim);font-weight:400}
-.hero.compact h1{font-size:30px}
+.hero.compact h1{font-size:32px}
 .hero.compact{padding-top:8px}
-.hero.compact .lede{font-size:15.5px;max-width:92ch}
+.hero.compact .lede{font-size:16.5px;max-width:92ch}
 main{gap:32px}
 
 .sim{display:grid;grid-template-columns:420px minmax(0,1fr);gap:48px;align-items:start}
@@ -289,36 +290,36 @@ main{gap:32px}
 /* ── 설정 묶음 ── */
 .grp{padding:16px 0;border-top:1px solid var(--pq-ivory-line)}
 .grp:first-child{border-top:0;padding-top:0}
-.lab{display:block;margin:0 0 10px;font-size:14px;font-weight:600;color:var(--pq-ivory)}
+.lab{display:block;margin:0 0 10px;font-size:15px;font-weight:600;color:var(--pq-ivory)}
 .lab-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
 .lab-row .hint{margin:0}
-.sub{font-size:13px;color:var(--pq-ivory-dim)}
-.hint{margin-top:8px;font-size:12.5px;line-height:1.55;color:var(--pq-ivory-dim)}
-select{width:100%;height:40px;padding:0 12px;font:inherit;font-size:14px;color:var(--pq-ivory);background:var(--pq-onyx);
+.sub{font-size:14px;color:var(--pq-ivory-dim)}
+.hint{margin-top:8px;font-size:14px;line-height:1.55;color:var(--pq-ivory-dim)}
+select{width:100%;height:40px;padding:0 12px;font:inherit;font-size:15px;color:var(--pq-ivory);background:var(--pq-onyx);
   border:1px solid var(--pq-ivory-line-strong);border-radius:var(--pq-radius-ctl);cursor:pointer}
 select:hover{border-color:rgba(245,240,232,0.26)}
 .env{display:grid;grid-template-columns:96px minmax(0,1fr);align-items:center;gap:10px 12px}
 .actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px}
-.actions .btn{height:36px;font-size:13.5px;padding:0 14px}
+.actions .btn{height:36px;font-size:14px;padding:0 14px}
 
 /* 통제 줄: 이름(누르면 펼침) + 3칸 선택. 펼친 칸은 두 열을 다 쓴다 */
 .ctls{display:grid;gap:2px}
 .ctl{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:0 12px;padding:4px 0}
-.ctl .nm{display:flex;align-items:baseline;gap:8px;min-width:0;padding:6px 0;font:inherit;font-size:14px;color:var(--pq-ivory);
+.ctl .nm{display:flex;align-items:baseline;gap:8px;min-width:0;padding:6px 0;font:inherit;font-size:15px;color:var(--pq-ivory);
   background:none;border:0;text-align:left;cursor:pointer}
-.ctl .nm small{font-size:12px;color:var(--pq-ivory-dim)}
+.ctl .nm small{font-size:13.5px;color:var(--pq-ivory-dim)}
 .ctl .nm::after{content:"+";margin-left:auto;padding-right:2px;color:var(--pq-bronze);transition:transform 200ms}
 .ctl .nm[aria-expanded="true"]::after{transform:rotate(45deg)}
 .ctl .nm:hover{color:var(--pq-bronze)}
-.ctl .seg span{width:70px;justify-content:center;padding:0;font-size:12.5px}
+.ctl .seg span{width:70px;justify-content:center;padding:0;font-size:14px}
 .more{grid-column:1/-1;margin:4px 0 10px;padding:12px 14px;border-radius:var(--pq-radius-ctl);background:var(--pq-card-veil);
-  box-shadow:inset 0 0 0 1px var(--pq-ivory-line);font-size:13px;line-height:1.6;color:var(--pq-ivory-soft)}
+  box-shadow:inset 0 0 0 1px var(--pq-ivory-line);font-size:14px;line-height:1.6;color:var(--pq-ivory-soft)}
 .more dl{margin:0;display:grid;grid-template-columns:72px minmax(0,1fr);gap:4px 10px}
 .more dt{color:var(--pq-ivory-dim)}
 .more dd{margin:0}
 .more .reg{margin-top:10px;padding-top:10px;border-top:1px solid var(--pq-ivory-line)}
-.more .reg p{margin:0 0 6px;max-width:none;font-size:12.5px;color:var(--pq-ivory-dim)}
-.more .reg li{margin:3px 0;font-size:12.5px;list-style:none}
+.more .reg p{margin:0 0 6px;max-width:none;font-size:14px;color:var(--pq-ivory-dim)}
+.more .reg li{margin:3px 0;font-size:14px;list-style:none}
 .more .reg ul{padding:0}
 .more .reg b{color:var(--pq-ivory);font-weight:600}
 .more .reg .quote{display:block;margin-top:2px;color:var(--pq-ivory-dim)}
@@ -328,32 +329,32 @@ select:hover{border-color:rgba(245,240,232,0.26)}
 .seg{display:inline-flex;border:1px solid var(--pq-ivory-line-strong);border-radius:var(--pq-radius-ctl);overflow:hidden;max-width:100%;justify-self:start}
 .seg label{position:relative;display:inline-flex;margin:0;cursor:pointer}
 .seg input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}
-.seg span{display:inline-flex;align-items:center;min-height:32px;padding:0 12px;font-size:13px;color:var(--pq-ivory-dim);white-space:nowrap;
+.seg span{display:inline-flex;align-items:center;min-height:32px;padding:0 12px;font-size:14px;color:var(--pq-ivory-dim);white-space:nowrap;
   transition:background-color 160ms var(--pq-ease),color 160ms var(--pq-ease)}
 .seg label+label span{border-left:1px solid var(--pq-ivory-line-strong)}
 .seg label:hover span{color:var(--pq-ivory);background:var(--pq-card-veil-strong)}
 .seg input:checked+span{background:var(--pq-bronze);color:var(--pq-ink);font-weight:600}
 .seg input:focus-visible+span{outline:2px solid var(--pq-ivory);outline-offset:-3px}
-.sec-h .seg{font-size:13px}
+.sec-h .seg{font-size:14px}
 
 /* 데모 케이스 고르기 · 배너 */
 .cases-grp{padding-bottom:18px}
 .case-row{display:grid;grid-template-columns:minmax(0,1fr) 40px 40px;gap:6px}
-.btn.sq{height:40px;width:40px;padding:0;font-size:15px}
+.btn.sq{height:40px;width:40px;padding:0;font-size:16px}
 .case-banner:empty{display:none}
 .case-banner{padding:18px 22px;border-radius:var(--pq-radius-card);background:var(--pq-bronze-wash);box-shadow:inset 0 0 0 1px var(--pq-bronze-line)}
-.case-banner .k{font-size:13px;color:var(--pq-bronze)}
-.case-banner .t{margin-top:4px;font-size:19px;font-weight:700;letter-spacing:-0.02em}
-.case-banner .s{margin-top:6px;font-size:14.5px;color:var(--pq-ivory-soft);max-width:110ch}
-.case-banner .grid{display:grid;grid-template-columns:150px minmax(0,1fr);gap:6px 16px;margin-top:12px;font-size:14px}
+.case-banner .k{font-size:14px;color:var(--pq-bronze)}
+.case-banner .t{margin-top:4px;font-size:20px;font-weight:700;letter-spacing:-0.02em}
+.case-banner .s{margin-top:6px;font-size:15.5px;color:var(--pq-ivory-soft);max-width:110ch}
+.case-banner .grid{display:grid;grid-template-columns:150px minmax(0,1fr);gap:6px 16px;margin-top:12px;font-size:15px}
 .case-banner .grid dt{color:var(--pq-ivory-dim)}
 .case-banner .grid dd{margin:0;color:var(--pq-ivory)}
 .case-banner .r{font-weight:700}
 .case-banner .r.blocked{color:var(--pq-bronze)}
 .case-banner .r.reduced{color:var(--pq-bronze-light)}
-.case-banner .warn{margin-top:10px;font-size:13px;color:var(--pq-stale)}
+.case-banner .warn{margin-top:10px;font-size:14px;color:var(--pq-stale)}
 .case-banner.off{opacity:0.55}
-.case-banner .again{margin-left:8px;height:28px;font-size:12.5px;padding:0 10px}
+.case-banner .again{margin-left:8px;height:28px;font-size:14px;padding:0 10px}
 
 /* ── ① 원형 한눈에 ── */
 .ov td,.ov th{vertical-align:middle}
@@ -362,13 +363,13 @@ select:hover{border-color:rgba(245,240,232,0.26)}
 .ov tbody tr.sel td:first-child{box-shadow:inset 2px 0 0 var(--pq-bronze)}
 .ov input{margin:0;accent-color:var(--pq-bronze);cursor:pointer}
 .ov .t{font-weight:600;color:var(--pq-ivory)}
-.ov .s{font-size:12.5px;color:var(--pq-ivory-dim)}
+.ov .s{font-size:14px;color:var(--pq-ivory-dim)}
 .ov .r{font-weight:700;white-space:nowrap}
 .ov .r.blocked{color:var(--pq-bronze)}
 .ov .r.reduced{color:var(--pq-bronze-light)}
 .ov .r.damage{color:var(--pq-ivory)}
 .ov .r.no_surface{color:var(--pq-ivory-dim)}
-.ov .w{font-size:13px;color:var(--pq-ivory-soft)}
+.ov .w{font-size:14px;color:var(--pq-ivory-soft)}
 .run{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;margin:16px 0 4px;max-width:none}
 
 /* 공격 흐름도 스타일은 flow.css (랜딩 페이지와 같이 쓴다) */
@@ -378,15 +379,15 @@ select:hover{border-color:rgba(245,240,232,0.26)}
 .stages{list-style:none;margin:8px 0 0;padding:0}
 .stage{display:grid;grid-template-columns:34px minmax(0,1fr);gap:4px 14px;padding:14px 0;border-bottom:1px solid var(--pq-ivory-line)}
 .stage .no{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:7px;
-  border:1px solid var(--pq-ivory-line-strong);font-size:13px;font-weight:600;color:var(--pq-ivory-dim);font-variant-numeric:tabular-nums}
+  border:1px solid var(--pq-ivory-line-strong);font-size:14px;font-weight:600;color:var(--pq-ivory-dim);font-variant-numeric:tabular-nums}
 .stage .t{font-weight:600}
-.stage .d{font-size:13.5px;color:var(--pq-ivory-mid)}
+.stage .d{font-size:14px;color:var(--pq-ivory-mid)}
 .stage .ck{margin:8px 0 0;padding:0;list-style:none;display:grid;gap:4px}
-.stage .ck li{margin:0;font-size:13.5px;color:var(--pq-ivory-dim)}
+.stage .ck li{margin:0;font-size:14px;color:var(--pq-ivory-dim)}
 .stage .ck li b{font-weight:600}
 .stage .ck li.on{color:var(--pq-ivory)}
 .stage .ck li.on b{color:var(--pq-bronze)}
-.stage .ck .why{display:block;font-size:12.5px;color:var(--pq-ivory-dim)}
+.stage .ck .why{display:block;font-size:14px;color:var(--pq-ivory-dim)}
 .stage.blocked .no{background:var(--pq-bronze);border-color:var(--pq-bronze);color:var(--pq-ink)}
 .stage.passed .no{color:var(--pq-ivory)}
 .stage.after{opacity:0.38}
@@ -396,17 +397,17 @@ select:hover{border-color:rgba(245,240,232,0.26)}
 }
 .outcome{position:sticky;top:16px;margin-top:8px;padding:18px 20px;border-radius:var(--pq-radius-card);background:var(--pq-card-veil);border:1px solid var(--pq-ivory-line)}
 .outcome:empty{display:none}
-.outcome .k{font-size:13px;color:var(--pq-ivory-dim)}
-.outcome .v{margin-top:6px;font-size:24px;font-weight:700;letter-spacing:-0.025em;line-height:1.3}
+.outcome .k{font-size:14px;color:var(--pq-ivory-dim)}
+.outcome .v{margin-top:6px;font-size:26px;font-weight:700;letter-spacing:-0.025em;line-height:1.3}
 .outcome .v.blocked{color:var(--pq-bronze)}
 .outcome .v.reduced{color:var(--pq-bronze-light)}
 .outcome .v.damage{color:var(--pq-ivory)}
 .outcome .v.no_surface{color:var(--pq-ivory-mid)}
-.outcome p{margin-top:8px;font-size:13.5px}
+.outcome p{margin-top:8px;font-size:14px}
 
 /* ── ② 다시 돌리기 ── */
 .cards.four{grid-template-columns:repeat(4,minmax(0,1fr))}
-.cards.four .v{font-size:32px}
+.cards.four .v{font-size:35px}
 .cards .card.hl{background:var(--pq-bronze-wash);border-color:var(--pq-bronze-line)}
 .cards .card.hl .v{color:var(--pq-bronze)}
 .two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:40px;margin-top:8px}
@@ -421,29 +422,29 @@ select:hover{border-color:rgba(245,240,232,0.26)}
 .hist{list-style:none;margin:0;padding:0;border-top:1px solid var(--pq-ivory-line-strong)}
 .hist>li{margin:0;padding:12px 0;border-bottom:1px solid var(--pq-ivory-line)}
 .hist .h{display:flex;gap:12px;align-items:baseline}
-.hist time{font-size:13px;color:var(--pq-ivory-dim);white-space:nowrap}
+.hist time{font-size:14px;color:var(--pq-ivory-dim);white-space:nowrap}
 .hist .l{font-weight:600}
-.hist ul{margin:6px 0 0;padding-left:18px;font-size:13.5px;color:var(--pq-ivory-soft)}
+.hist ul{margin:6px 0 0;padding-left:18px;font-size:14px;color:var(--pq-ivory-soft)}
 .hist ul li{margin:2px 0}
 .hist b{color:var(--pq-bronze);font-weight:600}
 #pend>li{grid-template-columns:86px minmax(0,1fr)}
-#pend .t{font-weight:500;font-size:14px}
+#pend .t{font-weight:500;font-size:15px}
 
 /* ── 기준과 비교 (변경안) ── */
 .tag{color:var(--pq-bronze);font-weight:600}
 .cmp-ctl{display:flex;flex-wrap:wrap;gap:8px}
-.cmp-ctl .btn,.drawer-acts .btn{height:36px;font-size:13.5px;padding:0 14px}
+.cmp-ctl .btn,.drawer-acts .btn{height:36px;font-size:14px;padding:0 14px}
 body.comparing .cmp-grp .lab{color:var(--pq-bronze)}
 .ctl.chg .nm{color:var(--pq-bronze)}
-.ctl .was-l{grid-column:1/-1;margin:-2px 0 4px;font-size:12px;color:var(--pq-ivory-dim)}
+.ctl .was-l{grid-column:1/-1;margin:-2px 0 4px;font-size:13.5px;color:var(--pq-ivory-dim)}
 .seg.chg{border-color:var(--pq-bronze)}
 .cmpbar:not(.on){display:none}
 .cmpbar{margin:0 0 16px;padding:14px 18px;border-radius:var(--pq-radius-ctl);background:var(--pq-bronze-wash);box-shadow:inset 0 0 0 1px var(--pq-bronze-line)}
-.cmpbar .k{font-size:13px;color:var(--pq-bronze);font-weight:600}
-.cmpbar .t{margin-top:4px;font-size:14px;color:var(--pq-ivory);max-width:none}
-.cmpbar .s{margin-top:4px;font-size:13px;color:var(--pq-ivory-soft);max-width:none}
-.was{display:block;font-size:12px;font-weight:500;color:var(--pq-ivory-dim);white-space:nowrap}
-.was-c{margin-top:2px;font-size:12.5px;color:var(--pq-bronze)}
+.cmpbar .k{font-size:14px;color:var(--pq-bronze);font-weight:600}
+.cmpbar .t{margin-top:4px;font-size:15px;color:var(--pq-ivory);max-width:none}
+.cmpbar .s{margin-top:4px;font-size:14px;color:var(--pq-ivory-soft);max-width:none}
+.was{display:block;font-size:13.5px;font-weight:500;color:var(--pq-ivory-dim);white-space:nowrap}
+.was-c{margin-top:2px;font-size:14px;color:var(--pq-bronze)}
 tr.chg>td{background:var(--pq-bronze-wash)}
 
 /* ── 한눈에: KPI 3개 (통제 없음 → 기준 → 지금/변경안 → 모두 AI 까지) ── */
@@ -452,15 +453,15 @@ tr.chg>td{background:var(--pq-bronze-wash)}
 .kpi+.kpi{box-shadow:inset 1px 0 0 var(--pq-ivory-line)}
 .kpi:first-child{padding-left:0}
 .kpi:last-child{padding-right:0}
-.kpi .k{font-size:13px;color:var(--pq-ivory-dim)}
-.kpi .v{margin-top:4px;font-size:32px;font-weight:700;letter-spacing:-0.03em;line-height:1.15;color:var(--pq-bronze);font-variant-numeric:tabular-nums}
-.kpi .v small{margin-left:6px;font-size:14px;font-weight:500;letter-spacing:0;color:var(--pq-ivory-dim)}
-.kpi .d{margin-top:2px;font-size:13px;font-weight:600;color:var(--pq-ivory)}
-.kpi .h{margin-top:4px;font-size:12.5px;line-height:1.5;color:var(--pq-ivory-dim)}
+.kpi .k{font-size:14px;color:var(--pq-ivory-dim)}
+.kpi .v{margin-top:4px;font-size:35px;font-weight:700;letter-spacing:-0.03em;line-height:1.15;color:var(--pq-bronze);font-variant-numeric:tabular-nums}
+.kpi .v small{margin-left:6px;font-size:15px;font-weight:500;letter-spacing:0;color:var(--pq-ivory-dim)}
+.kpi .d{margin-top:2px;font-size:14px;font-weight:600;color:var(--pq-ivory)}
+.kpi .h{margin-top:4px;font-size:14px;line-height:1.5;color:var(--pq-ivory-dim)}
 .mv{display:grid;grid-template-columns:76px minmax(0,1fr) auto;align-items:center;gap:7px 10px;margin:14px 0 0;padding-top:12px;border-top:1px solid var(--pq-ivory-line)}
-.mv dt{font-size:12.5px;color:var(--pq-ivory-dim);white-space:nowrap}
+.mv dt{font-size:14px;color:var(--pq-ivory-dim);white-space:nowrap}
 .mv dd{margin:0;min-width:0}
-.mv .n{font-size:12.5px;color:var(--pq-ivory-dim);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.mv .n{font-size:14px;color:var(--pq-ivory-dim);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 .mv .cur{color:var(--pq-ivory);font-weight:600}
 .strip{display:flex;gap:2px}
 .strip i{display:block;flex:1 1 0;height:12px;border-radius:2px;box-shadow:inset 0 0 0 1px var(--pq-ivory-line-strong)}
@@ -472,7 +473,7 @@ tr.chg>td{background:var(--pq-bronze-wash)}
 .track .hi,.track .lo{position:absolute;left:0;top:0;bottom:0}
 .track .hi{background:var(--pq-bronze-line)}
 .track .lo{background:var(--pq-bronze)}
-.legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:12px;font-size:12.5px;color:var(--pq-ivory-soft);max-width:none}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:12px;font-size:14px;color:var(--pq-ivory-soft);max-width:none}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .legend i{display:inline-block;width:12px;height:12px;border-radius:2px;box-shadow:inset 0 0 0 1px var(--pq-ivory-line-strong)}
 
@@ -481,16 +482,16 @@ tr.chg>td{background:var(--pq-bronze-wash)}
 .heat-h .h3{margin:0 0 10px}
 .heat{border-collapse:separate;border-spacing:3px;table-layout:fixed}
 .heat th,.heat td{padding:0;border:0}
-.heat thead th{padding:0 2px 6px;font-size:12px;font-weight:500;line-height:1.35;text-align:center;white-space:normal;color:var(--pq-ivory-dim);vertical-align:bottom}
-.heat thead th b{display:block;font-size:12.5px;font-weight:600;color:var(--pq-ivory)}
+.heat thead th{padding:0 2px 6px;font-size:13.5px;font-weight:500;line-height:1.35;text-align:center;white-space:normal;color:var(--pq-ivory-dim);vertical-align:bottom}
+.heat thead th b{display:block;font-size:14px;font-weight:600;color:var(--pq-ivory)}
 .heat .rh{width:172px;text-align:left;padding-right:8px}
 .heat tbody th.rh{vertical-align:middle;white-space:normal}
-.heat tbody th .t{display:block;font-size:13px;font-weight:600;color:var(--pq-ivory)}
-.heat tbody th .s{display:block;font-size:11.5px;font-weight:400;color:var(--pq-ivory-dim)}
+.heat tbody th .t{display:block;font-size:14px;font-weight:600;color:var(--pq-ivory)}
+.heat tbody th .s{display:block;font-size:13px;font-weight:400;color:var(--pq-ivory-dim)}
 .heat .first{padding-left:12px}
 .heat thead th.mine b{color:var(--pq-bronze)}
 .hc{position:relative;display:flex;align-items:center;justify-content:center;width:100%;height:38px;padding:0;border:0;border-radius:4px;
-  font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;transition:outline-color 120ms var(--pq-ease)}
+  font:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:outline-color 120ms var(--pq-ease)}
 .hc.blocked{background:var(--pq-bronze);color:var(--pq-ink)}
 .hc.reduced{background:var(--pq-bronze-line);color:var(--pq-ivory)}
 .hc.damage{background:rgba(245,240,232,0.10);color:var(--pq-ivory);box-shadow:inset 0 0 0 1px rgba(245,240,232,0.34)}
@@ -507,48 +508,48 @@ tr.chg>td{background:var(--pq-bronze-wash)}
   border-right:1px solid var(--pq-ivory-line-strong);box-shadow:24px 0 48px rgba(0,0,0,0.55);overscroll-behavior:contain}
 .drawer[hidden]{display:none}
 .drawer-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-.drawer-top .k{font-size:13px;color:var(--pq-bronze)}
-.drawer-top h2{margin-top:4px;font-size:21px}
-.drawer .s{margin-top:8px;font-size:13.5px;color:var(--pq-ivory-mid)}
-.drawer .meta{display:grid;grid-template-columns:68px minmax(0,1fr);gap:4px 10px;margin:14px 0 0;font-size:12.5px}
+.drawer-top .k{font-size:14px;color:var(--pq-bronze)}
+.drawer-top h2{margin-top:4px;font-size:23px}
+.drawer .s{margin-top:8px;font-size:14px;color:var(--pq-ivory-mid)}
+.drawer .meta{display:grid;grid-template-columns:68px minmax(0,1fr);gap:4px 10px;margin:14px 0 0;font-size:14px}
 .drawer .meta dt{color:var(--pq-ivory-dim)}
 .drawer .meta dd{margin:0;color:var(--pq-ivory-soft)}
 .drawer .res{margin-top:16px;padding:14px 16px;border-radius:var(--pq-radius-ctl);background:var(--pq-card-veil);box-shadow:inset 0 0 0 1px var(--pq-ivory-line)}
-.drawer .res .v{font-size:20px;font-weight:700;letter-spacing:-0.02em}
+.drawer .res .v{font-size:21px;font-weight:700;letter-spacing:-0.02em}
 .drawer .res .v.blocked{color:var(--pq-bronze)}
 .drawer .res .v.reduced{color:var(--pq-bronze-light)}
 .drawer .res .v.no_surface{color:var(--pq-ivory-mid)}
-.drawer .res p{margin-top:4px;font-size:13px}
+.drawer .res p{margin-top:4px;font-size:14px}
 .log{list-style:none;margin:0;padding:0;border-top:1px solid var(--pq-ivory-line-strong)}
 .log>li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:2px 12px;margin:0;padding:12px 0;border-bottom:1px solid var(--pq-ivory-line)}
 .log .no{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;
-  border:1px solid var(--pq-ivory-line-strong);font-size:12px;font-weight:600;color:var(--pq-ivory-dim);font-variant-numeric:tabular-nums}
-.log .t{font-size:13.5px;font-weight:600}
-.log .dec{margin-top:2px;font-size:13px;font-weight:600;color:var(--pq-ivory-mid)}
+  border:1px solid var(--pq-ivory-line-strong);font-size:13.5px;font-weight:600;color:var(--pq-ivory-dim);font-variant-numeric:tabular-nums}
+.log .t{font-size:14px;font-weight:600}
+.log .dec{margin-top:2px;font-size:14px;font-weight:600;color:var(--pq-ivory-mid)}
 .log li.block .no{background:var(--pq-bronze);border-color:var(--pq-bronze);color:var(--pq-ink)}
 .log li.block .dec{color:var(--pq-bronze)}
 .log li.act .dec{color:var(--pq-bronze-light)}
 .log li.skip{opacity:0.4}
 .log ul{margin:6px 0 0;padding:0;list-style:none}
-.log ul li{margin:2px 0;font-size:12.5px;color:var(--pq-ivory-dim)}
+.log ul li{margin:2px 0;font-size:14px;color:var(--pq-ivory-dim)}
 .log ul li.on{color:var(--pq-ivory)}
 .drawer-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
 
 /* ── ③ 개선 조치 ── */
 .acts-tools{display:inline-flex;align-items:center;gap:12px}
-.acts-tools .btn{height:36px;font-size:13.5px;padding:0 14px}
+.acts-tools .btn{height:36px;font-size:14px;padding:0 14px}
 #acts-note{margin:0 0 10px;max-width:none}
 #acts td{vertical-align:top}
 #acts .act{min-width:280px}
 #acts .act b{font-weight:600;color:var(--pq-ivory)}
 #acts .act .fine{margin-top:2px}
-#acts .eff span,#acts .sc span,#acts .reg span{display:block;white-space:nowrap;font-size:13px}
+#acts .eff span,#acts .sc span,#acts .reg span{display:block;white-space:nowrap;font-size:14px}
 #acts .eff b{color:var(--pq-bronze)}
 #acts .sc b{font-weight:600;color:var(--pq-ivory-soft)}
 #acts .reg b{font-weight:500;color:var(--pq-ivory-dim)}
 #acts .reg b.must{font-weight:700;color:var(--pq-ivory)}
 #acts .prop,#acts .stg{white-space:nowrap}
-#acts .prop .btn{height:32px;font-size:13px;padding:0 12px}
+#acts .prop .btn{height:32px;font-size:14px;padding:0 12px}
 #acts .in{margin-right:8px;font-weight:600;color:var(--pq-bronze)}
 #acts tr.zero td{color:var(--pq-ivory-dim)}
 #acts tr.zero .act b{color:var(--pq-ivory-mid)}
@@ -557,13 +558,13 @@ tr.chg>td{background:var(--pq-bronze-wash)}
 /* ── ④ OWASP 커버리지 ── */
 #asi td{vertical-align:top}
 #asi .it b{display:block;font-weight:600;color:var(--pq-ivory)}
-#asi .it .en{display:block;font-size:12px;color:var(--pq-ivory-dim)}
+#asi .it .en{display:block;font-size:13.5px;color:var(--pq-ivory-dim)}
 .asi-st{font-weight:700;white-space:nowrap}
 .asi-st.full{color:var(--pq-bronze)}
 .asi-st.partial{color:var(--pq-bronze-light)}
 .asi-st.gap{color:var(--pq-ivory)}
 .asi-st.na,.asi-st.none{font-weight:500;color:var(--pq-ivory-dim)}
-#asi .sc span{display:inline-block;margin:0 16px 2px 0;font-size:13px;white-space:nowrap}
+#asi .sc span{display:inline-block;margin:0 16px 2px 0;font-size:14px;white-space:nowrap}
 #asi .sc .r{font-weight:600}
 #asi .sc .r.blocked{color:var(--pq-bronze)}
 #asi .sc .r.reduced{color:var(--pq-bronze-light)}
@@ -574,8 +575,8 @@ tr.chg>td{background:var(--pq-bronze-wash)}
 #cmp tr.base td{color:var(--pq-ivory-soft)}
 
 /* ── 공용 작은 것 ── */
-.btn.sm{height:30px;padding:0 10px;font-size:12.5px}
-.chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--pq-ivory-soft);cursor:pointer}
+.btn.sm{height:30px;padding:0 10px;font-size:14px}
+.chk{display:inline-flex;align-items:center;gap:6px;font-size:14px;color:var(--pq-ivory-soft);cursor:pointer}
 .chk input{accent-color:var(--pq-bronze);margin:0}
 .vh{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);border:0}
 label.btn:has(+ .vh:focus-visible){outline:2px solid var(--pq-ivory);outline-offset:2px}
@@ -598,9 +599,9 @@ label.btn:has(+ .vh:focus-visible){outline:2px solid var(--pq-ivory);outline-off
 .sankey .nd.o-reduced{fill:var(--pq-bronze-deep)}
 .sankey .nd.o-unchanged{fill:var(--pq-ivory)}
 .sankey .nd.o-unknown{fill:none;stroke:var(--pq-ivory-dim);stroke-dasharray:3 2}
-.sankey .lb{fill:var(--pq-ivory);font-size:12.5px;font-weight:600;paint-order:stroke;stroke:var(--pq-ink);stroke-width:4px;stroke-linejoin:round}
+.sankey .lb{fill:var(--pq-ivory);font-size:14px;font-weight:600;paint-order:stroke;stroke:var(--pq-ink);stroke-width:4px;stroke-linejoin:round}
 .sankey .lb .c,.sankey .lb.sub{fill:var(--pq-ivory-dim);font-weight:500}
-.sankey .lb.sub{font-size:11.5px}
+.sankey .lb.sub{font-size:13px}
 .sankey .sc,.sankey .oc{cursor:pointer}
 .sankey .sc:hover .lb,.sankey .oc:hover .lb{fill:var(--pq-bronze)}
 .sankey .sc:focus,.sankey .oc:focus{outline:none}
@@ -610,7 +611,7 @@ label.btn:has(+ .vh:focus-visible){outline:2px solid var(--pq-ivory);outline-off
 /* ── 서랍: 추적 사슬 ── */
 .trace{margin-top:18px}
 .trace .h3{margin:0 0 8px}
-.tr-item{padding:10px 0;border-top:1px solid var(--pq-ivory-line);font-size:12.5px}
+.tr-item{padding:10px 0;border-top:1px solid var(--pq-ivory-line);font-size:14px}
 .tr-c{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;color:var(--pq-ivory-dim)}
 .tr-c i{display:inline-block;width:9px;height:9px;border-radius:2px;box-shadow:inset 0 0 0 1px var(--pq-ivory-dim);flex:none;align-self:center}
 .tr-c b{color:var(--pq-ivory);font-weight:600}
@@ -630,7 +631,7 @@ label.btn:has(+ .vh:focus-visible){outline:2px solid var(--pq-ivory);outline-off
 #wi-cand{max-width:640px;width:100%}
 .wi-ctl{display:flex;flex-wrap:wrap;gap:6px 16px}
 .wi-out{margin-top:14px;padding-top:12px;border-top:1px solid var(--pq-ivory-line)}
-.wi-say{margin:0 0 8px;font-size:13.5px;color:var(--pq-ivory-soft);max-width:none}
+.wi-say{margin:0 0 8px;font-size:14px;color:var(--pq-ivory-soft);max-width:none}
 .wi-say b{color:var(--pq-bronze)}
 .wi-t td b{color:var(--pq-bronze)}
 .wi-t tr.zero td{color:var(--pq-ivory-dim)}
@@ -638,17 +639,20 @@ label.btn:has(+ .vh:focus-visible){outline:2px solid var(--pq-ivory);outline-off
 /* ── ⑥ 자가 진단 ── */
 .diag-note{max-width:none;margin:0 0 10px}
 .diag-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin-bottom:12px}
-.diag-tools .btn{height:36px;font-size:13.5px;padding:0 14px}
-#diag-t select{width:auto;min-width:92px;height:34px;font-size:13px}
+.diag-tools .btn{height:36px;font-size:14px;padding:0 14px}
+#diag-t select{width:auto;min-width:92px;height:34px;font-size:14px}
 #diag-t td.memo{width:46%}
-#diag-t input[type=text]{width:100%;height:34px;padding:0 10px;font:inherit;font-size:13px;color:var(--pq-ivory);background:var(--pq-onyx);
+#diag-t input[type=text]{width:100%;height:34px;padding:0 10px;font:inherit;font-size:14px;color:var(--pq-ivory);background:var(--pq-onyx);
   border:1px solid var(--pq-ivory-line-strong);border-radius:var(--pq-radius-ctl)}
 #diag-t input[type=text]::placeholder{color:var(--pq-ivory-faint)}
 #diag-t input[type=text]:focus,#diag-t select:focus{outline:2px solid var(--pq-bronze);outline-offset:1px}
-#diag-t td.lv{white-space:nowrap;color:var(--pq-ivory-dim);font-size:13px}
+#diag-t td.lv{white-space:nowrap;color:var(--pq-ivory-dim);font-size:14px}
 #diag-t th[scope=row]{font-weight:600;color:var(--pq-ivory);white-space:nowrap}
 
 /* ── 인쇄 · PDF: 밝은 바탕, 설정은 고른 값만, 단계 펼침 ── */
+/* 화면 넘김(pager.js)일 때: 위 단계 줄 아래로 설정 판을 붙인다 */
+html.paged .panel{top:68px;max-height:calc(100vh - 84px)}
+html.paged .results>.pg{scroll-margin-top:72px}
 @media print{
   @page{size:A4 landscape;margin:12mm}
   :root{--pq-ink:#fff;--pq-ivory:#111;--pq-ivory-soft:#222;--pq-ivory-mid:#333;--pq-ivory-dim:#555;--pq-ivory-faint:#777;
@@ -661,7 +665,7 @@ label.btn:has(+ .vh:focus-visible){outline:2px solid var(--pq-ivory);outline-off
   .wi-t td:last-child,.wi-t th:last-child{display:none!important}
   .sankey svg{max-height:120mm}
   .hc,.strip i,.track,.track span,.legend i,.seg input:checked+span{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .hc{height:26px;font-size:11px}
+  .hc{height:26px;font-size:12.5px}
   .hc.damage{background:#f3f3f3}
   .strip i.damage,.strip i.a-gap,.legend i.damage{background:#555}
   .band{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -678,6 +682,93 @@ label.btn:has(+ .vh:focus-visible){outline:2px solid var(--pq-ivory);outline-off
   a{color:#111}
 }
 
+/* 화면 넘김 (pager.js) — PivoxMap 의 표지 · 위 단계 줄(.pq-rail) · 넘김을 옮긴 것. 단계 표시는 네모(동그라미 없음).
+   html.paged 일 때만 한 화면씩 보인다. JS 가 없으면 이 규칙들은 단계 줄 · 넘김 막대를 숨기는 것 말고는 아무것도 하지 않는다. */
+[data-pager-rail],[data-pager-nav]{display:none}
+html.paged [data-pager-rail]:not([hidden]){display:flex}
+html.paged [data-pager-nav]:not([hidden]){display:flex}
+html.paged [data-pager]>.pg[hidden]{display:none}
+
+/* 위 단계 줄 */
+.pg-railbar{position:sticky;top:0;z-index:20;align-items:center;justify-content:center;min-height:52px;margin:0 -24px;padding:0 24px;
+  border-top:1px solid var(--pq-ivory-line);border-bottom:1px solid var(--pq-ivory-line);background:rgba(5,5,5,0.92);backdrop-filter:blur(8px)}
+.pg-rail{display:flex;align-items:center;list-style:none;margin:0;padding:0;min-width:0}
+.pg-rail>li{display:flex;align-items:center;font-size:15px;color:var(--pq-ivory-faint);white-space:nowrap}
+.pg-rail>li+li::before{content:"";width:26px;height:1px;background:var(--pq-ivory-line-strong);margin:0 8px;flex:none}
+.pg-rail>li[data-status="done"]+li::before,.pg-rail>li[data-status="now"]::before{background:var(--pq-bronze-line)}
+.pg-rail-item{display:inline-flex;align-items:center;gap:8px;padding:5px 8px;border:0;border-radius:var(--pq-radius-ctl);background:transparent;
+  font:inherit;color:inherit;cursor:pointer;transition:background-color 200ms,color 200ms}
+.pg-rail-item:hover{background:var(--pq-card-veil-strong);color:var(--pq-ivory)}
+.pg-rail-item:focus-visible{outline:1px solid var(--pq-bronze);outline-offset:1px}
+.pg-rail-no{display:inline-flex;align-items:center;justify-content:center;flex:none;width:22px;height:22px;border-radius:5px;font-size:13.5px;font-weight:700;
+  font-variant-numeric:tabular-nums;box-shadow:inset 0 0 0 1px var(--pq-ivory-line-strong);transition:background-color 300ms,box-shadow 300ms,color 300ms}
+.pg-rail>li[data-status="done"]{color:var(--pq-ivory-dim)}
+.pg-rail>li[data-status="done"] .pg-rail-no{background:var(--pq-bronze-wash);box-shadow:inset 0 0 0 1px var(--pq-bronze-line);color:var(--pq-bronze)}
+.pg-rail>li[data-status="now"]{color:var(--pq-ivory);font-weight:600}
+.pg-rail>li[data-status="now"] .pg-rail-no{background:var(--pq-bronze);color:var(--pq-ink);box-shadow:none}
+.pg-rail-mobile{display:none;margin:0;padding:8px 0;border:0;background:transparent;font:inherit;font-size:15px;font-weight:600;color:var(--pq-ivory);font-variant-numeric:tabular-nums;cursor:pointer;white-space:pre}
+[data-pager] h1[tabindex="-1"]:focus,[data-pager] h2[tabindex="-1"]:focus{outline:none}
+.pg-kicker{position:relative;margin:0 0 26px;font-size:14px;font-weight:600;color:var(--pq-ivory-dim)}
+
+/* 이전 · 다음 */
+.pg-nav{position:sticky;bottom:0;z-index:20;align-items:center;justify-content:space-between;gap:12px;margin:40px -24px 0;padding:12px 24px;
+  border-top:1px solid var(--pq-ivory-line);background:rgba(5,5,5,0.94);backdrop-filter:blur(8px)}
+.pg-btn{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border:1px solid var(--pq-ivory-line-strong);border-radius:var(--pq-radius-ctl);
+  background:transparent;font:inherit;font-size:16px;font-weight:600;color:var(--pq-ivory);cursor:pointer;transition:background-color 200ms,border-color 200ms,color 200ms}
+.pg-btn:hover:not(:disabled){background:var(--pq-card-veil-strong)}
+.pg-btn:focus-visible{outline:1px solid var(--pq-bronze);outline-offset:2px}
+.pg-btn:disabled{opacity:.35;cursor:default}
+.pg-btn.next{border-color:var(--pq-bronze);background:var(--pq-bronze);color:var(--pq-ink)}
+.pg-btn.next:hover:not(:disabled){background:var(--pq-bronze-light);border-color:var(--pq-bronze-light)}
+.pg-count{font-size:15px;color:var(--pq-ivory-dim);font-variant-numeric:tabular-nums}
+
+/* 표지 */
+.pg-cover{position:relative;text-align:center}
+html.paged .pg-cover{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100dvh - 90px);cursor:pointer;user-select:none}
+html.paged.pg-at-cover .topbar{border-bottom-color:transparent}
+.pg-cover .pg-spot{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 80% 80% at 50% 50%,rgba(245,240,232,0.03) 0%,rgba(245,240,232,0.012) 40%,transparent 75%)}
+.pg-wordmark{position:relative;margin:0;font-family:var(--font-wordmark);font-size:min(clamp(3rem,7vw,6rem),10vw);font-weight:500;font-style:normal;line-height:1;letter-spacing:0.22em;margin-right:-0.22em;
+  text-transform:uppercase;color:var(--pq-ivory);text-shadow:0 0 24px rgba(245,240,232,0.06);animation:pg-breath 4s ease-in-out infinite}
+.pg-wordmark span{color:var(--pq-bronze)}
+@keyframes pg-breath{0%,100%{transform:scale(1)}50%{transform:scale(1.006)}}
+.pg-q{position:relative;margin:34px auto 0;max-width:30ch;font-size:clamp(20px,2.4vw,28px);font-weight:700;line-height:1.4;letter-spacing:-0.02em;color:var(--pq-ivory)}
+.pg-sub{position:relative;margin:12px auto 0;max-width:46ch;font-size:17px;line-height:1.7;color:var(--pq-ivory-dim)}
+.pg-start{position:relative;display:inline-flex;align-items:center;gap:8px;margin-top:40px;font-size:16px;font-weight:600;color:var(--pq-bronze)}
+.pg-start:hover{color:var(--pq-ivory)}
+.pg-hint{position:relative;margin:14px 0 0;font-size:14px;color:var(--pq-ivory-faint)}
+.pg-links{position:relative;display:flex;flex-wrap:wrap;justify-content:center;gap:4px 18px;margin:18px 0 0;font-size:15px}
+.pg-links a{color:var(--pq-ivory-dim)}
+.pg-links a:hover{color:var(--pq-ivory)}
+html:not(.paged) .pg-start,html:not(.paged) .pg-hint{display:none}
+
+/* 넘김 화면의 머리: 왼쪽 칸 제목 대신 위에 크게 */
+html.paged [data-pager]>.pg.sh{grid-template-columns:minmax(0,1fr);gap:18px;padding:34px 0 8px;border-top:0}
+html.paged [data-pager]>.pg.sh>h2{font-size:clamp(1.45rem,2.5vw,2rem);font-weight:650;letter-spacing:-0.025em;line-height:1.32;color:var(--pq-ivory)}
+
+@media (max-width:1180px){
+  .pg-rail>li:not([data-status="now"]) .pg-rail-label{display:none}
+  .pg-rail>li+li::before{width:16px;margin:0 6px}
+}
+@media (max-width:760px){
+  .pg-railbar{min-height:46px;justify-content:flex-start}
+  .pg-rail{display:none}
+  .pg-rail-mobile{display:block}
+  .pg-railbar{position:sticky}
+  .pg-railbar[data-open="1"] .pg-rail{display:flex;flex-direction:column;align-items:stretch;position:absolute;top:100%;left:0;right:0;padding:8px 16px 12px;
+    background:rgba(5,5,5,0.98);border-bottom:1px solid var(--pq-ivory-line)}
+  .pg-railbar[data-open="1"] .pg-rail>li+li::before{display:none}
+  .pg-railbar[data-open="1"] .pg-rail .pg-rail-label{display:inline}
+  .pg-railbar[data-open="1"] .pg-rail-item{width:100%;min-height:44px;font-size:16px}
+  .pg-btn{padding:0 12px;font-size:15px}
+  .pg-btn .lab{display:none}
+}
+@media (max-width:560px){
+  .pg-railbar{margin:0 -16px;padding:0 16px}
+  .pg-nav{margin:32px -16px 0;padding:10px 16px}
+}
+@media (prefers-reduced-motion: reduce){.pg-wordmark{animation:none}}
+@media print{[data-pager-rail],[data-pager-nav]{display:none!important}html.paged [data-pager]>.pg[hidden]{display:block!important}}
+
 </style>
 </head>
 <body>
@@ -690,6 +781,7 @@ label.btn:has(+ .vh:focus-visible){outline:2px solid var(--pq-ivory);outline-off
 <a href="pivoxpolicy-dashboard.html">대시보드</a><a href="pivoxpolicy-sim.html" aria-current="page">모의 테스트</a>
 </nav>
 </header>
+<nav class="pg-railbar" data-pager-rail aria-label="결과 화면"></nav>
 
 <main id="main">
 
@@ -748,18 +840,18 @@ label.btn:has(+ .vh:focus-visible){outline:2px solid var(--pq-ivory);outline-off
 </aside>
 
 <!-- ── 오른쪽: 결과 ── -->
-<div class="results">
+<div class="results" data-pager data-pager-url="none" data-pager-keys="none">
 
 <div class="case-banner" id="case-banner" aria-live="polite"></div>
 
-<section id="posture" aria-labelledby="h-pos">
+<section class="pg" id="posture" data-title="지금 설정" aria-labelledby="h-pos">
 <div class="sec-h"><h2 id="h-pos">지금 설정은 어디쯤인가</h2><span id="pos-env"></span></div>
 <div class="cmpbar" id="cmpbar" aria-live="polite"></div>
 <div class="band" id="band"></div>
 <p class="legend" id="legend"></p>
 </section>
 
-<section id="scenario" aria-labelledby="h-scn">
+<section class="pg" id="scenario" data-title="공격 원형" aria-labelledby="h-scn">
 <div class="sec-h"><h2 id="h-scn">공격 원형 12개</h2><span>행을 고르면 아래에 공격 흐름이 나온다</span></div>
 <div class="tblwrap"><table class="ov" id="ov"></table></div>
 <div class="flow-h"><h3 class="h3" id="h-flow">공격 흐름: <span id="flow-name"></span></h3><span class="fine flow-key"><i class="k-on"></i>켜진 통제 <i class="k-off"></i>꺼진 통제. 통제에 마우스를 올리면 그 자리에 있는 이유가 나온다</span></div>
@@ -775,7 +867,7 @@ label.btn:has(+ .vh:focus-visible){outline:2px solid var(--pq-ivory);outline-off
 <div class="tblwrap"><table class="heat" id="heat" aria-labelledby="h-heat"></table></div>
 </section>
 
-<section id="replay" aria-labelledby="h-rep">
+<section class="pg" id="replay" data-title="사건 다시 돌리기" aria-labelledby="h-rep">
 <div class="sec-h"><h2 id="h-rep">실제 사건 45건 다시 돌리기</h2><span class="seg" role="radiogroup" aria-label="판정 기준" id="basis"></span></div>
 <div class="cards four" id="rep-cards"></div>
 <p class="fine" id="rep-explain"></p>
@@ -786,19 +878,19 @@ label.btn:has(+ .vh:focus-visible){outline:2px solid var(--pq-ivory);outline-off
 <details id="per-d"><summary>사건별 결과 ('추적'을 누르면 실패한 통제와 규제 근거가 열린다)</summary><div class="tblwrap"><table id="per"></table></div></details>
 </section>
 
-<section id="actions" aria-labelledby="h-act">
+<section class="pg" id="actions" data-title="개선 조치" aria-labelledby="h-act">
 <div class="sec-h"><h2 id="h-act">개선 조치</h2><span class="acts-tools"><button type="button" class="btn" id="acts-csv">CSV 내보내기</button><button type="button" class="btn" id="policy-md">정책 초안 (.md)</button><span class="fine" id="csv-msg" aria-live="polite"></span></span></div>
 <p class="fine" id="acts-note"></p>
 <div class="tblwrap"><table id="acts"></table></div>
 </section>
 
-<section id="owasp" aria-labelledby="h-asi">
+<section class="pg" id="owasp" data-title="OWASP" aria-labelledby="h-asi">
 <div class="sec-h"><h2 id="h-asi">OWASP Agentic Top 10</h2><span id="asi-sum"></span></div>
 <div class="tblwrap"><table id="asi"></table></div>
 <p class="fine" id="asi-note"></p>
 </section>
 
-<section id="updates" aria-labelledby="h-upd">
+<section class="pg" id="updates" data-title="규제가 바뀌면" aria-labelledby="h-upd">
 <div class="sec-h"><h2 id="h-upd">규제가 바뀌면</h2><span id="reg-meta"></span></div>
 <p class="fine">새 문서가 레지스트리에 들어와 판정을 마치면 프리셋과 규제 근거, 두 테스트를 다시 계산한다. 결과가 바뀐 때만 이력에 남기고, 결과가 달라진 데모 케이스에는 경고를 띄운다.</p>
 <div class="two">
@@ -810,7 +902,7 @@ label.btn:has(+ .vh:focus-visible){outline:2px solid var(--pq-ivory);outline-off
 <div class="whatif" id="whatif" role="group" aria-labelledby="h-wi"></div>
 </section>
 
-<section id="diag" aria-labelledby="h-diag">
+<section class="pg" id="diag" data-title="자가 진단" aria-labelledby="h-diag">
 <div class="sec-h"><h2 id="h-diag">자가 진단</h2><span id="diag-sum"></span></div>
 <p class="fine diag-note">통제마다 사람·계정 층과 AI 층의 상태를 고르고 근거를 한 줄 적는다. 적은 내용은 이 브라우저 안에만 있고 어디로도 보내지 않으니, 남기려면 JSON으로 내보냈다가 다음에 불러온다. '설정에 반영'은 구현으로 표시한 것만 켠다. AI 층이 구현이면 AI까지, 사람·계정 층만 구현이면 사람·계정까지다.</p>
 <div class="diag-tools">
@@ -824,7 +916,7 @@ label.btn:has(+ .vh:focus-visible){outline:2px solid var(--pq-ivory);outline-off
 <div class="tblwrap"><table id="diag-t"></table></div>
 </section>
 
-<section id="limits" aria-labelledby="h-lim">
+<section class="pg" id="limits" data-title="한계" aria-labelledby="h-lim">
 <div class="sec-h"><h2 id="h-lim">한계</h2></div>
 <ul class="fine lim">
 <li>사건 다시 돌리기는 예측이 아니라 반사실 연습이다. 그 사건에서 실패했다고 판정된 통제가 켜져 있었다면 어땠을지를 따질 뿐이다. 통제가 있어도 우회될 수 있고 다른 경로가 있었을 수도 있어서, 막힘을 하한과 상한으로 나눠 낸다.</li>
@@ -840,6 +932,11 @@ label.btn:has(+ .vh:focus-visible){outline:2px solid var(--pq-ivory);outline-off
 </section>
 
 </div>
+</div>
+<div class="pg-nav" data-pager-nav>
+<button type="button" class="pg-btn prev" data-pager-prev><span aria-hidden="true">←</span><span class="lab">이전</span></button>
+<span class="pg-count" data-pager-count></span>
+<button type="button" class="pg-btn next" data-pager-next><span data-pager-next-label>다음</span><span aria-hidden="true">→</span></button>
 </div>
 
 </main>
@@ -2366,6 +2463,212 @@ label.btn:has(+ .vh:focus-visible){outline:2px solid var(--pq-ivory);outline-off
   readHash();
   if (state.kase && !/[&#]l=/.test(location.hash)) applyCase(state.kase);   // 케이스 링크만 있으면 케이스 설정으로
   renderPresetSelect(); renderCasePicker(); renderUpdates(); renderWhatIfForm(); renderDiagTable(); update();
+})();
+</script>
+<script>/* 화면 넘김 (2026-11-12) — PivoxMap 의 표지 · 위 단계 줄 · 화면 넘김(components/Cover.tsx · Rail.tsx · Screen.tsx)을 정적 페이지에 옮긴 것.
+   [data-pager] 안의 <section class="pg" data-title="…" id="…"> 를 한 화면씩 보여 준다. 첫 화면이 .pg-cover 면 표지다.
+   선택: data-pager-url="none" — 주소의 # 를 읽거나 쓰지 않는다(모의 테스트처럼 # 를 설정 저장에 쓰는 페이지).
+         data-pager-keys="none" — 키로 넘기지 않는다(← → 를 다른 일에 쓰는 페이지). 버튼 · 단계 줄 · 쓸기는 그대로.
+   페이지 코드가 숨은 화면 안의 요소로 scrollIntoView 하면 그 화면으로 먼저 넘어간다(다른 화면의 결과로 데려가는 버튼들).
+   - 앞으로 가면 오른쪽에서 28px, 뒤로 가면 왼쪽에서 들어온다(380ms, cubic-bezier(.2,.75,.2,1)). 움직임 줄이기 설정이면 움직이지 않는다.
+   - 표지: 누르거나 Enter · Space · → · ↓ · 휠을 내리면 다음. 다른 화면: ← → · PageUp/PageDown · 좌우로 쓸기 · 단계 줄 · 이전/다음 버튼.
+   - 주소의 #id 가 지금 화면이다(공유 · 새로고침). 브라우저 뒤로 가기도 화면을 따른다.
+   - JS 가 없으면 아무것도 숨기지 않는다(모든 화면이 세로로 이어진다 — 인쇄 · 검색 · 화면 낭독기).
+   외부 라이브러리 없음. CSP script-src 'self'(배포) · sha256(오프라인 사본)로 돈다. */
+(function () {
+  "use strict";
+  var main = document.querySelector("[data-pager]");
+  if (!main) return;
+  var pages = Array.prototype.slice.call(main.children).filter(function (x) { return x.classList && x.classList.contains("pg"); });
+  if (pages.length < 2) return;
+  var SLIDE_PX = 28, SLIDE_MS = 380, EASE = "cubic-bezier(.2,.75,.2,1)";
+  var INTERACTIVE = "a, button, input, textarea, select, summary, label, [contenteditable], .tblwrap";
+  var root = document.documentElement;
+  var rail = document.querySelector("[data-pager-rail]");
+  var nav = document.querySelector("[data-pager-nav]");
+  var hasCover = pages[0].classList.contains("pg-cover");
+  var useUrl = main.getAttribute("data-pager-url") !== "none";
+  var useKeys = main.getAttribute("data-pager-keys") !== "none";
+  var cur = -1;
+
+  function reduced() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
+  function indexOfId(id) { for (var i = 0; i < pages.length; i++) if (pages[i].id === id) return i; return -1; }
+  function fromHash() {
+    if (!useUrl) return 0;
+    var i = -1;
+    try { i = indexOfId(decodeURIComponent((location.hash || "").slice(1))); } catch (e) { i = -1; }
+    return i < 0 ? 0 : i;
+  }
+  function hashIsPage() { try { return indexOfId(decodeURIComponent((location.hash || "").slice(1))) >= 0; } catch (e) { return false; } }
+
+  // 단계 줄: 표지는 넣지 않는다(PivoxMap 처럼 표지는 단계 밖)
+  var steps = pages.map(function (p, i) { return { i: i, title: p.getAttribute("data-title") || ("" + (i + 1)) }; }).filter(function (s) { return !(hasCover && s.i === 0); });
+  function buildRail() {
+    if (!rail) return;
+    var ol = document.createElement("ol");
+    ol.className = "pg-rail";
+    steps.forEach(function (s, k) {
+      var li = document.createElement("li");
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "pg-rail-item";
+      b.setAttribute("data-i", s.i);
+      var n = document.createElement("span"); n.className = "pg-rail-no"; n.setAttribute("aria-hidden", "true"); n.textContent = String(k + 1);
+      var l = document.createElement("span"); l.className = "pg-rail-label"; l.textContent = s.title;
+      b.appendChild(n); b.appendChild(l);
+      b.addEventListener("click", function () { go(s.i); });
+      li.appendChild(b);
+      ol.appendChild(li);
+    });
+    // 좁은 폭: '2 / 5 · 명령 흐름' 한 줄이 버튼이 되어 같은 목록을 세로로 연다(PivoxMap Rail 과 같다)
+    var mob = document.createElement("button");
+    mob.type = "button";
+    mob.className = "pg-rail-mobile";
+    mob.setAttribute("aria-expanded", "false");
+    ol.id = "pg-rail-list";
+    mob.setAttribute("aria-controls", ol.id);
+    mob.addEventListener("click", function () {
+      var open = rail.getAttribute("data-open") === "1";
+      rail.setAttribute("data-open", open ? "0" : "1");
+      mob.setAttribute("aria-expanded", open ? "false" : "true");
+    });
+    rail.appendChild(mob);
+    rail.appendChild(ol);
+  }
+  function paintRail() {
+    if (!rail) return;
+    var at = -1;
+    Array.prototype.forEach.call(rail.querySelectorAll(".pg-rail > li"), function (li, k) {
+      var i = steps[k].i, b = li.firstChild;
+      li.setAttribute("data-status", i < cur ? "done" : (i === cur ? "now" : "todo"));
+      if (i === cur) { b.setAttribute("aria-current", "step"); at = k; } else b.removeAttribute("aria-current");
+    });
+    rail.hidden = hasCover && cur === 0;
+    var mob = rail.querySelector(".pg-rail-mobile");
+    if (mob && at >= 0) mob.textContent = (at + 1) + " / " + steps.length + " · " + steps[at].title + "  ▾";
+    rail.setAttribute("data-open", "0");
+    if (mob) mob.setAttribute("aria-expanded", "false");
+  }
+  function paintNav() {
+    if (!nav) return;
+    var prev = nav.querySelector("[data-pager-prev]"), next = nav.querySelector("[data-pager-next]"), cnt = nav.querySelector("[data-pager-count]");
+    nav.hidden = hasCover && cur === 0;
+    if (prev) { prev.disabled = cur <= (hasCover ? 1 : 0); }
+    if (next) {
+      var last = cur >= pages.length - 1;
+      next.disabled = last;
+      var lab = next.querySelector("[data-pager-next-label]");
+      if (lab) lab.textContent = last ? "끝" : (pages[cur + 1].getAttribute("data-title") || "다음");
+    }
+    if (cnt) {
+      var k = steps.map(function (s) { return s.i; }).indexOf(cur);
+      cnt.textContent = k < 0 ? "" : (k + 1) + " / " + steps.length;
+    }
+  }
+  function slideIn(el, dir) {
+    if (!el || reduced() || typeof el.animate !== "function") return;
+    var host = el.parentElement;
+    if (host) host.style.overflowX = "clip";
+    var a = el.animate([{ opacity: 0, transform: "translateX(" + (dir * SLIDE_PX) + "px)" }, { opacity: 1, transform: "none" }], { duration: SLIDE_MS, easing: EASE });
+    var release = function () { if (host) host.style.overflowX = ""; };
+    if (a.finished) a.finished.then(release, release); else a.onfinish = release;
+  }
+  function show(i, opts) {
+    opts = opts || {};
+    i = Math.max(0, Math.min(pages.length - 1, i));
+    if (i === cur) return;
+    var dir = i > cur ? 1 : -1, first = cur < 0;
+    pages.forEach(function (p, k) { p.hidden = k !== i; });
+    cur = i;
+    root.classList.toggle("pg-at-cover", hasCover && i === 0);
+    paintRail(); paintNav();
+    if (!first) { toScreen(pages[i]); slideIn(pages[i], dir); }
+    if (opts.push && useUrl) {
+      try { history.pushState({ pg: i }, "", "#" + pages[i].id); } catch (e) { /* file:// 등 */ }
+    }
+    if (!first && !opts.noFocus) {
+      var h = pages[i].querySelector("h1, h2");
+      if (h) { h.setAttribute("tabindex", "-1"); h.focus({ preventScroll: true }); }
+    }
+  }
+  // 넘긴 화면의 시작으로 — 화면이 첫 화면 높이 안에서 시작하면 맨 위로(머리 띠가 보이게), 더 아래에서 시작하면
+  // (폰의 모의 테스트처럼 설정 판이 위에 쌓인 경우) 그 화면의 시작으로 간다. 위에 붙는 단계 줄 높이만큼 띄운다.
+  function toScreen(el) {
+    var top = el.getBoundingClientRect().top + window.pageYOffset;
+    var bar = rail && !rail.hidden ? rail.getBoundingClientRect().height : 0;
+    if (top < window.innerHeight * 0.75) window.scrollTo(0, 0);
+    else window.scrollTo(0, Math.max(0, top - bar - 12));
+  }
+  function go(i) { show(i, { push: true }); }
+  function next() { if (cur < pages.length - 1) go(cur + 1); }
+  function prev() { if (cur > (hasCover ? 1 : 0)) go(cur - 1); else if (hasCover && cur === 1) go(0); }
+
+  // 키
+  window.addEventListener("keydown", function (e) {
+    if (!useKeys) return;
+    if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
+    var t = e.target;
+    if (t && t.closest && t.closest("input, textarea, select, [contenteditable]")) return;
+    var onCover = hasCover && cur === 0;
+    if (onCover && ["Enter", " ", "ArrowRight", "ArrowDown", "PageDown"].indexOf(e.key) >= 0) {
+      if (t && t.closest && t.closest(INTERACTIVE) && e.key !== "ArrowRight" && e.key !== "ArrowDown") return;
+      e.preventDefault(); next(); return;
+    }
+    if (e.key === "ArrowRight" || e.key === "PageDown") { e.preventDefault(); next(); }
+    else if (e.key === "ArrowLeft" || e.key === "PageUp") { e.preventDefault(); prev(); }
+  });
+  // 표지: 누르기 · 휠
+  if (hasCover) {
+    pages[0].addEventListener("click", function (e) { if (!(e.target.closest && e.target.closest("a, button, input, textarea, select"))) next(); });
+    window.addEventListener("wheel", function (e) { if (cur === 0 && e.deltaY > 30) next(); }, { passive: true });
+  }
+  // 좌우로 쓸기(가로로 넘치는 표 · 그림 위에서는 하지 않는다)
+  var sx = 0, sy = 0, st = 0, skip = false;
+  main.addEventListener("touchstart", function (e) {
+    var p = e.touches[0]; sx = p.clientX; sy = p.clientY; st = Date.now();
+    skip = !!(e.target.closest && e.target.closest(".tblwrap, .fr, .mt-box, .xt, textarea, input"));
+  }, { passive: true });
+  main.addEventListener("touchend", function (e) {
+    if (skip) return;
+    var p = e.changedTouches[0], dx = p.clientX - sx, dy = p.clientY - sy;
+    if (Date.now() - st < 700 && Math.abs(dx) > 70 && Math.abs(dx) > 1.6 * Math.abs(dy)) { if (dx < 0) next(); else prev(); }
+  }, { passive: true });
+  // 뒤로 가기 · 주소 바꾸기
+  if (useUrl) {
+    // 화면 id 가 아닌 # (다른 용도)는 무시한다 — 바꿀 때마다 첫 화면으로 튀지 않게
+    window.addEventListener("popstate", function () { if (!location.hash || hashIsPage()) show(fromHash(), { noFocus: false }); });
+    window.addEventListener("hashchange", function () { if (hashIsPage()) show(fromHash()); });
+  }
+  // 숨은 화면 안의 요소로 스크롤하려 하면 그 화면을 먼저 연다
+  var nativeSIV = Element.prototype.scrollIntoView;
+  if (nativeSIV) {
+    Element.prototype.scrollIntoView = function () {
+      var pg = this.closest && this.closest("[data-pager] > .pg");
+      if (pg && pg.hidden) { var i = pages.indexOf(pg); if (i >= 0) show(i, { push: true, noFocus: true }); }
+      return nativeSIV.apply(this, arguments);
+    };
+  }
+  // 이전 · 다음 버튼 · 표지의 '시작하기'
+  if (nav) {
+    var pb = nav.querySelector("[data-pager-prev]"), nb = nav.querySelector("[data-pager-next]");
+    if (pb) pb.addEventListener("click", prev);
+    if (nb) nb.addEventListener("click", next);
+  }
+  Array.prototype.forEach.call(document.querySelectorAll("[data-pager-start]"), function (a) {
+    a.addEventListener("click", function (e) { e.preventDefault(); next(); });
+  });
+  // 화면 안의 '#다른화면' 링크도 넘김으로
+  main.addEventListener("click", function (e) {
+    var a = e.target.closest && e.target.closest('a[href^="#"]');
+    if (!a) return;
+    var i = indexOfId(a.getAttribute("href").slice(1));
+    if (i >= 0) { e.preventDefault(); go(i); }
+  });
+
+  buildRail();
+  root.classList.add("paged");
+  if (rail) rail.removeAttribute("aria-hidden");
+  show(fromHash(), { noFocus: true });
 })();
 </script>
 </body>
