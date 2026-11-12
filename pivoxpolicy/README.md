@@ -93,13 +93,13 @@ registry/
   frameworks.yaml        루브릭 basis 가 가리키는 13개 프레임워크(FSB·NCCoE·IR 8596·OWASP ASI·CSA MAESTRO·NYDFS·COSO·BCBS·EU AI Act·SEC S-K 106 …)
   sources.yaml           watch 가 보는 발표 목록 페이지 (금융위·금보원·금감원·NIST·연준·OCC·FDIC·NYDFS·재무부·FINRA·FSB)
   documents/<id>.yaml    문서 1건 = 파일 1개 (30건, 2026-11-11)
-  codings/<coder>.yaml   코더 1명 = 파일 1개. TEMPLATE.yaml 을 복사해 2차 코더를 만든다
+  codings/<coder>.yaml   코더 1명 = 파일 1개. TEMPLATE.yaml 을 복사해 2차 코더를 만든다. consensus_* = 조정본(독립 코더 아님)
   inbox.md               확인은 했지만 아직 문서로 안 넣은 단서 (날짜·출처 포함)
 snapshots/
   manifest.json          id 별 url·sha256·크기·받은 시각·HTTP 상태·에이전트 언급 수·목록 링크 (git 추적)
   content/               받은 본문 (git 추적 안 함)
 out/                     report 가 쓰는 매트릭스·연표·공백·κ (git 추적 — 논문에 붙일 표)
-tests/                   pytest 22개, 네트워크 없이 돈다
+tests/                   pytest 130개, 네트워크 없이 돈다
 ```
 
 ## 문서 레코드 규칙
@@ -128,6 +128,26 @@ true 칸의 인용문은 전부 코퍼스 원문에서 확인됐다(A 108칸 · 
 - **점수 3 은 0칸** — 구속력 있는 문서가 에이전트를 명시해 요구하는 칸은 어느 관할에도 없다. 에이전트를 명시한 요구는 자율 문서뿐.
 - EU 는 AI Act 제14조만 코딩했다(사람 승인 · 즉시 중단 2, 나머지 0) — DORA 등은 레지스트리에 없다.
 - 일반 층 불일치 6칸은 `out/kappa-ai_v2a_2026-11-11-vs-ai_v2b_2026-11-11.md` — AI 문서 안의 일반 IT 문구를 analog 로 볼지(FSB 인벤토리 · NYDFS 서한의 사람 승인 등). 아직 조정(adjudication)하지 않았다.
+
+## 조정 (2026-11-12) — `consensus_2026-11-12`
+
+두 팀이 갈린 칸을 판정해 조정본 `registry/codings/consensus_2026-11-12.yaml` 을 만들었다(`adjudicates: [ai_v2a, ai_v2b]`).
+일치한 칸은 그대로 옮기고, 갈린 칸은 `adjudication` 에 판정 · 따른 쪽 · 이유를 적는다. **이제 매트릭스 · 공백 · 대시보드의 대표 코딩은 조정본이다.**
+조정본은 독립 판단이 아니라 κ 에서 빠진다(`kappa` 기본값 · `report` · `site` 모두 ai_v2a vs ai_v2b). `check` 가 '원본이 같은 칸 = 원본 그대로 · 갈린 칸 = 판정 있음' 을 검사한다.
+
+| 칸 | 판정 | 따른 쪽 | 이유 (요약 — 전문 `out/adjudication-consensus_2026-11-12.md`) |
+|---|---|---|---|
+| FSB 최종 · 초안 × 인벤토리 (일반) | false | B | '인터넷 연결 시스템 문서화' 는 노출 점검이지 목록 유지가 아님 |
+| 금융위 AI 가이드라인 × 인벤토리 (일반) | **true** | B | 7.7 망분리 대체 통제 '사용자ㆍ관리자 등록ㆍ관리' — 원문 86쪽 재확인 |
+| NYDFS 2024-10 서한 × 사람 승인 (일반) | false | B | 교육 내용이지 승인 절차 요구가 아님 |
+| NYDFS 2026-09 서한 × 사람 승인 (일반) | false | B | 위험 수용 결정의 기록 요구 — 승인 요구가 아님 |
+| FS AI RMF × 공급자 (일반) | false | A | MG-3.1.5 는 'Third-Party AI Risk' — AI 공급망(→ agent) · Guidebook 원문 재확인 |
+| NIST IR 8596 × 사람 승인 (AI) 대상 | agent | A | PR.PS-05 'AI agent systems … subject to approval' |
+
+- **결과가 바뀐 칸은 하나** — INTL · 인벤토리 일반 층 1 → 0. 간극 12칸 · 점수 3 의 0칸은 그대로(`out/matrix-consensus_2026-11-12.md`).
+- 판정에서 나온 코드북 보강 5줄을 `controls.yaml` 에 `# 2026-11-12 조정` 으로 달았다. ai_v2a·ai_v2b 는 보강 전 코드북으로 코딩했으니,
+  사람 코더(보강 후 코드북)와의 κ 를 보고할 땐 그 차이를 밝힌다.
+- 조정자도 같은 계열의 AI 다. 사람 코더가 들어오면 조정본이 아니라 ai_v2a·ai_v2b 와 각각 κ 를 내고, 조정 7칸을 다시 본다.
 
 ## 한 칸 코딩 결과 (v1 — 기록)
 
@@ -176,7 +196,7 @@ git push git@github.com:seanbae-analyst/pivoxpolicy.git pivoxpolicy-split:main
 ## 다음 할 일 (우선순위)
 
 1. **사람 코더 1명** — `registry/codings/TEMPLATE.yaml` + 코퍼스 21건(본문은 저장소에 없다 — `snapshots/corpus.json` 의 출처로 다시 받거나 보관한 zip) → `kappa`.
-2. 일반 층 불일치 6칸 조정, 경계 사례(note 가 `borderline:`) 검토 → 코드북 false_if 보강.
+2. ~~일반 층 불일치 6칸 조정~~ (2026-11-12, 위 '조정'). 남은 것: 두 팀이 **일치했지만** note 가 `borderline:` 인 칸 검토.
 3. 사건 × 통제 코딩도 판정 규칙 정하기('원문이 실패를 적은 것만 참' vs 추론) — 지금 κ 0.42.
 4. 덱 정정 반영(`registry/inbox.md` 맨 위): FSB 고유 식별자 · CISA BOD 22-01 폐지 → 26-04.
 5. EU 확장(DORA), ISO 27001·42001 원문 확보 여부, 논문용 표.

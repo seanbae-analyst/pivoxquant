@@ -13,7 +13,7 @@ from . import kappa as kappa_mod
 from . import matrix as matrix_mod
 from . import rubric as rubric_mod
 from .registry import OUT_DIR
-from .schema import Control, Document, JURISDICTIONS
+from .schema import Control, Document, JURISDICTIONS, is_adjudicated
 
 
 def render_timeline(docs: dict[str, Document]) -> str:
@@ -100,6 +100,25 @@ def render_documents_index(docs: dict[str, Document]) -> str:
     return "\n".join(lines)
 
 
+def render_adjudication(coder: str, coding: dict[str, Any]) -> str:
+    """조정본의 판정 목록 — 칸마다 판정·따른 쪽·이유·코드북 보강."""
+    a, b = coding.get("adjudicates") or ["?", "?"]
+    rows = coding.get("adjudication") or []
+    lines = [f"# 조정 — `{a}` + `{b}` → `{coder}`", "",
+             f"두 코더가 갈린 칸 **{len(rows)}** 개의 판정. 나머지 칸은 두 코더가 같아 그대로 옮겼다 (`check` 가 검사한다).",
+             "조정본은 독립 코더가 아니라 κ 에 넣지 않는다. 조정자도 AI 다 — 사람 코더가 들어오면 다시 본다.", "",
+             "| 문서 | 통제 | 층 | 판정 | 따른 쪽 |", "|---|---|---|---|---|"]
+    for d in rows:
+        lines.append(f"| `{d.get('document')}` | {d.get('control')} | {d.get('layer')} | {d.get('decision')} | `{d.get('follows')}` |")
+    lines.append("")
+    for d in rows:
+        lines += [f"## {d.get('document')} × {d.get('control')} ({d.get('layer')})", "", str(d.get("reason", ""))]
+        if d.get("codebook"):
+            lines += ["", f"코드북 보강: {d['codebook']}"]
+        lines.append("")
+    return "\n".join(lines)
+
+
 def write_all(
     docs: dict[str, Document],
     controls: list[Control],
@@ -129,7 +148,10 @@ def write_all(
                 w(f"matrix-{coder}-{layer}.md", matrix_mod.render_markdown(m, controls, coder, docs, layer))
                 w(f"matrix-{coder}-{layer}.csv", matrix_mod.render_csv(m, controls))
             w(f"gaps-{coder}.md", render_layer_gaps(ms["analog"], ms["agent"], controls, coder))
-    names = sorted(codings)
+    for coder, coding in codings.items():
+        if is_adjudicated(coding):
+            w(f"adjudication-{coder}.md", render_adjudication(coder, coding))
+    names = sorted(k for k, c in codings.items() if not is_adjudicated(c))  # 조정본은 독립 판단이 아니다 — κ 에서 뺀다
     summary: list[tuple[str, str, str, dict[str, Any]]] = []
     for i in range(len(names)):
         for j in range(i + 1, len(names)):

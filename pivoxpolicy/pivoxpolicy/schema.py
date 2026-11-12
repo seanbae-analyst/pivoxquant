@@ -167,12 +167,65 @@ def coding_version(coding: dict[str, Any] | None) -> int:
     return 2 if isinstance(coding, dict) and coding.get("codebook") == 2 else 1
 
 
+def is_adjudicated(coding: dict[str, Any] | None) -> bool:
+    """독립 코더 둘을 칸마다 합친 조정본인가 (adjudicates: [A, B]). 조정본은 독립 판단이 아니라 κ 에서 뺀다."""
+    return isinstance(coding, dict) and bool(coding.get("adjudicates"))
+
+
+def independent_v2(codings: dict[str, Any]) -> list[str]:
+    """κ 를 낼 수 있는 두 층(v2) 코더 — 조정본을 뺀 이름순."""
+    return sorted(k for k, c in codings.items() if coding_version(c) == 2 and not is_adjudicated(c))
+
+
 def primary_coder(codings: dict[str, Any]) -> str | None:
-    """대표로 보일 코더 — 두 층(v2) 코딩이 있으면 그중 이름순 첫째, 없으면 이름순 첫째."""
+    """대표로 보일 코더 — 두 층(v2) 조정본 > 두 층 독립 코더 > 아무 코더, 각각 이름순 첫째."""
     if not codings:
         return None
-    v2 = sorted(k for k, c in codings.items() if coding_version(c) == 2)
+    adj = sorted(k for k, c in codings.items() if coding_version(c) == 2 and is_adjudicated(c))
+    if adj:
+        return adj[0]
+    v2 = independent_v2(codings)
     return v2[0] if v2 else sorted(codings)[0]
+
+
+def validate_adjudication(coding: dict[str, Any], codings: dict[str, Any]) -> list[str]:
+    """조정본 검사 — 원본 둘이 같은 칸은 원본 그대로인가, 갈린 칸(covered · agent subject)은 모두 adjudication 에 판정이 있는가.
+    조정본이 아니면 빈 목록."""
+    if not is_adjudicated(coding):
+        return []
+    srcs = coding.get("adjudicates") or []
+    if len(srcs) != 2 or any(s not in codings for s in srcs):
+        return [f"adjudicates 는 있는 코더 둘이어야 함: {srcs}"]
+    a, b = (codings[s].get("items") or {} for s in srcs)
+    mine = coding.get("items") or {}
+    decided: set[tuple[str, str, str]] = set()
+    problems: list[str] = []
+    for d in coding.get("adjudication") or []:
+        key = (d.get("document"), d.get("control"), d.get("layer"))
+        if d.get("layer") not in LAYERS or d.get("follows") not in srcs or not d.get("reason"):
+            problems.append(f"adjudication {key}: layer · follows(원본 코더 중 하나) · reason 필요")
+        decided.add(key)
+
+    def val(items: dict[str, Any], doc: str, cid: str, layer: str) -> tuple[Any, Any]:
+        c = ((items.get(doc) or {}).get(cid) or {}).get(layer) or {}
+        return c.get("covered"), (c.get("subject") if layer == "agent" else None)
+
+    for doc in sorted(set(a) | set(b) | set(mine)):
+        cids = set(a.get(doc) or {}) | set(b.get(doc) or {}) | set(mine.get(doc) or {})
+        for cid in sorted(cids):
+            for layer in LAYERS:
+                va, vb, vc = val(a, doc, cid, layer), val(b, doc, cid, layer), val(mine, doc, cid, layer)
+                key = (doc, cid, layer)
+                if va == vb:
+                    if vc != va:
+                        problems.append(f"{doc}.{cid}.{layer}: 원본 둘이 {va} 로 같은데 조정본은 {vc}")
+                    if key in decided:
+                        problems.append(f"{doc}.{cid}.{layer}: 원본이 일치하는데 adjudication 에 있음")
+                elif key not in decided:
+                    problems.append(f"{doc}.{cid}.{layer}: 원본이 갈렸는데({va} vs {vb}) adjudication 에 판정 없음")
+                elif vc not in (va, vb):
+                    problems.append(f"{doc}.{cid}.{layer}: 조정 결과 {vc} 가 원본 어느 쪽도 아님")
+    return problems
 
 
 def _or3(a: bool | None, b: bool | None) -> bool | None:

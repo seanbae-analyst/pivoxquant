@@ -17,7 +17,7 @@ from . import matrix as matrix_mod
 from . import rubric as rubric_mod
 from .intel import load_items
 from .registry import OUT_DIR, SNAPSHOT_DIR, load_codings, load_controls, load_documents
-from .schema import JURISDICTIONS, coding_version
+from .schema import JURISDICTIONS, coding_version, independent_v2, is_adjudicated, primary_coder
 
 TEMPLATES = Path(__file__).resolve().parent / "templates"
 REPO_URL = "https://github.com/seanbae-analyst/pivoxpolicy"
@@ -343,8 +343,12 @@ def build(out_dir: Path = OUT_DIR, snapshot_dir: Path = SNAPSHOT_DIR, now: datet
     docs = load_documents()
     codings = load_codings()
     v2 = sorted(k for k, c in codings.items() if coding_version(c) == 2)
-    if v2:   # 두 층 코딩이 있으면 그것이 대표 — 다른 두 층 코더가 있으면 ‡ 비교 대상
-        name, alt_name = v2[0], (v2[1] if len(v2) > 1 else None)
+    pair = independent_v2(codings)[:2]   # κ 는 독립 코더 둘로만
+    if v2 and is_adjudicated(codings[primary_coder(codings)]):
+        # 조정본이 대표 — 갈린 칸은 판정됐으니 ‡ 없음. κ 는 조정 전 독립 코더 둘
+        name, alt_name = primary_coder(codings), None
+    elif v2:   # 두 층 코딩이 있으면 그것이 대표 — 다른 두 층 코더가 있으면 ‡ 비교 대상
+        name, alt_name = pair[0], (pair[1] if len(pair) > 1 else None)
     else:
         name = "deck_2026-11-01" if "deck_2026-11-01" in codings else sorted(codings)[0]
         alt_name = next((n for n in sorted(codings) if n != name), None)
@@ -374,7 +378,13 @@ def build(out_dir: Path = OUT_DIR, snapshot_dir: Path = SNAPSHOT_DIR, now: datet
         inc_src = ["registry/incidents.yaml"] + inc_src
     if v2:
         matrix_html, (m_a, m_g) = _matrix_section_v2(docs, controls, coding, inc_counts, alt)
-        agree_html = _agreement_note_v2(docs, controls, coding, alt, name, alt_name, codings)
+        if alt is None and len(pair) == 2:   # 조정본 대표 — κ 는 독립 둘
+            agree_html = _agreement_note_v2(docs, controls, codings[pair[0]], codings[pair[1]], pair[0], pair[1], codings)
+            n_adj = len(coding.get("adjudication") or [])
+            agree_html += (f"<li>두 코더가 갈린 {n_adj}칸은 조정했다(<code>out/adjudication-{_e(name)}.md</code>) — "
+                           f"매트릭스·공백은 조정본 {_e(name)} 이다. 조정자도 AI 다.</li>")
+        else:
+            agree_html = _agreement_note_v2(docs, controls, coding, alt, name, alt_name, codings)
         agree_html += _incident_note(controls, incs)
         gaps_html = _gaps_section_v2(m_a, m_g, controls)
     else:
