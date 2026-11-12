@@ -1316,3 +1316,62 @@ items:
           rapid, controlled disengagement of AI systems with inconsistent performance or outcomes."'
       note: 'strong: (agent) 신속 중단(deactivation·rollback) 기술 수단을 구현하고 정기 테스트 — 권한 회수 문언은 없음; MG-2.4.1(중단 판단·책임 지정), GV-6.2.1(제3자 AI ''system isolation'')도 있음. analog false: 계정 정지·일반 자산 격리 조항 없음(GV-1.7.1
         은 AI 폐기 절차).'
+  eu-dora-2022-2554:
+    inventory:
+      analog:
+        covered: true
+        evidence: 'Art 8(6): "financial entities shall maintain relevant inventories and update them periodically and every time any major change as referred to in paragraph 3 occurs"'
+      agent:
+        covered: false
+        subject: null
+      note: No AI mention anywhere in scope.
+    vendors:
+      analog:
+        covered: true
+        evidence: 'Art 28(4)(d): "undertake all due diligence on prospective ICT third-party service providers and ensure throughout the selection and assessment processes that the ICT third-party service
+          provider is suitable"'
+      agent:
+        covered: false
+        subject: null
+      note: Also Art 30(3)(e)(i) audit rights, 30(3)(b) notification, 28(3) register of information.
+    unique_id:
+      analog:
+        covered: false
+      agent:
+        covered: false
+        subject: null
+      note: 'borderline: Art 9(4)(c) access rights administration and Art 15(b) granting/revoking rights do not require individual identifiers or identity issuance; Art 9(4)(d) is authentication strength
+        only.'
+    least_privilege:
+      analog:
+        covered: true
+        evidence: 'Art 9(4)(c): "implement policies that limit the physical or logical access to information assets and ICT assets to what is required for legitimate and approved functions and activities
+          only"'
+      agent:
+        covered: false
+        subject: null
+    human_approval:
+      analog:
+        covered: true
+        evidence: 'Art 9(4)(e): "to ensure that all changes to ICT systems are recorded, tested, assessed, approved, implemented and verified in a controlled manner"'
+      agent:
+        covered: false
+        subject: null
+      note: 'borderline: per-change approval in change management (also ''approved by appropriate lines of management''); other management-body approvals in Art 5 are periodic policy approvals and excluded.'
+    audit_trail:
+      analog:
+        covered: true
+        evidence: 'Art 11(8): "keep readily accessible records of activities before and during disruption events when their ICT business continuity plans and ICT response and recovery plans are activated"'
+      agent:
+        covered: false
+        subject: null
+      note: 'borderline: no explicit access/transaction log requirement; Art 11(8) activity records and Art 9(4)(e) ''changes ... recorded'' are the closest. Art 10(3) monitor user activity is monitoring
+        only.'
+    kill_switch:
+      analog:
+        covered: true
+        evidence: 'Art 9(4): "design the network connection infrastructure in a way that allows it to be instantaneously severed or segmented in order to minimise and prevent contagion"'
+      agent:
+        covered: false
+        subject: null
+      note: Also Art 9(4)(b) automated mechanisms to isolate affected information assets.

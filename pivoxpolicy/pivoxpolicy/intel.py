@@ -115,9 +115,17 @@ def _text(el: ET.Element | None) -> str:
 
 
 def _strip(s: str | None) -> str:
-    """태그 제거 → 엔티티 풀기(이중 이스케이프된 &amp;rsquo; 도) → 공백 정리."""
+    """태그 제거 → 엔티티 풀기(두세 번 이스케이프된 것도 — 바뀌지 않을 때까지) → 풀려 나온 주석·태그 제거 → 공백 정리.
+    과기정통부 RSS 요약은 '&amp;lt;!--[data-hwpjson]{ &amp;#034;…' 처럼 한글 문서 JSON 을 이스케이프된 주석으로 싣는다(2026-11-12 실측)."""
     s = re.sub(r"<[^>]+>", " ", s or "")
-    s = html.unescape(s)
+    for _ in range(4):
+        t = html.unescape(s)
+        if t == s:
+            break
+        s = t
+    s = re.sub(r"<!--.*?(?:-->|$)", " ", s, flags=re.S)   # 닫히지 않은(잘린) 주석은 끝까지
+    s = re.sub(r"\[data-hwpjson\].*", " ", s, flags=re.S)
+    s = re.sub(r"<[^>]+>", " ", s).replace("\xa0", " ")
     return re.sub(r"\s+", " ", s).strip()
 
 

@@ -191,6 +191,15 @@ items:
     audit_trail:     {covered: null,  note: 로그 보존은 Art. 12·19 — 제14조 밖}
     kill_switch:     {covered: true,  evidence: "Art. 14(4)(e) 'stop' 버튼으로 중단 가능해야 함 (덱 슬라이드 14)"}
 
+  eu-dora-2022-2554:   # 덱에 없었다 — 2026-11-12 레지스트리에 추가. 1차 코딩 대상 아님(null)
+    inventory:       {covered: null}
+    vendors:         {covered: null}
+    unique_id:       {covered: null}
+    least_privilege: {covered: null}
+    human_approval:  {covered: null}
+    audit_trail:     {covered: null}
+    kill_switch:     {covered: null}
+
   # ── INTL ────────────────────────────────────────────────────────────
   intl-fsb-ai-sound-practices-2026-10:
     inventory:       {covered: true,  evidence: "원문 대조 정정(2026-11-11) — PDF p.30 사례 '조직 전체 AI inventory' · p.31 에이전트 인증 상태·허용 범위를 'inventory attributes' 로 기록"}

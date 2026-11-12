@@ -9,6 +9,7 @@
 | 2024-02-26 | US | NIST | [NIST Cybersecurity Framework (CSF) 2.0 — CSWP 29](https://nvlpubs.nist.gov/nistpubs/CSWP/NIST.CSWP.29.pdf) | standard | 1 | 아니오 | final |
 | 2024-07-12 | EU | European Parliament & Council | [EU AI Act (Regulation (EU) 2024/1689) Art. 14 — Human oversight of high-risk AI, incl. stop button (Art. 14(4)(e))](https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=OJ:L_202401689) | law | 2 | 아니오 | in_force |
 | 2024-10-16 | US | NYDFS | [NYDFS Industry Letter — Cybersecurity Risks Arising from AI and Strategies to Combat Related Risks](https://www.dfs.ny.gov/industry-guidance/industry-letters/il20241016-cyber-risks-ai-and-strategies-combat-related-risks) | supervisory_guidance | 1 | 아니오 | final |
+| 2025-01-17 | EU | European Parliament & Council | [EU DORA (Regulation (EU) 2022/2554) — 제2장 ICT 위험관리(제5~16조) · 제5장 제1절 ICT 제3자 위험(제28~30조)](https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32022R2554) | regulation | 2 | 아니오 | in_force |
 | 2025-02-05 | KR | 금융위원회 (FSC) | [전자금융감독규정 제13조 (전산자료 보호대책) — 계정·접근권한·로그](https://www.law.go.kr/행정규칙/전자금융감독규정) | regulation | 2 | 아니오 | in_force |
 | 2025-12-01 | US | FINRA | [FINRA 2026 Annual Regulatory Oversight Report — AI / agentic AI](https://www.finra.org/rules-guidance/guidance/reports/2026-finra-annual-regulatory-oversight-report) | report | 0 | 예 | final |
 | 2025-12-16 | US | NIST | [NIST IR 8596 (initial public draft) — Cybersecurity Framework Profile for AI (Cyber AI Profile)](https://csrc.nist.gov/pubs/ir/8596/iprd) | draft | 1 | 확인 필요 | draft |

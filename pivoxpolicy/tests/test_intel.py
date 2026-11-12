@@ -80,3 +80,10 @@ def test_keep_all_feed_bypasses_keyword_filter():
     feeds = [{"id": "f", "url": "u", "issuer": "X", "jurisdiction": "US", "kind": "primary", "topic": "threat_intel", "keep_all": True}]
     new, _ = collect(feeds, [], fetcher=lambda u: FetchResult(200, RSS, ""), now="t")
     assert len(new) == 3
+
+
+def test_strip_unescapes_until_stable_and_drops_hwpjson_comment():
+    from pivoxpolicy.intel import _strip
+    raw = "- 7대 SEED 논의 - &amp;nbsp; &lt;!--[data-hwpjson]{ &#034;documentPr&#034;: { &#034;di&#034;: &#0"
+    assert _strip(raw) == "- 7대 SEED 논의 -"
+    assert _strip("A&amp;amp;rsquo;s &lt;b&gt;bold&lt;/b&gt; <!-- x --> end") == "A’s bold end"

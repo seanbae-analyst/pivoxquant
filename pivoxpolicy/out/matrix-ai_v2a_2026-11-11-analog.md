@@ -6,13 +6,13 @@
 
 | # | 통제 | KR | US | EU | INTL |
 |---|---|---|---|---|---|
-| 1 | 인벤토리 (Inventory) | 2 | 2 | 0 | 1 |
-| 2 | 공급자 관리 (Vendors / third-party) | 2 | 2 | 0 | 0 |
+| 1 | 인벤토리 (Inventory) | 2 | 2 | 2 | 1 |
+| 2 | 공급자 관리 (Vendors / third-party) | 2 | 2 | 2 | 0 |
 | 3 | 고유 식별자 (Unique ID) | 2 | 1 | 0 | 0 |
-| 4 | 최소 권한 (Least privilege) | 2 | 2 | 0 | 0 |
-| 5 | 사람 승인 (Human approval) | 2 | 2 | 0 | 0 |
-| 6 | 감사 기록 (Audit trail) | 2 | 2 | 0 | 1 |
-| 7 | 즉시 중단 (Kill switch) | 2 | 2 | 0 | 0 |
+| 4 | 최소 권한 (Least privilege) | 2 | 2 | 2 | 0 |
+| 5 | 사람 승인 (Human approval) | 2 | 2 | 2 | 0 |
+| 6 | 감사 기록 (Audit trail) | 2 | 2 | 2 | 1 |
+| 7 | 즉시 중단 (Kill switch) | 2 | 2 | 2 | 0 |
 
 ## 셀별 근거 문서
 
@@ -38,13 +38,13 @@
 
 ### EU
 
-- 1 인벤토리: **0** ← `eu-ai-act-art14`
-- 2 공급자 관리: **0** ← `eu-ai-act-art14`
-- 3 고유 식별자: **0** ← `eu-ai-act-art14`
-- 4 최소 권한: **0** ← `eu-ai-act-art14`
-- 5 사람 승인: **0** ← `eu-ai-act-art14`
-- 6 감사 기록: **0** ← `eu-ai-act-art14`
-- 7 즉시 중단: **0** ← `eu-ai-act-art14`
+- 1 인벤토리: **2** ← `eu-dora-2022-2554`
+- 2 공급자 관리: **2** ← `eu-dora-2022-2554`
+- 3 고유 식별자: **0** ← `eu-ai-act-art14`, `eu-dora-2022-2554`
+- 4 최소 권한: **2** ← `eu-dora-2022-2554`
+- 5 사람 승인: **2** ← `eu-dora-2022-2554`
+- 6 감사 기록: **2** ← `eu-dora-2022-2554`
+- 7 즉시 중단: **2** ← `eu-dora-2022-2554`
 
 ### INTL
 

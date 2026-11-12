@@ -17,6 +17,7 @@ from . import matrix as matrix_mod
 from . import rubric as rubric_mod
 from .intel import load_items
 from .registry import OUT_DIR, SNAPSHOT_DIR, load_codings, load_controls, load_documents
+from . import intel as intel_mod
 from .schema import JURISDICTIONS, coding_version, independent_v2, is_adjudicated, primary_coder
 
 TEMPLATES = Path(__file__).resolve().parent / "templates"
@@ -87,7 +88,7 @@ def _now_and_incidents(items: list) -> tuple[str, str, list[str], list[str]]:
         dt = it.published[:10] if it.published else ""
         # 발행일이 없으면 수집일을 '수집' 이라고 밝혀 적는다 — 발행일처럼 보이면 안 된다
         shown = dt[5:] if dt else (f"수집 {it.first_seen[5:10]}" if it.first_seen else "날짜 없음")
-        s = (it.summary or "")[:160]
+        s = intel_mod._strip(it.summary)[:160]   # 이미 수집된 항목도 표시 때 다시 정리 (이중 이스케이프 · hwpjson)
         return (f'<li><time datetime="{_e(dt)}">{_e(shown)}</time>'
                 f'<div><div class="k">{_e(k)}</div>'
                 f'<div class="t">{_link(it.link, it.title)}</div>'

@@ -58,10 +58,12 @@
 - `us-nydfs-letter-2026-09-10` **NYDFS Industry Letter — Guidance on How to Conduct and Use Risk Assessments Required by Part 500** · NYDFS · 2026-09-10 · binding 1 — <https://www.dfs.ny.gov/industry_guidance/industry_letters/il20260910-cyber-risk-assessment>
   - Part 500 리스크 평가 수행·활용 안내. 덱에 없던 문서 — AI 시스템을 리스크 평가에 어떻게 넣는지 코딩 필요.
 
-## EU (1)
+## EU (2)
 
 - `eu-ai-act-art14` **EU AI Act (Regulation (EU) 2024/1689) Art. 14 — Human oversight of high-risk AI, incl. stop button (Art. 14(4)(e))** · European Parliament & Council · 2024-07-12 · binding 2 — <https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=OJ:L_202401689>
   - 고위험 AI 에 사람 감독 의무 — 개입·중단('stop' 버튼) 가능해야 함. '에이전트'가 아니라 '고위험 AI 시스템' 기준. 비공식 조문 보기 https://artificialintelligenceact.eu/article/14/
+- `eu-dora-2022-2554` **EU DORA (Regulation (EU) 2022/2554) — 제2장 ICT 위험관리(제5~16조) · 제5장 제1절 ICT 제3자 위험(제28~30조)** · European Parliament & Council · 2025-01-17 · binding 2 — <https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32022R2554>
+  - 금융회사 ICT 위험관리 의무 — ICT 자산 식별·목록(제8조), 접근 통제·강한 인증(제9조), 이상 탐지(제10조), 대응·격리(제11조), 백업·복구(제12조), ICT 제3자 위험 관리·등록부·계약 조항(제28~30조). 2025-01-17 적용. AI·에이전트를 이름 붙이지 않는다(원문 검색 2026-11-12). source_note 원문.
 
 ## INTL (4)
 

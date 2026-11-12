@@ -38,12 +38,12 @@
 
 ### EU
 
-- 1 인벤토리: **0** ← `eu-ai-act-art14`
-- 2 공급자 관리: **0** ← `eu-ai-act-art14`
-- 3 고유 식별자: **0** ← `eu-ai-act-art14`
-- 4 최소 권한: **0** ← `eu-ai-act-art14`
+- 1 인벤토리: **0** ← `eu-ai-act-art14`, `eu-dora-2022-2554`
+- 2 공급자 관리: **0** ← `eu-ai-act-art14`, `eu-dora-2022-2554`
+- 3 고유 식별자: **0** ← `eu-ai-act-art14`, `eu-dora-2022-2554`
+- 4 최소 권한: **0** ← `eu-ai-act-art14`, `eu-dora-2022-2554`
 - 5 사람 승인: **2** ← `eu-ai-act-art14`
-- 6 감사 기록: **0** ← `eu-ai-act-art14`
+- 6 감사 기록: **0** ← `eu-ai-act-art14`, `eu-dora-2022-2554`
 - 7 즉시 중단: **2** ← `eu-ai-act-art14`
 
 ### INTL

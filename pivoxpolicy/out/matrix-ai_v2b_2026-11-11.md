@@ -4,15 +4,15 @@
 
 | # | 통제 | KR | US | EU | INTL |
 |---|---|---|---|---|---|
-| 1 | 인벤토리 (Inventory) | 2 / 1 | 2 / 1* | 0 / 0 | 0 / 1 |
-| 2 | 공급자 관리 (Vendors / third-party) | 2 / 1* | 2 / 1 | 0 / 0 | 0 / 1* |
+| 1 | 인벤토리 (Inventory) | 2 / 1 | 2 / 1* | 2 / 0 | 0 / 1 |
+| 2 | 공급자 관리 (Vendors / third-party) | 2 / 1* | 2 / 1 | 2 / 0 | 0 / 1* |
 | 3 | 고유 식별자 (Unique ID) | 2 / 0 | 1 / 1* | 0 / 0 | 0 / 1* |
-| 4 | 최소 권한 (Least privilege) | 2 / 1* | 2 / 1* | 0 / 0 | 0 / 1* |
-| 5 | 사람 승인 (Human approval) | 2 / 2† | 2 / 1* | 0 / 2 | 0 / 1* |
-| 6 | 감사 기록 (Audit trail) | 2 / 1* | 2 / 1* | 0 / 0 | 1 / 1* |
-| 7 | 즉시 중단 (Kill switch) | 2 / 1* | 2 / 1* | 0 / 2 | 0 / 1* |
+| 4 | 최소 권한 (Least privilege) | 2 / 1* | 2 / 1* | 2 / 0 | 0 / 1* |
+| 5 | 사람 승인 (Human approval) | 2 / 2† | 2 / 1* | 2 / 2 | 0 / 1* |
+| 6 | 감사 기록 (Audit trail) | 2 / 1* | 2 / 1* | 2 / 0 | 1 / 1* |
+| 7 | 즉시 중단 (Kill switch) | 2 / 1* | 2 / 1* | 2 / 2 | 0 / 1* |
 
-## 간극 — 일반 통제는 구속력(2)인데 AI·에이전트 층은 2 미만: 12칸
+## 간극 — 일반 통제는 구속력(2)인데 AI·에이전트 층은 2 미만: 16칸
 
 - KR · 1 인벤토리: 일반 **2** ← `kr-efsr-art13` · AI·에이전트 **1** ← `kr-fsc-ai-guidelines-2026-06`
 - KR · 2 공급자 관리: 일반 **2** ← `kr-outsourcing-regulation` · AI·에이전트 **1*** ← `kr-fsc-ai-guidelines-2026-06`, `kr-fsi-agent-criteria-2026-10`
@@ -26,5 +26,9 @@
 - US · 5 사람 승인: 일반 **2** ← `us-nydfs-part500` · AI·에이전트 **1*** ← `us-nist-ir-8596-cyber-ai-profile`, `us-nist-nccoe-agent-identity-2026-02`, `us-nydfs-letters-2026-05-21`
 - US · 6 감사 기록: 일반 **2** ← `us-nydfs-part500` · AI·에이전트 **1*** ← `us-nist-ir-8596-cyber-ai-profile`, `us-nist-nccoe-agent-identity-2026-02`, `us-treasury-fs-ai-rmf-2026-02`
 - US · 7 즉시 중단: 일반 **2** ← `us-cisa-bod-26-04`, `us-nydfs-part500` · AI·에이전트 **1*** ← `us-nist-ir-8596-cyber-ai-profile`, `us-nist-nccoe-agent-identity-2026-02`, `us-treasury-fs-ai-rmf-2026-02`
+- EU · 1 인벤토리: 일반 **2** ← `eu-dora-2022-2554` · AI·에이전트 **0** ← –
+- EU · 2 공급자 관리: 일반 **2** ← `eu-dora-2022-2554` · AI·에이전트 **0** ← –
+- EU · 4 최소 권한: 일반 **2** ← `eu-dora-2022-2554` · AI·에이전트 **0** ← –
+- EU · 6 감사 기록: 일반 **2** ← `eu-dora-2022-2554` · AI·에이전트 **0** ← –
 
 구속력 있는 문서가 에이전트를 명시해 요구하는 칸(점수 3): **0**
