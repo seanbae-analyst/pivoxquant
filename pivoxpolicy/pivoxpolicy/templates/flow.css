@@ -1,5 +1,5 @@
 /* flow.css — 흐름도(진입 → 단계 → 결과). 모의 테스트(sim.html)와 랜딩(index.html)이 같이 쓴다.
-   칸 = .fn, 화살표 = 앞 칸과의 사이(::before 선 + ::after 화살촉). 지나간 길은 실선, 오지 않은 길은 점선. */
+   칸 = .fn, 화살표 = 앞 칸과의 사이(::before 선 + ::after 화살촉). 지나간 길은 진한 실선, 오지 않은 길은 흐린 실선(점선 · 동그라미는 쓰지 않는다). */
 /* ── 공격 흐름: 진입 → 단계(통제 관문) → 결과. 화살표는 공격이 지나간 길, 점선은 오지 않은 길 ── */
 .flow-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-top:24px}
 .flow-h .h3{margin:0 0 10px}
@@ -19,10 +19,10 @@
   box-shadow:inset 0 0 0 1px var(--pq-ivory-line-strong)}
 .fn+.fn::before{content:"";position:absolute;left:-27px;top:24px;width:20px;border-top:2px solid var(--pq-ivory-mid)}
 .fn+.fn::after{content:"";position:absolute;left:-9px;top:19px;border:6px solid transparent;border-left-color:var(--pq-ivory-mid)}
-.fn.after::before,.fn.end.blocked::before{border-top:2px dashed var(--pq-ivory-line-strong)}
+.fn.after::before,.fn.end.blocked::before{border-top:2px solid var(--pq-ivory-line)}
 .fn.after::after,.fn.end.blocked::after{border-left-color:var(--pq-ivory-line-strong)}
 .fh{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:24px}
-.fn .no{display:inline-flex;align-items:center;justify-content:center;flex:none;width:24px;height:24px;border-radius:50%;
+.fn .no{display:inline-flex;align-items:center;justify-content:center;flex:none;width:24px;height:24px;border-radius:6px;
   border:1px solid var(--pq-ivory-line-strong);font-size:12px;font-weight:600;color:var(--pq-ivory);font-variant-numeric:tabular-nums}
 .fn .tag{font-size:12px;font-weight:600;color:var(--pq-ivory-dim);text-align:right}
 .fn .ft{margin-top:8px;font-size:13.5px;font-weight:600;line-height:1.4;color:var(--pq-ivory)}
@@ -48,7 +48,7 @@
 .fn.end.reduced .ft{color:var(--pq-bronze-light)}
 .fn.end.damage{box-shadow:inset 0 0 0 2px rgba(245,240,232,0.55)}
 .fn.chg .fh::after{content:"바뀜";margin-left:6px;font-size:11px;font-weight:600;color:var(--pq-ivory)}
-.fn.chg{outline:1px dashed var(--pq-ivory-mid);outline-offset:3px}
+.fn.chg{outline:1px solid var(--pq-ivory-mid);outline-offset:3px}
 @media(prefers-reduced-motion:no-preference){
   .fn{transition:opacity 320ms var(--pq-ease),transform 320ms var(--pq-ease)}
   .fn.pending{opacity:0;transform:translateX(-8px)}
@@ -59,7 +59,7 @@
   .flow{grid-template-columns:minmax(0,1fr)!important;gap:22px 0}
   .fn+.fn::before{left:22px;top:-20px;width:0;height:12px;border-top:0;border-left:2px solid var(--pq-ivory-mid)}
   .fn+.fn::after{left:17px;top:-10px;border:6px solid transparent;border-top-color:var(--pq-ivory-mid);border-left-color:transparent}
-  .fn.after::before,.fn.end.blocked::before{border-top:0;border-left:2px dashed var(--pq-ivory-line-strong)}
+  .fn.after::before,.fn.end.blocked::before{border-top:0;border-left:2px solid var(--pq-ivory-line)}
   .fn.after::after,.fn.end.blocked::after{border-left-color:transparent;border-top-color:var(--pq-ivory-line-strong)}
   .flow-h,.flow-top{flex-wrap:wrap}
 }

@@ -2,7 +2,7 @@
 
   관문은 세로 막대다: 빈 막대 = 검사 안 함(그 통제가 AI 수준이 아니다) · 채운 막대 = 검사하고 통과
                       굵은 채운 막대 = 차단 · 굵은 빈 막대 = 승인 대기
-  ━ 명령이 지나간 길   ┄ 승인되면 지나갈 길   · 도달하지 않은 길
+  아이보리 실선 = 명령이 지나간 길 · 브론즈 실선 = 승인되면 지나갈 길 · 선 없음 = 도달하지 않은 길(점선 · 점은 쓰지 않는다)
 
 정책 엔진(policy.decide)이 남긴 checks 를 그대로 옮긴다. 그림을 위해 판정을 다시 계산하지 않는다.
 글자는 관문 이름(머리줄 한 번)과 끝의 결과 한 단어뿐이다. 단계별 설명은 접어 둔다(details).
@@ -247,8 +247,8 @@ CSS = """
 .c::before{left:0;right:50%}
 .c::after{left:50%;right:0}
 .c.in-live::before,.c.out-live::after{border-top:3px solid var(--mt-live);margin-top:-1.5px}
-.c.in-cond::before,.c.out-cond::after{border-top:3px dashed var(--mt-cond);margin-top:-1.5px}
-.c.in-dead::before,.c.out-dead::after{border-top:2px dotted var(--mt-dead);margin-top:-1px}
+.c.in-cond::before,.c.out-cond::after{border-top:3px solid var(--mt-cond);margin-top:-1.5px}
+.c.in-dead::before,.c.out-dead::after{border-top:0}
 .c.end::after{display:none}
 .c.end .arrow{position:relative;z-index:1;width:0;height:0;margin-left:-8px;border-top:7px solid transparent;border-bottom:7px solid transparent;border-left:11px solid var(--mt-live)}
 .c.end.in-cond .arrow{border-left-color:var(--mt-cond)}
@@ -256,7 +256,7 @@ CSS = """
 .n{position:relative;z-index:1;display:block;box-sizing:border-box;border-radius:2px;background:var(--mt-bg)}
 .n.s-off{width:8px;height:24px;border:1.5px solid var(--mt-off)}
 .n.s-pass,.n.s-flag{width:8px;height:24px;background:var(--mt-gate)}
-.n.s-not_reached{width:6px;height:14px;border:1px solid var(--mt-dead)}
+.n.s-not_reached{width:8px;height:24px;border:1px solid var(--mt-dead);opacity:.55}
 .n.s-block{width:14px;height:38px;border-radius:3px;background:var(--mt-gate)}
 .n.s-approval{width:14px;height:38px;border-radius:3px;border:3px solid var(--mt-gate)}
 .nl{position:absolute;top:calc(50% + 23px);left:50%;transform:translateX(-50%);font-style:normal;font-size:12.5px;font-weight:600;white-space:nowrap;color:var(--pq-bronze)}
@@ -271,7 +271,7 @@ CSS = """
 .mt-key .n.s-block,.mt-key .n.s-approval{width:11px;height:22px}
 .mt-key .n.s-approval{border-width:2.5px}
 .ln{display:inline-block;width:28px;height:0;border-top:3px solid var(--mt-live)}
-.ln.cond{border-top-style:dashed;border-top-color:var(--mt-cond)}
+.ln.cond{border-top-color:var(--mt-cond)}
 .mt-gl{display:none;margin:0 0 8px;font-size:13px;line-height:1.7;color:var(--pq-ivory-dim)}
 .mt-gl.on{display:block}
 .fr-row{display:grid;grid-template-columns:15em repeat(var(--cols,1),minmax(0,1fr));align-items:center;gap:6px 22px;padding:6px 0;border-bottom:1px solid var(--pq-ivory-line)}
@@ -295,7 +295,7 @@ CSS = """
 .mt-row.mini .n.s-pass,.mt-row.mini .n.s-flag{width:6px;height:15px}
 .mt-row.mini .n.s-block,.mt-row.mini .n.s-approval{width:10px;height:24px;border-radius:2px}
 .mt-row.mini .n.s-approval{border-width:2.5px}
-.mt-row.mini .n.s-not_reached{width:4px;height:9px}
+.mt-row.mini .n.s-not_reached{width:6px;height:15px}
 .mt-row.mini .c.in-live::before,.mt-row.mini .c.out-live::after,.mt-row.mini .c.in-cond::before,.mt-row.mini .c.out-cond::after{border-top-width:2px;margin-top:-1px}
 .mt-row.mini .c.end .arrow{margin-left:-6px;border-top-width:5px;border-bottom-width:5px;border-left-width:8px}
 .mt-row.mini .mt-w{font-size:14px}

@@ -75,7 +75,7 @@ def test_experiment_page(F):
     assert "명령 흐름" in page and "<svg" not in page and "<script" not in page
     assert page.count('<div class="fr-row">') == sum(len(f["cases"]) for f in F.values())       # 시나리오마다 한 줄
     assert page.count('class="cmp-row') == 3 and 'class="d v-' not in page                        # 그림 1: 기준 셋 막대
-    assert "border-radius:50%" not in flow.CSS                                                  # 관문은 세로 막대(동그라미 없음)
+    assert "border-radius:50%" not in flow.CSS and "dotted" not in flow.CSS and "dashed" not in flow.CSS   # 동그라미 · 점선 없음
     for aid, c, rs in X._featured(F):                                                            # 대표 흐름은 해석 의존
         assert rs["binding_explicit"]["verdict"] in ("defect", "held") and rs["binding_interpretive"]["verdict"] == "good"
     assert len(X._featured(F)) == 2 and "그림 2" in page and "그림 3" in page and "그림 4" in page

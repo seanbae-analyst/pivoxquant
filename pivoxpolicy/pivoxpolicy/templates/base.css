@@ -113,7 +113,7 @@ td time{white-space:nowrap}
 
 /* ── 상태 글자: live / stale / error 는 색 글자(+점)뿐. 바탕·테두리·알약 없음 ── */
 .st{font-size:13px;font-weight:600;white-space:nowrap}
-.st::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor;margin-right:6px;vertical-align:1px}
+.st::before{content:"";display:inline-block;width:6px;height:6px;border-radius:1px;background:currentColor;margin-right:6px;vertical-align:1px}
 .st-live{color:var(--pq-live)}
 .st-stale{color:var(--pq-stale)}
 .st-error{color:var(--pq-error)}

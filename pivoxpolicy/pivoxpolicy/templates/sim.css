@@ -106,7 +106,7 @@ select:hover{border-color:rgba(245,240,232,0.26)}
 .walk:has(.stages:empty){display:none}
 .stages{list-style:none;margin:8px 0 0;padding:0}
 .stage{display:grid;grid-template-columns:34px minmax(0,1fr);gap:4px 14px;padding:14px 0;border-bottom:1px solid var(--pq-ivory-line)}
-.stage .no{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;
+.stage .no{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:7px;
   border:1px solid var(--pq-ivory-line-strong);font-size:13px;font-weight:600;color:var(--pq-ivory-dim);font-variant-numeric:tabular-nums}
 .stage .t{font-weight:600}
 .stage .d{font-size:13.5px;color:var(--pq-ivory-mid)}
@@ -250,7 +250,7 @@ tr.chg>td{background:var(--pq-bronze-wash)}
 .drawer .res p{margin-top:4px;font-size:13px}
 .log{list-style:none;margin:0;padding:0;border-top:1px solid var(--pq-ivory-line-strong)}
 .log>li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:2px 12px;margin:0;padding:12px 0;border-bottom:1px solid var(--pq-ivory-line)}
-.log .no{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;
+.log .no{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;
   border:1px solid var(--pq-ivory-line-strong);font-size:12px;font-weight:600;color:var(--pq-ivory-dim);font-variant-numeric:tabular-nums}
 .log .t{font-size:13.5px;font-weight:600}
 .log .dec{margin-top:2px;font-size:13px;font-weight:600;color:var(--pq-ivory-mid)}
