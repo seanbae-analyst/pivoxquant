@@ -199,6 +199,45 @@ def presets(docs, controls, coding) -> list[dict[str, Any]]:
     return out
 
 
+def regulation_basis(docs, controls, coding) -> dict[str, dict[str, Any]]:
+    """통제 id → 관할 → {analog|agent: {score, doc, title, url, quote}} — 그 관할에서 가장 센 문서 하나와 근거 인용.
+    점수 0 이면 문서를 싣지 않는다(다루지 않음). AI 층은 자율 문서 중 에이전트를 명시한 것이 따로 있으면 agent_named 로."""
+    from . import matrix as matrix_mod
+    ms = matrix_mod.layer_matrices(docs, controls, coding)
+    items = coding.get("items") or {}
+
+    def short(t: str) -> str:
+        return (t or "").split(" — ")[0].strip()
+
+    def clip(t: str, n: int = 200) -> str:
+        """코딩 근거(위치 + 인용) — 길면 단어 경계에서 자르고 '…'."""
+        t = " ".join(t.split())
+        if len(t) <= n:
+            return t
+        cut = t[:n].rsplit(" ", 1)[0]
+        return cut.rstrip(" ,;:/") + " …"
+
+    out: dict[str, dict[str, Any]] = {}
+    for c in controls:
+        row: dict[str, Any] = {}
+        for j in JUR_KO:
+            cell: dict[str, Any] = {}
+            for layer in LAYERS:
+                m = ms[layer][j][c.id]
+                rec: dict[str, Any] = {"score": m.score or 0}
+                if (m.score or 0) > 0 and m.top_docs:
+                    d = docs[m.top_docs[0]]
+                    ev = (((items.get(d.id) or {}).get(c.id) or {}).get(layer) or {}).get("evidence", "")
+                    rec.update(doc=d.id, title=short(d.title), url=d.url or "", quote=clip(str(ev)))
+                if layer == "agent" and m.agent_specific_voluntary:
+                    v = docs[m.agent_specific_voluntary[0]]
+                    rec["agent_named"] = {"doc": v.id, "title": short(v.title), "url": v.url or ""}
+                cell[layer] = rec
+            row[j] = cell
+        out[c.id] = row
+    return out
+
+
 # ── 페이지 데이터 · 빌드 ──────────────────────────────────────────────
 
 def payload() -> dict[str, Any]:
@@ -220,11 +259,15 @@ def payload() -> dict[str, Any]:
         raise SimError("; ".join(probs[:5]))
     scen_of = {i: s["id"] for s in data["scenarios"] for i in s["incidents"]}
     fails = incident_failures(raws[adj])
+    doc_coding = codings[primary_coder(codings)]
+    helps = data.get("control_help") or {}
     return {
-        "controls": [{"id": c.id, "num": c.num, "name": c.name_ko, "stage": c.stage} for c in controls],
+        "controls": [{"id": c.id, "num": c.num, "name": c.name_ko, "stage": c.stage, "help": helps.get(c.id, {})} for c in controls],
+        "regulation": regulation_basis(docs, controls, doc_coding),
+        "jurisdictions": JUR_KO,
         "scenarios": data["scenarios"],
         "agent_profiles": data.get("agent_profiles") or [],
-        "presets": presets(docs, controls, codings[primary_coder(codings)]),
+        "presets": presets(docs, controls, doc_coding),
         "incidents": [{"id": i.id, "title": i.title, "date": i.date, "url": i.source_url, "role": i.ai_role,
                        "evidence": i.evidence_level, "scenario": scen_of.get(i.id), "fails": fails.get(i.id, [])}
                       for i in sorted(incs, key=lambda x: x.date, reverse=True)],

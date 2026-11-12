@@ -115,3 +115,14 @@ def test_js_engine_matches_python(tmp_path):
         assert [sim.run_scenario(s, c["env"], c["levels"]) for s in p["scenarios"]] == j["s"]
         assert sim.replay(fails, c["levels"], STAGE_OF, c["stated"]) == j["r"]
         assert [list(x) for x in sim.best_next(fails, c["levels"], STAGE_OF, c["stated"])] == j["b"]
+
+
+def test_regulation_basis_names_the_clause():
+    p = sim.payload()
+    kr = p["regulation"]["least_privilege"]["KR"]
+    assert kr["analog"]["score"] == 2 and kr["analog"]["doc"] == "kr-efsr-art13" and "최소" in kr["analog"]["quote"]
+    assert kr["agent"]["score"] == 1 and kr["agent"]["agent_named"]["doc"]   # AI 층은 자율 — 에이전트를 이름 붙인 자율 문서가 따로 있다
+    eu = p["regulation"]["unique_id"]["EU"]
+    assert eu["analog"]["score"] == 0 and "doc" not in eu["analog"]          # 다루지 않으면 문서를 싣지 않는다
+    assert all(len(r[j][layer].get("quote", "")) <= 202 for r in p["regulation"].values() for j in r for layer in r[j])
+    assert all(c["help"].get("analog") and c["help"].get("agent") for c in p["controls"])

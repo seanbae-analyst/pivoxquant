@@ -156,6 +156,16 @@ scenarios:
                 mythos-preview-unauthorized-access-2026-04, langflow-exploited-in-the-wild-kev-2025-05, llmjacking-autonomous-agent-2026-10,
                 cairn-exposed-agent-panels-2026-10]
 
+# 통제 수준의 실무 뜻 — 설정 패널에서 통제 이름을 누르면 보인다(저자 작성, controls.yaml 의 판정 기준을 실무 문장으로 줄인 것)
+control_help:
+  inventory: {analog: "자산·계정·시스템 목록과 책임자를 유지한다", agent: "에이전트·모델·API 키·연결 도구(MCP 서버 등)까지 목록에 올리고 책임자를 정한다"}
+  vendors: {analog: "위탁·클라우드 업체를 실사하고 계약에 감사권·사고 통지를 넣는다", agent: "외부 모델·플러그인·패키지·스킬의 출처와 서명을 확인하고, AI 업체와 취약점·사고 통지를 계약한다"}
+  unique_id: {analog: "직원마다 개별 계정·인증, 공유 계정은 쓰지 않는다", agent: "에이전트마다 고유 계정과 짧은 수명의 자격증명 — 사람 계정·세션을 빌려 쓰지 않는다"}
+  least_privilege: {analog: "업무에 필요한 권한만 주고 정기적으로 회수한다", agent: "에이전트의 도구·데이터 범위를 줄이고 격리 실행, 외부 입력이 섞인 작업에서는 고위험 도구를 막는다"}
+  human_approval: {analog: "주요 거래·변경·예외는 책임자가 결재한다", agent: "송금·외부 전송·배포·설정 변경 같은 고위험 행위는 사람이 승인해야 실행된다"}
+  audit_trail: {analog: "접속·거래 로그를 남기고 보존한다", agent: "에이전트의 입력 출처·도구 호출·결정을 기록하고 보존한다"}
+  kill_switch: {analog: "퇴직·침해 때 계정을 즉시 정지하고 자산을 격리한다", agent: "에이전트를 즉시 멈추는 수단과 자격증명 일괄 폐기 — 정기적으로 시험한다"}
+
 # 에이전트 종류 — 고르면 환경 세 가지가 이 값으로 바뀐다(그 뒤 손으로 바꿀 수 있다)
 agent_profiles:
   - {id: support, label: 고객 상담 에이전트, tools: read, untrusted_input: true, open_components: false}
