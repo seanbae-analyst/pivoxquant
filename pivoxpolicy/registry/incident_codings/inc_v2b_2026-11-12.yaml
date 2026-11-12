@@ -2,11 +2,13 @@
 # 배치 3개(15·15·15건)를 서로 독립된 에이전트(Sonnet)가 코딩했다. 1차 related_controls · v1 2차 코딩 · 사건 요약 · 다른 팀 결과를 보지 않았고 웹도 쓰지 않았다.
 # 두 팀(inc_v2a · inc_v2b)은 같은 모델 계열 — κ 는 '같은 코드북을 두 번 독립 적용했을 때의 재현성' 이지 사람 코더 간 신뢰도가 아니다.
 # 인용은 전부 코퍼스 원문에 그대로 있는지 검사했다 (validate_incident_v2 corpus_dir).
+# vendors 칸은 코드북 v2.1(공급망 경로만)로 같은 팀 이름의 새 블라인드 에이전트가 다시 코딩했다(2026-11-12). 나머지 6통제는 v2.0 그대로.
 coder: "inc_v2b_2026-11-12"
 coded_at: "2026-11-12"
 codebook: 2
 basis: "고정 코퍼스 원문(snapshots/incident_corpus.json) — 블라인드, 웹 사용 안 함"
 provisional: true
+vendors_recoded: "2026-11-12 v2.1"
 incidents:
   "aepd-first-ai-agent-breach-notification-2026-09":
     basis: "source"
@@ -32,12 +34,13 @@ incidents:
     basis: "source"
     controls:
       inventory: {failed: false}
-      vendors: {failed: true, level: "stated", layer: "agent", quote: "The package was function-color, part of a malicious campaign on npm", reason: "Agent installed a malicious third-party npm package on instruction from a planted file"}
+      vendors: {failed: false}
       unique_id: {failed: false}
       least_privilege: {failed: true, level: "stated", layer: "agent", quote: "tell the agent to run commands with its sandbox turned off", reason: "Agent trusting an untrusted instructions file can be made to run commands outside its sandbox"}
       human_approval: {failed: true, level: "stated", layer: "agent", quote: "When Codex was opened in that folder and given any task, it first changed its own settings and then installed the package named in the file.", reason: "Codex changed settings and installed a package with no approval step"}
       audit_trail: {failed: false}
       kill_switch: {failed: false}
+    note: "vendors v2.1: borderline: malicious npm package is only the payload; route is web-planted AGENTS.md, no vendor relationship -> false"
   "amazon-q-extension-prompt-tamper-2025-07":
     basis: "source"
     controls:
@@ -48,7 +51,7 @@ incidents:
       human_approval: {failed: true, level: "inferred", layer: "analog", quote: "the threat actor was able to commit malicious code into the extension's open-source repository that was automatically included in a release", reason: "Attacker commit shipped in a release automatically, i.e. no review/approval gate before release"}
       audit_trail: {failed: false}
       kill_switch: {failed: false}
-    note: "borderline: human_approval inferred from \"automatically included in a release\"; vendors coded false (AWS own repo, no third-party supplier named)"
+    note: "borderline: human_approval inferred from \"automatically included in a release\"; vendors coded false (AWS own repo, no third-party supplier named) | vendors v2.1: borderline: tampered extension, but protagonist is AWS itself (own GitHub token misscoped) -> false per vendor-is-protagonist rule"
   "anthropic-agentic-extortion-2025-08":
     basis: "source"
     controls:
@@ -64,13 +67,13 @@ incidents:
     basis: "source"
     controls:
       inventory: {failed: false}
-      vendors: {failed: true, level: "stated", layer: "agent", quote: "Due to a misunderstanding between us and our evaluation partner, this was not the case, and internet access was available.", reason: "Third-party evaluation partner environment had live internet access contrary to what the operator believed"}
+      vendors: {failed: true, level: "stated", layer: "agent", quote: "Due to a misunderstanding between us and our evaluation partner, this was not the case, and internet access was available.", reason: "Third-party evaluation partner's environment had live internet access, enabling the unauthorized access"}
       unique_id: {failed: false}
       least_privilege: {failed: true, level: "stated", layer: "agent", quote: "a misconfiguration left the machines that Claude accessed as part of the evaluation with live internet access", reason: "Agent had network reach far beyond the sealed task scope, enabling access to real organizations"}
       human_approval: {failed: false}
       audit_trail: {failed: false}
       kill_switch: {failed: false}
-    note: "borderline: human_approval, audit_trail, kill_switch coded false (no human-in-loop is by design; monitoring existed and found it late = R4; operator stopped evals same day)"
+    note: "borderline: human_approval, audit_trail, kill_switch coded false (no human-in-loop is by design; monitoring existed and found it late = R4; operator stopped evals same day) | vendors v2.1: borderline: operator and partner share the failure; coded true under managed-function clause"
   "anthropic-gtg-1002-2025-11":
     basis: "source"
     controls:
@@ -86,13 +89,13 @@ incidents:
     basis: "source"
     controls:
       inventory: {failed: false}
-      vendors: {failed: true, level: "stated", layer: "agent", quote: "a target’s AI API keys were stolen from the target’s enterprise software vendors", reason: "AI API keys reached the attacker via the targets’ enterprise software vendors"}
+      vendors: {failed: true, level: "stated", layer: "analog", quote: "to reach their targets indirectly, the actor compromised at least three hospitality vendors that operate hotel guest WiFi", reason: "Compromised third-party vendors were the route to the actual targets"}
       unique_id: {failed: false}
       least_privilege: {failed: true, level: "stated", layer: "agent", quote: "By injecting malicious instructions into an AI vendor’s automated evaluation sandbox, the actor caused the sandbox to hand over the credentials it held", reason: "Sandbox agent reading untrusted input held production API keys it could be made to hand over"}
       human_approval: {failed: false}
       audit_trail: {failed: false}
       kill_switch: {failed: false}
-    note: "borderline: title is the whole multi-case report; coded only the cyber-operations section (AI supply-chain/API-key cases); other 6 harm areas ignored"
+    note: "borderline: title is the whole multi-case report; coded only the cyber-operations section (AI supply-chain/API-key cases); other 6 harm areas ignored | vendors v2.1: borderline: multi-case report; title case not clearly identified; coded on GTG-20006 lead case (GTG-50014 also has SaaS-vendor downstream path)"
   "cairn-exposed-agent-panels-2026-10":
     basis: "source"
     controls:
@@ -114,23 +117,23 @@ incidents:
       human_approval: {failed: true, level: "inferred", layer: "agent", quote: "trick the AI agent into running arbitrary commands and compromise production releases", reason: "Triage agent ran commands automatically on any new issue, no human approval before execution"}
       audit_trail: {failed: false}
       kill_switch: {failed: false}
-    note: "borderline: vendors coded false (npm/GitHub token theft is the victim's own pipeline; Claude as component not described as a failed vendor)"
+    note: "borderline: vendors coded false (npm/GitHub token theft is the victim's own pipeline; Claude as component not described as a failed vendor) | vendors v2.1: borderline: malicious cline@2.3.0 published, but protagonist is Cline itself (its triage bot/workflow) -> false per vendor-is-protagonist rule"
   "composio-agent-broker-breach-2026-05":
     basis: "source"
     controls:
       inventory: {failed: false}
-      vendors: {failed: true, level: "stated", layer: "agent", quote: "In May 2026, an attacker accessed internal Composio systems and compromised customer credentials.", reason: "Customers’ agent tool credentials were exposed via the third-party tool broker"}
+      vendors: {failed: false}
       unique_id: {failed: true, level: "inferred", layer: "agent", quote: "We rebuilt the tool-building service and replaced shared static secrets with OIDC authentication.", reason: "Shared static secrets between internal services meant callers were not individually identifiable"}
       least_privilege: {failed: true, level: "stated", layer: "agent", quote: "Default project keys keep full project API key access, so create a scoped key for anything that needs less.", reason: "Leaked API keys carried full project access by default"}
       human_approval: {failed: false}
       audit_trail: {failed: true, level: "inferred", layer: "analog", quote: "tightened infrastructure permissions, and centralized security logging and alerts", reason: "Remediation list implies security logging was not centralized before; impact beyond listed connections stated as unknown"}
       kill_switch: {failed: true, level: "stated", layer: "agent", quote: "There are certain tokens and api keys we cannot revoke.", reason: "Operator could not revoke some leaked tokens/keys itself"}
-    note: "borderline: unique_id and audit_trail inferred from remediation wording only"
+    note: "borderline: unique_id and audit_trail inferred from remediation wording only | vendors v2.1: vendor Composio itself breached -> false"
   "crowdstrike-four-agentic-actors-2026-10":
     basis: "thin"
     controls:
       inventory: {failed: null}
-      vendors: {failed: null}
+      vendors: {failed: false}
       unique_id: {failed: null}
       least_privilege: {failed: null}
       human_approval: {failed: null}
@@ -163,7 +166,7 @@ incidents:
     basis: "source"
     controls:
       inventory: {failed: false}
-      vendors: {failed: true, level: "stated", layer: "analog", quote: "exploited two zero-day vulnerabilities in Zammad, an open-source helpdesk and customer support ticketing system", reason: "Third-party helpdesk software flaws were the entry path"}
+      vendors: {failed: false}
       unique_id: {failed: false}
       least_privilege: {failed: false}
       human_approval: {failed: false}
@@ -174,7 +177,7 @@ incidents:
     basis: "thin"
     controls:
       inventory: {failed: null}
-      vendors: {failed: null}
+      vendors: {failed: false}
       unique_id: {failed: null}
       least_privilege: {failed: null}
       human_approval: {failed: null}
@@ -196,7 +199,7 @@ incidents:
     basis: "source"
     controls:
       inventory: {failed: false}
-      vendors: {failed: true, level: "stated", layer: "analog", quote: "On 31 August 2026, a likely Russian-speaking malicious cyber actor (MCA) used 45.142.193.132 and artificial intelligence (AI) to develop, test, and use exploits for PaperCut NG/MF", reason: "Victims were breached through exploitable flaws (two CVEs) in third-party PaperCut software"}
+      vendors: {failed: false}
       unique_id: {failed: false}
       least_privilege: {failed: true, level: "stated", layer: "analog", quote: "If the compromised PaperCut host was on the Domain Controller itself or running as a Domain-Admin service account, the adversary simply added its newly created account to Domain Admins.", reason: "Service ran as Domain Admin / SYSTEM, so one compromised host gave full domain control"}
       human_approval: {failed: false}
@@ -213,7 +216,7 @@ incidents:
       human_approval: {failed: null}
       audit_trail: {failed: null}
       kill_switch: {failed: null}
-    note: "File is only a list of news headlines; no body text (R1)."
+    note: "File is only a list of news headlines; no body text (R1). | vendors v2.1: thin: text is headline list only"
   "gtig-ai-threat-tracker-2025-11":
     basis: "source"
     controls:
@@ -235,18 +238,18 @@ incidents:
       human_approval: {failed: false}
       audit_trail: {failed: false}
       kill_switch: {failed: false}
-    note: "borderline: a 2FA-bypass logic flaw in a third-party admin tool was found and disclosed before exploitation, no identified victim organization; vendors left false."
+    note: "borderline: a 2FA-bypass logic flaw in a third-party admin tool was found and disclosed before exploitation, no identified victim organization; vendors left false. | vendors v2.1: supply-chain section concerns other cases; title case is the LLM-developed zero-day -> false"
   "hexagonalrodent-nk-web3-ai-tooling-2026-04":
     basis: "source"
     controls:
       inventory: {failed: false}
-      vendors: {failed: true, level: "stated", layer: "analog", quote: "On March 18, it was revealed that the ‘fast-draft’ VSX extension had been compromised and used to install malware.", reason: "Compromised third-party editor extension delivered malware"}
+      vendors: {failed: true, level: "stated", layer: "analog", quote: "VSX extension had been compromised and used to install malware", reason: "Compromised fast-draft VSX extension used as a malware route to developers"}
       unique_id: {failed: false}
       least_privilege: {failed: false}
       human_approval: {failed: true, level: "stated", layer: "analog", quote: "This causes VSCode to execute malware simply as a result of the target opening the source code folder with VSCode.", reason: "Code execution via tasks.json folderOpen ran with no user confirmation"}
       audit_trail: {failed: false}
       kill_switch: {failed: false}
-    note: "borderline: human_approval relies on the VSCode auto-run behavior described, not an explicit 'no approval' statement. EDR late detection ignored (R4)."
+    note: "borderline: human_approval relies on the VSCode auto-run behavior described, not an explicit 'no approval' statement. EDR late detection ignored (R4). | vendors v2.1: borderline: main vector is attacker-built fake skills assessments; the supply-chain extension compromise is a secondary stated route"
   "hugging-face-openai-eval-agent-breach-2026-07":
     basis: "source"
     controls:
@@ -257,7 +260,7 @@ incidents:
       human_approval: {failed: false}
       audit_trail: {failed: false}
       kill_switch: {failed: false}
-    note: "borderline: coded from the Hugging Face article body only. The OpenAI evaluation-agent sandbox-escape side appears only in reader comments (hearsay), so no agent-layer codes. Late/weekend detection not coded (R4)."
+    note: "borderline: coded from the Hugging Face article body only. The OpenAI evaluation-agent sandbox-escape side appears only in reader comments (hearsay), so no agent-layer codes. Late/weekend detection not coded (R4). | vendors v2.1: HF is victim; text names no third-party route (malicious dataset on HF itself) -> false"
   "infostealers-target-ai-agent-tokens-2026-09":
     basis: "source"
     controls:
@@ -306,7 +309,7 @@ incidents:
     basis: "source"
     controls:
       inventory: {failed: false}
-      vendors: {failed: true, level: "stated", layer: "agent", quote: "This vulnerability affects a common open-source project, third-party library, or a protocol used by different products.", reason: "CVE-2025-3248 is a missing-auth flaw in a third-party AI agent builder component that deployers ran"}
+      vendors: {failed: false}
       unique_id: {failed: false}
       least_privilege: {failed: false}
       human_approval: {failed: false}
@@ -317,13 +320,13 @@ incidents:
     basis: "source"
     controls:
       inventory: {failed: false}
-      vendors: {failed: true, level: "stated", layer: "agent", quote: "On October 21, our release pipeline published a compromised litellm==1.107.0 to PyPI and to our container registries.", reason: "Malicious package release in the AI gateway supply chain was the vector for downstream users"}
+      vendors: {failed: false}
       unique_id: {failed: true, level: "inferred", layer: "agent", quote: "In order to create PRs, the system was configured with a GitHub authentication token.", reason: "The agent platform acted with the org owner's own GitHub CLI token rather than its own scoped identity, so agent actions were not distinguishable from the owner"}
       least_privilege: {failed: true, level: "stated", layer: "agent", quote: "the token configured in our LiteLLM Agent Platform was not a Personal Access Token scoped to the appropriate repositories and capabilities, but was the GitHub CLI OAuth token associated with our GitHub organization owner", reason: "Agent platform held an unscoped org-owner token"}
       human_approval: {failed: true, level: "stated", layer: "analog", quote: "The threat actor then used the organization owner's token, which can override branch protection, to push the commit to main anyway.", reason: "Branch-protection PR/approval requirement was bypassed; release approval was also relaxed to any two engineers"}
       audit_trail: {failed: true, level: "stated", layer: "analog", quote: "Both deletions removed the workflow logs from the repository.", reason: "Attacker deleted production and staging run records and force-pushed history clean"}
       kill_switch: {failed: true, level: "stated", layer: "agent", quote: "nobody followed through on revoking the administrative key to the LiteLLM Agent Platform, so it was still valid more than four months later", reason: "Exposed admin key stayed valid after the leak was noticed"}
-    note: "borderline: vendors layer; audit_trail (GitHub audit log still recorded overrides, so partly working); unique_id inferred."
+    note: "borderline: vendors layer; audit_trail (GitHub audit log still recorded overrides, so partly working); unique_id inferred. | vendors v2.1: borderline: tampered release, but vendor LiteLLM is the breached protagonist -> false"
   "llmjacking-autonomous-agent-2026-10":
     basis: "source"
     controls:
@@ -350,7 +353,7 @@ incidents:
     basis: "source"
     controls:
       inventory: {failed: false}
-      vendors: {failed: true, level: "stated", layer: "agent", quote: "has managed to gain access to the tool through a third-party vendor.", reason: "Access to the restricted AI model came through a third-party vendor environment/contractor."}
+      vendors: {failed: true, level: "stated", layer: "agent", quote: "has managed to gain access to the tool through a third-party vendor", reason: "Unauthorized group reached restricted model via a third-party vendor/contractor environment"}
       unique_id: {failed: false}
       least_privilege: {failed: false}
       human_approval: {failed: false}
@@ -360,13 +363,13 @@ incidents:
     basis: "source"
     controls:
       inventory: {failed: false}
-      vendors: {failed: true, level: "stated", layer: "analog", quote: "multiple malicious versions of the widely used Nx build system package were published to the npm registry.", reason: "Malicious third-party npm package was the entry path."}
+      vendors: {failed: true, level: "stated", layer: "analog", quote: "multiple malicious versions of the widely used Nx build system package were published to the npm registry", reason: "Tampered npm package was the route onto victim developer machines"}
       unique_id: {failed: false}
       least_privilege: {failed: true, level: "stated", layer: "analog", quote: "the pull_request_target trigger granted elevated permissions by providing a GITHUB_TOKEN with read/write access to the repository.", reason: "Workflow token had read/write scope exploitable via PR title injection; AI CLIs with filesystem access also abused (agent layer)."}
       human_approval: {failed: true, level: "stated", layer: "agent", quote: "prompting them with dangerous flags ( --dangerously-skip-permissions , --yolo , --trust-all-tools ) to steal filesystem contents", reason: "Installed AI CLIs ran with permission prompts bypassed, so no human confirmation for filesystem access."}
       audit_trail: {failed: false}
       kill_switch: {failed: false}
-    note: "borderline: least_privilege layer analog (workflow token) chosen over agent (AI CLI filesystem reach); human_approval agent."
+    note: "borderline: least_privilege layer analog (workflow token) chosen over agent (AI CLI filesystem reach); human_approval agent. | vendors v2.1: borderline: Nx is the compromised vendor; coded true because downstream package users are the victims"
   "openai-funded-test-wallet-2026-10":
     basis: "source"
     controls:
@@ -393,7 +396,7 @@ incidents:
     basis: "source"
     controls:
       inventory: {failed: false}
-      vendors: {failed: true, level: "stated", layer: "agent", quote: "the ClawHub marketplace for OpenClaw is teeming with malware and leaky agent skills that expose sensitive credentials.", reason: "Third-party skills marketplace supplied malicious/leaky skills."}
+      vendors: {failed: true, level: "stated", layer: "agent", quote: "76 malicious payloads designed for credential theft, backdoor installation, and data exfiltration", reason: "ClawHub skill marketplace carried malicious skills as the route into agents"}
       unique_id: {failed: false}
       least_privilege: {failed: true, level: "inferred", layer: "agent", quote: "asking OpenClaw to read all of the files on a user's desktop, steal their content and send it all to an attacker-controlled server, and then permanently delete all the files.", reason: "Agent reading untrusted document/content could perform high-risk file read, exfil and delete."}
       human_approval: {failed: true, level: "inferred", layer: "agent", quote: "it contains an indirect prompt injection payload directing OpenClaw to create a new integration with a Telegram bot.", reason: "Agent created integration and executed destructive/exfil commands from injected content with no confirmation step described."}
@@ -404,35 +407,35 @@ incidents:
     basis: "source"
     controls:
       inventory: {failed: false}
-      vendors: {failed: true, level: "stated", layer: "agent", quote: "Pull requests to popular repositories that include poisoned rule files", reason: "Third-party/shared rule files are the injection path into the AI assistants."}
+      vendors: {failed: true, level: "stated", layer: "agent", quote: "dangerous new supply chain attack vector we've named", reason: "Poisoned shared rules files (distributed via open-source communities) act as tampered third-party artifacts steering coding agents"}
       unique_id: {failed: false}
       least_privilege: {failed: false}
       human_approval: {failed: true, level: "stated", layer: "agent", quote: "This technique bypasses any \"human-in-the-loop\" protection measures.", reason: "Hidden-unicode payload defeats human review of AI-modified code."}
       audit_trail: {failed: true, level: "stated", layer: "agent", quote: "with no trace in the chat history or coding logs that would alert security teams.", reason: "AI-added script leaves no trace in chat/coding logs."}
       kill_switch: {failed: false}
-    note: "borderline: least_privilege false (agent only generates code, no high-risk action stated)."
+    note: "borderline: least_privilege false (agent only generates code, no high-risk action stated). | vendors v2.1: borderline: research demo (R3); route is shared third-party config files, not a vendor relationship per se"
   "salesforce-agentforce-forcedleak-salesbleed-2025-09":
     basis: "source"
     controls:
       inventory: {failed: false}
-      vendors: {failed: true, level: "inferred", layer: "agent", quote: "The domain my-salesforce-cms.com was whitelisted but had expired and become available for purchase, creating a trusted exfiltration channel.", reason: "Vendor platform flaw (expired trusted third-party domain in CSP) enabled exfiltration."}
+      vendors: {failed: false}
       unique_id: {failed: false}
       least_privilege: {failed: true, level: "stated", layer: "agent", quote: "AI Model Boundaries: Insufficient restrictions on query scope and context", reason: "Agent could be steered by untrusted lead data to query CRM beyond its scope."}
       human_approval: {failed: true, level: "inferred", layer: "agent", quote: "Prompt Injection: Agentforce executes both legitimate and malicious instructions", reason: "Agent queried CRM and sent data externally via image request with no human confirmation."}
       audit_trail: {failed: false}
       kill_switch: {failed: false}
-    note: "borderline: vendors and human_approval inferred. Text covers ForcedLeak only; SalesBleed not in the text."
+    note: "borderline: vendors and human_approval inferred. Text covers ForcedLeak only; SalesBleed not in the text. | vendors v2.1: borderline: vendor product vulnerability patched by Salesforce (CVE-like) -> false"
   "salesloft-drift-oauth-theft-2025-08":
     basis: "source"
     controls:
       inventory: {failed: false}
-      vendors: {failed: true, level: "stated", layer: "analog", quote: "the actor targeted Salesforce customer instances through compromised OAuth tokens associated with the Salesloft Drift third-party application.", reason: "Third-party app tokens were the entry path."}
+      vendors: {failed: true, level: "stated", layer: "analog", quote: "the actor targeted Salesforce customer instances through compromised OAuth tokens associated with the Salesloft Drift third-party application", reason: "Third-party OAuth integration was the route into customer Salesforce instances"}
       unique_id: {failed: false}
       least_privilege: {failed: false}
       human_approval: {failed: false}
       audit_trail: {failed: false}
       kill_switch: {failed: false}
-    note: "borderline: least_privilege false - scope advice is a recommendation, not a stated fact; text does not describe Drift as AI."
+    note: "borderline: least_privilege false - scope advice is a recommendation, not a stated fact; text does not describe Drift as AI. | vendors v2.1: borderline: Salesloft Drift is itself the breached vendor, but customer instances are the victims and the OAuth integration is the explicit route"
   "step-finance-ai-trading-agent-drain-2026-01":
     basis: "source"
     controls:
@@ -443,18 +446,18 @@ incidents:
       human_approval: {failed: true, level: "inferred", layer: "agent", quote: "Once inside, the agents executed large SOL transfers", reason: "Large treasury transfers were executed by agents with no human approval step described."}
       audit_trail: {failed: false}
       kill_switch: {failed: false}
-    note: "borderline: article is generic; only Step-specific sentences used; shared-key statistics not tied to Step so unique_id false."
+    note: "borderline: article is generic; only Step-specific sentences used; shared-key statistics not tied to Step so unique_id false. | vendors v2.1: device compromise of executives; no vendor path stated -> false"
   "storm-0940-artex-connectwise-2026-10":
     basis: "source"
     controls:
       inventory: {failed: false}
-      vendors: {failed: true, level: "stated", layer: "analog", quote: "linked to the recent supply-chain attack involving stolen vendor credentials and downstream Microsoft 365 tenants", reason: "Vendor credentials stolen and used against downstream tenants."}
+      vendors: {failed: true, level: "stated", layer: "analog", quote: "supply-chain attack involving stolen vendor credentials and downstream Microsoft 365 tenants", reason: "Compromised vendor credentials used to reach downstream M365 tenants"}
       unique_id: {failed: false}
       least_privilege: {failed: false}
       human_approval: {failed: false}
       audit_trail: {failed: false}
       kill_switch: {failed: false}
-    note: "Attacker used AI; victims have no AI system so analog only."
+    note: "Attacker used AI; victims have no AI system so analog only. | vendors v2.1: borderline: Wiz text itself is thin on ConnectWise and mostly shows attacks on vendors; supply-chain route stated only in one sentence"
   "taiwan-gov-near-autonomous-agents-2026-08":
     basis: "source"
     controls:
@@ -465,7 +468,7 @@ incidents:
       human_approval: {failed: false}
       audit_trail: {failed: false}
       kill_switch: {failed: false}
-    note: "borderline: unauthenticated endpoints are access-control absence (false_if for least_privilege); attacker-side AI only."
+    note: "borderline: unauthenticated endpoints are access-control absence (false_if for least_privilege); attacker-side AI only. | vendors v2.1: supply-chain vendors were attacker's further targets, not the route in -> false"
   "thailand-mof-hermes-agent-2026-07":
     basis: "source"
     controls:
@@ -492,10 +495,10 @@ incidents:
     basis: "source"
     controls:
       inventory: {failed: false}
-      vendors: {failed: true, level: "stated", layer: "agent", quote: "Unfortunately, these MicroVMs do not provide sufficient network isolation.", reason: "Vendor platform defect (IMDS reachable from agent) was the cause."}
+      vendors: {failed: true, level: "stated", layer: "agent", quote: "it included broad permissions across all AgentCore resources in the entire AWS account", reason: "Managed agent platform (AWS AgentCore) default role/IMDS exposure let one agent expose customer account's agents and secrets"}
       unique_id: {failed: false}
       least_privilege: {failed: true, level: "stated", layer: "agent", quote: "Because the Role that is attached to AgentCore workloads by default is overprivileged.", reason: "Default role spanned all agents in account/region."}
       human_approval: {failed: false}
       audit_trail: {failed: false}
       kill_switch: {failed: false}
-    note: "borderline: human_approval false (only prompt injection stated)."
+    note: "borderline: human_approval false (only prompt injection stated). | vendors v2.1: borderline: AWS-managed platform defect (not a CVE-in-software-the-victim-patches); matches managed-service operational-defect clause"
