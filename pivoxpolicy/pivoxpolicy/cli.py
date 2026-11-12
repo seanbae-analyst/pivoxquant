@@ -37,6 +37,13 @@ def cmd_check(_: argparse.Namespace) -> int:
         for p in validate_coding(coding, docs, controls) + validate_adjudication(coding, codings):
             print(f"✗ codings/{coder}: {p}")
             problems += 1
+    from . import agreement as agreement_mod
+    inc_ids = {i.id for i in incidents_mod.load_incidents(control_ids={c.id for c in controls})}
+    for coder, raw in agreement_mod.load_incident_codings().items():
+        if agreement_mod.is_incident_v2(raw):
+            for p in agreement_mod.validate_incident_v2(raw, inc_ids):
+                print(f"✗ incident_codings/{coder}: {p}")
+                problems += 1
     n_url = sum(1 for d in docs.values() if d.url)
     n_verified = sum(1 for d in docs.values() if d.url_verified)
     print(f"통제 {len(controls)} · 문서 {len(docs)} (URL {n_url}, 검증 {n_verified}) · 코더 {len(codings)}: {', '.join(codings) or '없음'}")
@@ -254,7 +261,25 @@ def cmd_incident_kappa(args: argparse.Namespace) -> int:
             return 1
         basis = {k: (v or {}).get("basis", "") for k, v in (raw.get("incidents") or {}).items()}
         print(agreement_mod.render_incident_agreement(first, second, n, basis))
+    v2 = [n for n in sorted(raws) if agreement_mod.is_incident_v2(raws[n])]
+    if not args.coder and len(v2) >= 2:   # 코드북 v2 코더 둘 — 관점별 κ
+        print(agreement_mod.render_incident_v2_agreement(raws[v2[0]], raws[v2[1]], v2[0], v2[1], set(first)))
     return 0
+
+
+def cmd_incident_corpus(_: argparse.Namespace) -> int:
+    from . import incident_corpus as ic
+    controls = load_controls()
+    incs = incidents_mod.load_incidents(control_ids={c.id for c in controls})
+    data = ic.build(incs)
+    bad = {k: v for k, v in data["documents"].items() if v.get("http_status") != 200}
+    thin = sorted(k for k, v in data["documents"].items() if v.get("thin"))
+    print(f"사건 {len(data['documents'])} · 받지 못함 {len(bad)} · 얇음(2,500자 미만) {len(thin)} → {ic.MANIFEST}")
+    for k, v in bad.items():
+        print(f"  ✗ {k}: HTTP {v.get('http_status')}")
+    for k in thin:
+        print(f"  · thin {k}")
+    return 1 if bad else 0
 
 
 def cmd_site(_: argparse.Namespace) -> int:
@@ -327,6 +352,7 @@ def build_parser() -> argparse.ArgumentParser:
     ik = sub.add_parser("incident-kappa", help="사건 × 통제 코딩 일치도 (1차 related_controls vs registry/incident_codings)")
     ik.add_argument("coder", nargs="?")
     ik.set_defaults(fn=cmd_incident_kappa)
+    sub.add_parser("incident-corpus", help="사건 source_url → 고정 원문(snapshots/incident_content/) + incident_corpus.json").set_defaults(fn=cmd_incident_corpus)
     sub.add_parser("site", help="out/index.html 정적 대시보드 생성 (Pivox 디자인)").set_defaults(fn=cmd_site)
     return p
 

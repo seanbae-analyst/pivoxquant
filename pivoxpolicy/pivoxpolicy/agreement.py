@@ -120,9 +120,159 @@ def load_incident_codings(registry_dir: Path = REGISTRY_DIR) -> dict[str, dict[s
     return out
 
 
+# ── 사건 코드북 v2 (registry/incident_codebook.yaml) — 칸마다 failed · level(stated/inferred) · layer(agent/analog) ──
+
+INCIDENT_LEVELS = ("stated", "inferred")
+INCIDENT_LAYERS = ("agent", "analog")
+# κ 를 내는 관점 — 칸을 참/거짓으로 펴는 법
+INCIDENT_VIEWS: dict[str, str] = {
+    "stated": "원문이 실패를 적은 것만 (stated)",
+    "any": "적었거나 추론 (stated ∨ inferred) — v1 과 견주는 값",
+    "agent": "AI·에이전트 층 (수준 무관)",
+    "analog": "일반 통제 층 (수준 무관)",
+}
+
+
+def is_incident_v2(raw: dict[str, Any] | None) -> bool:
+    return isinstance(raw, dict) and raw.get("codebook") == 2
+
+
+def _view_true(cell: dict[str, Any], view: str) -> bool:
+    if cell.get("failed") is not True:
+        return False
+    if view == "stated":
+        return cell.get("level") == "stated"
+    if view in INCIDENT_LAYERS:
+        return cell.get("layer") == view
+    return True
+
+
+def validate_incident_v2(raw: dict[str, Any], incident_ids: set[str] | None = None,
+                         corpus_dir: Path | None = None) -> list[str]:
+    """v2 사건 코딩의 문제 목록. corpus_dir 를 주면 인용이 원문에 그대로 있는지도 본다."""
+    problems: list[str] = []
+    for iid, rec in sorted((raw.get("incidents") or {}).items()):
+        if incident_ids is not None and iid not in incident_ids:
+            problems.append(f"모르는 사건: {iid}")
+            continue
+        ctls = (rec or {}).get("controls") or {}
+        if not isinstance(ctls, dict):
+            problems.append(f"{iid}: controls 는 통제 → {{failed, …}} 매핑")
+            continue
+        text = None
+        if corpus_dir is not None and (corpus_dir / f"{iid}.txt").exists():
+            text = " ".join((corpus_dir / f"{iid}.txt").read_text(encoding="utf-8").split())
+        for cid, cell in ctls.items():
+            where = f"{iid}.{cid}"
+            if cid not in CONTROL_IDS:
+                problems.append(f"{where}: 모르는 통제")
+                continue
+            f = (cell or {}).get("failed")
+            if f not in (True, False, None):
+                problems.append(f"{where}: failed 는 true/false/null")
+            if f is True:
+                if cell.get("level") not in INCIDENT_LEVELS:
+                    problems.append(f"{where}: level 은 stated/inferred")
+                if cell.get("layer") not in INCIDENT_LAYERS:
+                    problems.append(f"{where}: layer 는 agent/analog")
+                if not cell.get("quote"):
+                    problems.append(f"{where}: quote 필요")
+                elif text is not None and " ".join(str(cell["quote"]).split()) not in text:
+                    problems.append(f"{where}: quote 가 원문에 없음")
+    return problems
+
+
+def incident_view(raw: dict[str, Any], view: str, incident_ids: set[str] | None = None) -> dict[str, dict[str, bool]]:
+    """v2 사건 코딩 → {iid:{ctl:bool}}. basis thin 이거나 null 이 섞인 사건은 뺀다(판단 못 함)."""
+    if view not in INCIDENT_VIEWS:
+        raise ValueError(f"view 는 {tuple(INCIDENT_VIEWS)} 중 하나")
+    probs = validate_incident_v2(raw, incident_ids)
+    if probs:
+        raise IncidentCodingError(probs[0])
+    out: dict[str, dict[str, bool]] = {}
+    for iid, rec in sorted((raw.get("incidents") or {}).items()):
+        ctls = (rec or {}).get("controls") or {}
+        if (rec or {}).get("basis") == "thin" or any((ctls.get(c) or {}).get("failed") is None for c in CONTROL_IDS):
+            continue
+        out[iid] = {c: _view_true(ctls[c], view) for c in CONTROL_IDS}
+    return out
+
+
+def render_incident_v2_agreement(raw_a: dict[str, Any], raw_b: dict[str, Any], a: str, b: str,
+                                 incident_ids: set[str] | None = None) -> str:
+    """v2 사건 코더 둘의 κ — 관점마다 · 통제마다."""
+    def f(x: float | None) -> str:
+        return "n/a" if x is None else f"{x:.3f}"
+
+    va = {v: incident_view(raw_a, v, incident_ids) for v in INCIDENT_VIEWS}
+    vb = {v: incident_view(raw_b, v, incident_ids) for v in INCIDENT_VIEWS}
+    common = sorted(set(va["any"]) & set(vb["any"]))
+    thin = sorted((set(raw_a.get("incidents") or {}) | set(raw_b.get("incidents") or {})) - set(common))
+    lines = [f"# 사건 × 통제 코딩 일치도 (코드북 v2) — `{a}` vs `{b}`", "",
+             f"공통 사건 {len(common)}건 × 통제 7 = 셀 {len(common) * 7}. 원문이 얇거나 한쪽이 판단을 못 한 사건 {len(thin)}건은 뺐다"
+             + (": " + ", ".join(f"`{i}`" for i in thin) if thin else "") + ".", "",
+             "| 관점 | A 참 | B 참 | 둘 다 참 | 일치율 | κ | Landis–Koch |", "|---|---|---|---|---|---|---|"]
+    per_view: dict[str, Any] = {}
+    for v, label in INCIDENT_VIEWS.items():
+        x = [va[v][i][c] for i in common for c in CONTROL_IDS]
+        y = [vb[v][i][c] for i in common for c in CONTROL_IDS]
+        k = kappa_mod.cohen_kappa(x, y)
+        per_view[v] = (x, y)
+        lines.append(f"| {label} | {sum(x)} | {sum(y)} | {sum(p and q for p, q in zip(x, y))} | {f(k.observed_agreement)} | "
+                     f"**{f(k.kappa)}** | {k.landis_koch()} |")
+    lines += ["", "## 통제별 — 둘 다 참 (보수적인 사건 수)", "",
+              "| 통제 | 적은 것만: 둘 다 참 · κ | 적었거나 추론: 둘 다 참 · κ | 그중 AI 층 · 일반 층 (둘 다 참) |", "|---|---|---|---|"]
+    for c in CONTROL_IDS:
+        cells = []
+        for v in ("stated", "any"):
+            x = [va[v][i][c] for i in common]
+            y = [vb[v][i][c] for i in common]
+            cells.append(f"{sum(p and q for p, q in zip(x, y))} · {f(kappa_mod.cohen_kappa(x, y).kappa)}")
+        lay = [sum(va[v][i][c] and vb[v][i][c] for i in common) for v in ("agent", "analog")]
+        lines.append(f"| {c} | {cells[0]} | {cells[1]} | {lay[0]} · {lay[1]} |")
+    lines += ["", "## 불일치 — 적었거나 추론 관점", ""]
+    n = 0
+    ia, ib = raw_a.get("incidents") or {}, raw_b.get("incidents") or {}
+    for i in common:
+        for c in CONTROL_IDS:
+            if va["any"][i][c] != vb["any"][i][c]:
+                n += 1
+                side, cell = ("A", ia[i]["controls"][c]) if va["any"][i][c] else ("B", ib[i]["controls"][c])
+                lines.append(f"- `{i}` × {c} — {side} 만 참 ({cell.get('level')}/{cell.get('layer')}): {cell.get('reason', '')}")
+    if not n:
+        lines.append("없음.")
+    return "\n".join(lines) + "\n"
+
+
+def incident_coding_yaml_v2(result: dict[str, Any], coder: str, coded_at: str, basis: str,
+                            header: list[str] | None = None) -> str:
+    """블라인드 에이전트 JSON → incident_codings YAML (codebook: 2)."""
+    lines = [f"# {h}" for h in (header or [])] + [
+        f"coder: {_q(coder)}", f"coded_at: {_q(coded_at)}", "codebook: 2", f"basis: {_q(basis)}", "provisional: true", "incidents:"]
+    for iid, rec in sorted((result.get("incidents") or {}).items()):
+        lines.append(f"  {_q(iid)}:")
+        lines.append(f"    basis: {_q((rec or {}).get('basis') or 'source')}")
+        lines.append("    controls:")
+        ctls = (rec or {}).get("controls") or {}
+        for c in CONTROL_IDS:
+            cell = ctls.get(c) or {}
+            fv = _tri(cell.get("failed"), f"{iid}.{c}")
+            parts = [f"failed: {'true' if fv is True else 'false' if fv is False else 'null'}"]
+            if fv is True:
+                for k in ("level", "layer", "quote", "reason"):
+                    parts.append(f"{k}: {_q(cell.get(k))}")
+            lines.append(f"      {c}: {{{', '.join(parts)}}}")
+        if (rec or {}).get("note"):
+            lines.append(f"    note: {_q(rec['note'])}")
+    return "\n".join(lines) + "\n"
+
+
 def second_controls(raw: dict[str, Any], incident_ids: set[str] | None = None) -> dict[str, dict[str, bool]]:
     """incident_codings YAML({incidents:{iid:{controls:[...]}}}) → {iid:{ctl:bool}}.
+    v2 코딩(codebook: 2)은 '적었거나 추론' 관점으로 편다 — v1·1차와 같은 물음.
     모르는 통제는 오류, incident_ids 를 주면 모르는 사건도 오류(오타가 '불일치' 로 섞이지 않게)."""
+    if is_incident_v2(raw):
+        return incident_view(raw, "any", incident_ids)
     out: dict[str, dict[str, bool]] = {}
     for iid, rec in sorted((raw.get("incidents") or {}).items()):
         if incident_ids is not None and iid not in incident_ids:

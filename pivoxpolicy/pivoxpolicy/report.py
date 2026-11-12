@@ -193,4 +193,9 @@ def write_all(
             second = agreement_mod.second_controls(raw, set(first))
             basis = {k: (v or {}).get("basis", "") for k, v in (raw.get("incidents") or {}).items()}
             w(f"incident-kappa-{coder}.md", agreement_mod.render_incident_agreement(first, second, coder, basis))
+        raws = agreement_mod.load_incident_codings()
+        v2 = [n for n in sorted(raws) if agreement_mod.is_incident_v2(raws[n])]
+        if len(v2) >= 2:
+            w(f"incident-kappa-{v2[0]}-vs-{v2[1]}.md",
+              agreement_mod.render_incident_v2_agreement(raws[v2[0]], raws[v2[1]], v2[0], v2[1], set(first)))
     return written
