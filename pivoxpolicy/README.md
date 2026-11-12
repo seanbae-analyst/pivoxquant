@@ -54,6 +54,7 @@ python3 -m pivoxpolicy.cli assess example-worked_2026   # 기관 평가 프로�
 python3 -m pivoxpolicy.cli assess --compare             # 기관 × 차원 격자
 python3 -m pivoxpolicy.cli report  # out/ 에 전부 쓰기 (매트릭스·연표·공백·κ·평가 프로필)
 python3 -m pivoxpolicy.cli incidents  # AI 에이전트 보안 사건 45건 × 7통제 교차표
+python3 -m pivoxpolicy.cli sim     # out/sim.html 모의 테스트 (통제를 켜고 끄며 공격 원형·실제 사건을 다시 돌림)
 python3 -m pivoxpolicy.cli site    # out/index.html 정적 대시보드 (Pivox 블랙·골드 — matrix·동향·사건·프로필 한 장)
 python3 -m pytest -q
 ```
@@ -65,6 +66,26 @@ python3 -m pytest -q
 토큰·CSS 는 `pivoxpolicy/templates/`(pivoxmap globals.css · pivoxdata research.css 에서 옮긴 것, pivoxpolicy-research 워크플로가 추출).
 섹션: 지금 바뀐 것(규제 동향) · 사건(AI 에이전트 보안) · 통제×관할 매트릭스(브론즈 알파 히트, AA 대비 확인) · 공백 · 평가 프로필(16차원) · 연표 · 문서 색인 · 출처·방법.
 빨강·초록은 안 쓴다(가격색은 가격에만). 대시보드의 동향·사건은 AI 에이전트 관련성 필터를 거친다(intel.jsonl 전체 수집과 별개).
+
+## 모의 테스트 (out/sim.html, 2026-11-12)
+
+학회·데모용. 회사의 통제와 에이전트 환경을 고르면 두 가지가 바로 바뀐다.
+
+- **설정**: 규제 프리셋(관할마다 '강제 규제만' / '가이드라인까지' — 조정본 매트릭스에서 자동) · 7통제 각각 없음 / 사람·계정만 / AI 까지 ·
+  에이전트 종류(상담 · 트레이딩·결제 · 코딩 · 내부 문서) → 도구 권한 · 외부 입력을 읽는가 · 외부 구성요소를 들이는가.
+- **① 공격 원형 모의 테스트**: `registry/sim_scenarios.yaml` 의 원형 5개(간접 프롬프트 인젝션 · 공급망 변조 · 자율 에이전트 일탈 ·
+  공격자 AI 침투 · AI 연동·자격증명 탈취). 단계마다 어느 통제가 막음 / 범위 줄임 / 알아챔 / 멈춤인지 보여 주고 막힘 · 피해 축소 · 피해 발생을 낸다.
+  사건 45건이 원형 하나씩에 속한다. **원형·단계·통제 배치는 저자 설계**(블라인드 코딩 아님) — 페이지에 밝힌다.
+- **② 실제 사건 45건 다시 돌리기**: 사건 조정본이 '실패' 로 판정한 통제가 켜져 있었다면? 막힘을 **하한~상한**으로(하한 = 실패 통제 모두 켜짐,
+  상한 = 사전·사용 중 통제 하나라도), 실패 판정이 없는 20건은 **판단 근거 없음** 으로 따로 센다. '다음에 켤 통제' · 프리셋 비교 표.
+
+```bash
+python3 -m pivoxpolicy.cli sim     # out/sim.html · sim-*.js · simulation.md (site 도 같이 낸다)
+```
+
+`out/simulation.md` 가 프리셋별 표다 — 예: 한국 강제 규제만 = 막힘 5~21건 · 미국 강제 규제만 = 3~7건 · EU 강제 규제만 = 4~19건(판단 가능 25건 중).
+계산의 기준 구현은 `pivoxpolicy/sim.py`, 페이지는 같은 규칙을 옮긴 `templates/sim-engine.js` — `tests/test_sim.py` 가 node 로 무작위 설정 60개에서 둘을 대조한다.
+스크립트는 외부 파일만(CSP `script-src 'self'`), 데이터 저장 없음.
 
 ## 커스텀 API 어댑터
 

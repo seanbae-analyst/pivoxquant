@@ -1,0 +1,95 @@
+/* sim.css — 모의 테스트 페이지만의 것. 토큰·뼈대는 tokens.css · base.css. 박스·알약·글로우·그라디언트·italic 없음, 빨강·초록 없음
+   (막힘 = 브론즈, 통과 = 흐린 아이보리, 피해 = 아이보리 굵게). */
+
+.sim{display:grid;grid-template-columns:minmax(300px,360px) minmax(0,1fr);gap:40px;align-items:start}
+@media(max-width:900px){.sim{grid-template-columns:1fr;gap:32px}}
+.panel{position:sticky;top:16px;max-height:calc(100vh - 32px);overflow:auto;padding:4px 4px 8px 0;scrollbar-width:thin}
+@media(max-width:900px){.panel{position:static;max-height:none;overflow:visible}}
+.results{display:grid;gap:56px;min-width:0}
+.dim{color:var(--pq-ivory-dim);font-weight:400}
+
+/* ── 설정 묶음 ── */
+fieldset{margin:0;padding:0;border:0;min-width:0}
+.grp{padding:18px 0;border-top:1px solid var(--pq-ivory-line)}
+.grp:first-child{border-top:0;padding-top:0}
+.lab{display:block;padding:0;margin:0 0 10px;font-size:14px;font-weight:600;color:var(--pq-ivory)}
+legend.lab{float:left;width:100%}      /* fieldset 테두리가 legend 를 가로지르지 않게 — 떠 있는 legend 는 일반 블록처럼 놓인다 */
+legend.lab+*{clear:both}
+.sub{display:block;margin:14px 0 6px;font-size:13px;color:var(--pq-ivory-dim)}
+.hint{margin-top:8px;font-size:12.5px;line-height:1.55;color:var(--pq-ivory-dim)}
+select{width:100%;height:42px;padding:0 12px;font:inherit;font-size:14.5px;color:var(--pq-ivory);background:var(--pq-onyx);
+  border:1px solid var(--pq-ivory-line-strong);border-radius:var(--pq-radius-ctl);cursor:pointer}
+select:hover{border-color:rgba(245,240,232,0.26)}
+
+/* 통제 줄: 이름 + 3칸 선택 */
+.ctls{display:grid;gap:10px}
+.ctl{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px 12px}
+.ctl .nm{font-size:14px;color:var(--pq-ivory)}
+.ctl .nm small{display:block;font-size:12px;color:var(--pq-ivory-dim)}
+
+/* 세그먼트 선택 — 라디오를 숨기지 않고 시각만 감춘다(키보드·스크린리더 그대로) */
+.seg{display:inline-flex;border:1px solid var(--pq-ivory-line-strong);border-radius:var(--pq-radius-ctl);overflow:hidden;max-width:100%}
+.seg label{position:relative;display:inline-flex;margin:0;cursor:pointer}
+.seg input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}
+.seg span{display:inline-flex;align-items:center;min-height:34px;padding:0 11px;font-size:13px;color:var(--pq-ivory-dim);white-space:nowrap;
+  transition:background-color 160ms var(--pq-ease),color 160ms var(--pq-ease)}
+.seg label+label span{border-left:1px solid var(--pq-ivory-line-strong)}
+.seg label:hover span{color:var(--pq-ivory);background:var(--pq-card-veil-strong)}
+.seg input:checked+span{background:var(--pq-bronze);color:var(--pq-ink);font-weight:600}
+.seg input:focus-visible+span{outline:2px solid var(--pq-ivory);outline-offset:-3px}
+.seg-wide{margin:0 0 16px}
+@media(max-width:400px){.seg span{padding:0 8px;font-size:12.5px}}
+
+/* ── 공격 원형 고르기: 줄 목록(카드 아님) ── */
+.scns{border-top:1px solid var(--pq-ivory-line-strong)}
+.scn{position:relative;display:grid;grid-template-columns:22px minmax(0,1fr);gap:4px 12px;padding:12px 4px;border-bottom:1px solid var(--pq-ivory-line);cursor:pointer}
+.scn:hover{background:var(--pq-card-veil)}
+.scn input{margin:4px 0 0;accent-color:var(--pq-bronze);cursor:pointer}
+.scn .t{font-weight:600;color:var(--pq-ivory)}
+.scn .s{font-size:13.5px;color:var(--pq-ivory-mid)}
+.scn .k{font-size:12.5px;color:var(--pq-ivory-dim)}
+.scn.na .t,.scn.na .s{color:var(--pq-ivory-dim)}
+.run{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;margin:16px 0 8px;max-width:none}
+
+/* ── 단계 ── */
+.stages{list-style:none;margin:8px 0 0;padding:0}
+.stage{display:grid;grid-template-columns:34px minmax(0,1fr);gap:4px 14px;padding:14px 0;border-bottom:1px solid var(--pq-ivory-line)}
+.stage .no{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;
+  border:1px solid var(--pq-ivory-line-strong);font-size:13px;font-weight:600;color:var(--pq-ivory-dim);font-variant-numeric:tabular-nums}
+.stage .t{font-weight:600}
+.stage .d{font-size:13.5px;color:var(--pq-ivory-mid)}
+.stage .ck{margin:8px 0 0;padding:0;list-style:none;display:grid;gap:4px}
+.stage .ck li{margin:0;font-size:13.5px;color:var(--pq-ivory-dim)}
+.stage .ck li b{font-weight:600}
+.stage .ck li.on{color:var(--pq-ivory)}
+.stage .ck li.on b{color:var(--pq-bronze)}
+.stage .ck .why{display:block;font-size:12.5px;color:var(--pq-ivory-dim)}
+.stage.blocked .no{background:var(--pq-bronze);border-color:var(--pq-bronze);color:var(--pq-ink)}
+.stage.passed .no{color:var(--pq-ivory)}
+.stage.after{opacity:0.38}
+@media(prefers-reduced-motion:no-preference){
+  .stage{transition:opacity 320ms var(--pq-ease),transform 320ms var(--pq-ease)}
+  .stage.pending{opacity:0;transform:translateY(6px)}
+}
+
+/* 결과 한 줄 — 크게 */
+.outcome{margin-top:16px}
+.outcome .v{font-size:clamp(22px,2.6vw,28px);font-weight:700;letter-spacing:-0.025em;line-height:1.25}
+.outcome .v.blocked{color:var(--pq-bronze)}
+.outcome .v.reduced{color:var(--pq-bronze-light)}
+.outcome .v.damage{color:var(--pq-ivory)}
+.outcome .v.no_surface{color:var(--pq-ivory-mid)}
+.outcome p{margin-top:6px}
+
+/* ── 다시 돌리기 ── */
+.cards.big .v{font-size:34px}
+.cards.big .card.hl{background:var(--pq-bronze-wash);border-color:var(--pq-bronze-line)}
+.cards.big .card.hl .v{color:var(--pq-bronze)}
+.next{margin-top:14px}
+.next ol{margin:6px 0 0;padding-left:20px}
+.h3{margin:28px 0 10px}
+#cmp td.num b{color:var(--pq-bronze)}
+#cmp tr.cur td{background:var(--pq-bronze-wash)}
+#per td:nth-child(3),#per td:nth-child(4){white-space:nowrap}
+.lim li{margin:6px 0}
+.lim b{color:var(--pq-ivory)}

@@ -284,9 +284,19 @@ def cmd_incident_corpus(args: argparse.Namespace) -> int:
     return 1 if bad else 0
 
 
+def cmd_sim(_: argparse.Namespace) -> int:
+    from . import sim as sim_mod
+    for p in sim_mod.build():
+        print(f"wrote {p}")
+    return 0
+
+
 def cmd_site(_: argparse.Namespace) -> int:
+    from . import sim as sim_mod
     p = site_mod.build()
     print(f"wrote {p}")
+    for q in sim_mod.build():   # 대시보드 메뉴의 '모의 테스트' 가 가리키는 페이지 — 같이 낸다
+        print(f"wrote {q}")
     return 0
 
 
@@ -357,6 +367,7 @@ def build_parser() -> argparse.ArgumentParser:
     icp = sub.add_parser("incident-corpus", help="사건 source_url → 고정 원문(snapshots/incident_content/) + incident_corpus.json")
     icp.add_argument("ids", nargs="*", help="이 사건만 다시 받기 (나머지 고정본은 그대로)")
     icp.set_defaults(fn=cmd_incident_corpus)
+    sub.add_parser("sim", help="out/sim.html 모의 테스트 페이지 + out/simulation.md 프리셋 표").set_defaults(fn=cmd_sim)
     sub.add_parser("site", help="out/index.html 정적 대시보드 생성 (Pivox 디자인)").set_defaults(fn=cmd_site)
     return p
 

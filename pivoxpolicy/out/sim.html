@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PivoxPolicy 모의 테스트</title>
+<meta name="description" content="통제를 켜고 끄며 AI 에이전트 공격 원형과 실제 사건 45건을 다시 돌려 본다." />
+<meta name="theme-color" content="#050505" />
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<style>
+:root {
+  /* pivoxmap/frontend/src/app/globals.css :root (L11-64) 에서 이름·값 그대로 복사 — 이 정적 페이지가 쓰는 것만.
+     pivoxquant globals.css :root(L200-470) 와 대조: 아래 값은 전부 같다. 단 --pq-ivory-faint 만 pivoxquant 는 0.50 (2026-09-10 AA 보정) —
+     여기선 pivoxmap 값(0.45)을 그대로 두되 본문 글자색으로는 쓰지 않는다(rules 참고). 가격색 --pq-up/--pq-down 은 이 페이지에 가격이 없어 뺐다. */
+  --pq-ink: #050505;
+  --pq-ivory: #F5F0E8;
+  --pq-bronze: #B8956A;
+  --pq-bronze-light: #A3845C;
+  --pq-bronze-deep: #6F5636;
+  --pq-onyx: #111111;
+
+  --pq-ivory-soft: rgba(245, 240, 232, 0.78);
+  --pq-ivory-mid: rgba(245, 240, 232, 0.65);
+  --pq-ivory-dim: rgba(245, 240, 232, 0.55);
+  --pq-ivory-faint: rgba(245, 240, 232, 0.45);
+  --pq-ivory-line: rgba(245, 240, 232, 0.08);
+  --pq-ivory-line-soft: rgba(245, 240, 232, 0.06);
+  --pq-ivory-line-faint: rgba(245, 240, 232, 0.04);
+  --pq-card-veil: var(--pq-ivory-line-faint);
+  --pq-card-veil-strong: var(--pq-ivory-line-soft);
+
+  --pq-live: #7db487;
+  --pq-stale: #a88f4a;
+  --pq-error: #d18888;
+  /* 알림 칸 바탕 · 테두리 (로그인 화면 Callout — 강조색을 옅게 깐다) */
+  --pq-bronze-wash: rgba(184, 149, 106, 0.07);
+  --pq-bronze-line: rgba(184, 149, 106, 0.30);
+  /* 버튼 · 입력 테두리 (헤어라인 0.08 보다 한 단 진하게 — 2026-10-15 새 흐름) */
+  --pq-ivory-line-strong: rgba(245, 240, 232, 0.16);
+  /* 화면 넘김 (components/Screen.tsx · AppShell) */
+  --pq-ease: cubic-bezier(0.2, 0.75, 0.2, 1);
+
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  --font-code: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;   /* kbd · code 만 */
+
+  --pq-radius-card: 14px;
+  --pq-radius-ctl: 10px;
+  --pq-radius-chip: 6px;
+}
+/* base.css — Pivox 연구 대시보드(정적 HTML 한 장). 토큰은 tokens_css(pivoxmap globals.css :root 복사).
+   레이아웃 뼈대는 pivoxdata(research.css .wrap · ui.css .topbar/.nav/footer.site · index.html .sec-h),
+   글꼴·자간·모서리·컴포넌트 리듬은 pivoxmap globals.css(2026-10-15) 를 따른다. 박스·알약 배지·글로우·그라디언트·italic 없음. */
+
+*,*::before,*::after{box-sizing:border-box}
+html{color-scheme:dark;accent-color:var(--pq-bronze);-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh;background:var(--pq-ink);color:var(--pq-ivory);font-family:var(--font-sans);font-size:15px;line-height:1.6;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-feature-settings:"ss05";
+  word-break:keep-all;overflow-wrap:break-word;text-wrap:pretty}   /* keep-all = 어절 단위 줄바꿈. anywhere 가 아니라 break-word — 칸이 한 글자씩 세로로 눌리지 않게 */
+::selection{background:rgba(184,149,106,0.35)}
+:focus-visible{outline:2px solid var(--pq-bronze);outline-offset:2px;border-radius:var(--pq-radius-chip)}
+img,svg{max-width:100%;height:auto}
+.skip{position:absolute;left:-9999px;top:8px;z-index:100;padding:8px 12px;border-radius:var(--pq-radius-ctl);background:var(--pq-onyx);border:1px solid var(--pq-ivory-line-strong);color:var(--pq-ivory)}
+.skip:focus{left:16px}
+
+/* ── 레이아웃: 한 칸, 위아래로 읽는다. 가로 스크롤은 .tblwrap 과 폰의 .nav 안에서만 ── */
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px 72px}
+main{display:grid;gap:56px;padding-top:28px}
+main>*,section>*{min-width:0}   /* 넓은 표가 칸(그리드 항목)을 넓혀 페이지를 옆으로 밀지 않게 */
+@media(max-width:560px){.wrap{padding:0 16px 56px}main{gap:44px;padding-top:16px}}
+
+/* ── 글 ── */
+h1,h2,h3{margin:0;font-family:var(--font-sans);font-style:normal;text-wrap:balance}
+h1{font-size:clamp(28px,3.2vw,36px);font-weight:700;letter-spacing:-0.03em;line-height:1.2}   /* 머리말은 포스터가 아니라 신문 제호 크기 */
+h2{font-size:20px;font-weight:650;letter-spacing:-0.02em;line-height:1.3}
+h3{font-size:16px;font-weight:600;letter-spacing:-0.01em;line-height:1.4}
+p{margin:0;color:var(--pq-ivory-soft);max-width:72ch}
+p+p{margin-top:10px}
+.lede{font-size:17px;line-height:1.75;letter-spacing:-0.01em;color:var(--pq-ivory-soft);max-width:64ch}
+.eyebrow{font-size:13px;letter-spacing:0.01em;color:var(--pq-bronze);font-weight:500}   /* pivoxmap .pq-eyebrow 그대로 — 대문자·넓은 자간 없음 */
+.meta,.fine{font-size:13px;line-height:1.6;color:var(--pq-ivory-dim)}
+b,strong{font-weight:600;color:var(--pq-ivory)}
+a{color:var(--pq-bronze);text-decoration:none}
+a:hover{text-decoration:underline;text-underline-offset:3px}
+ul,ol{margin:0;padding-left:20px}
+li{margin:4px 0}
+li::marker{color:var(--pq-ivory-faint)}
+time{font-variant-numeric:tabular-nums}
+code,kbd{font-family:var(--font-code);font-size:0.86em}
+code{padding:1px 6px;border:1px solid var(--pq-ivory-line);border-radius:var(--pq-radius-chip);background:var(--pq-onyx);color:var(--pq-ivory-soft)}
+
+/* ── 머리 띠: 이름 + 메뉴 한 줄 (pivoxdata ui.css .topbar/.brand/.nav) ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;height:64px}
+.brand{display:inline-flex;align-items:center;flex-shrink:0;white-space:nowrap;font-size:18px;font-weight:700;letter-spacing:-0.02em;color:var(--pq-ivory)}
+.brand:hover{text-decoration:none}
+.brand .b{color:var(--pq-bronze)}   /* 'Pivox' 아이보리 + 접미 브론즈 — 세 제품 공통 워드마크 */
+.nav{display:flex;align-items:center;gap:4px;margin-left:auto;font-size:14px}
+.nav a{color:var(--pq-ivory-dim);padding:7px 11px;border-radius:var(--pq-radius-ctl);white-space:nowrap;transition:color 150ms,background-color 150ms}
+.nav a:hover{color:var(--pq-ivory);background:var(--pq-card-veil-strong);text-decoration:none}
+.nav a[aria-current]{color:var(--pq-ivory)}
+@media(max-width:780px){.nav a{padding-left:8px;padding-right:8px}.topbar{gap:8px}}
+@media(max-width:640px){
+  .topbar{flex-wrap:wrap;height:auto;padding:10px 0 0;row-gap:2px;border-bottom:1px solid var(--pq-ivory-line)}
+  .brand{min-height:44px}
+  /* 폰: 메뉴가 둘째 줄에 한 줄로, 넘치면 옆으로 민다(거터 밖까지). 아래 탭 바 없음 */
+  .nav{flex:1 0 100%;gap:0;margin:0 -16px;padding:0 12px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .nav::-webkit-scrollbar{display:none}
+  .nav a{display:inline-flex;align-items:center;min-height:44px;padding:0 10px;font-size:14.5px;border-radius:0}
+  .nav a[aria-current]{box-shadow:inset 0 -2px 0 var(--pq-bronze)}
+}
+
+/* ── 머리말 한 줄 ── */
+.hero .eyebrow{display:block;margin-bottom:14px}
+.hero h1{margin-bottom:10px}
+.hero .meta{margin-top:14px}
+
+/* ── 섹션: 앵커 · 헤딩 줄(제목 + 오른쪽 흐린 설명) · 끝에 '출처 · 기준일' 한 줄 ── */
+section{scroll-margin-top:16px}
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:0 0 14px}
+.sec-h h2 a{color:inherit}
+.sec-h h2 a:hover{text-decoration:underline;text-underline-offset:4px}
+.sec-h span{font-size:13px;color:var(--pq-ivory-dim);text-align:right}
+.src{display:flex;flex-wrap:wrap;gap:2px 10px;margin:16px 0 0;max-width:none;font-size:13px;line-height:1.6;color:var(--pq-ivory-dim)}
+/* 항목 사이는 '·' 대신 1px 헤어라인 — 줄이 바뀌어도 구분자가 줄 머리에 남지 않는다 (pivoxdata ui.css .r-k) */
+.src>*:not(:last-child)::after{content:"";display:inline-block;width:1px;height:10px;margin-left:10px;background:var(--pq-ivory-line-strong);vertical-align:-1px}
+.src a{color:var(--pq-ivory-dim);text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--pq-ivory-line-strong)}
+.src a:hover{color:var(--pq-ivory)}
+
+/* ── 카드: 14px · veil 바탕 · 헤어라인 테두리. 꼭 필요한 곳(평가 프로필 숫자 칸)에만 — 목록은 카드로 감싸지 않는다 ── */
+.card{background:var(--pq-card-veil);border:1px solid var(--pq-ivory-line);border-radius:var(--pq-radius-card);padding:18px 20px;min-width:0}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.card .k{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--pq-ivory-dim)}
+.card .v{margin-top:6px;font-size:28px;font-weight:700;letter-spacing:-0.03em;line-height:1.15;font-variant-numeric:tabular-nums}
+.card .h{margin-top:2px;font-size:13px;color:var(--pq-ivory-dim)}
+
+/* ── 표: 헤더 행 헤어라인(한 단 진한 0.16), 본문 행 헤어라인 0.08, 숫자 tabular, 행 hover 는 card-veil ── */
+.tblwrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+th,td{padding:10px 12px;text-align:left;vertical-align:top;overflow-wrap:break-word}
+th{font-size:13px;font-weight:600;letter-spacing:0.01em;color:var(--pq-ivory-dim);white-space:nowrap;border-bottom:1px solid var(--pq-ivory-line-strong)}
+td{border-bottom:1px solid var(--pq-ivory-line)}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:var(--pq-card-veil)}
+.num{text-align:right;white-space:nowrap}
+td time{white-space:nowrap}
+/* 매트릭스(통제 × 관할): 첫 열은 통제 이름, 나머지 칸은 점수(heat_scale 의 .h-0 ~ .h-3 · .h-x) */
+.matrix th:first-child,.matrix td:first-child{min-width:160px}
+.matrix th:not(:first-child),.matrix td:not(:first-child){text-align:center;min-width:64px}
+.matrix td:not(:first-child){font-weight:600}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin:10px 0 0;max-width:none;font-size:13px;color:var(--pq-ivory-dim)}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:3px;margin-right:7px;vertical-align:-2px}
+.legend i.h-x{outline-offset:-1px}
+
+/* ── 줄 목록: 사건 · 지금 바뀐 것 · 연표 · 공백 — 박스 없이 헤어라인, 날짜 열 + 내용 열 (pivoxdata .events/.case) ── */
+.rows{list-style:none;margin:0;padding:0;border-top:1px solid var(--pq-ivory-line-strong)}
+.rows>li{display:grid;grid-template-columns:96px minmax(0,1fr);gap:4px 14px;margin:0;padding:12px 0;border-bottom:1px solid var(--pq-ivory-line)}
+.rows time,.rows .d{font-size:13px;color:var(--pq-ivory-dim);white-space:nowrap;padding-top:2px}
+.rows .t{font-weight:600;color:var(--pq-ivory)}
+.rows .t a{color:inherit}
+.rows .s{margin-top:2px;font-size:14px;line-height:1.6;color:var(--pq-ivory-mid);max-width:72ch}
+.rows .k{font-size:13px;color:var(--pq-ivory-dim)}   /* 분류(관할 · 통제 · 종류) 한 줄 — 칩 아님 */
+@media(max-width:560px){.rows>li{grid-template-columns:1fr;gap:2px}}
+
+/* ── 상태 글자: live / stale / error 는 색 글자(+점)뿐. 바탕·테두리·알약 없음 ── */
+.st{font-size:13px;font-weight:600;white-space:nowrap}
+.st::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor;margin-right:6px;vertical-align:1px}
+.st-live{color:var(--pq-live)}
+.st-stale{color:var(--pq-stale)}
+.st-error{color:var(--pq-error)}
+
+/* ── 안내 칸: 네 변 테두리(한쪽 막대 아님). 범위·한계 설명 같은 읽을거리 ── */
+.note{padding:12px 16px;border-radius:var(--pq-radius-ctl);background:var(--pq-card-veil);box-shadow:inset 0 0 0 1px var(--pq-ivory-line);font-size:13px;line-height:1.65;color:var(--pq-ivory-dim);max-width:none}
+.note-bronze{background:var(--pq-bronze-wash);box-shadow:inset 0 0 0 1px var(--pq-bronze-line);color:var(--pq-ivory-soft)}
+.note b{color:var(--pq-bronze);font-weight:600}
+
+/* ── 버튼: 꼭 필요한 곳(파일 받기)에만 — pivoxmap .pq-btn/.pq-btn-line/.pq-btn-md 리듬 ── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:42px;padding:0 16px;font:inherit;font-size:15px;font-weight:500;letter-spacing:0.01em;
+  border-radius:var(--pq-radius-ctl);white-space:nowrap;cursor:pointer;border:1px solid var(--pq-ivory-line-strong);color:var(--pq-ivory);background:transparent;
+  transition:background-color 220ms var(--pq-ease),color 220ms var(--pq-ease),border-color 220ms var(--pq-ease)}
+.btn:hover{background:var(--pq-card-veil-strong);border-color:rgba(245,240,232,0.26);text-decoration:none}
+.btn-primary{background:var(--pq-bronze);color:var(--pq-ink);border-color:transparent}
+.btn-primary:hover{background:var(--pq-bronze-light)}
+.btn[disabled]{opacity:0.45;pointer-events:none}
+
+/* ── 접기: 방법 · 긴 목록 (pivoxmap details.pq-faq — 헤어라인 위아래, 브론즈 '+') ── */
+details{border-top:1px solid var(--pq-ivory-line)}
+details:last-of-type{border-bottom:1px solid var(--pq-ivory-line)}
+summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 0;font-size:15px;font-weight:600;color:var(--pq-ivory)}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";flex:none;width:1em;line-height:1;text-align:center;color:var(--pq-bronze);transition:transform 250ms}
+details[open] summary::after{transform:rotate(45deg)}
+details>:not(summary){padding-bottom:16px}
+
+/* ── 바닥 (pivoxdata ui.css footer.site) ── */
+footer.site{margin-top:72px;padding:22px 0 8px;border-top:1px solid var(--pq-ivory-line);display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center;justify-content:space-between;font-size:13px;color:var(--pq-ivory-dim)}
+footer.site a{color:var(--pq-ivory-dim)}
+footer.site a:hover{color:var(--pq-ivory)}
+footer.site .links{display:flex;flex-wrap:wrap;gap:4px 16px}
+@media(max-width:640px){footer.site{margin-top:40px}}
+@media(max-width:560px){footer.site .links{gap:0 4px}footer.site .links a{display:inline-flex;align-items:center;min-height:44px;padding:0 8px}}
+
+/* ── 움직임 ── */
+@media(prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
+/* sim.css — 모의 테스트 페이지만의 것. 토큰·뼈대는 tokens.css · base.css. 박스·알약·글로우·그라디언트·italic 없음, 빨강·초록 없음
+   (막힘 = 브론즈, 통과 = 흐린 아이보리, 피해 = 아이보리 굵게). */
+
+.sim{display:grid;grid-template-columns:minmax(300px,360px) minmax(0,1fr);gap:40px;align-items:start}
+@media(max-width:900px){.sim{grid-template-columns:1fr;gap:32px}}
+.panel{position:sticky;top:16px;max-height:calc(100vh - 32px);overflow:auto;padding:4px 4px 8px 0;scrollbar-width:thin}
+@media(max-width:900px){.panel{position:static;max-height:none;overflow:visible}}
+.results{display:grid;gap:56px;min-width:0}
+.dim{color:var(--pq-ivory-dim);font-weight:400}
+
+/* ── 설정 묶음 ── */
+fieldset{margin:0;padding:0;border:0;min-width:0}
+.grp{padding:18px 0;border-top:1px solid var(--pq-ivory-line)}
+.grp:first-child{border-top:0;padding-top:0}
+.lab{display:block;padding:0;margin:0 0 10px;font-size:14px;font-weight:600;color:var(--pq-ivory)}
+legend.lab{float:left;width:100%}      /* fieldset 테두리가 legend 를 가로지르지 않게 — 떠 있는 legend 는 일반 블록처럼 놓인다 */
+legend.lab+*{clear:both}
+.sub{display:block;margin:14px 0 6px;font-size:13px;color:var(--pq-ivory-dim)}
+.hint{margin-top:8px;font-size:12.5px;line-height:1.55;color:var(--pq-ivory-dim)}
+select{width:100%;height:42px;padding:0 12px;font:inherit;font-size:14.5px;color:var(--pq-ivory);background:var(--pq-onyx);
+  border:1px solid var(--pq-ivory-line-strong);border-radius:var(--pq-radius-ctl);cursor:pointer}
+select:hover{border-color:rgba(245,240,232,0.26)}
+
+/* 통제 줄: 이름 + 3칸 선택 */
+.ctls{display:grid;gap:10px}
+.ctl{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px 12px}
+.ctl .nm{font-size:14px;color:var(--pq-ivory)}
+.ctl .nm small{display:block;font-size:12px;color:var(--pq-ivory-dim)}
+
+/* 세그먼트 선택 — 라디오를 숨기지 않고 시각만 감춘다(키보드·스크린리더 그대로) */
+.seg{display:inline-flex;border:1px solid var(--pq-ivory-line-strong);border-radius:var(--pq-radius-ctl);overflow:hidden;max-width:100%}
+.seg label{position:relative;display:inline-flex;margin:0;cursor:pointer}
+.seg input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}
+.seg span{display:inline-flex;align-items:center;min-height:34px;padding:0 11px;font-size:13px;color:var(--pq-ivory-dim);white-space:nowrap;
+  transition:background-color 160ms var(--pq-ease),color 160ms var(--pq-ease)}
+.seg label+label span{border-left:1px solid var(--pq-ivory-line-strong)}
+.seg label:hover span{color:var(--pq-ivory);background:var(--pq-card-veil-strong)}
+.seg input:checked+span{background:var(--pq-bronze);color:var(--pq-ink);font-weight:600}
+.seg input:focus-visible+span{outline:2px solid var(--pq-ivory);outline-offset:-3px}
+.seg-wide{margin:0 0 16px}
+@media(max-width:400px){.seg span{padding:0 8px;font-size:12.5px}}
+
+/* ── 공격 원형 고르기: 줄 목록(카드 아님) ── */
+.scns{border-top:1px solid var(--pq-ivory-line-strong)}
+.scn{position:relative;display:grid;grid-template-columns:22px minmax(0,1fr);gap:4px 12px;padding:12px 4px;border-bottom:1px solid var(--pq-ivory-line);cursor:pointer}
+.scn:hover{background:var(--pq-card-veil)}
+.scn input{margin:4px 0 0;accent-color:var(--pq-bronze);cursor:pointer}
+.scn .t{font-weight:600;color:var(--pq-ivory)}
+.scn .s{font-size:13.5px;color:var(--pq-ivory-mid)}
+.scn .k{font-size:12.5px;color:var(--pq-ivory-dim)}
+.scn.na .t,.scn.na .s{color:var(--pq-ivory-dim)}
+.run{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;margin:16px 0 8px;max-width:none}
+
+/* ── 단계 ── */
+.stages{list-style:none;margin:8px 0 0;padding:0}
+.stage{display:grid;grid-template-columns:34px minmax(0,1fr);gap:4px 14px;padding:14px 0;border-bottom:1px solid var(--pq-ivory-line)}
+.stage .no{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;
+  border:1px solid var(--pq-ivory-line-strong);font-size:13px;font-weight:600;color:var(--pq-ivory-dim);font-variant-numeric:tabular-nums}
+.stage .t{font-weight:600}
+.stage .d{font-size:13.5px;color:var(--pq-ivory-mid)}
+.stage .ck{margin:8px 0 0;padding:0;list-style:none;display:grid;gap:4px}
+.stage .ck li{margin:0;font-size:13.5px;color:var(--pq-ivory-dim)}
+.stage .ck li b{font-weight:600}
+.stage .ck li.on{color:var(--pq-ivory)}
+.stage .ck li.on b{color:var(--pq-bronze)}
+.stage .ck .why{display:block;font-size:12.5px;color:var(--pq-ivory-dim)}
+.stage.blocked .no{background:var(--pq-bronze);border-color:var(--pq-bronze);color:var(--pq-ink)}
+.stage.passed .no{color:var(--pq-ivory)}
+.stage.after{opacity:0.38}
+@media(prefers-reduced-motion:no-preference){
+  .stage{transition:opacity 320ms var(--pq-ease),transform 320ms var(--pq-ease)}
+  .stage.pending{opacity:0;transform:translateY(6px)}
+}
+
+/* 결과 한 줄 — 크게 */
+.outcome{margin-top:16px}
+.outcome .v{font-size:clamp(22px,2.6vw,28px);font-weight:700;letter-spacing:-0.025em;line-height:1.25}
+.outcome .v.blocked{color:var(--pq-bronze)}
+.outcome .v.reduced{color:var(--pq-bronze-light)}
+.outcome .v.damage{color:var(--pq-ivory)}
+.outcome .v.no_surface{color:var(--pq-ivory-mid)}
+.outcome p{margin-top:6px}
+
+/* ── 다시 돌리기 ── */
+.cards.big .v{font-size:34px}
+.cards.big .card.hl{background:var(--pq-bronze-wash);border-color:var(--pq-bronze-line)}
+.cards.big .card.hl .v{color:var(--pq-bronze)}
+.next{margin-top:14px}
+.next ol{margin:6px 0 0;padding-left:20px}
+.h3{margin:28px 0 10px}
+#cmp td.num b{color:var(--pq-bronze)}
+#cmp tr.cur td{background:var(--pq-bronze-wash)}
+#per td:nth-child(3),#per td:nth-child(4){white-space:nowrap}
+.lim li{margin:6px 0}
+.lim b{color:var(--pq-ivory)}
+
+</style>
+</head>
+<body>
+<a class="skip" href="#main">본문으로</a>
+<div class="wrap">
+
+<header class="topbar">
+<a class="brand" href="./" aria-label="PivoxPolicy 대시보드">Pivox<span class="b">Policy</span></a>
+<nav class="nav" aria-label="페이지">
+<a href="./">대시보드</a><a href="sim.html" aria-current="page">모의 테스트</a>
+</nav>
+</header>
+
+<main id="main">
+
+<header class="hero" id="top">
+<span class="eyebrow">모의 테스트 · AI 에이전트 내부통제</span>
+<h1>통제를 켜고 끄며, 공격을 다시 돌려 본다</h1>
+<p class="lede">회사의 통제와 에이전트 환경을 고르면, 공격 원형 5개와 실제 사건 45건이 그 설정으로 어떻게 끝나는지 바로 보인다.</p>
+<noscript><p class="note">이 페이지는 자바스크립트로 계산한다. 같은 결과의 표는 <a href="./simulation.md">simulation.md</a>.</p></noscript>
+</header>
+
+<div class="sim" id="sim">
+
+<!-- ── 왼쪽: 환경 설정 ── -->
+<aside class="panel" aria-label="환경 설정">
+
+<div class="grp">
+<label class="lab" for="preset">규제 프리셋</label>
+<select id="preset"></select>
+<p class="hint" id="preset-hint">관할 규제가 요구하는 만큼만 통제를 갖춘 회사로 맞춘다.</p>
+</div>
+
+<fieldset class="grp">
+<legend class="lab">통제 7개 <span class="dim">— 누구에게 적용하나</span></legend>
+<div id="controls" class="ctls"></div>
+<p class="hint">사람·계정만 = 직원 계정·일반 시스템에만. AI 까지 = 에이전트에도 같은 통제를 건다.</p>
+</fieldset>
+
+<fieldset class="grp">
+<legend class="lab">에이전트 환경</legend>
+<label class="sub" for="profile">에이전트 종류</label>
+<select id="profile"></select>
+<div class="sub">도구 권한</div>
+<div class="seg" role="radiogroup" aria-label="도구 권한" id="tools"></div>
+<div class="sub">외부 입력(웹·메일·문서·고객 메시지)을 읽는가</div>
+<div class="seg" role="radiogroup" aria-label="외부 입력" id="untrusted"></div>
+<div class="sub">외부 패키지·확장·스킬을 들여오는가</div>
+<div class="seg" role="radiogroup" aria-label="외부 구성요소" id="components"></div>
+</fieldset>
+
+</aside>
+
+<!-- ── 오른쪽: 결과 ── -->
+<div class="results">
+
+<section id="scenario" aria-labelledby="h-scn">
+<div class="sec-h"><h2 id="h-scn">① 공격 원형 모의 테스트</h2><span>원형을 고르고 실행</span></div>
+<div id="scenarios" class="scns" role="radiogroup" aria-label="공격 원형"></div>
+<p class="run"><button type="button" class="btn btn-primary" id="run">실행</button><span class="dim" id="run-hint">단계별로 어느 통제가 끼어드는지 보여 준다.</span></p>
+<ol class="stages" id="stages" aria-label="공격 단계"></ol>
+<div class="outcome" id="outcome" aria-live="polite"></div>
+<details id="scn-cases"><summary>이 원형의 근거 사건</summary><ul class="rows" id="scn-list"></ul></details>
+</section>
+
+<section id="replay" aria-labelledby="h-rep">
+<div class="sec-h"><h2 id="h-rep">② 실제 사건 45건 다시 돌리기</h2><span>같은 설정으로</span></div>
+<div class="seg seg-wide" role="radiogroup" aria-label="판정 기준" id="basis"></div>
+<div class="cards big" id="rep-cards"></div>
+<p class="fine" id="rep-explain"></p>
+<div class="next" id="next"></div>
+<h3 class="h3">프리셋끼리 비교</h3>
+<div class="tblwrap"><table id="cmp"></table></div>
+<details><summary>사건별 결과</summary><div class="tblwrap"><table id="per"></table></div></details>
+</section>
+
+<section id="limits" aria-labelledby="h-lim">
+<div class="sec-h"><h2 id="h-lim">이 테스트가 말할 수 없는 것</h2></div>
+<ul class="fine lim">
+<li><b>예측이 아니라 반사실 연습이다.</b> ②는 "그 사건에서 실패했다고 판정된 통제가 켜져 있었다면" 을 가정한다. 통제가 있어도 뚫릴 수 있고, 다른 경로가 있었을 수 있다 — 그래서 막힘을 하한~상한으로 낸다.</li>
+<li><b>판단 근거 없음</b> 은 공개 자료가 피해 쪽 통제를 적지 않은 사건이다(대부분 공격자가 AI 를 쓴 사건). 막혔다는 뜻도, 못 막았다는 뜻도 아니다.</li>
+<li>사건 판정은 서로 보지 않은 AI 코더 두 팀(κ 0.96)과 조정을 거쳤다. ①의 공격 원형·단계·통제 배치는 저자 설계로, 블라인드 코딩을 거치지 않았다.</li>
+<li>규제 프리셋은 문서가 요구하는 통제를 이 에이전트에 모두 적용했다고 가정한다. 적용 대상(예: AI 기본법의 사람 관리·감독은 고영향 AI 만)은 따지지 않는다.</li>
+<li>근거: <a href="./simulation.md">simulation.md</a>(프리셋별 표) · 사건 판정 · 시나리오 정의는 저장소 <code>pivoxpolicy/registry/</code>.</li>
+</ul>
+</section>
+
+</div>
+</div>
+
+</main>
+
+<footer class="site">
+<span>PivoxPolicy · 정책 연구용 모의 테스트 — 법률 자문이 아니다.</span>
+<span class="links"><a href="./">대시보드</a><a href="./simulation.md">표 (simulation.md)</a></span>
+</footer>
+
+</div>
+<script src="./sim-data.js"></script>
+<script src="./sim-engine.js"></script>
+<script src="./sim-ui.js"></script>
+</body>
+</html>
