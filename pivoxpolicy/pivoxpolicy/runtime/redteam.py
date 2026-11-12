@@ -54,17 +54,17 @@ def pick_tool(agent: dict[str, Any], spec: str) -> dict[str, Any] | None:
     return next((t for t in tools if t["kind"] == spec), None)
 
 
-def run(agent: dict[str, Any], sid: str, spec: dict[str, Any], approved: list[dict[str, Any]], now=None) -> dict[str, Any]:
-    """원형 하나 → {scenario, outcome: blocked|damage|no_surface|runtime_na, stopped_at, control, detected, steps}."""
-    if not spec.get("runtime", True):
-        return {"scenario": sid, "outcome": "runtime_na", "note": spec.get("note", ""), "steps": [], "stopped_at": None, "control": None, "detected": False}
+def walk_steps(agent: dict[str, Any], steps: list[dict[str, Any]] | None, approved: list[dict[str, Any]],
+               now=None, note_key: str = "note") -> dict[str, Any]:
+    """단계 목록을 샌드박스 복사본의 정책 엔진으로 흘려보낸다(redteam · cases 공용).
+    → {outcome: blocked|passed|no_surface, steps, stopped_at, control, detected}. 단계가 모두 허용되면 passed."""
     a = copy.deepcopy(agent)
-    recent, steps, detected = 0, [], False
-    for k, st in enumerate(spec.get("steps") or [], 1):
+    recent, out, detected = 0, [], False
+    for k, st in enumerate(steps or [], 1):
         tool = pick_tool(a, st["tool"])
         if tool is None:
-            steps.append({"step": k, "note": st["note"], "tool": None, "decision": "no_tool", "reason": f"{st['tool']} 도구가 등록돼 있지 않다"})
-            return {"scenario": sid, "outcome": "no_surface", "steps": steps, "stopped_at": k, "control": None, "detected": detected}
+            out.append({"step": k, "note": st.get(note_key, ""), "tool": None, "decision": "no_tool", "reason": f"{st['tool']} 도구가 등록돼 있지 않다"})
+            return {"outcome": "no_surface", "steps": out, "stopped_at": k, "control": None, "detected": detected}
         for i in range(int(st.get("repeat") or 1)):
             req = {"tool": tool["name"], "action": "call", "args": dict(st.get("args") or {}), "context": dict(st.get("context") or {}),
                    "input_sources": list(st.get("input_sources") or [])}
@@ -77,13 +77,22 @@ def run(agent: dict[str, Any], sid: str, spec: dict[str, Any], approved: list[di
             if res["kind"] in policy.HIGH:
                 recent += 1
             detected = detected or "burst" in res["flags"]
-            steps.append({"step": k, "repeat": i + 1, "note": st["note"], "tool": tool["name"], "kind": res["kind"],
-                          "decision": res["decision"], "control": res["control"], "reason": res["reason"], "checks": res["checks"], "flags": res["flags"]})
+            out.append({"step": k, "repeat": i + 1, "note": st.get(note_key, ""), "tool": tool["name"], "kind": res["kind"],
+                        "decision": res["decision"], "control": res["control"], "reason": res["reason"], "checks": res["checks"], "flags": res["flags"]})
             if res["suspend"]:
                 a["status"] = "suspended"
             if res["decision"] != "allow":
-                return {"scenario": sid, "outcome": "blocked", "steps": steps, "stopped_at": k, "control": res["control"], "detected": detected}
-    return {"scenario": sid, "outcome": "damage", "steps": steps, "stopped_at": None, "control": None, "detected": detected}
+                return {"outcome": "blocked", "steps": out, "stopped_at": k, "control": res["control"], "detected": detected}
+    return {"outcome": "passed", "steps": out, "stopped_at": None, "control": None, "detected": detected}
+
+
+def run(agent: dict[str, Any], sid: str, spec: dict[str, Any], approved: list[dict[str, Any]], now=None) -> dict[str, Any]:
+    """원형 하나 → {scenario, outcome: blocked|damage|no_surface|runtime_na, stopped_at, control, detected, steps}."""
+    if not spec.get("runtime", True):
+        return {"scenario": sid, "outcome": "runtime_na", "note": spec.get("note", ""), "steps": [], "stopped_at": None, "control": None, "detected": False}
+    r = walk_steps(agent, spec.get("steps"), approved, now)
+    return {"scenario": sid, "outcome": "damage" if r["outcome"] == "passed" else r["outcome"],
+            "steps": r["steps"], "stopped_at": r["stopped_at"], "control": r["control"], "detected": r["detected"]}
 
 
 def run_all(agent: dict[str, Any], approved: list[dict[str, Any]], book: dict[str, Any] | None = None, now=None) -> dict[str, Any]:

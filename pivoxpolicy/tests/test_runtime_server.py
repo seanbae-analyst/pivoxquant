@@ -105,6 +105,45 @@ def test_end_to_end_register_decide_approve_suspend_redteam(srv):
     assert v["ok"] and v["checked"] > 5
 
 
+def test_cases_and_matrix_endpoints(srv):
+    base, _ = srv
+    h = login(base)
+    st, r, _ = call(base, "POST", "/admin/api/agents", {"name": "정산 에이전트", "owner": "재무팀", "profile": "trading",
+                                                        "env": {"tools": "pay", "untrusted_input": True}, "levels": ALL2}, headers=h)
+    aid = r["agent"]["id"]
+    # 공격 팀 — 모든 통제를 AI까지 켠 에이전트엔 결함이 없어야 한다
+    st, cs, _ = call(base, "POST", f"/admin/api/agents/{aid}/cases", {}, headers=h)
+    assert st == 200 and cs["summary"]["defect"] == 0 and cs["summary"]["friction"] >= 1
+    by = {r["id"]: r for r in cs["results"]}
+    assert by["news-injection"]["verdict"] == "good" and by["normal-settlement"]["verdict"] == "friction"
+    # 규제별 비교 — 통제 없음에서 결함이 가장 많고, 모두 AI까지에서 가장 적다
+    st, mx, _ = call(base, "POST", f"/admin/api/agents/{aid}/matrix", {"presets": ["none", "KR-2", "all"]}, headers=h)
+    assert st == 200 and [p["preset"] for p in mx["presets"]] == ["none", "KR-2", "all"]
+    cols = {p["preset"]: p for p in mx["presets"]}
+    assert cols["none"]["summary"]["defect"] > cols["all"]["summary"]["defect"]
+    assert call(base, "POST", f"/admin/api/agents/{aid}/matrix", {"presets": ["bogus"]}, headers=h)[0] == 400
+
+
+def test_cases_preview_levels_and_bad_bodies(srv):
+    """버그 회귀: 화면에서 고친 수준(저장 전)으로 돌릴 수 있어야 하고, 객체가 아닌 본문은 500 이 아니라 400."""
+    base, _ = srv
+    h = login(base)
+    st, r, _ = call(base, "POST", "/admin/api/agents", {"name": "정산 에이전트", "owner": "재무팀", "profile": "trading",
+                                                        "env": {"tools": "pay", "untrusted_input": True}, "levels": ALL2}, headers=h)
+    aid = r["agent"]["id"]
+    none = {c: 0 for c in ALL2}
+    st, cs, _ = call(base, "POST", f"/admin/api/agents/{aid}/cases", {"levels": none}, headers=h)
+    assert st == 200 and cs["preview"] is True and cs["summary"]["defect"] > 0          # 저장 안 한 '통제 없음' 으로 돌았다
+    st, a, _ = call(base, "GET", f"/admin/api/agents/{aid}", headers=h)
+    assert a["levels"] == ALL2                                                          # 저장된 수준은 그대로
+    st, mx, _ = call(base, "POST", f"/admin/api/agents/{aid}/matrix", {"presets": ["all"], "current_levels": none}, headers=h)
+    assert [p["preset"] for p in mx["presets"]] == ["current", "all"]
+    for path, body in ((f"/admin/api/agents/{aid}/cases", [1]), (f"/admin/api/agents/{aid}/matrix", {"presets": [[1]]}),
+                       (f"/admin/api/agents/{aid}/status", [1]), ("/admin/api/components", [1]),
+                       (f"/admin/api/agents/{aid}/cases", {"levels": {"inventory": 7}})):
+        assert call(base, "POST", path, body, headers=h)[0] == 400, path
+
+
 def test_agent_api_rejects_bad_input(srv):
     base, _ = srv
     assert call(base, "POST", "/v1/decide", {"tool": "x"})[0] == 401

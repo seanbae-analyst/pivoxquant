@@ -7,10 +7,13 @@
   var DEC_KO = { allow: "허용", deny: "거부", require_approval: "승인 필요" };
   var RT_KO = { blocked: "막힘", damage: "피해 발생", no_surface: "쓸 도구 없음", runtime_na: "런타임 밖" };
   var MODEL_KO = { blocked: "막힘", reduced: "피해 축소", damage: "피해 발생", no_surface: "공격면 없음" };
+  var OUT_KO = { blocked: "막힘", passed: "통과", no_surface: "공격면 없음" };
   var KIND_KO = { read: "조회", write: "쓰기", send: "외부 전송", exec: "코드 실행", pay: "송금·결제" };
-  var AUD_KO = { decision: "판정", admin: "관리", auth: "인증", approval: "승인", kill_switch: "즉시 중단", redteam: "레드팀" };
+  var AUD_KO = { decision: "판정", admin: "관리", auth: "인증", approval: "승인", kill_switch: "즉시 중단", redteam: "레드팀", cases: "공격 팀" };
   var OP_KO = { login: "로그인", register: "등록", update: "수정", status: "상태 변경", rotate_key: "키 회전", token: "토큰 발급", approve: "승인",
-                deny: "거부", redteam: "레드팀 실행", component_add: "구성요소 추가", component_delete: "구성요소 삭제" };
+                deny: "거부", redteam: "레드팀 실행", component_add: "구성요소 추가", component_delete: "구성요소 삭제", cases: "공격 팀 투입", matrix: "규제별 비교" };
+  function verdictLabel(kind, v) { return v === "good" ? (kind === "attack" ? "막음" : "처리됨") : v === "defect" ? "결함(뚫림)" : v === "friction" ? "업무 마찰" : "해당 없음"; }
+  function verdictShort(kind, v) { return v === "good" ? (kind === "attack" ? "막음" : "처리") : v === "defect" ? "결함" : v === "friction" ? "마찰" : "·"; }
   var TOOLS = [["read", "조회만"], ["write", "쓰기·실행"], ["pay", "송금·결제"]];
   var FLAGS = [["untrusted_input", "외부 입력을 읽는다"], ["open_components", "외부 구성요소를 들인다"], ["memory", "장기 메모리"], ["multi_agent", "다른 에이전트와 일한다"]];
   var csrf = "", meta = null, agents = [], cur = null, ctlName = {};
@@ -126,11 +129,7 @@
     if (!dead && a.status === "suspended") acts.appendChild(btn("재개", "", function () { setStatus("active"); }));
     if (!dead) acts.appendChild(btn("키 회전", "", rotate));
     if (!dead) acts.appendChild(btn("폐기", "", function () { if (window.confirm(a.name + " 을(를) 폐기한다. 키와 토큰이 모두 끊기고 되돌릴 수 없다.")) setStatus("revoked"); }));
-    var cbox = clear($("d-controls"));
-    meta.controls.forEach(function (c) {
-      cbox.appendChild(el("div", { cls: "ctl" }, [el("span", { cls: "nm", title: (c.help || {}).agent || "", text: c.num + ". " + c.name }),
-        seg("lv-" + c.id, [[0, "없음"], [1, "사람·계정"], [2, "AI까지"]], cur.levels[c.id] || 0, function (v) { cur.levels[c.id] = Number(v); })]));
-    });
+    renderControls();
     var env = clear($("d-env"));
     env.appendChild(el("span", { cls: "sub", text: "도구 권한" }));
     env.appendChild(seg("env-tools", TOOLS, cur.env.tools, function (v) { cur.env.tools = v; }));
@@ -141,8 +140,39 @@
     $("d-max").value = cur.limits.max_amount === null ? "" : cur.limits.max_amount;
     $("d-burst").value = cur.limits.max_high_risk_per_min;
     renderTools();
-    ["d-save", "d-redteam"].forEach(function (id) { $(id).disabled = dead; });
+    $("attack").hidden = false;
+    clear($("cases-out")); clear($("matrix-out")); say("cases-hint", ""); say("matrix-hint", "");
+    ["d-save", "d-redteam", "d-cases", "d-matrix", "d-apply-btn"].forEach(function (id) { $(id).disabled = dead; });
   }
+  function levelsDirty() {
+    var saved = (agents.filter(function (x) { return cur && x.id === cur.id; })[0] || {}).levels || {};
+    return meta.controls.some(function (c) { return Number(saved[c.id] || 0) !== Number((cur.levels || {})[c.id] || 0); });
+  }
+  function renderControls() {
+    var cbox = clear($("d-controls"));
+    meta.controls.forEach(function (c) {
+      cbox.appendChild(el("div", { cls: "ctl" }, [el("span", { cls: "nm", title: (c.help || {}).agent || "", text: c.num + ". " + c.name }),
+        seg("lv-" + c.id, [[0, "없음"], [1, "사람·계정"], [2, "AI까지"]], cur.levels[c.id] || 0, function (v) { cur.levels[c.id] = Number(v); })]));
+    });
+  }
+  function stepsDetails(steps, note) {
+    var det = el("details", null, [el("summary", { text: (steps.length || 0) + "단계" })]), ol = el("ol", { cls: "rt-steps" });
+    steps.forEach(function (st) {
+      ol.appendChild(el("li", { cls: "d-" + st.decision }, [el("b", { text: (DEC_KO[st.decision] || st.decision) + (st.repeat > 1 ? " ×" + st.repeat : "") }),
+        " " + st.note + (st.tool ? " (" + st.tool + ")" : "") + ": " + (st.reason || "")]));
+    });
+    if (note) ol.appendChild(el("li", { text: note }));
+    det.appendChild(ol);
+    return det;
+  }
+  // 규제 적용 — 프리셋 수준을 통제 세그먼트에 부어 넣는다(저장 전까지 미리보기)
+  $("d-apply-btn").addEventListener("click", function () {
+    var pre = (meta.presets || []).filter(function (p) { return p.id === $("d-apply").value; })[0];
+    if (!pre || !cur) return;
+    cur.levels = {}; meta.controls.forEach(function (c) { cur.levels[c.id] = Number((pre.levels || {})[c.id] || 0); });
+    renderControls();
+    say("d-saved", pre.label + " 수준을 부었다 — 저장을 누르면 반영된다.");
+  });
   function renderTools() {
     var t = clear($("d-tools"));
     t.appendChild(el("thead", null, [el("tr", null, ["도구", "종류", "구성요소", ""].map(function (h) { return el("th", { text: h }); }))]));
@@ -195,14 +225,7 @@
     var tb = el("tbody");
     j.results.forEach(function (r) {
       var diff = (r.outcome === "blocked") !== (r.model === "blocked") && r.outcome !== "runtime_na";
-      var det = el("details", null, [el("summary", { text: r.steps.length + "단계" })]);
-      var ol = el("ol", { cls: "rt-steps" });
-      r.steps.forEach(function (st) {
-        ol.appendChild(el("li", { cls: "d-" + st.decision }, [el("b", { text: (DEC_KO[st.decision] || st.decision) + (st.repeat > 1 ? " ×" + st.repeat : "") }),
-          " " + st.note + (st.tool ? " (" + st.tool + ")" : "") + ": " + (st.reason || "")]));
-      });
-      if (r.note) ol.appendChild(el("li", { text: r.note }));
-      det.appendChild(ol);
+      var det = stepsDetails(r.steps, r.note);
       tb.appendChild(el("tr", { cls: diff ? "diff" : "" }, [el("td", { text: r.title }),
         el("td", null, [el("span", { cls: "o " + r.model, text: MODEL_KO[r.model] || r.model })]),
         el("td", null, [el("span", { cls: "o " + r.outcome, text: (RT_KO[r.outcome] || r.outcome) + (r.detected ? " · 탐지" : "") })]),
@@ -210,6 +233,69 @@
     });
     t.appendChild(tb);
     out.appendChild(el("div", { cls: "tblwrap" }, [t]));
+  }
+
+  // ── 공격 팀 (현재 통제 그대로) ──
+  $("d-cases").addEventListener("click", function () {
+    var out = clear($("cases-out"));
+    out.appendChild(el("p", { cls: "fine", text: "공격 팀 투입 중…" }));
+    api("POST", "/admin/api/agents/" + cur.id + "/cases", levelsDirty() ? { levels: cur.levels } : {}).then(function (j) { renderCases(j); loadAudit(); })
+      .catch(function (err) { clear(out).appendChild(el("p", { cls: "err", text: err.message })); });
+  });
+  function renderCases(j) {
+    var out = clear($("cases-out")), s = j.summary;
+    out.appendChild(el("p", { cls: "sum", text: "결함 " + s.defect + " · 업무 마찰 " + s.friction + " · 정상 " + s.good + " · 해당 없음 " + s.na }));
+    if (j.preview) out.appendChild(el("p", { cls: "fine", text: "저장하지 않은 화면의 통제 수준으로 돌렸다. 에이전트에 반영하려면 저장을 누른다." }));
+    var t = el("table", { cls: "rt-t" });
+    t.appendChild(el("thead", null, [el("tr", null, ["케이스", "종류", "결과", "판정", "멈춘 곳", "단계"].map(function (h) { return el("th", { text: h }); }))]));
+    var tb = el("tbody");
+    j.results.forEach(function (r) {
+      tb.appendChild(el("tr", { cls: "v-" + r.verdict }, [el("td", { text: r.title }),
+        el("td", { cls: "sub", text: r.kind === "attack" ? "공격" : "정상 업무" }),
+        el("td", null, [el("span", { cls: "o " + r.outcome, text: OUT_KO[r.outcome] || r.outcome })]),
+        el("td", null, [el("span", { cls: "vd v-" + r.verdict, text: verdictLabel(r.kind, r.verdict) + (r.detected ? " · 탐지" : "") })]),
+        el("td", { text: r.control ? ctlName[r.control] + " · " + r.stopped_at + "단계" : "—" }),
+        el("td", null, [stepsDetails(r.steps)])]));
+    });
+    t.appendChild(tb);
+    out.appendChild(el("div", { cls: "tblwrap" }, [t]));
+  }
+
+  // ── 규제별 비교 (케이스 × 프리셋) ──
+  $("d-matrix").addEventListener("click", function () {
+    var ids = Array.prototype.slice.call($("reg-pick").querySelectorAll("input:checked")).map(function (i) { return i.value; });
+    if (!ids.length) { say("matrix-hint", "규제를 하나 이상 고른다."); return; }
+    say("matrix-hint", "");
+    var out = clear($("matrix-out"));
+    out.appendChild(el("p", { cls: "fine", text: "규제마다 돌리는 중…" }));
+    api("POST", "/admin/api/agents/" + cur.id + "/matrix", { presets: ids, current_levels: cur.levels }).then(function (j) { renderMatrix(j); loadAudit(); })
+      .catch(function (err) { clear(out).appendChild(el("p", { cls: "err", text: err.message })); });
+  });
+  function renderMatrix(j) {
+    var out = clear($("matrix-out")), t = el("table", { cls: "mx-t" });
+    var head = el("tr", null, [el("th", { cls: "cs", text: "케이스" })]);
+    var dirty = levelsDirty();
+    j.presets.forEach(function (p) {
+      head.appendChild(el("th", { cls: "pz" + (p.preset === "current" ? " cur" : ""), text: p.preset === "current" ? (dirty ? "지금 화면 (저장 안 함)" : "지금 설정") : p.label }));
+    });
+    t.appendChild(el("thead", null, [head]));
+    var tb = el("tbody");
+    j.cases.forEach(function (c) {
+      var tr = el("tr", { cls: "k-" + c.kind }, [el("td", { cls: "cs" }, [el("b", { text: c.title }), el("span", { cls: "sub", text: c.kind === "attack" ? " 공격" : " 정상 업무" })])]);
+      j.presets.forEach(function (p) {
+        var cell = p.cells[c.id] || {}, v = cell.verdict || "na";
+        tr.appendChild(el("td", { cls: "mx v-" + v, title: cell.control ? ctlName[cell.control] + "에서 멈춤" : "" }, [el("span", { cls: "vd v-" + v, text: verdictShort(c.kind, v) })]));
+      });
+      tb.appendChild(tr);
+    });
+    [["결함 합계", "defect"], ["업무 마찰 합계", "friction"]].forEach(function (row) {
+      var tr = el("tr", { cls: "mx-sum" }, [el("td", { cls: "cs", text: row[0] })]);
+      j.presets.forEach(function (p) { tr.appendChild(el("td", { cls: "mx", text: String(p.summary[row[1]]) })); });
+      tb.appendChild(tr);
+    });
+    t.appendChild(tb);
+    out.appendChild(el("div", { cls: "tblwrap" }, [t]));
+    out.appendChild(el("p", { cls: "fine", text: "공격이 통과하면 결함, 정상 업무가 막히면 업무 마찰이다. 규제가 셀수록 결함은 줄고 마찰은 는다. 샌드박스라 에이전트 상태는 바뀌지 않는다." }));
   }
 
   // ── 승인 대기 ──
@@ -306,6 +392,14 @@
     s.value = "all";
     meta.kinds.forEach(function (x) { k.appendChild(el("option", { value: x, text: KIND_KO[x] })); });
     meta.controls.forEach(function (c) { ctlName[c.id] = c.name; });
+    var ap = clear($("d-apply")), rp = clear($("reg-pick")), def = meta.matrix_default || [];
+    meta.presets.forEach(function (x) { ap.appendChild(el("option", { value: x.id, text: x.label })); });
+    ap.value = "KR-2";
+    meta.presets.forEach(function (x) {
+      var id = "rp-" + x.id, inp = el("input", { type: "checkbox", id: id, value: x.id });
+      if (def.indexOf(x.id) >= 0) inp.checked = true;
+      rp.appendChild(el("label", { cls: "rp-item", "for": id }, [inp, el("span", { text: x.label })]));
+    });
   }
   var poll = null;
   function start() {

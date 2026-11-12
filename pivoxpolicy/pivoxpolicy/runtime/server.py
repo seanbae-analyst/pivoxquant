@@ -28,8 +28,9 @@ from socketserver import ThreadingMixIn
 from typing import Any, Callable
 from wsgiref.simple_server import WSGIRequestHandler, WSGIServer, make_server
 
+from . import cases as cases_mod
 from . import redteam
-from .service import AuthError, PROFILE_TOOLS, Runtime, RuntimeError_
+from .service import AuthError, PROFILE_TOOLS, Runtime, RuntimeError_, clean_levels
 from .store import Store
 
 TEMPLATES = Path(__file__).resolve().parents[1] / "templates"
@@ -56,9 +57,11 @@ def _meta_payload() -> dict[str, Any]:
     """콘솔이 쓰는 고정 데이터 — 통제 설명 · 에이전트 종류 · 관할 프리셋 · 기본 도구 · 원형 이름."""
     from .. import sim
     p = sim.payload()
+    cs = cases_mod.load_cases()
     return {"controls": p["controls"], "profiles": p["agent_profiles"], "presets": [{k: x[k] for k in ("id", "label", "levels")} for x in p["presets"]],
             "profile_tools": PROFILE_TOOLS, "scenarios": [{"id": s["id"], "title": s["title"]} for s in p["scenarios"]],
-            "kinds": ["read", "write", "send", "exec", "pay"]}
+            "cases": [{k: c.get(k) for k in ("id", "kind", "title", "story", "scenario")} for c in cs],
+            "matrix_default": ["none", "US-2", "EU-2", "KR-2", "all"], "kinds": ["read", "write", "send", "exec", "pay"]}
 
 
 class App:
@@ -84,6 +87,8 @@ class App:
             ("POST", re.compile(r"^/admin/api/agents/(agt_[a-z0-9]+)/status$"), self.a(self.status)),
             ("POST", re.compile(r"^/admin/api/agents/(agt_[a-z0-9]+)/rotate$"), self.a(self.rotate)),
             ("POST", re.compile(r"^/admin/api/agents/(agt_[a-z0-9]+)/redteam$"), self.a(self.redteam)),
+            ("POST", re.compile(r"^/admin/api/agents/(agt_[a-z0-9]+)/cases$"), self.a(self.run_cases)),
+            ("POST", re.compile(r"^/admin/api/agents/(agt_[a-z0-9]+)/matrix$"), self.a(self.run_matrix)),
             ("GET", re.compile(r"^/admin/api/approvals$"), self.a(self.approvals)),
             ("POST", re.compile(r"^/admin/api/approvals/(apr_[0-9a-f]{16})$"), self.a(self.approve)),
             ("GET", re.compile(r"^/admin/api/audit$"), self.a(self.audit)), ("GET", re.compile(r"^/admin/api/audit/verify$"), self.a(self.verify)),
@@ -136,6 +141,15 @@ class App:
             return json.loads(raw.decode("utf-8") or "null")
         except (UnicodeDecodeError, json.JSONDecodeError):
             raise HttpError(400, "JSON 이 아니다") from None
+
+    def obj(self, environ) -> dict[str, Any]:
+        """본문이 JSON 객체(또는 비어 있음)일 때만 — 목록 · 숫자 본문이 handler 안에서 500 이 되지 않게."""
+        d = self.body(environ)
+        if d is None:
+            return {}
+        if not isinstance(d, dict):
+            raise HttpError(400, "본문은 JSON 객체여야 한다")
+        return d
 
     # ── 공개 ──
     def root(self, environ, sr):
@@ -240,10 +254,13 @@ class App:
         return [body]
 
     # ── 관리자 API ──
-    def meta(self, environ, sr):
+    def meta_data(self) -> dict[str, Any]:
         if self._meta is None:
             self._meta = _meta_payload()
-        return self.json(sr, self._meta)
+        return self._meta
+
+    def meta(self, environ, sr):
+        return self.json(sr, self.meta_data())
 
     def _with_keys(self, a: dict[str, Any]) -> dict[str, Any]:
         return {**a, "keys": self.rt.store.list_keys(a["id"])}
@@ -262,7 +279,7 @@ class App:
         return self.json(sr, self._with_keys(self.rt.update(aid, self.body(environ))))
 
     def status(self, environ, sr, aid):
-        d = self.body(environ) or {}
+        d = self.obj(environ)
         return self.json(sr, self._with_keys(self.rt.set_status(aid, d.get("status"), "admin", str(d.get("reason") or "")[:200])))
 
     def rotate(self, environ, sr, aid):
@@ -275,13 +292,43 @@ class App:
         self.rt.store.audit("redteam", aid, {"op": "redteam", "summary": res["summary"]})
         return self.json(sr, res)
 
+    def run_cases(self, environ, sr, aid):
+        """현재 통제로 공격 팀을 돌린다. levels 를 주면 저장하지 않은 화면의 수준으로 돌린다(샌드박스 — 저장 안 함)."""
+        a = self.rt.agent(aid)
+        d = self.obj(environ)
+        preview = "levels" in d
+        if preview:
+            a = cases_mod.with_levels(a, clean_levels(d["levels"]))
+        res = cases_mod.run_cases(a, approved=self.rt.store.components())
+        res["preview"] = preview
+        self.rt.store.audit("cases", aid, {"op": "cases", "summary": res["summary"], "preview": preview})
+        return self.json(sr, res)
+
+    def run_matrix(self, environ, sr, aid):
+        """케이스 × 규제 프리셋. current_levels 를 주면 맨 앞에 '지금 설정' 열을 붙인다."""
+        a = self.rt.agent(aid)
+        d = self.obj(environ)
+        by_id = {p["id"]: p for p in self.meta_data()["presets"]}
+        raw = d.get("presets")
+        ids = raw if isinstance(raw, list) and raw else self.meta_data()["matrix_default"]
+        if any(not isinstance(i, str) for i in ids):
+            raise HttpError(400, "presets 는 프리셋 id 문자열 목록")
+        chosen = [by_id[i] for i in dict.fromkeys(ids) if i in by_id][:10]
+        if not chosen:
+            raise HttpError(400, "알 수 없는 규제 프리셋")
+        if "current_levels" in d:
+            chosen = [{"id": "current", "label": "지금 설정", "levels": clean_levels(d["current_levels"])}, *chosen]
+        res = cases_mod.run_matrix(a, chosen, approved=self.rt.store.components())
+        self.rt.store.audit("cases", aid, {"op": "matrix", "presets": [p["preset"] for p in res["presets"]]})
+        return self.json(sr, res)
+
     def approvals(self, environ, sr):
         qs = environ.get("QUERY_STRING", "")
         st = "pending" if "status=pending" in qs else None
         return self.json(sr, {"approvals": self.rt.store.list_approvals(st)})
 
     def approve(self, environ, sr, aid):
-        d = self.body(environ) or {}
+        d = self.obj(environ)
         return self.json(sr, self.rt.decide_approval(aid, d.get("approve") is True, "admin"))
 
     def audit(self, environ, sr):
@@ -295,7 +342,7 @@ class App:
         return self.json(sr, {"components": self.rt.store.components()})
 
     def add_component(self, environ, sr):
-        d = self.body(environ) or {}
+        d = self.obj(environ)
         name, ver, sha = d.get("name"), d.get("version"), d.get("sha256") or None
         if not (isinstance(name, str) and 0 < len(name) <= 60 and isinstance(ver, str) and 0 < len(ver) <= 40):
             raise HttpError(400, "name(60자) · version(40자) 필요")
@@ -306,7 +353,7 @@ class App:
         return self.json(sr, {"components": self.rt.store.components()}, 201)
 
     def del_component(self, environ, sr):
-        d = self.body(environ) or {}
+        d = self.obj(environ)
         n = self.rt.store.del_component(str(d.get("name")), str(d.get("version")))
         self.rt.store.audit("admin", None, {"op": "component_delete", "name": d.get("name"), "version": d.get("version"), "removed": n})
         return self.json(sr, {"components": self.rt.store.components()})
