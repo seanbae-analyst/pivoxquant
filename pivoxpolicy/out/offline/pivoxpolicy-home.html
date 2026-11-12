@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8" />
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'none'; style-src 'unsafe-inline' https://cdn.jsdelivr.net; font-src https://cdn.jsdelivr.net data:; img-src data:; base-uri 'none'; form-action 'none'" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-VCLCsIJosdfsHSzbdDh+yJd8gxJtQGqA8sizNKlTo/Y='; style-src 'unsafe-inline' https://cdn.jsdelivr.net; font-src https://cdn.jsdelivr.net data:; img-src data:; base-uri 'none'; form-action 'none'" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>PivoxPolicy — AI 에이전트 시대의 금융 내부통제</title>
 <meta name="description" content="한국·미국·EU 규제 32건을 직원·계정과 AI 에이전트 두 갈래로 다시 판정하고, 공개된 AI 에이전트 사건 45건에 비춰 본 정책 연구." />
@@ -367,6 +367,93 @@ main{gap:0}
   .bars dt{grid-column:1/-1;margin-bottom:-6px}
 }
 
+/* 화면 넘김 (pager.js) — PivoxMap 의 표지 · 위 단계 줄(.pq-rail) · 넘김을 옮긴 것. 단계 표시는 네모(동그라미 없음).
+   html.paged 일 때만 한 화면씩 보인다. JS 가 없으면 이 규칙들은 단계 줄 · 넘김 막대를 숨기는 것 말고는 아무것도 하지 않는다. */
+[data-pager-rail],[data-pager-nav]{display:none}
+html.paged [data-pager-rail]:not([hidden]){display:flex}
+html.paged [data-pager-nav]:not([hidden]){display:flex}
+html.paged main[data-pager]>.pg[hidden]{display:none}
+
+/* 위 단계 줄 */
+.pg-railbar{position:sticky;top:0;z-index:20;align-items:center;justify-content:center;min-height:52px;margin:0 -24px;padding:0 24px;
+  border-top:1px solid var(--pq-ivory-line);border-bottom:1px solid var(--pq-ivory-line);background:rgba(5,5,5,0.92);backdrop-filter:blur(8px)}
+.pg-rail{display:flex;align-items:center;list-style:none;margin:0;padding:0;min-width:0}
+.pg-rail>li{display:flex;align-items:center;font-size:14px;color:var(--pq-ivory-faint);white-space:nowrap}
+.pg-rail>li+li::before{content:"";width:26px;height:1px;background:var(--pq-ivory-line-strong);margin:0 8px;flex:none}
+.pg-rail>li[data-status="done"]+li::before,.pg-rail>li[data-status="now"]::before{background:var(--pq-bronze-line)}
+.pg-rail-item{display:inline-flex;align-items:center;gap:8px;padding:5px 8px;border:0;border-radius:var(--pq-radius-ctl);background:transparent;
+  font:inherit;color:inherit;cursor:pointer;transition:background-color 200ms,color 200ms}
+.pg-rail-item:hover{background:var(--pq-card-veil-strong);color:var(--pq-ivory)}
+.pg-rail-item:focus-visible{outline:1px solid var(--pq-bronze);outline-offset:1px}
+.pg-rail-no{display:inline-flex;align-items:center;justify-content:center;flex:none;width:22px;height:22px;border-radius:5px;font-size:12px;font-weight:700;
+  font-variant-numeric:tabular-nums;box-shadow:inset 0 0 0 1px var(--pq-ivory-line-strong);transition:background-color 300ms,box-shadow 300ms,color 300ms}
+.pg-rail>li[data-status="done"]{color:var(--pq-ivory-dim)}
+.pg-rail>li[data-status="done"] .pg-rail-no{background:var(--pq-bronze-wash);box-shadow:inset 0 0 0 1px var(--pq-bronze-line);color:var(--pq-bronze)}
+.pg-rail>li[data-status="now"]{color:var(--pq-ivory);font-weight:600}
+.pg-rail>li[data-status="now"] .pg-rail-no{background:var(--pq-bronze);color:var(--pq-ink);box-shadow:none}
+.pg-rail-mobile{display:none;margin:0;padding:8px 0;border:0;background:transparent;font:inherit;font-size:14px;font-weight:600;color:var(--pq-ivory);font-variant-numeric:tabular-nums;cursor:pointer;white-space:pre}
+main[data-pager] h1[tabindex="-1"]:focus,main[data-pager] h2[tabindex="-1"]:focus{outline:none}
+.pg-kicker{position:relative;margin:0 0 26px;font-size:13px;font-weight:600;color:var(--pq-ivory-dim)}
+
+/* 이전 · 다음 */
+.pg-nav{position:sticky;bottom:0;z-index:20;align-items:center;justify-content:space-between;gap:12px;margin:40px -24px 0;padding:12px 24px;
+  border-top:1px solid var(--pq-ivory-line);background:rgba(5,5,5,0.94);backdrop-filter:blur(8px)}
+.pg-btn{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border:1px solid var(--pq-ivory-line-strong);border-radius:var(--pq-radius-ctl);
+  background:transparent;font:inherit;font-size:15px;font-weight:600;color:var(--pq-ivory);cursor:pointer;transition:background-color 200ms,border-color 200ms,color 200ms}
+.pg-btn:hover:not(:disabled){background:var(--pq-card-veil-strong)}
+.pg-btn:focus-visible{outline:1px solid var(--pq-bronze);outline-offset:2px}
+.pg-btn:disabled{opacity:.35;cursor:default}
+.pg-btn.next{border-color:var(--pq-bronze);background:var(--pq-bronze);color:var(--pq-ink)}
+.pg-btn.next:hover:not(:disabled){background:var(--pq-bronze-light);border-color:var(--pq-bronze-light)}
+.pg-count{font-size:14px;color:var(--pq-ivory-dim);font-variant-numeric:tabular-nums}
+
+/* 표지 */
+.pg-cover{position:relative;text-align:center}
+html.paged .pg-cover{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100dvh - 90px);cursor:pointer;user-select:none}
+html.paged.pg-at-cover .topbar{border-bottom-color:transparent}
+.pg-cover .pg-spot{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 80% 80% at 50% 50%,rgba(245,240,232,0.03) 0%,rgba(245,240,232,0.012) 40%,transparent 75%)}
+.pg-wordmark{position:relative;margin:0;font-size:min(clamp(2.6rem,6.4vw,5.6rem),11vw);font-weight:600;line-height:1;letter-spacing:0.18em;margin-right:-0.18em;
+  text-transform:uppercase;color:var(--pq-ivory);text-shadow:0 0 24px rgba(245,240,232,0.06);animation:pg-breath 4s ease-in-out infinite}
+.pg-wordmark span{color:var(--pq-bronze)}
+@keyframes pg-breath{0%,100%{transform:scale(1)}50%{transform:scale(1.006)}}
+.pg-q{position:relative;margin:34px auto 0;max-width:30ch;font-size:clamp(20px,2.4vw,28px);font-weight:700;line-height:1.4;letter-spacing:-0.02em;color:var(--pq-ivory)}
+.pg-sub{position:relative;margin:12px auto 0;max-width:46ch;font-size:16px;line-height:1.7;color:var(--pq-ivory-dim)}
+.pg-start{position:relative;display:inline-flex;align-items:center;gap:8px;margin-top:40px;font-size:15px;font-weight:600;color:var(--pq-bronze)}
+.pg-start:hover{color:var(--pq-ivory)}
+.pg-hint{position:relative;margin:14px 0 0;font-size:13px;color:var(--pq-ivory-faint)}
+.pg-links{position:relative;display:flex;flex-wrap:wrap;justify-content:center;gap:4px 18px;margin:18px 0 0;font-size:14px}
+.pg-links a{color:var(--pq-ivory-dim)}
+.pg-links a:hover{color:var(--pq-ivory)}
+html:not(.paged) .pg-start,html:not(.paged) .pg-hint{display:none}
+
+/* 넘김 화면의 머리: 왼쪽 칸 제목 대신 위에 크게 */
+html.paged main[data-pager]>.pg.sh{grid-template-columns:minmax(0,1fr);gap:18px;padding:34px 0 8px;border-top:0}
+html.paged main[data-pager]>.pg.sh>h2{font-size:clamp(24px,2.6vw,30px);font-weight:700;letter-spacing:-0.025em;color:var(--pq-ivory)}
+
+@media (max-width:1180px){
+  .pg-rail>li:not([data-status="now"]) .pg-rail-label{display:none}
+  .pg-rail>li+li::before{width:16px;margin:0 6px}
+}
+@media (max-width:760px){
+  .pg-railbar{min-height:46px;justify-content:flex-start}
+  .pg-rail{display:none}
+  .pg-rail-mobile{display:block}
+  .pg-railbar{position:sticky}
+  .pg-railbar[data-open="1"] .pg-rail{display:flex;flex-direction:column;align-items:stretch;position:absolute;top:100%;left:0;right:0;padding:8px 16px 12px;
+    background:rgba(5,5,5,0.98);border-bottom:1px solid var(--pq-ivory-line)}
+  .pg-railbar[data-open="1"] .pg-rail>li+li::before{display:none}
+  .pg-railbar[data-open="1"] .pg-rail .pg-rail-label{display:inline}
+  .pg-railbar[data-open="1"] .pg-rail-item{width:100%;min-height:44px;font-size:15px}
+  .pg-btn{padding:0 12px;font-size:14px}
+  .pg-btn .lab{display:none}
+}
+@media (max-width:560px){
+  .pg-railbar{margin:0 -16px;padding:0 16px}
+  .pg-nav{margin:32px -16px 0;padding:10px 16px}
+}
+@media (prefers-reduced-motion: reduce){.pg-wordmark{animation:none}}
+@media print{[data-pager-rail],[data-pager-nav]{display:none!important}html.paged main[data-pager]>.pg[hidden]{display:block!important}}
+
 </style>
 </head>
 <body>
@@ -379,17 +466,22 @@ main{gap:0}
 <a href="pivoxpolicy-sim.html">모의 테스트</a><a href="pivoxpolicy-experiment.html">실험</a><a href="pivoxpolicy-dashboard.html">대시보드</a><a href="#method">방법</a>
 </nav>
 </header>
+<nav class="pg-railbar" data-pager-rail aria-label="화면"></nav>
 
-<main id="main">
+<main id="main" data-pager>
 
-<header class="masthead" id="top">
-<p class="kicker">연구 노트 <time datetime="2026-11-12T12:05:04Z">2026년 11월 12일</time> 기준</p>
-<h1>AI 에이전트 시대, 금융회사 내부통제는 안전한가</h1>
-<p class="deck">규제가 요구하는 통제를 두 갈래로 나눠 읽었다. 직원과 계정에 거는 통제가 하나, 같은 통제를 AI 에이전트에 거는 것이 또 하나다. 한국과 미국, EU의 문서 32건을 이렇게 다시 판정하고, 공개된 AI 에이전트 사건 45건에 비춰 봤다.</p>
-<p class="go"><a class="btn btn-primary" href="pivoxpolicy-sim.html">모의 테스트 열기</a><a class="more" href="pivoxpolicy-dashboard.html">대시보드에서 문서와 조문 보기</a></p>
-</header>
+<section class="pg pg-cover" id="top" data-title="표지" aria-labelledby="h-top">
+<div class="pg-spot" aria-hidden="true"></div>
+<p class="pg-kicker">연구 노트 · <time datetime="2026-11-12T12:13:29Z">2026년 11월 12일</time> 기준</p>
+<p class="pg-wordmark" aria-hidden="true">Pivox<span>Policy</span></p>
+<h1 class="pg-q" id="h-top">AI 에이전트 시대, 금융회사 내부통제는 안전한가</h1>
+<p class="pg-sub">규제가 요구하는 통제를 두 갈래로 나눠 읽었다. 직원과 계정에 거는 통제가 하나, 같은 통제를 AI 에이전트에 거는 것이 또 하나다. 한국과 미국, EU의 문서 32건을 이렇게 다시 판정하고, 공개된 AI 에이전트 사건 45건에 비춰 봤다.</p>
+<a class="pg-start" href="#finding" data-pager-start>시작하기 <span aria-hidden="true">→</span></a>
+<p class="pg-links"><a href="pivoxpolicy-sim.html">모의 테스트</a><a href="pivoxpolicy-experiment.html">실험</a><a href="pivoxpolicy-dashboard.html">대시보드</a></p>
+<p class="pg-hint">화면을 누르면 넘어간다</p>
+</section>
 
-<section class="sh lead" id="finding" aria-labelledby="h-sum">
+<section class="pg sh lead" id="finding" data-title="요약" aria-labelledby="h-sum">
 <h2 id="h-sum">요약</h2>
 <div class="lead-grid">
 <div class="summary">
@@ -405,7 +497,7 @@ main{gap:0}
 </div>
 </section>
 
-<section class="sh" id="sim" aria-labelledby="h-sim">
+<section class="pg sh" id="sim" data-title="모의 테스트" aria-labelledby="h-sim">
 <h2 id="h-sim">모의 테스트</h2>
 <div>
 <p class="body">회사의 통제 수준과 에이전트 환경을 고르면 두 가지가 바로 계산된다. 공격 원형 12개가 단계마다 어떤 통제 앞에서 멈추는지, 그리고 공개 사건 45건이 그 설정이었다면 어떻게 끝났을지. 가상 회사 데모 케이스 25개가 들어 있어 발표 중에 넘겨 가며 쓸 수 있다.</p>
@@ -430,7 +522,7 @@ main{gap:0}
 </div>
 </section>
 
-<section class="sh" id="method" aria-labelledby="h-method">
+<section class="pg sh" id="method" data-title="방법" aria-labelledby="h-method">
 <h2 id="h-method">방법</h2>
 <div>
 <div class="tblwrap"><table class="method"><thead><tr><th scope="col" class="n"></th><th scope="col">단계</th><th scope="col">하는 일</th><th scope="col">누가</th><th scope="col">지금</th></tr></thead><tbody><tr><td class="n">1</td><th scope="row">수집</th><td>규제기관, 표준기구, 보안 회사의 공개 피드를 읽는다.</td><td class="who">자동</td><td class="now">피드 79곳, 항목 916건</td></tr><tr><td class="n">2</td><th scope="row">후보</th><td>AI 에이전트와 관련된 새 규제와 가이드라인을 점수로 골라 둔다.</td><td class="who">자동</td><td class="now">반영 대기 16건</td></tr><tr><td class="n">3</td><th scope="row">등록</th><td>후보 중 연구에 넣을 문서를 고르고 원문을 고정한다.</td><td class="who">사람</td><td class="now">문서 32건(규범 문서 23건)</td></tr><tr><td class="n">4</td><th scope="row">판정</th><td>서로 결과를 보지 않는 두 팀이 통제 7개를 직원·계정과 AI 두 층으로 판정하고, 갈린 칸만 조정한다.</td><td class="who">AI 코더 두 팀</td><td class="now">κ 문서 0.92(직원·계정), 1.00(AI) / 사건 0.96</td></tr><tr><td class="n">5</td><th scope="row">매트릭스</th><td>관할마다 통제별로 가장 센 문서의 수준을 모은다.</td><td class="who">계산</td><td class="now">간극 16칸</td></tr><tr><td class="n">6</td><th scope="row">모의 테스트</th><td>공격 원형을 단계별로 돌리고, 공개 사건을 반사실로 다시 계산한다.</td><td class="who">계산</td><td class="now">원형 12개, 사건 45건, 이력 2줄</td></tr></tbody></table></div>
@@ -438,7 +530,7 @@ main{gap:0}
 </div>
 </section>
 
-<section class="sh" id="limits" aria-labelledby="h-lim">
+<section class="pg sh" id="limits" data-title="한계" aria-labelledby="h-lim">
 <h2 id="h-lim">한계</h2>
 <ul class="lim">
 <li>법률 자문이 아니다. 공개된 문서와 사건 자료로 무엇이 요구되는지, 그리고 공개된 증거가 어느 수준인지를 잴 뿐이다. 회사가 실제로 통제를 갖췄는지는 알 수 없다.</li>
@@ -449,6 +541,11 @@ main{gap:0}
 </section>
 
 </main>
+<div class="pg-nav" data-pager-nav>
+<button type="button" class="pg-btn prev" data-pager-prev><span aria-hidden="true">←</span><span class="lab">이전</span></button>
+<span class="pg-count" data-pager-count></span>
+<button type="button" class="pg-btn next" data-pager-next><span data-pager-next-label>다음</span><span aria-hidden="true">→</span></button>
+</div>
 
 <footer class="site">
 <span>PivoxPolicy 정책 연구. 법률 자문이 아니다.</span>
@@ -456,5 +553,179 @@ main{gap:0}
 </footer>
 
 </div>
+<script>/* 화면 넘김 (2026-11-12) — PivoxMap 의 표지 · 위 단계 줄 · 화면 넘김(components/Cover.tsx · Rail.tsx · Screen.tsx)을 정적 페이지에 옮긴 것.
+   <main data-pager> 안의 <section class="pg" data-title="…" id="…"> 를 한 화면씩 보여 준다. 첫 화면이 .pg-cover 면 표지다.
+   - 앞으로 가면 오른쪽에서 28px, 뒤로 가면 왼쪽에서 들어온다(380ms, cubic-bezier(.2,.75,.2,1)). 움직임 줄이기 설정이면 움직이지 않는다.
+   - 표지: 누르거나 Enter · Space · → · ↓ · 휠을 내리면 다음. 다른 화면: ← → · PageUp/PageDown · 좌우로 쓸기 · 단계 줄 · 이전/다음 버튼.
+   - 주소의 #id 가 지금 화면이다(공유 · 새로고침). 브라우저 뒤로 가기도 화면을 따른다.
+   - JS 가 없으면 아무것도 숨기지 않는다(모든 화면이 세로로 이어진다 — 인쇄 · 검색 · 화면 낭독기).
+   외부 라이브러리 없음. CSP script-src 'self'(배포) · sha256(오프라인 사본)로 돈다. */
+(function () {
+  "use strict";
+  var main = document.querySelector("main[data-pager]");
+  if (!main) return;
+  var pages = Array.prototype.slice.call(main.children).filter(function (x) { return x.classList && x.classList.contains("pg"); });
+  if (pages.length < 2) return;
+  var SLIDE_PX = 28, SLIDE_MS = 380, EASE = "cubic-bezier(.2,.75,.2,1)";
+  var INTERACTIVE = "a, button, input, textarea, select, summary, label, [contenteditable], .tblwrap";
+  var root = document.documentElement;
+  var rail = document.querySelector("[data-pager-rail]");
+  var nav = document.querySelector("[data-pager-nav]");
+  var hasCover = pages[0].classList.contains("pg-cover");
+  var cur = -1;
+
+  function reduced() { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
+  function indexOfId(id) { for (var i = 0; i < pages.length; i++) if (pages[i].id === id) return i; return -1; }
+  function fromHash() { var i = indexOfId(decodeURIComponent((location.hash || "").slice(1))); return i < 0 ? 0 : i; }
+
+  // 단계 줄: 표지는 넣지 않는다(PivoxMap 처럼 표지는 단계 밖)
+  var steps = pages.map(function (p, i) { return { i: i, title: p.getAttribute("data-title") || ("" + (i + 1)) }; }).filter(function (s) { return !(hasCover && s.i === 0); });
+  function buildRail() {
+    if (!rail) return;
+    var ol = document.createElement("ol");
+    ol.className = "pg-rail";
+    steps.forEach(function (s, k) {
+      var li = document.createElement("li");
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "pg-rail-item";
+      b.setAttribute("data-i", s.i);
+      var n = document.createElement("span"); n.className = "pg-rail-no"; n.setAttribute("aria-hidden", "true"); n.textContent = String(k + 1);
+      var l = document.createElement("span"); l.className = "pg-rail-label"; l.textContent = s.title;
+      b.appendChild(n); b.appendChild(l);
+      b.addEventListener("click", function () { go(s.i); });
+      li.appendChild(b);
+      ol.appendChild(li);
+    });
+    // 좁은 폭: '2 / 5 · 명령 흐름' 한 줄이 버튼이 되어 같은 목록을 세로로 연다(PivoxMap Rail 과 같다)
+    var mob = document.createElement("button");
+    mob.type = "button";
+    mob.className = "pg-rail-mobile";
+    mob.setAttribute("aria-expanded", "false");
+    ol.id = "pg-rail-list";
+    mob.setAttribute("aria-controls", ol.id);
+    mob.addEventListener("click", function () {
+      var open = rail.getAttribute("data-open") === "1";
+      rail.setAttribute("data-open", open ? "0" : "1");
+      mob.setAttribute("aria-expanded", open ? "false" : "true");
+    });
+    rail.appendChild(mob);
+    rail.appendChild(ol);
+  }
+  function paintRail() {
+    if (!rail) return;
+    var at = -1;
+    Array.prototype.forEach.call(rail.querySelectorAll(".pg-rail > li"), function (li, k) {
+      var i = steps[k].i, b = li.firstChild;
+      li.setAttribute("data-status", i < cur ? "done" : (i === cur ? "now" : "todo"));
+      if (i === cur) { b.setAttribute("aria-current", "step"); at = k; } else b.removeAttribute("aria-current");
+    });
+    rail.hidden = hasCover && cur === 0;
+    var mob = rail.querySelector(".pg-rail-mobile");
+    if (mob && at >= 0) mob.textContent = (at + 1) + " / " + steps.length + " · " + steps[at].title + "  ▾";
+    rail.setAttribute("data-open", "0");
+    if (mob) mob.setAttribute("aria-expanded", "false");
+  }
+  function paintNav() {
+    if (!nav) return;
+    var prev = nav.querySelector("[data-pager-prev]"), next = nav.querySelector("[data-pager-next]"), cnt = nav.querySelector("[data-pager-count]");
+    nav.hidden = hasCover && cur === 0;
+    if (prev) { prev.disabled = cur <= (hasCover ? 1 : 0); }
+    if (next) {
+      var last = cur >= pages.length - 1;
+      next.disabled = last;
+      var lab = next.querySelector("[data-pager-next-label]");
+      if (lab) lab.textContent = last ? "끝" : (pages[cur + 1].getAttribute("data-title") || "다음");
+    }
+    if (cnt) {
+      var k = steps.map(function (s) { return s.i; }).indexOf(cur);
+      cnt.textContent = k < 0 ? "" : (k + 1) + " / " + steps.length;
+    }
+  }
+  function slideIn(el, dir) {
+    if (!el || reduced() || typeof el.animate !== "function") return;
+    var host = el.parentElement;
+    if (host) host.style.overflowX = "clip";
+    var a = el.animate([{ opacity: 0, transform: "translateX(" + (dir * SLIDE_PX) + "px)" }, { opacity: 1, transform: "none" }], { duration: SLIDE_MS, easing: EASE });
+    var release = function () { if (host) host.style.overflowX = ""; };
+    if (a.finished) a.finished.then(release, release); else a.onfinish = release;
+  }
+  function show(i, opts) {
+    opts = opts || {};
+    i = Math.max(0, Math.min(pages.length - 1, i));
+    if (i === cur) return;
+    var dir = i > cur ? 1 : -1, first = cur < 0;
+    pages.forEach(function (p, k) { p.hidden = k !== i; });
+    cur = i;
+    root.classList.toggle("pg-at-cover", hasCover && i === 0);
+    paintRail(); paintNav();
+    if (!first) { window.scrollTo(0, 0); slideIn(pages[i], dir); }
+    if (opts.push) {
+      try { history.pushState({ pg: i }, "", "#" + pages[i].id); } catch (e) { /* file:// 등 */ }
+    }
+    if (!first && !opts.noFocus) {
+      var h = pages[i].querySelector("h1, h2");
+      if (h) { h.setAttribute("tabindex", "-1"); h.focus({ preventScroll: true }); }
+    }
+  }
+  function go(i) { show(i, { push: true }); }
+  function next() { if (cur < pages.length - 1) go(cur + 1); }
+  function prev() { if (cur > (hasCover ? 1 : 0)) go(cur - 1); else if (hasCover && cur === 1) go(0); }
+
+  // 키
+  window.addEventListener("keydown", function (e) {
+    if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
+    var t = e.target;
+    if (t && t.closest && t.closest("input, textarea, select, [contenteditable]")) return;
+    var onCover = hasCover && cur === 0;
+    if (onCover && ["Enter", " ", "ArrowRight", "ArrowDown", "PageDown"].indexOf(e.key) >= 0) {
+      if (t && t.closest && t.closest(INTERACTIVE) && e.key !== "ArrowRight" && e.key !== "ArrowDown") return;
+      e.preventDefault(); next(); return;
+    }
+    if (e.key === "ArrowRight" || e.key === "PageDown") { e.preventDefault(); next(); }
+    else if (e.key === "ArrowLeft" || e.key === "PageUp") { e.preventDefault(); prev(); }
+  });
+  // 표지: 누르기 · 휠
+  if (hasCover) {
+    pages[0].addEventListener("click", function (e) { if (!(e.target.closest && e.target.closest("a, button, input, textarea, select"))) next(); });
+    window.addEventListener("wheel", function (e) { if (cur === 0 && e.deltaY > 30) next(); }, { passive: true });
+  }
+  // 좌우로 쓸기(가로로 넘치는 표 · 그림 위에서는 하지 않는다)
+  var sx = 0, sy = 0, st = 0, skip = false;
+  main.addEventListener("touchstart", function (e) {
+    var p = e.touches[0]; sx = p.clientX; sy = p.clientY; st = Date.now();
+    skip = !!(e.target.closest && e.target.closest(".tblwrap, .fr, .mt-box, .xt, textarea, input"));
+  }, { passive: true });
+  main.addEventListener("touchend", function (e) {
+    if (skip) return;
+    var p = e.changedTouches[0], dx = p.clientX - sx, dy = p.clientY - sy;
+    if (Date.now() - st < 700 && Math.abs(dx) > 70 && Math.abs(dx) > 1.6 * Math.abs(dy)) { if (dx < 0) next(); else prev(); }
+  }, { passive: true });
+  // 뒤로 가기 · 주소 바꾸기
+  window.addEventListener("popstate", function () { show(fromHash(), { noFocus: false }); });
+  window.addEventListener("hashchange", function () { show(fromHash()); });
+  // 이전 · 다음 버튼 · 표지의 '시작하기'
+  if (nav) {
+    var pb = nav.querySelector("[data-pager-prev]"), nb = nav.querySelector("[data-pager-next]");
+    if (pb) pb.addEventListener("click", prev);
+    if (nb) nb.addEventListener("click", next);
+  }
+  Array.prototype.forEach.call(document.querySelectorAll("[data-pager-start]"), function (a) {
+    a.addEventListener("click", function (e) { e.preventDefault(); next(); });
+  });
+  // 화면 안의 '#다른화면' 링크도 넘김으로
+  main.addEventListener("click", function (e) {
+    var a = e.target.closest && e.target.closest('a[href^="#"]');
+    if (!a) return;
+    var i = indexOfId(a.getAttribute("href").slice(1));
+    if (i >= 0) { e.preventDefault(); go(i); }
+  });
+
+  buildRail();
+  root.classList.add("paged");
+  if (rail) rail.removeAttribute("aria-hidden");
+  show(fromHash(), { noFocus: true });
+})();
+</script>
 </body>
 </html>
