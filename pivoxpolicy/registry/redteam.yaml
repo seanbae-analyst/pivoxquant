@@ -53,7 +53,7 @@ scenarios:
 
   multi_agent_cascade:
     steps:
-      - {note: 뚫린 다른 에이전트가 일을 넘긴다, tool: high, on_behalf_of: agt_compromised, args: {amount: 4000000, target: attacker-account}, input_sources: [{kind: agent, trusted: false}]}
+      - {note: 침해된 다른 에이전트가 일을 위임한다, tool: high, on_behalf_of: agt_compromised, args: {amount: 4000000, target: attacker-account}, input_sources: [{kind: agent, trusted: false}]}
 
   approval_exploitation:
     steps:

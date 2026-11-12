@@ -320,7 +320,7 @@ obligations:
     requires: 사람 승인 체계를 두고, 승인자가 과부하로 형식적 승인을 하지 않게 한다.
     control: human_approval
     layer: agent
-    note: ⑭ 인적 개입 과부하 방지는 '승인 의존' 판정(승인자가 지쳐서 또는 속아서 승인하면 실행)이 가리키는 위험과 같다.
+    note: ⑭ 인적 개입 과부하 방지는 '승인 의존' 판정(승인 피로나 기망으로 승인되면 실행)이 가리키는 위험과 같다.
     owner: AI 담당 임원
 
   - id: fsiagent-15-16

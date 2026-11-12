@@ -27,7 +27,7 @@ JURS = ("KR", "US", "EU", "INTL", "OTHER")
 AI_ROLE_KO = {
     "attacker_used_ai_agent": "공격자가 에이전트 사용",
     "attacker_used_ai_tooling": "공격자가 AI 도구 보조",
-    "victim_ai_system_exploited": "피해자의 AI 시스템이 뚫림",
+    "victim_ai_system_exploited": "피해 측 AI 시스템 침해",
     "ai_vulnerability_disclosed": "AI 취약점 공개",
     "suspected": "AI 관여 추정",
     "ai_system_misbehaved": "AI 시스템이 스스로 일탈(평가·연구 중)",

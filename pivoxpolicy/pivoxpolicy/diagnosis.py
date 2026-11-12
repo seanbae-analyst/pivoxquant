@@ -43,9 +43,15 @@ def _controls() -> list[dict[str, Any]]:
 
 
 def _git_rev() -> str:
+    """HEAD 짧은 해시. 코드 · 레지스트리에 커밋 안 된 수정이 있으면 '+dirty' 를 붙인다(그 해시로는 재현되지 않는다)."""
+    here = Path(__file__).resolve().parent
     try:
-        r = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=Path(__file__).resolve().parent, capture_output=True, text=True, timeout=3)
-        return r.stdout.strip() or "알 수 없음"
+        r = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=here, capture_output=True, text=True, timeout=3)
+        rev = r.stdout.strip()
+        if not rev:
+            return "알 수 없음"
+        d = subprocess.run(["git", "status", "--porcelain", "--", ".", "../registry"], cwd=here, capture_output=True, text=True, timeout=5)
+        return rev + ("+dirty" if d.stdout.strip() else "")
     except (OSError, subprocess.SubprocessError):
         return "알 수 없음"
 

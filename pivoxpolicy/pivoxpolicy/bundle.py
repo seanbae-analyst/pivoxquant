@@ -19,7 +19,8 @@ from pathlib import Path
 
 from .registry import OUT_DIR
 
-PAGES = {"index.html": "pivoxpolicy-home.html", "dashboard.html": "pivoxpolicy-dashboard.html", "sim.html": "pivoxpolicy-sim.html"}
+PAGES = {"index.html": "pivoxpolicy-home.html", "dashboard.html": "pivoxpolicy-dashboard.html", "sim.html": "pivoxpolicy-sim.html",
+         "experiment.html": "pivoxpolicy-experiment.html"}
 EXTRA = ("simulation.md", "pending-regulations.md")
 CSP = ("default-src 'none'; script-src {hashes}; style-src 'unsafe-inline' https://cdn.jsdelivr.net; "
        "font-src https://cdn.jsdelivr.net data:; img-src data:; base-uri 'none'; form-action 'none'")

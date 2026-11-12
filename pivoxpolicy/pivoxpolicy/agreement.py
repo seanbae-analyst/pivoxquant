@@ -395,7 +395,7 @@ def render_incident_agreement(first: dict[str, list[str]], second: dict[str, dic
         "",
         f"공통 사건 {n_inc}건 × 통제 7 = 셀 {len(a)}. 관측 일치율 {f(k.observed_agreement)} · κ {f(k.kappa)} ({k.landis_koch()})",
         "",
-        "'둘 다 참' 은 두 코더가 모두 이 통제의 실패를 본 사건 수 — 코더에 덜 기대는 보수적인 숫자다.",
+        "'둘 다 참' 은 두 코더가 모두 이 통제의 실패를 본 사건 수 — 코더 한 명의 판단에 덜 의존하는 보수적인 숫자다.",
         "",
         "| 통제 | 1차 참 | 2차 참 | 둘 다 참 | 일치율 | κ |",
         "|---|---|---|---|---|---|",

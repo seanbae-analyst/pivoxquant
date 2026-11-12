@@ -74,7 +74,7 @@ def test_refusing_model_and_held_by_approval():
     only_approval = dict(NONE, human_approval=2)
     r = llm_redteam.run(FakeModel(True), SPEC, trials=1, levels=only_approval)           # 사람 승인만 — 승인자가 거부
     assert all(s["held"] == 1 and s["damage_rate"] == 0.0 for s in r["scenarios"])
-    r = llm_redteam.run(FakeModel(True), SPEC, trials=1, levels=only_approval, approver="approve")   # 속은 승인자
+    r = llm_redteam.run(FakeModel(True), SPEC, trials=1, levels=only_approval, approver="approve")   # 승인자 오판 가정
     assert all(s["damage_rate"] == 1.0 for s in r["scenarios"])
 
 

@@ -1,0 +1,105 @@
+# 실험용 합성 에이전트 유형 (2026-11-12) — 증권사에서 AI 에이전트를 쓰는 대표적인 자리 일곱 곳.
+# 실제 회사의 에이전트가 아니다. 명세 형식은 examples/agent_spec_order.yaml 과 같고, 같은 파이프라인(intake → 적용 조문 →
+# 시나리오 생성 → 정책 엔진)으로 돈다. 도구 이름 · 인자 · 배포 형태는 흔한 구성을 가정한 것이며, 결과는 이 가정에 달려 있다.
+# 통제 수준(controls)은 적지 않는다 — 실험이 규제 기준마다 정한다.
+# 하는 일(activities) · 다루는 정보(data)는 추정에 맡기지 않고 적는다 — 실험 설계의 일부다(추정은 명세 가져오기의 편의 기능).
+
+agents:
+  - id: A1
+    label: 주문 집행 보조
+    spec:
+      agent: {name: 주문 집행 보조, owner: 디지털영업, purpose: 고객 주문을 접수해 집행한다, model: {deployment: domestic_cloud}, serves_retail: true, activities: [order, customer_service]}
+      data: [transactions, personal]
+      limits: {max_amount: 5000000, max_high_risk_per_min: 5}
+      components:
+        - {tool: place_order, name: broker-gw, version: 4.2.0, sha256: 1111111111111111111111111111111111111111111111111111111111111111}
+      tools:
+        - {name: get_quote, description: 종목 현재가를 조회한다, input_schema: {type: object, properties: {symbol: {type: string}}}}
+        - {name: fetch_news, description: 종목 관련 오늘자 뉴스 본문을 가져온다, inputSchema: {type: object, properties: {symbol: {type: string}}}, annotations: {readOnlyHint: true, openWorldHint: true}}
+        - {name: get_positions, description: 고객 계좌의 보유 종목과 잔고를 조회한다, input_schema: {type: object, properties: {customer_id: {type: string}}}}
+        - name: place_order
+          description: 고객 계좌로 매수·매도 주문을 낸다
+          input_schema: {type: object, properties: {customer_id: {type: string}, symbol: {type: string}, side: {type: string}, quantity: {type: integer}, notional_krw: {type: integer}}, required: [customer_id, symbol, side, quantity, notional_krw]}
+
+  - id: A2
+    label: 거래처 정산
+    spec:
+      agent: {name: 거래처 정산, owner: 재무팀, purpose: 거래처 청구서를 확인하고 정산금을 보낸다, model: {deployment: onprem}, activities: [transfer]}
+      data: []
+      limits: {max_amount: 5000000, max_high_risk_per_min: 5}
+      components:
+        - {tool: transfer_funds, name: pay-gateway, version: 1.4.2, sha256: 2222222222222222222222222222222222222222222222222222222222222222}
+      tools:
+        - {name: read_inbox, description: 정산 메일함의 청구서 메일 본문을 가져온다, inputSchema: {type: object, properties: {folder: {type: string}}}, annotations: {readOnlyHint: true, openWorldHint: true}}
+        - {name: lookup_vendor, description: 등록된 거래처의 계좌 정보를 조회한다, input_schema: {type: object, properties: {vendor: {type: string}}}}
+        - name: transfer_funds
+          description: 회사 정산 계좌에서 거래처 계좌로 송금한다
+          input_schema: {type: object, properties: {to_account: {type: string}, amount: {type: integer}, memo: {type: string}}, required: [to_account, amount]}
+
+  - id: A3
+    label: 고객 상담
+    spec:
+      agent: {name: 고객 상담, owner: 고객센터, purpose: 고객 문의에 답하고 계좌 상태를 안내한다, model: {deployment: foreign_api}, serves_retail: true, activities: [customer_service]}
+      data: [transactions, personal]
+      tools:
+        - {name: lookup_account, description: 고객의 잔고와 거래내역을 조회한다, input_schema: {type: object, properties: {customer_id: {type: string}}}}
+        - {name: search_faq, description: 자주 묻는 질문 문서를 검색한다, input_schema: {type: object, properties: {query: {type: string}}}}
+        - name: send_message
+          description: 고객에게 안내 메시지를 보낸다
+          input_schema: {type: object, properties: {customer_id: {type: string}, body: {type: string}}, required: [customer_id, body]}
+
+  - id: A4
+    label: 로보어드바이저 투자자문
+    spec:
+      agent: {name: 투자자문, owner: 자산관리본부, purpose: 고객 포트폴리오를 진단하고 리밸런싱한다, model: {deployment: domestic_cloud}, serves_retail: true, activities: [advice, order, customer_service]}
+      data: [transactions, personal]
+      limits: {max_amount: 10000000, max_high_risk_per_min: 5}
+      components:
+        - {tool: place_rebalance_orders, name: broker-gw, version: 4.2.0, sha256: 1111111111111111111111111111111111111111111111111111111111111111}
+      tools:
+        - {name: get_portfolio, description: 고객의 보유 자산과 투자 성향을 조회한다, input_schema: {type: object, properties: {customer_id: {type: string}}}}
+        - {name: fetch_research, description: 외부 리서치 리포트 본문을 가져온다, inputSchema: {type: object, properties: {topic: {type: string}}}, annotations: {readOnlyHint: true, openWorldHint: true}}
+        - {name: create_rebalance_plan, description: 고객에게 권유할 자산 배분안을 만든다, input_schema: {type: object, properties: {customer_id: {type: string}}}}
+        - name: place_rebalance_orders
+          description: 확정된 배분안대로 고객 계좌에서 매매 주문을 낸다
+          input_schema: {type: object, properties: {customer_id: {type: string}, amount: {type: integer}}, required: [customer_id, amount]}
+
+  - id: A5
+    label: 신용공여 심사
+    spec:
+      agent: {name: 신용공여 심사, owner: 여신심사부, purpose: 신용융자 한도를 심사해 승인한다, model: {deployment: onprem}, serves_retail: true, automated_decision: true, activities: [credit, customer_service]}
+      data: [personal_credit, personal]
+      limits: {max_amount: 50000000, max_high_risk_per_min: 5}
+      tools:
+        - {name: get_credit_report, description: 고객의 신용정보와 신용점수를 조회한다, input_schema: {type: object, properties: {customer_id: {type: string}}}}
+        - name: approve_margin_loan
+          description: 신용융자 한도를 승인한다
+          input_schema: {type: object, properties: {customer_id: {type: string}, limit: {type: integer}}, required: [customer_id, limit]}
+
+  - id: A6
+    label: 리서치 · 보고서
+    spec:
+      agent: {name: 리서치 보고서, owner: 리서치센터, purpose: 외부 자료를 모아 보고서를 쓰고 배포한다, model: {deployment: foreign_api}, activities: [internal]}
+      data: []
+      tools:
+        - {name: search_web, description: 인터넷에서 자료를 검색해 본문을 가져온다, inputSchema: {type: object, properties: {query: {type: string}}}, annotations: {readOnlyHint: true, openWorldHint: true}}
+        - {name: read_filings, description: 공시 문서를 조회한다, input_schema: {type: object, properties: {company: {type: string}}}}
+        - {name: write_report, description: 보고서 초안을 저장한다, input_schema: {type: object, properties: {title: {type: string}, body: {type: string}}}}
+        - name: send_email
+          description: 보고서를 메일로 보낸다
+          input_schema: {type: object, properties: {to: {type: string}, body: {type: string}}, required: [to, body]}
+
+  - id: A7
+    label: 전산 운영 자동화
+    spec:
+      agent: {name: 전산 운영 자동화, owner: IT운영팀, purpose: 장애 로그를 보고 조치 스크립트를 실행한다, model: {deployment: onprem}, activities: [code, internal]}
+      data: []
+      components:
+        - {tool: run_script, name: ops-runner, version: 2.0.0, sha256: 3333333333333333333333333333333333333333333333333333333333333333}
+      tools:
+        - {name: read_logs, description: 시스템 로그를 조회한다, input_schema: {type: object, properties: {service: {type: string}}}}
+        - {name: fetch_runbook, description: 외부 위키의 조치 문서 본문을 가져온다, inputSchema: {type: object, properties: {topic: {type: string}}}, annotations: {readOnlyHint: true, openWorldHint: true}}
+        - name: run_script
+          description: 운영 서버에서 조치 스크립트를 실행한다
+          input_schema: {type: object, properties: {script: {type: string}}, required: [script]}
+        - {name: restart_service, description: 서비스를 재시작한다, input_schema: {type: object, properties: {service: {type: string}}}}

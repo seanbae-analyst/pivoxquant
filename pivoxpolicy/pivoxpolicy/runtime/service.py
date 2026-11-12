@@ -108,6 +108,8 @@ def clean_tools(tools: Any) -> list[dict[str, Any]]:
         if t.get("kind") not in policy.KINDS:
             raise RuntimeError_(f"도구 kind 는 {policy.KINDS}")
         item: dict[str, Any] = {"name": name, "kind": t["kind"]}
+        if t.get("high_risk") is True:                  # 고객에 대한 결정 등 — 종류와 상관없이 고위험(사람 승인 · 빈도 탐지 대상)
+            item["high_risk"] = True
         for k in ("amount_arg", "customer_arg"):        # 한도 · 고객 범위 검사가 볼 인자 이름(없으면 amount · customer)
             v = t.get(k)
             if v:

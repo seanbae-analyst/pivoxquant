@@ -24,8 +24,12 @@ def test_offline_pages_are_self_contained(tmp_path):
     (tmp_path / "index.html").write_text('<!doctype html><html><head><meta charset="utf-8" /></head><body><a href="./">홈</a>'
                                          '<a href="sim.html">s</a><a href="dashboard.html#matrix">d</a><a href="offline/pivoxpolicy-sim.html" download>o</a></body></html>', encoding="utf-8")
     (tmp_path / "dashboard.html").write_text('<!doctype html><html><head><meta charset="utf-8" /></head><body></body></html>', encoding="utf-8")
+    from pivoxpolicy import experiment
+    (tmp_path / "experiment.html").write_text(experiment.page(experiment.run()), encoding="utf-8")
     names = {p.name for p in bundle.build(out_dir=tmp_path)}
-    assert {"pivoxpolicy-home.html", "pivoxpolicy-dashboard.html", "pivoxpolicy-sim.html", "simulation.md"} <= names
+    assert {"pivoxpolicy-home.html", "pivoxpolicy-dashboard.html", "pivoxpolicy-sim.html", "pivoxpolicy-experiment.html", "simulation.md"} <= names
+    exp = (tmp_path / "offline" / "pivoxpolicy-experiment.html").read_text(encoding="utf-8")
+    assert "<script" not in exp and 'href="pivoxpolicy-sim.html"' in exp and "script-src 'none'" in exp
     page = (tmp_path / "offline" / "pivoxpolicy-sim.html").read_text(encoding="utf-8")
     assert not re.search(r"<script\s+src=", page) and page.count("<script>") == 3
     csp = re.search(r'http-equiv="Content-Security-Policy" content="([^"]+)"', page).group(1)

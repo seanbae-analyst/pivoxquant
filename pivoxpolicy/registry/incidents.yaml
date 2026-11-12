@@ -3,7 +3,7 @@
 # 이 세션이 45건 source_url 을 다시 받아 전부 HTTP 200 확인(source_checked). 내용 대조는 아님 — 요약은 finder 가 쓴 것.
 #
 # ai_role: attacker_used_ai_agent(공격자가 에이전트로 공격) · attacker_used_ai_tooling(AI 도구 보조) ·
-#          victim_ai_system_exploited(피해자의 AI 시스템이 뚫림) · ai_vulnerability_disclosed(취약점 공개) ·
+#          victim_ai_system_exploited(피해 측 AI 시스템 침해) · ai_vulnerability_disclosed(취약점 공개) ·
 #          suspected(AI 관여 추정, 확정 아님) · ai_system_misbehaved(AI 시스템이 스스로 일탈 — 평가·연구 중) ·
 #          none(AI 관여 없음 — 비교 사례). 2026-11-11: finder 가 none 하나로 묶은 둘을 나눴다
 # evidence_level: primary(정부·회사 원문) · vendor(보안업체 분석) · press(보도) — 요약 수치는 이 수준을 넘어 쓰지 않는다
@@ -90,7 +90,7 @@ incidents:
     related_controls: [least_privilege, human_approval]
     source_url: "https://www.giskard.ai/knowledge/how-grok-got-prompt-injected-an-x-user-drained-150-000-from-an-ai-wallet"
     source_checked: "2026-11-12 HTTP 200"
-    summary: "xAI Grok 과 연동된 Bankr 크립토 트레이딩 에이전트가 프롬프트 인젭션에 속아 DRB 토큰 약 $174~204k 를 공격자에게 전송, 협상으로 80~88% 반환."
+    summary: "xAI Grok 과 연동된 Bankr 크립토 트레이딩 에이전트가 프롬프트 인젝션으로 조작되어 DRB 토큰 약 $174~204k 를 공격자에게 전송, 협상으로 80~88% 반환."
     notes: "2026-11-12: source_url 을 OECD AI 사건 모음(헤드라인 목록뿐 — 코더 둘 다 thin)에서 Giskard 분석으로 바꿈 → evidence press→vendor. 옛 출처 https://oecd.ai/en/incidents/2026-05-04-4a73. date=사건·보도일. OECD AIM 집계(200); SlowMist 분석(medium)은 403. 금융 에이전트의 '출처 기반 이체 차단' 통제 사례."
 
   - id: hexagonalrodent-nk-web3-ai-tooling-2026-04
@@ -160,7 +160,7 @@ incidents:
     related_controls: [vendors, least_privilege, kill_switch]
     source_url: "https://composio.dev/blog/composio-may-2026-security-incident"
     source_checked: "2026-11-11 HTTP 200"
-    summary: "에이전트 대신 외부 서비스 토큰을 보관하는 Composio 가 침해되어 API 키 5,241·GitHub OAuth 5,001 등 1만 건 이상 노출 — 브로커 한 곳이 뚫리면 연결된 모든 에이전트의 하류 접근권이 넘어가는 구조."
+    summary: "에이전트 대신 외부 서비스 토큰을 보관하는 Composio 가 침해되어 API 키 5,241·GitHub OAuth 5,001 등 1만 건 이상 노출 — 브로커 한 곳이 침해되면 연결된 모든 에이전트의 하류 접근권이 넘어가는 구조."
     notes: "date=회사 공지일(메타 2026-05-21). 숫자는 2차 집계(tracker) — 회사 공지 본문 대조 필요."
 
   - id: anthropic-gtg-1002-2025-11

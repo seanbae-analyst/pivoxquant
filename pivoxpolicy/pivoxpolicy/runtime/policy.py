@@ -75,7 +75,8 @@ def decide(agent: dict[str, Any], req: dict[str, Any], ctx: dict[str, Any] | Non
     kind = (tool or {}).get("kind") or (req.get("kind") if req.get("kind") in KINDS else "write")
     # 등록부에 없는 도구는 무엇을 하는지 모른다 — 요청이 스스로 '조회' 라고 신고해도 믿지 않고 고위험으로 다룬다
     unknown = tool is None
-    high = kind in HIGH or unknown
+    # 고객에 대한 결정(신용공여 승인 · 한도 설정 등)은 종류가 '쓰기' 여도 등록부에서 high_risk 로 표시하면 고위험으로 다룬다
+    high = kind in HIGH or unknown or bool((tool or {}).get("high_risk"))
 
     def out(decision: str, control: str | None, reason: str, suspend: bool = False) -> dict[str, Any]:
         for c in CONTROL_ORDER:            # 판정에 오지 않은 통제도 표에 남긴다

@@ -309,6 +309,9 @@ def cmd_site(_: argparse.Namespace) -> int:
     for q in sim_mod.build():   # 대시보드 메뉴의 '모의 테스트' 가 가리키는 페이지 — 같이 낸다
         print(f"wrote {q}")
     print(f"wrote {landing_mod.build()}")   # 첫 화면 — 모의 테스트 이력까지 반영한 뒤에
+    from . import experiment as experiment_mod
+    for q in experiment_mod.build():         # 실험 노트(에이전트 유형 × 규제 기준)와 원자료
+        print(f"wrote {q}")
     from . import bundle as bundle_mod
     for q in bundle_mod.build():             # 오프라인 사본 — 위 세 페이지를 파일 하나씩으로
         print(f"wrote {q}")
@@ -405,6 +408,18 @@ def cmd_llm_redteam(a: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_experiment(a: argparse.Namespace) -> int:
+    """에이전트 유형 × 규제 기준 실험 → out/experiment.html · out/experiment/(results.csv · summary.md · results.json · manifest.json)."""
+    from . import experiment as experiment_mod
+    paths = experiment_mod.build(Path(a.out)) if a.out else experiment_mod.build()
+    R = experiment_mod.run()
+    for s in experiment_mod.findings(R):
+        print(f"- {s}")
+    for p in paths:
+        print(f"wrote {p}")
+    return 0
+
+
 def cmd_report(_: argparse.Namespace) -> int:
     controls, docs, codings = _load_all()
     for p in report_mod.write_all(docs, controls, codings):
@@ -470,13 +485,16 @@ def build_parser() -> argparse.ArgumentParser:
     dg.add_argument("--out", default="out/diagnosis", help="보고서를 쓸 폴더")
     dg.add_argument("--company", help="보고서 머리말에 넣을 회사 이름")
     dg.set_defaults(fn=cmd_diagnose)
+    ex = sub.add_parser("experiment", help="실험: 합성 에이전트 유형 × 규제 기준(명문 · 확장 해석 · 자율규범 포함) → 논문 표 · 그림 · 원자료")
+    ex.add_argument("--out", help="출력 폴더(기본 out/)")
+    ex.set_defaults(fn=cmd_experiment)
     lr = sub.add_parser("llm-redteam", help="실제 LLM 으로 회사 에이전트의 프롬프트 · 도구를 돌려 숨은 지시를 따르는지와 런타임이 막는지를 잰다"
                                             " (ANTHROPIC_API_KEY 필요, 비용 발생)")
     lr.add_argument("spec", help="명세 YAML · JSON (agent.system_prompt 가 있으면 그것을 쓴다)")
     lr.add_argument("--trials", type=int, default=3, help="시나리오마다 반복 횟수")
     lr.add_argument("--levels", default="spec", choices=["spec", "all", "none", "binding_explicit", "binding_interpretive", "guideline"],
                     help="통제 수준: 명세의 지금 수준 · 모두 · 없음 · 적용 조문 모드")
-    lr.add_argument("--approver", default="refuse", choices=["refuse", "approve"], help="사람 승인 요청에 승인자가 거부할지 · 승인할지(속은 승인자)")
+    lr.add_argument("--approver", default="refuse", choices=["refuse", "approve"], help="사람 승인 요청에 승인자가 거부할지 · 승인할지(approve = 승인자 오판 가정)")
     lr.add_argument("--model", default="claude-opus-5-5")
     lr.add_argument("--effort", default="medium", choices=["low", "medium", "high", "xhigh", "max"])
     lr.add_argument("--max-calls", type=int, default=60, help="모델 호출 상한(비용 안전장치)")

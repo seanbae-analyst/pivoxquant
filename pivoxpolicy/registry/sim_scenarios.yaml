@@ -138,12 +138,12 @@ scenarios:
   - id: ai_credentials
     basis: ["OWASP ASI03 Identity and Privilege Abuse"]
     title: AI 연동·자격증명 탈취 → 업체 침해·토큰·노출된 AI 인프라
-    summary: 에이전트 연동 업체가 뚫리거나, AI 서비스 토큰이 털리거나, 노출된 AI 엔드포인트·패널이 넘어간다. 내 쪽에서 막을 수 없는 경우가 많다 — 피해를 줄이는 싸움이다.
+    summary: 에이전트 연동 업체가 침해되거나, AI 서비스 토큰이 탈취되거나, 노출된 AI 엔드포인트·패널이 넘어간다. 내 쪽에서 막을 수 없는 경우가 많다 — 피해를 줄이는 싸움이다.
     requires: []
     impact:
       fixed: 연동된 데이터 대량 조회·AI 자원 도용
     stages:
-      - title: 업체·연동이 뚫리거나 AI 인프라가 노출된다
+      - title: 업체·연동이 침해되거나 AI 인프라가 노출된다
         desc: 연동 업체 침해, 인포스틸러의 토큰 수집, 인터넷에 열린 AI 엔드포인트·관리 패널.
         checks:
           - {control: inventory, layer: agent, effect: limit, why: 에이전트·AI 엔드포인트 목록이 있어 열린 채 잊힌 것이 없다}
@@ -224,8 +224,8 @@ scenarios:
 
   - id: multi_agent_cascade
     basis: ["OWASP ASI07 Insecure Inter-Agent Communication", "OWASP ASI08 Cascading Failures"]
-    title: 에이전트 간 위임 연쇄 → 하나가 속으면 줄줄이 따라간다
-    summary: 외부와 닿는 에이전트 하나가 속아, 동료 에이전트에게 일을 넘긴다. 받는 쪽은 동료의 요청이라 믿는다.
+    title: 에이전트 간 위임 연쇄 → 한 에이전트의 침해가 위임을 따라 전파된다
+    summary: 외부와 닿는 에이전트 하나가 조작되어, 동료 에이전트에게 일을 넘긴다. 받는 쪽은 동료의 요청이라 믿는다.
     requires: [multi_agent]
     impact:
       by_tools: {read: 여러 시스템의 정보가 한꺼번에 새어 나감, write: 여러 시스템 설정이 연쇄로 바뀜, pay: 연쇄 위임으로 송금}
@@ -239,7 +239,7 @@ scenarios:
           - {control: unique_id, layer: agent, effect: prevent, why: 에이전트마다 신원이 있어 요청을 누가 보냈는지 확인하고, 허락된 위임만 받는다}
           - {control: least_privilege, layer: agent, effect: limit, why: 받는 에이전트가 할 수 있는 일이 좁다}
       - title: 연쇄 끝에서 고위험 행위
-        desc: 처음 속은 에이전트에게는 없던 권한이 쓰인다.
+        desc: 처음 조작된 에이전트에게는 없던 권한이 쓰인다.
         checks:
           - {control: human_approval, layer: agent, effect: prevent, why: 고위험 행위는 사람이 승인해야 실행된다}
       - title: 퍼지는 중
@@ -251,7 +251,7 @@ scenarios:
 
   - id: approval_exploitation
     basis: ["OWASP ASI09 Human-Agent Trust Exploitation"]
-    title: 사람 승인 노리기 → 승인 피로·꾸민 요약으로 승인을 받아 낸다
+    title: 사람 승인 절차 악용 → 승인 피로·왜곡된 요약으로 승인을 얻는다
     summary: 사람 승인이 있어도, 하루 수십 건 승인 요청 속에 무해해 보이게 꾸민 위험 행위가 섞인다.
     requires: [untrusted_input]
     impact:

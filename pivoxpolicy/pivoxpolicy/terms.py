@@ -47,6 +47,11 @@ MODE_LONG = {"binding_explicit": "강제 조문을 문언대로 읽는다",
              "guideline": "자율 가이드라인과 평가기준까지 넣는다"}
 STATUS = {"met": "충족", "partial": "사람·계정 층만 충족", "unmet": "미충족", "offline": "런타임 외(증적 점검)", "conflict": "구성상 저촉"}
 FIX = "단일 보완 통제"
+# 공격 유형(시나리오 원형). sim_scenarios.yaml 의 id 와 같다.
+SCENARIO = {"prompt_injection": "간접 프롬프트 주입", "approval_exploitation": "승인 절차 악용", "insider_misuse": "내부자 권한 남용",
+            "rogue_agent": "자율 실행 일탈", "multi_agent_cascade": "에이전트 간 위임 전파", "supply_chain": "공급망 변조",
+            "ai_credentials": "자격증명 유출", "cross_customer_leak": "고객 간 정보 노출", "tool_poisoning": "도구 설명 오염",
+            "memory_poisoning": "기억 오염", "code_execution": "코드 실행 이탈", "ai_attacker": "AI 이용 침투"}
 CONFLICT = "구성상 저촉"
 
 
@@ -83,4 +88,5 @@ def as_dict() -> dict[str, Any]:
     """콘솔이 받는 용어 묶음."""
     return {"level": LEVEL, "attack": ATTACK, "attack_short": ATTACK_SHORT, "benign": BENIGN, "benign_short": BENIGN_SHORT,
             "summary": SUMMARY, "link": LINK, "link_long": LINK_LONG, "stop": STOP, "stop_long": STOP_LONG, "mode": MODE,
-            "mode_long": MODE_LONG, "status": STATUS, "fix": FIX, "conflict": CONFLICT}
+            "mode_long": MODE_LONG, "status": STATUS, "fix": FIX, "conflict": CONFLICT,
+            "scenario": SCENARIO}

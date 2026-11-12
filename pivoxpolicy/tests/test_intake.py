@@ -100,3 +100,21 @@ def test_policy_uses_registered_amount_and_customer_args():
     assert policy.decide(a, {"tool": "po", "args": {"notional_krw": 5000}, "input_sources": U}, ctx)["control"] == "least_privilege"
     assert policy.decide(a, {"tool": "po", "args": {"notional_krw": "5000"}, "input_sources": U}, ctx)["control"] == "least_privilege"
     assert policy.decide(a, {"tool": "acct", "args": {"customer_id": "c-2"}, "context": {"customer": "c-1"}}, ctx)["control"] == "least_privilege"
+
+
+def test_decision_tools_are_high_risk():
+    """신용공여 승인 · 한도 설정 같은 고객에 대한 결정은 종류가 쓰기여도 고위험 — 사람 승인 · 빈도 탐지 대상."""
+    spec = {"agent": {"name": "신용공여 심사", "model": {"deployment": "onprem"}, "automated_decision": True},
+            "tools": [{"name": "get_credit_report", "input_schema": {"type": "object", "properties": {"customer_id": {"type": "string"}}}},
+                      {"name": "approve_margin_loan", "description": "신용융자 한도를 승인한다",
+                       "input_schema": {"type": "object", "properties": {"customer_id": {"type": "string"}, "limit": {"type": "integer"}}}}]}
+    r = intake.build(spec)
+    t = {x["name"]: x for x in r["tools"]}["approve_margin_loan"]
+    assert t["kind"] == "write" and t["high_risk"] and t["amount_arg"] == "limit" and "고위험" in t["why"]
+    assert "credit" in r["compliance"]["activities"]
+    a = {"id": "agt_t", "status": "active", **r["agent"], "levels": dict(ALL2)}
+    ctx = {"auth": "token", "recent_high_risk": 0, "approval": None, "approved_components": []}
+    d = policy.decide(a, {"tool": "approve_margin_loan", "args": {"customer_id": "c-1", "limit": 100}, "context": {"customer": "c-1"},
+                          "input_sources": [{"kind": "user", "trusted": True}]}, ctx)
+    assert d["decision"] == "require_approval" and d["high"]
+    assert any(c["id"].startswith("gen-insider-approve_margin_loan") for c in r["cases"])
