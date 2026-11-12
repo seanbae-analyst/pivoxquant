@@ -255,7 +255,10 @@
     });
   }
   function stepsDetails(steps, note) {
-    var det = el("details", null, [el("summary", { text: (steps.length || 0) + "단계" })]), ol = el("ol", { cls: "rt-steps" });
+    // 단계 수 = 서로 다른 단계 번호(반복 · 승인 재판정은 한 단계). 판정 기록이 더 많으면 함께 적는다(예: 1단계 · 판정 24회).
+    var uniq = {}; steps.forEach(function (st) { uniq[st.step] = 1; });
+    var n = Object.keys(uniq).length, lab = n + "단계" + (steps.length > n ? " · 판정 " + steps.length + "회" : "");
+    var det = el("details", null, [el("summary", { text: lab })]), ol = el("ol", { cls: "rt-steps" });
     steps.forEach(function (st) {
       ol.appendChild(el("li", { cls: "d-" + st.decision }, [el("b", { text: (DEC_KO[st.decision] || st.decision) + (st.repeat > 1 ? " ×" + st.repeat : "") }),
         " " + st.note + (st.tool ? " (" + st.tool + ")" : "") + ": " + (st.reason || "")]));

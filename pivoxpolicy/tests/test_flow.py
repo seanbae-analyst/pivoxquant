@@ -38,7 +38,8 @@ def test_nodes_mirror_engine_checks(F):
         want = [c[2] for c in flow._norm(last["checks"])]
         ia = r.get("if_approved")
         if last["decision"] == "require_approval" and ia and ia.get("steps"):
-            after = [c[2] for c in flow._norm(flow._last_per_step(ia["steps"])[-1]["checks"])]
+            rec = next(x for x in ia["steps"] if x["step"] == last["step"] and x.get("repeat") == last.get("repeat") and not x.get("approved"))
+            after = [c[2] for c in flow._norm(rec["checks"])]
             want = want[:rt["at"]] + after[rt["at"]:]
         assert _states(flow.track(r, "기준")) == want
         n += 1
@@ -92,3 +93,21 @@ def test_diagnosis_report_has_flows():
     h = diagnosis.to_html(D)
     assert h.count('<div class="fr-row">') == len(open_) > 0 and "<script" not in h
     assert "명령 흐름이다" in diagnosis.to_markdown(D)
+
+
+def test_held_route_uses_the_same_call_after_approval():
+    """승인 뒤 재판정이 다음 단계까지 가도, 노선의 승인 관문 뒤 칸은 멈췄던 그 호출의 재판정이다(다른 호출의 칸을 섞지 않는다)."""
+    from pivoxpolicy.runtime import cases as C
+    case = next(c for c in C.load_cases() if c["id"] == "poisoned-tool")
+    agent = {"id": "a", "status": "active", "expires_at": None,
+             "tools": [{"name": "market_news", "kind": "read"},
+                       {"name": "transfer", "kind": "pay", "component": {"name": "pay-gw", "version": "1.4.2", "sha256": "a" * 64}}],
+             "env": {"tools": "pay", "untrusted_input": True, "multi_agent": True}, "limits": {"max_amount": 5000000, "max_high_risk_per_min": 5},
+             "levels": {"inventory": 0, "vendors": 0, "unique_id": 0, "least_privilege": 2, "human_approval": 2, "audit_trail": 0, "kill_switch": 0}}
+    r = C.run_case(agent, case, [{"name": "pay-gw", "version": "1.4.2", "sha256": "a" * 64}])
+    held = flow._last_per_step(r["steps"])[-1]
+    assert held["decision"] == "require_approval" and r["if_approved"]["outcome"] == "blocked"
+    same = next(x for x in r["if_approved"]["steps"] if x["step"] == held["step"] and not x.get("approved"))
+    rt = flow.route(r)
+    assert rt["nodes"][5:] == [c[2] for c in flow._norm(same["checks"])][5:]
+    assert rt["end"] == "cond_block" and rt["alive_end"] == "dead" and flow.end_word(r, rt)[0] == "차단"

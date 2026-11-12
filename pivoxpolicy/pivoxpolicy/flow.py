@@ -84,7 +84,11 @@ def route(res: dict[str, Any]) -> dict[str, Any] | None:
     end = {"allow": "exec", "deny": "block", "require_approval": "approval"}.get(last.get("decision"), "block")
     ia = res.get("if_approved")
     if end == "approval" and ia and ia.get("steps"):
-        after = [r for _, _, r, _ in _norm(_last_per_step(ia["steps"])[-1].get("checks"))]
+        # 승인 뒤 재판정 중 '같은 호출'(같은 단계 · 같은 반복, 승인 표시 줄 제외)을 쓴다. 승인 뒤 다음 단계로 넘어가 거기서
+        # 막혔더라도 이 노선은 멈췄던 호출 하나를 그린다 — 끝 단어는 전체 결과(차단), 다음 단계는 단계별 판정에 적힌다.
+        same = [x for x in ia["steps"] if x["step"] == last["step"] and x.get("repeat") == last.get("repeat") and not x.get("approved")]
+        rec = same[0] if same else _last_per_step(ia["steps"])[-1]
+        after = [r for _, _, r, _ in _norm(rec.get("checks"))]
         alive = "cond"
         for i in range(stop, 7):          # 승인 관문 뒤
             nodes[i] = after[i]
@@ -92,6 +96,8 @@ def route(res: dict[str, Any]) -> dict[str, Any] | None:
             if after[i] == "block":
                 alive = "dead"
         end = "cond_exec" if ia.get("outcome") == "passed" else "cond_block"
+        if end == "cond_block":
+            alive = "dead"
     return {"nodes": nodes, "segs": segs, "end": end, "at": stop, "alive_end": alive}
 
 

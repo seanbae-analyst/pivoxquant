@@ -11,7 +11,8 @@ FILES = ["pivoxpolicy/templates/runtime-ui.js", "pivoxpolicy/templates/runtime.h
          "pivoxpolicy/runtime/cases.py", "pivoxpolicy/runtime/llm_redteam.py", "registry/obligations/kr-securities.yaml",
          "pivoxpolicy/intake.py", "pivoxpolicy/experiment.py", "pivoxpolicy/cli.py", "pivoxpolicy/templates/sim.html",
          "registry/runtime_cases.yaml", "registry/redteam.yaml", "registry/sim_scenarios.yaml", "registry/sim_cases.yaml",
-         "registry/experiment_agents.yaml", "README.md", "pivoxpolicy/flow.py", "pivoxpolicy/runtime/redteam.py"]
+         "registry/experiment_agents.yaml", "README.md", "pivoxpolicy/flow.py", "pivoxpolicy/runtime/redteam.py",
+         "pivoxpolicy/templates/runtime.css"]                                 # CSS content: 로 붙는 말도 화면 글자다
 RETIRED = ["사람 승인에 기댐", "승인 기댐", "결함(뚫림)", "업무 마찰", "처방", "설계 충돌", "위반 소지", "칸 해부", "공격 팀", "규제 공백",
            "가이드라인 미이행", "뚫리", "뚫린", "뚫림", "기댐", "바꿔치기", "속은 승인자", "받아 내", "몰래", "털리", "속음", "속거나"]
 

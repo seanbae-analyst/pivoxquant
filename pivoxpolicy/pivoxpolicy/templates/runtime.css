@@ -88,7 +88,7 @@ input:focus-visible,select:focus-visible{outline:2px solid var(--pq-bronze);outl
 .apply-row select{max-width:230px}
 #d-apply-note{margin:2px 0 0}
 
-/* 공격 팀 · 규제 비교 */
+/* 시나리오 시험 · 규제별 비교 */
 .attack{margin-top:24px;padding-top:22px;border-top:1px solid var(--pq-ivory-line-strong)}
 .attack h4{margin:26px 0 8px;font-size:15px}
 .attack h4:first-child{margin-top:0}
@@ -136,12 +136,12 @@ tr.v-defect td:first-child{box-shadow:inset 2px 0 0 var(--pq-ivory)}
 .rt-t details,.rt-t details:last-of-type{border:0}
 .rt-t summary{padding:0;font-size:12.5px;font-weight:500;color:var(--pq-ivory-soft);justify-content:flex-start;gap:6px}
 .rt-t summary::after{width:auto}
-/* 사람 승인에 기댐 — 막힌 것도 뚫린 것도 아닌, 사람에게 맡긴 칸 */
-.v-held .vd,td.v-held .vd{color:var(--pq-ivory-soft);text-decoration:underline solid var(--pq-ivory-line-strong);text-underline-offset:3px}
+/* 승인 의존 — 자동 차단도 미차단도 아닌, 사람 승인 단계에서만 멈춘 칸 */
+.v-held .vd,td.v-held .vd{color:var(--pq-ivory-soft);text-decoration:none}
 .o.held{color:var(--pq-ivory-soft)}
 .rp-item input,.reg-pick input{accent-color:var(--pq-bronze)}
 
-/* 칸 해부 */
+/* 셀 상세 */
 .mx-btn{display:inline-flex;align-items:center;justify-content:center;min-width:52px;min-height:30px;padding:0 8px;font:inherit;background:none;border:0;border-radius:6px;cursor:pointer}
 .mx-btn:hover{background:var(--pq-bronze-wash)}
 .mx-btn:focus-visible{outline:2px solid var(--pq-bronze);outline-offset:1px}
@@ -158,7 +158,7 @@ tr.v-defect td:first-child{box-shadow:inset 2px 0 0 var(--pq-ivory)}
 .chip.lv2{color:var(--pq-bronze)}
 .chip.stop{box-shadow:inset 0 0 0 1px var(--pq-ivory-mid)}
 .chip.fix{box-shadow:inset 0 0 0 1.5px var(--pq-bronze)}
-.chip.fix::after{content:"처방";margin-left:4px;font-size:11px;color:var(--pq-bronze)}
+.chip.fix::after{content:"보완";margin-left:4px;font-size:11px;color:var(--pq-bronze)}
 .basis{margin:10px 0 0;padding:10px 0 2px;border-top:1px solid var(--pq-ivory-line)}
 .basis-h{margin:0;font-size:13.5px;color:var(--pq-ivory-soft)}
 .basis-h b{color:var(--pq-ivory)}

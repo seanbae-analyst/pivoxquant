@@ -56,15 +56,25 @@ CONFLICT = "구성상 저촉"
 
 
 def _final(word: str) -> tuple[bool, bool]:
-    """(받침이 있나, 그 받침이 ㄹ 인가). 한글은 글자로, 영문 · 숫자는 읽는 소리로(order 오더, news 뉴스, tool 툴, 10 십)."""
-    ch = word.strip()[-1:] or " "
+    """(받침이 있나, 그 받침이 ㄹ 인가). 한글은 글자로, 숫자 · 영문은 읽는 소리로.
+    숫자: 0 영 · 1 일 · 3 삼 · 6 육 · 7 칠 · 8 팔 에 받침(1 · 7 · 8 은 ㄹ).
+    대문자 약어는 글자 이름으로: L 엘 · R 알(ㄹ), M 엠 · N 엔(받침), 나머지는 받침 없음(AI 에이아이, API 에이피아이).
+    소문자 낱말은 끝소리로: -l(툴) ㄹ · -m · -n · -ng(로깅) · -b(웹) · -ook(런북) · 모음+p(앱) 받침, 나머지(-r 오더 · -s 뉴스 · -t 리포트 …)는 받침 없음."""
+    w = word.strip()
+    ch = w[-1:] or " "
     if "가" <= ch <= "힣":
         f = (ord(ch) - 0xAC00) % 28
         return f != 0, f == 8
-    c = ch.upper()
-    if c in "L1":             # 툴 · 일 — ㄹ 받침으로 읽는다
-        return True, True          # R 로 끝나는 말은 받침 없이 읽는다(order 오더 → 를, user 유저 → 를)
-    return c in "MN03678", False
+    if ch.isdigit():
+        return ch in "013678", ch in "178"
+    if ch.isalpha() and ch.isupper() and (len(w) < 2 or not w[-2].islower()):
+        return ch in "LRMN", ch in "LR"
+    lw = w.lower()
+    if lw.endswith("l"):
+        return True, True
+    if lw.endswith(("m", "n", "ng", "b", "ook")) or (lw.endswith("p") and lw.rstrip("p")[-1:] in tuple("aeiou")):
+        return True, False
+    return False, False
 
 
 def josa(word: str, with_final: str, without: str) -> str:
