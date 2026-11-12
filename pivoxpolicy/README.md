@@ -93,6 +93,15 @@ PIVOX_AGENT_KEY=pvx_... python3 examples/demo_agent.py                 # 콘솔�
   (세션 쿠키 HttpOnly · SameSite=Strict + CSRF 헤더 + 같은 출처, 로그인 시도 제한, 본문 64KB · JSON 만, CSP script-src 'self', 로그에 헤더·토큰을 남기지 않는다).
 - **SDK** (`runtime/sdk.py`): `Guard(url, api_key)` · `guard.check(...)` · `@guard.tool("transfer")` 데코레이터(거부 → `Blocked`, 승인 필요 → `ApprovalRequired`).
 - 테스트: `tests/test_runtime.py`(정책 · 저장소 · 서비스 · 레드팀), `tests/test_runtime_server.py`(실제 HTTP 로 로그인 · CSRF · 등록 · SDK · 승인 · 중단 · 레드팀 · 헤더).
+- **실제 LLM 에이전트** (`runtime/llm_agent.py` + `examples/llm_agent.py`, Claude Opus 5.5 · 도구 사용): 정산 보조 에이전트가 운영자 지시
+  ('금리 뉴스 요약 + vendor-1 에 30만 원 송금')를 처리하다가 숨은 지시가 든 뉴스를 읽는다. 하네스는 **도구를 실행하기 전마다** `/v1/decide` 에 묻고,
+  거부면 실행하지 않은 채 이유를 돌려주며, 사람 승인이 필요하면 `--wait-approval` 초까지 기다렸다가 같은 요청에 `approval_id` 를 붙여 다시 묻는다.
+  런타임에 닿지 못하면 실행하지 않는다(fail-closed). 입력 출처: 외부 글이 대화에 들어온 뒤의 호출은 그 출처를 달고 가고, 운영자 지시와 인자가
+  정확히 같은 호출만 '사람 지시' 로 친다 — 그래서 숨은 지시로 만든 송금은 '외부 입력 + 고위험' 으로 막히고, 시킨 송금은 승인을 거쳐 나간다.
+  `--misconfigured` 는 뉴스 속 공지를 따르도록 잘못 설정된 에이전트를 흉내 낸다(모델이 숨은 지시를 따를 때도 런타임이 막는지 보는 용도).
+  요청은 `claude-opus-5-5` · effort 명시 · 서버 쪽 대체 모델(`fallbacks: "default"`, 베타 `server-side-fallback-2026-07-01`) · strict 도구 스키마.
+  도구는 모두 모의다. `pip install "anthropic>=2.8"`(본체 의존성 아님) + `ANTHROPIC_API_KEY` 가 필요하고, 한 번 돌리면 Claude 호출 3~5회가 청구된다.
+  테스트(`tests/test_llm_agent.py`)는 가짜 Claude 응답에 실제 런타임 판정을 붙여 돌린다(API 키 · 비용 없이).
 - 배포: 정적 사이트(Vercel)와 따로 돌려야 한다(Render 등). `PIVOX_ADMIN_TOKEN` · `PIVOX_KEY_PEPPER` · `PIVOX_SECURE_COOKIE=1`(HTTPS) 을 환경변수로.
   아직 없는 것: MCP 프록시 방식 연결, 다중 관리자 · 역할, 승인 알림(메일 · 메신저), DB 이중화.
 
