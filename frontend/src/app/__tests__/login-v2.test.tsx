@@ -65,17 +65,18 @@ describe("AuthEntryPage", () => {
   it("renders Continue with Google + Continue with Kakao buttons (default unauth state)", () => {
     renderWithLocale(<AuthEntryPage />);
 
-    // i18n: ko default → "Google로 계속" / "Kakao로 계속"; match by provider name only.
+    // i18n: ko default → "Google로 계속하기" / "카카오로 계속하기"; match by provider name only.
     expect(screen.getByText(/Google/)).toBeInTheDocument();
-    expect(screen.getByText(/Kakao/)).toBeInTheDocument();
+    expect(screen.getByText(/카카오|Kakao/)).toBeInTheDocument();
   });
 
   it("renders the editorial hero eyebrow + the OAuth affordance", () => {
     renderWithLocale(<AuthEntryPage />);
 
     // Eyebrow is rendered by AuthHeroV2. 2026-09-17: neutral for both
-    // first-time and returning visitors ("PivoxQuant · Entry").
-    expect(screen.getByText(/PivoxQuant · Entry/)).toBeInTheDocument();
+    // first-time and returning visitors. 2026-11-13: says what it is
+    // ("PivoxQuant · 무료 베타") instead of the old "PivoxQuant · Entry".
+    expect(screen.getByText(/PivoxQuant · 무료 베타/)).toBeInTheDocument();
 
     // 삭제된 단언: 하단 /signup 전환 링크.
     //   `/login` 과 `/signup` 이 같은 화면이 되면서 전환 링크는 소스에서

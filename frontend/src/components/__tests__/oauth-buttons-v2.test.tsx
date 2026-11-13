@@ -17,9 +17,9 @@ describe("OAuthButtonsV2", () => {
   it("renders both Google and Kakao buttons in enabled state with correct hrefs (ko)", () => {
     renderWithLocale(<OAuthButtonsV2 />, "ko");
 
-    // ko locale: "Google로 계속" / "Kakao로 계속"
+    // ko locale: "Google로 계속하기" / "카카오로 계속하기"
     const google = screen.getByText(/Google/).closest("a");
-    const kakao = screen.getByText(/Kakao/).closest("a");
+    const kakao = screen.getByText(/카카오|Kakao/).closest("a");
 
     expect(google).toBeInTheDocument();
     expect(kakao).toBeInTheDocument();
@@ -32,7 +32,7 @@ describe("OAuthButtonsV2", () => {
 
     // Should render <button> elements, not <a>
     const googleBtn = screen.getByText(/Google/).closest("button");
-    const kakaoBtn = screen.getByText(/Kakao/).closest("button");
+    const kakaoBtn = screen.getByText(/카카오|Kakao/).closest("button");
 
     expect(googleBtn).toBeInTheDocument();
     expect(kakaoBtn).toBeInTheDocument();

@@ -118,7 +118,7 @@ describe("OAuthButtonsV2 — backend wake gate", () => {
     expect(waiting).toHaveAttribute("aria-live", "polite");
     expect(googleLink()).toHaveAttribute("aria-busy", "true");
     expect(googleLink()).toHaveAttribute("aria-disabled", "true");
-    expect(screen.getByText(/Kakao/).closest("a")).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByText(/카카오|Kakao/).closest("a")).toHaveAttribute("aria-disabled", "true");
     expect(assignMock).not.toHaveBeenCalled();
 
     await act(async () => {
@@ -135,7 +135,7 @@ describe("OAuthButtonsV2 — backend wake gate", () => {
     await flush();
 
     expect(googleLink()).toHaveAttribute("href", API.auth.google);
-    expect(screen.getByText(/Kakao/).closest("a")).toHaveAttribute("href", API.auth.kakao);
+    expect(screen.getByText(/카카오|Kakao/).closest("a")).toHaveAttribute("href", API.auth.kakao);
   });
 
   it("shows our own Korean error and a working retry instead of Render's 502", async () => {

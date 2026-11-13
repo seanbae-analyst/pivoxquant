@@ -4,12 +4,13 @@
  * Split out of `oauth-buttons-v2.tsx` so that file stays about behaviour: the
  * two brand glyphs are ~40 lines of path data that never change. Google's
  * four-colour mark is fixed by Google's brand terms, so its hex values are
- * deliberately literal and NOT design tokens; Kakao's is drawn in our ivory.
+ * deliberately literal and NOT design tokens; Kakao's symbol is black (#000000) on Kakao yellow, per the Kakao Login
+ * design guide — also literal.
  */
 
 export function GoogleIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
         d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
         fill="#4285F4"
@@ -32,10 +33,10 @@ export function GoogleIcon() {
 
 export function KakaoIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
         d="M12 3C6.48 3 2 6.58 2 10.94c0 2.8 1.86 5.27 4.66 6.67-.15.53-.96 3.41-.99 3.63 0 0-.02.16.08.22.1.06.23.01.23.01.3-.04 3.5-2.3 4.05-2.67.62.09 1.27.14 1.97.14 5.52 0 10-3.58 10-7.94S17.52 3 12 3z"
-        fill="var(--pq-ivory, #F5F0E8)"
+        fill="#000000"
       />
     </svg>
   );

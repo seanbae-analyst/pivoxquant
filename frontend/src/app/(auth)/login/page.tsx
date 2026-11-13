@@ -196,7 +196,7 @@ export default function AuthEntryPage() {
             2026-09-17: it also greeted every visitor with "welcome back",
             which is wrong for the half of them who have no account yet. */}
         <AuthHeroV2
-          eyebrow={"PivoxQuant · Entry"}
+          eyebrow={t("auth.login.heroEyebrow")}
           headlineHtml={t("auth.login.heroHeadline")}
           deck={t("auth.login.heroDeck")}
           signature={t("auth.login.heroSignature")}
@@ -477,20 +477,7 @@ export default function AuthEntryPage() {
           }
           :global(.pq-auth-shell-v2 .pq-auth-oauth-btn) {
             min-height: 56px;
-            padding: 0 20px !important;
-            gap: 12px !important;
-            font-family: var(--pq-font-sans) !important;
-            font-size: var(--pq-text-h6) !important;
-            font-weight: 500;
-            letter-spacing: 0 !important;
-            text-transform: none !important;
-            border-color: rgba(var(--pq-bronze-rgb), 0.38) !important;
-            background: var(--pq-ivory-line-faint) !important;
-            -webkit-tap-highlight-color: transparent;
-          }
-          :global(.pq-auth-shell-v2 .pq-auth-oauth-btn:active) {
-            background: var(--pq-ivory-line) !important;
-            border-color: rgba(var(--pq-bronze-rgb), 0.7) !important;
+            font-size: var(--pq-text-h6);
           }
           :global(.pq-auth-shell-v2 .pq-auth-wake-note) {
             font-family: var(--pq-font-sans) !important;
