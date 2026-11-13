@@ -12,6 +12,13 @@ import { nextAuthRedirect } from "../layout";
  * ``birthdate_required`` is still honoured for one deploy cycle.
  */
 describe("nextAuthRedirect", () => {
+  it("lets an unfinished onboarding reach the import screen, and nothing else", () => {
+    const user = { onboarding_completed: false };
+    expect(nextAuthRedirect(user, "/journal/import?tab=image")).toBeNull();
+    expect(nextAuthRedirect(user, "/journal")).toBe("/onboarding/broker");
+    expect(nextAuthRedirect(user, "/mirror")).toBe("/onboarding/broker");
+  });
+
   it("redirects to /login when there is no user", () => {
     expect(nextAuthRedirect(null)).toBe("/login");
     expect(nextAuthRedirect(undefined)).toBe("/login");

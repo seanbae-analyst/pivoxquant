@@ -387,6 +387,7 @@
     "heldCount": "Holdings added: {n}",
     "heldNone": "None yet. Upload a balance-screen capture below or enter holdings one at a time.",
     "manualLink": "No capture? Enter holdings one at a time →",
+    "startFromFills": "Start from your fills instead",
     "nextLocked": "Add at least one holding"
   },
   "profileMenu": {
@@ -564,6 +565,14 @@
       "kicker": "Received fills · IMPORT INBOX",
       "title": "{n} received fills — write one line on why you bought or sold",
       "desc": "Nothing enters the log or the mirrors until you approve it. Attach one line of reasoning and approve to add it to your trade log.",
+      "approveAll": "Record all without a reason ({n})",
+      "approveAllDesc": "Skips the reason and records the fills only. To write a reason, approve them one by one below.",
+      "approveAllDone": "Recorded {n}.",
+      "approveAllReview": "{n} need a check and were left in the list.",
+      "approveAllPredates": "{n} are older than a holding you registered, so they were left out to avoid counting them twice.",
+      "approveAllFailed": "{n} could not be recorded and are still in the list.",
+      "nextHabits": "See your habits",
+      "nextOnboarding": "Continue setup",
       "emptyLine": "No fills waiting.",
       "importLink": "Import fills",
       "captureLink": "Import from a screenshot",
