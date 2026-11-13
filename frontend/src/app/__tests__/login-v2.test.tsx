@@ -65,9 +65,9 @@ describe("AuthEntryPage", () => {
   it("renders Continue with Google + Continue with Kakao buttons (default unauth state)", () => {
     renderWithLocale(<AuthEntryPage />);
 
-    // i18n: ko default → "Google로 계속" / "Kakao로 계속"; match by provider name only.
+    // i18n: ko default → "Google로 계속하기" / "카카오로 계속하기"; match by provider name only.
     expect(screen.getByText(/Google/)).toBeInTheDocument();
-    expect(screen.getByText(/Kakao/)).toBeInTheDocument();
+    expect(screen.getByText(/카카오|Kakao/)).toBeInTheDocument();
   });
 
   it("renders the editorial hero eyebrow + the OAuth affordance", () => {

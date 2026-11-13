@@ -11,8 +11,8 @@
   },
   "auth": {
     "login": {
-      "continueWithGoogle": "Google로 계속",
-      "continueWithKakao": "Kakao로 계속",
+      "continueWithGoogle": "Google로 계속하기",
+      "continueWithKakao": "카카오로 계속하기",
       "eyebrow": "시작하기 · 로그인",
       "heading": "소셜 계정으로 계속하기",
       "heroHeadline": "처음이든 다시든, <span class=\"br\">문은 하나</span>입니다.<br/>데스크는 이미 <span class=\"br\">준비됐습니다.</span>",

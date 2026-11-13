@@ -5309,6 +5309,70 @@ html {
   transform: scale(0.88);
   transition-duration: 0ms;
 }
+/* ───────────────────────────────────────────────────────────
+   OAuth provider buttons (/login · oauth-buttons-v2.tsx, 2026-11-13).
+   Each button is its provider's own: these hex values are fixed by the
+   Kakao Login design guide and Google's sign-in branding (dark theme),
+   NOT design tokens — do not swap them for --pq-* colours. */
+.pq-auth-oauth-btn {
+  display: grid;
+  grid-template-columns: 24px 1fr 24px;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 0 18px;
+  border: 1px solid transparent;
+  border-radius: var(--pq-radius-cta);
+  font-family: var(--pq-font-sans), "Pretendard Variable", Pretendard, sans-serif;
+  font-size: var(--pq-text-lead);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0;
+  text-transform: none;
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.pq-auth-oauth-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+.pq-auth-oauth-label {
+  text-align: center;
+  white-space: nowrap;
+  word-break: keep-all;
+}
+.pq-auth-oauth-btn--kakao {
+  background: #FEE500;
+  color: rgba(0, 0, 0, 0.85);
+}
+.pq-auth-oauth-btn--google {
+  background: #131314;
+  border-color: #8E918F;
+  color: #E3E3E3;
+}
+@media (hover: hover) {
+  .pq-auth-oauth-btn--kakao:not([aria-disabled="true"]):hover {
+    box-shadow: inset 0 0 0 999px rgba(0, 0, 0, 0.06);
+  }
+  .pq-auth-oauth-btn--google:not([aria-disabled="true"]):hover {
+    box-shadow: inset 0 0 0 999px rgba(227, 227, 227, 0.08);
+  }
+}
+.pq-auth-oauth-btn:focus-visible {
+  outline: 2px solid var(--pq-bronze);
+  outline-offset: 3px;
+}
+/* Legal-gate state: still recognisably the provider, just asleep. */
+button.pq-auth-oauth-btn[aria-disabled="true"] {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
 @media (hover: none) {
   .pq-ink-btn-bronze:hover:not(:active):not(:disabled):not([aria-disabled="true"]) {
     background: var(--pq-bronze);

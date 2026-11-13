@@ -30,13 +30,18 @@
  *   The `href` stays on the anchor throughout: with JS dead the link still
  *   works, exactly as it did before.
  *
- * Visual layer only:
- *   - Vantablack background, ivory text, bronze hairline border.
- *   - Hover: bronze border + subtle ink lift.
- *   - Mono uppercase label ("CONTINUE WITH GOOGLE / KAKAO").
- *   - Phone (< 768px, 2026-10-09): login/page.tsx restyles the
- *     `.pq-auth-oauth-btn` anchors to 56px sans labels with no tracking —
- *     wide mono tracking broke Korean labels apart ("G O O G L E 로 계 속").
+ * Visual layer (2026-11-13 — CEO "카카오 구글 이부분 개별로임"):
+ *   - Each button wears its provider's own button, not a shared ghost box:
+ *     Kakao = Kakao Login design guide (#FEE500 container, black symbol,
+ *     85% black label); Google = Google's dark-theme sign-in button
+ *     (#131314 fill, #8E918F stroke, #E3E3E3 label, full-colour G).
+ *     Brand colours are fixed by each provider's terms, so they live as
+ *     literals in globals.css (`.pq-auth-oauth-btn--kakao/--google`), not
+ *     as design tokens.
+ *   - Kakao first: the audience is Korean retail.
+ *   - Icon pinned left, label centred, sentence-case sans (no mono, no
+ *     uppercase, no tracking). Hover / focus / disabled live in globals.css.
+ *   - Phone (< 768px): login/page.tsx grows the anchors to 56px.
  */
 
 import * as React from "react";
@@ -69,22 +74,6 @@ interface OAuthButtonsV2Props {
 
 type Provider = "google" | "kakao";
 
-const buttonShellBase: React.CSSProperties = {
-  display: "flex",
-  width: "100%",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: 14,
-  padding: "14px 20px",
-  borderRadius: "var(--pq-radius-card)",
-  fontSize: "var(--pq-text-eyebrow)",
-  letterSpacing: "0.01em",
-  textTransform: "uppercase",
-  textDecoration: "none",
-  transition:
-    "border-color 200ms cubic-bezier(0.16,1,0.3,1), background-color 200ms cubic-bezier(0.16,1,0.3,1), color 200ms",
-};
-
 const noteBase: React.CSSProperties = {
   marginTop: 6,
   fontSize: "var(--pq-text-eyebrow)",
@@ -116,22 +105,6 @@ export function OAuthButtonsV2({
   const backend = useBackendWake({ enabled: gateEnabled });
   const [target, setTarget] = React.useState<{ provider: Provider; href: string } | null>(null);
   const [busy, setBusy] = React.useState(false);
-
-  const enabledShell: React.CSSProperties = {
-    ...buttonShellBase,
-    border: "1px solid rgba(184,149,106,0.30)",
-    background: "var(--pq-ivory-line-ghost)",
-    color: "var(--pq-ivory, #F5F0E8)",
-    cursor: busy ? "progress" : "pointer",
-  };
-
-  const disabledShell: React.CSSProperties = {
-    ...buttonShellBase,
-    border: "1px solid var(--pq-ivory-line-soft)",
-    background: "transparent",
-    color: "var(--pq-ivory-dim)",
-    cursor: "not-allowed",
-  };
 
   const runWake = React.useCallback(
     async (provider: Provider, href: string) => {
@@ -178,17 +151,25 @@ export function OAuthButtonsV2({
     );
     const icon = isGoogle ? <GoogleIcon /> : <KakaoIcon />;
 
+    const className = `pq-auth-oauth-btn pq-auth-oauth-btn--${provider}`;
+    const body = (
+      <>
+        <span className="pq-auth-oauth-icon">{icon}</span>
+        <span className="pq-auth-oauth-label">{label}</span>
+        {/* Mirror of the icon column so the label sits on the true centre. */}
+        <span className="pq-auth-oauth-icon" aria-hidden="true" />
+      </>
+    );
+
     if (disabled) {
       return (
         <button
           type="button"
           aria-disabled="true"
           onClick={onDisabledClick}
-          className="font-mono"
-          style={disabledShell}
+          className={className}
         >
-          {icon}
-          {label}
+          {body}
         </button>
       );
     }
@@ -202,19 +183,18 @@ export function OAuthButtonsV2({
         // still works, and a screen reader still reaches it while we wait.
         aria-disabled={busy ? "true" : undefined}
         aria-busy={busy && isTarget ? "true" : undefined}
-        className={`pq-auth-oauth-btn pq-auth-oauth-btn--${provider} font-mono`}
-        style={enabledShell}
+        className={className}
+        style={{ cursor: busy ? "progress" : undefined }}
       >
-        {icon}
-        {label}
+        {body}
       </a>
     );
   }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%" }}>
-      {providerButton("google")}
       {providerButton("kakao")}
+      {providerButton("google")}
 
       {/* Waking state. The live region is always mounted — a region inserted
           at the same moment as its text is announced unreliably — but while
