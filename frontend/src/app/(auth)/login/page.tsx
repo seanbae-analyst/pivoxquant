@@ -196,7 +196,7 @@ export default function AuthEntryPage() {
             2026-09-17: it also greeted every visitor with "welcome back",
             which is wrong for the half of them who have no account yet. */}
         <AuthHeroV2
-          eyebrow={"PivoxQuant · Entry"}
+          eyebrow={t("auth.login.heroEyebrow")}
           headlineHtml={t("auth.login.heroHeadline")}
           deck={t("auth.login.heroDeck")}
           signature={t("auth.login.heroSignature")}
