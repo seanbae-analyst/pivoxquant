@@ -7,6 +7,7 @@ import { ChevronRight } from "lucide-react";
 
 import { mutate as swrMutate } from "swr";
 
+import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
 import { API, PORTFOLIO_POSITIONS } from "@/lib/endpoints";
@@ -254,6 +255,14 @@ export default function OnboardingBrokerPage() {
               )}
             </div>
           ))}
+
+          <Link
+            href="/journal/import"
+            className="pq-hit mb-4 block text-pq-mono-sm text-[var(--pq-bronze-light)] underline underline-offset-4"
+            data-testid="onboarding-from-fills"
+          >
+            {t("brokerOnboarding.startFromFills")}
+          </Link>
 
           {/* Saved so far — the thing "next" waits on. */}
           <div

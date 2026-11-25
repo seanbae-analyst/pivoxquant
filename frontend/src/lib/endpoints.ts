@@ -408,6 +408,9 @@ export const API = {
     pendingItem: (id: number) => `/api/portfolio/imports/pending/${id}`,
     approve: (id: number) => `/api/portfolio/imports/pending/${id}/approve`,
     reject: (id: number) => `/api/portfolio/imports/pending/${id}/reject`,
+    // POST (no body) → {ok, approved, duplicate, needs_review, predates_holding, failed, remaining, first_error}.
+    // Records every clean pending fill with no reason written (2026-11-01).
+    approveAll: "/api/portfolio/imports/pending/approve-all",
     // Phase 2 v3-A — personal access tokens (IMPORT_INBOX_DESIGN.md §Phase 2).
     //   tokens   GET → {tokens[], active_limit} · POST {name, consent:true} → 201 {…, token} (raw token appears here only)
     //   token    DELETE → {ok} (revoke, idempotent)

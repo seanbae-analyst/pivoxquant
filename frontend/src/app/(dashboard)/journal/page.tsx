@@ -30,7 +30,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import Link from "next/link";
-import { Briefcase, NotebookPen, ChevronDown } from "lucide-react";
+import { NotebookPen, ChevronDown } from "lucide-react";
 import { useLocale, useT } from "@/lib/locale";
 import { usePreTradeJournal, useObservationNotes } from "@/lib/hooks";
 import { displayName, normalizeTicker, parseIsoUtc } from "@/lib/format";
@@ -495,12 +495,12 @@ function EmptyState() {
         {t("journal.page.emptyDesc")}
       </Caption>
       <Link
-        href="/portfolio"
+        href="/journal/import"
         className="mt-6 inline-flex items-center gap-2 rounded-[var(--pq-radius-card)] border px-5 py-2.5 font-mono text-pq-caption text-[var(--pq-bronze-light)] transition-colors hover:bg-[var(--pq-card-veil-strong)]"
         style={{ borderColor: "var(--pq-ivory-line)" }}
       >
-        <Briefcase className="h-3.5 w-3.5" aria-hidden="true" />
-        {t("journal.page.gotoPortfolio")}
+        <NotebookPen className="h-3.5 w-3.5" aria-hidden="true" />
+        {t("journal.import.importLink")}
       </Link>
     </div>
   );
@@ -619,10 +619,12 @@ function subscribeHash(cb: () => void) {
 /**
  * The page a deep link asks for. `?pending=<id>` (the fill_memo push) wins —
  * that row lives in the 기록 대기함 on the record page — then
- * `#weekly-pulse` (/portfolio's Monday link) opens the pulse page.
+ * `#weekly-pulse` (/portfolio's Monday link) opens the pulse page, and
+ * `#habits` (the end of an import) the behaviour mirrors.
  */
 export function deepLinkPage(search: string, hash: string): JournalPageId {
   if (new URLSearchParams(search).get("pending")) return "record";
+  if (hash === "#habits") return "habits";
   return hash === "#weekly-pulse" ? "pulse" : "record";
 }
 
@@ -853,6 +855,8 @@ function JournalContent() {
 
   const habitsPage = (
     <>
+      {/* Desktop stacks the pages, so `#habits` needs somewhere to land. */}
+      <div id="habits" className="scroll-mt-24" />
       {/* Behavior-mirror section — the disposition + concentration mirrors,
           each with its OWN SWR + loading/error boundary so any single mirror
           failure can never take down the journal feed (or its siblings) below.

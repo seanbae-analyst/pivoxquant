@@ -54,7 +54,11 @@ import {
   Caption,
   HairlineSoft,
 } from "@/components/ui/editorial";
-import type { PendingTradeDTO, ImportApproveResponse } from "@/lib/types";
+import type {
+  PendingTradeDTO,
+  ImportApproveAllResponse,
+  ImportApproveResponse,
+} from "@/lib/types";
 
 export const THESIS_MIN = 3;
 export const THESIS_MAX = 500;
@@ -107,6 +111,7 @@ export async function refreshBookAfterApprove(): Promise<void> {
   await Promise.all([
     globalMutate(PORTFOLIO_POSITIONS),
     globalMutate(PORTFOLIO_SUMMARY),
+    globalMutate(API.mirror.home),
     globalMutate(
       (key) =>
         typeof key === "string" &&
@@ -586,14 +591,89 @@ export function PendingTradeList({
   );
 }
 
+/** Every line of a bulk result worth saying, in the user's terms. */
+export function approveAllLines(
+  res: ImportApproveAllResponse,
+  t: (k: string) => string,
+  locale: "ko" | "en" = "ko",
+): string[] {
+  const line = (key: string, n: number) => t(key).replace("{n}", String(n));
+  // The count first: the server's reason is one row's, not every refusal's.
+  const reason = locale === "en" ? res.first_error_en : res.first_error;
+  return [
+    line("journal.import.approveAllDone", res.approved),
+    res.needs_review > 0 ? line("journal.import.approveAllReview", res.needs_review) : "",
+    res.predates_holding > 0 ? line("journal.import.approveAllPredates", res.predates_holding) : "",
+    res.failed > 0 ? line("journal.import.approveAllFailed", res.failed) : "",
+    res.failed > 0 ? (reason ?? "") : "",
+  ].filter(Boolean);
+}
+
+/**
+ * Records the whole list with no reason (2026-11-01). The first mirror needs
+ * 5~8 fills; a reason for each months-old trade stood in front of it. Hidden
+ * for a single row, where the row's own approve is the same number of taps.
+ */
+export function ApproveAllButton({
+  count,
+  onDone,
+}: {
+  count: number;
+  onDone: (res: ImportApproveAllResponse) => void;
+}) {
+  const t = useT();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  if (count < 2) return null;
+
+  async function run() {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await apiFetch<ImportApproveAllResponse>(API.imports.approveAll, {
+        method: "POST",
+        timeoutMs: 60_000,
+      });
+      onDone(res);
+      void refreshBookAfterApprove();
+    } catch (err) {
+      setError(errorMessage(err, t("journal.page.loadFailure")));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mt-4">
+      <button
+        type="button"
+        onClick={run}
+        disabled={busy}
+        aria-disabled={busy}
+        data-testid="approve-all"
+        className="pq-ink-btn-bronze inline-flex items-center px-5 py-2 text-pq-mono-sm disabled:opacity-30 disabled:cursor-not-allowed"
+      >
+        {busy ? t("journal.import.working") : t("journal.import.approveAll").replace("{n}", String(count))}
+      </button>
+      <Caption className="mt-2 max-w-lg">{t("journal.import.approveAllDesc")}</Caption>
+      {error && (
+        <Caption className="mt-2">
+          <span style={{ color: "var(--pq-error)" }}>{error}</span>
+        </Caption>
+      )}
+    </div>
+  );
+}
+
 /* ────────────────────────────────────────────────────────────────────────
  * Public card — mounted at the top of /journal.
  * ────────────────────────────────────────────────────────────────────── */
 
 export function ImportInbox() {
   const t = useT();
-  useLocale();
+  const { locale } = useLocale();
   const { pending, isLoading, error, mutate } = usePendingImports();
+  const [bulkLines, setBulkLines] = useState<string[]>([]);
 
   // /journal?pending=<id> — where the "a fill just arrived, write down why"
   // push and the webhook's memo_url land (services/fill_memo.py). Bring that
@@ -619,7 +699,7 @@ export function ImportInbox() {
       // One line, no link (2026-10-22): the journal's capture links sit right
       // above it, so a third "체결 가져오기" here only repeated them.
       <div className="mb-8">
-        <Caption>{t("journal.import.emptyLine")}</Caption>
+        <Caption>{bulkLines[0] ?? t("journal.import.emptyLine")}</Caption>
       </div>
     );
   }
@@ -650,6 +730,16 @@ export function ImportInbox() {
       </EditorialHead>
       <Caption className="mt-2 max-w-lg">{t("journal.import.desc")}</Caption>
 
+      <ApproveAllButton
+        count={pending.length}
+        onDone={(res) => {
+          setBulkLines(approveAllLines(res, t, locale));
+          void mutate();
+        }}
+      />
+      {bulkLines.map((line) => (
+        <Caption key={line} className="mt-2 max-w-lg">{line}</Caption>
+      ))}
       <PendingTradeList rows={pending} onChanged={() => void mutate()} />
     </motion.section>
   );

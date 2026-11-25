@@ -97,7 +97,11 @@ export function nextAuthRedirect(
   // completes the front-end UX so the user lands on the finalize step
   // instead of a broken-looking dashboard.
   if (ageConfirmationRequired(user)) return "/signup/oauth-finalize";
-  if (user.onboarding_completed === false) return "/onboarding/broker";
+  // A user may start from a fills file instead of holdings (2026-11-01), and
+  // that screen lives here — the import page sends them back to /onboarding.
+  if (user.onboarding_completed === false && !currentPath?.startsWith("/journal/import")) {
+    return "/onboarding/broker";
+  }
   return null;
 }
 

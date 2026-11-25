@@ -40,7 +40,11 @@ import { useAuth } from "@/lib/auth";
 import { useLocale, useT } from "@/lib/locale";
 import { apiFetch, ApiError } from "@/lib/api";
 import { API } from "@/lib/endpoints";
-import { PendingTradeList } from "@/components/journal/import-inbox";
+import {
+  ApproveAllButton,
+  PendingTradeList,
+  approveAllLines,
+} from "@/components/journal/import-inbox";
 import { ImageImportPanel } from "@/components/journal/image-import-panel";
 import { AiTextReadPanel } from "@/components/journal/ai-text-read-panel";
 import { JournalPager } from "@/components/journal/journal-pager";
@@ -51,7 +55,7 @@ import {
   FieldLabel,
   HairlineSoft,
 } from "@/components/ui/editorial";
-import type { ImportCreateResponse, PendingTradeDTO } from "@/lib/types";
+import type { ImportApproveAllResponse, ImportCreateResponse, PendingTradeDTO } from "@/lib/types";
 
 const CONSENT_KEY_PREFIX = "pivox_import_consent";
 const MAX_FILE_BYTES = 2 * 1024 * 1024;
@@ -102,7 +106,7 @@ function prefersReducedMotion(): boolean {
 
 function ImportPageInner() {
   const t = useT();
-  useLocale();
+  const { locale } = useLocale();
   const params = useSearchParams();
   const { user } = useAuth();
   const storageKey = consentKey(user?.id);
@@ -123,6 +127,7 @@ function ImportPageInner() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ImportCreateResponse | null>(null);
   const [rows, setRows] = useState<PendingTradeDTO[]>([]);
+  const [bulkLines, setBulkLines] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const resultRef = useRef<HTMLElement | null>(null);
 
@@ -213,6 +218,13 @@ function ImportPageInner() {
     if (!res || !Array.isArray(res.pending) || !res.batch) return;
     setResult(res);
     setRows(res.pending.filter((p) => p.status === "pending"));
+    void mutate(API.imports.pending);
+  }
+
+  async function onApprovedAll(res: ImportApproveAllResponse) {
+    setBulkLines(approveAllLines(res, t, locale));
+    const left = await apiFetch<{ pending: PendingTradeDTO[] }>(API.imports.pending);
+    setRows(left.pending);
     void mutate(API.imports.pending);
   }
 
@@ -509,10 +521,30 @@ function ImportPageInner() {
           )}
           <Caption className="mt-2 max-w-lg">{t("journal.import.page.resultDesc")}</Caption>
 
-          {rows.length === 0 ? (
+          {bulkLines.map((line) => (
+            <Caption key={line} className="mt-3 max-w-lg">{line}</Caption>
+          ))}
+          {rows.length === 0 && bulkLines.length === 0 && (
             <Caption className="mt-4">{t("journal.import.page.resultEmpty")}</Caption>
-          ) : (
-            <PendingTradeList rows={rows} onChanged={onRowChanged} />
+          )}
+          {/* Rows a bulk approve left behind must not hold back what it recorded.
+              Still mid-onboarding: the mirror is behind the questions. */}
+          {(rows.length === 0 || bulkLines.length > 0) && (
+            <Link
+              href={user?.onboarding_completed === false ? "/onboarding" : "/journal#habits"}
+              data-testid="import-next"
+              className="pq-ink-btn-bronze mt-4 inline-flex items-center px-5 py-2 text-pq-mono-sm"
+            >
+              {t(user?.onboarding_completed === false
+                ? "journal.import.nextOnboarding"
+                : "journal.import.nextHabits")}
+            </Link>
+          )}
+          {rows.length > 0 && (
+            <>
+              <ApproveAllButton count={rows.length} onDone={(res) => void onApprovedAll(res)} />
+              <PendingTradeList rows={rows} onChanged={onRowChanged} />
+            </>
           )}
         </section>
       )}
